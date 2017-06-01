@@ -13,7 +13,7 @@ docker run -it --rm posidron/fuzzos:latest bash -li
 ### Push
 ```
 docker login --username=posidron
-docker push posidron/fuzzing-os:latest
+docker push posidron/fuzzos:latest
 ```
 
 ### Overview
