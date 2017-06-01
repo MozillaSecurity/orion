@@ -32,7 +32,7 @@ RUN \
 RUN locale-gen en_US.UTF-8
 
 ENV USER      worker
-ENV HOME      worker
+ENV HOME      /home/worker
 ENV LOGNAME   worker
 ENV HOSTNAME  taskcluster-worker
 ENV LANG      en_US.UTF-8
