@@ -2,5 +2,5 @@
 
 #### FuzzFetch
 
-cd /home/worker
+cd $HOME
 git clone --depth 1 https://github.com/mozillasecurity/fuzzfetch

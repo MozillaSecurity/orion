@@ -2,7 +2,7 @@
 
 #### AFL
 
-cd /home/worker
+cd $HOME
 
 curl -O http://lcamtuf.coredump.cx/afl/releases/afl-latest.tgz \
   && mkdir afl \

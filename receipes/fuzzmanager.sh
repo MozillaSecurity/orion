@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-cd /home/worker
+cd $HOME
 
 git clone -v --depth 1 https://github.com/mozillasecurity/fuzzmanager.git
 pip install -r fuzzmanager/requirements.txt
