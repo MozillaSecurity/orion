@@ -6,8 +6,8 @@ RUN useradd -d /home/worker -s /bin/bash -m worker
 WORKDIR /home/worker
 
 RUN \
-  apt-get update -qq \
-  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
+  apt-get update -q \
+  && apt-get install -y -q --no-install-recommends --no-install-suggests \
     apt-utils \
     bzip2 \
     curl \
@@ -32,6 +32,7 @@ RUN \
 RUN locale-gen en_US.UTF-8
 
 ENV USER      worker
+ENV HOME      worker
 ENV LOGNAME   worker
 ENV HOSTNAME  taskcluster-worker
 ENV LANG      en_US.UTF-8
