@@ -1,5 +1,13 @@
 # FuzzOS
 
+### Contents
+* OS: Ubuntu zesty
+* Pre-installed: AFL, FuzzManager, FuzzFetch
+
+
+* https://hub.docker.com/u/posidron/
+* https://hub.docker.com/u/taskclusterprivate/
+
 ### Build
 ```
 docker build --squash -t posidron/fuzzos:latest -t posidron/fuzzos:v1 .
@@ -26,3 +34,9 @@ docker ps
 ```
 docker rmi -f $(docker images -a -q) &&  docker rm -f $(docker ps -a -q)
 ```
+
+
+### References
+* https://tools.taskcluster.net/task-creator/
+* https://docs.docker.com/engine/reference/builder/
+* https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker/
