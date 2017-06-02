@@ -1,9 +1,9 @@
 #!/bin/bash -ex
 
-bash receipes/llvm.sh
-bash receipes/fuzzmanager.sh
-bash receipes/afl.sh
-bash receipes/fuzzfetch.sh
+bash recipes/llvm.sh
+bash recipes/fuzzmanager.sh
+bash recipes/afl.sh
+bash recipes/fuzzfetch.sh
 
 apt-get clean -y \
 && apt-get autoclean -y \

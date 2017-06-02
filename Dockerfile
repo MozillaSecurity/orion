@@ -41,7 +41,7 @@ ENV CC        clang
 ENV CXX       clang++
 
 COPY setup.sh /tmp
-COPY receipes /tmp/receipes
+COPY recipes /tmp/recipes
 RUN \
   cd /tmp/ \
   && bash setup.sh \
