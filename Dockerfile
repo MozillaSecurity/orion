@@ -19,7 +19,7 @@ RUN \
     python-pip \
     python-setuptools \
     python3-pip \
-    python-setuptools \
+    python3-setuptools \
     software-properties-common \
     ssh \
     xvfb \
