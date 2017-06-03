@@ -7,6 +7,10 @@
 
 * https://hub.docker.com/u/posidron/
 * https://hub.docker.com/u/taskclusterprivate/
+* https://mozillians.org/en-US/group/sec-fuzzing/
+* https://tools.taskcluster.net/auth/roles/#mozillians-group:sec-fuzzing
+* https://hub.docker.com/r/taskclusterprivate/framboise
+* https://tools.taskcluster.net/task-creator/
 
 ### Build
 ```
@@ -41,8 +45,13 @@ docker rmi -f $(docker images -a -q) &&  docker rm -f $(docker ps -a -q)
 ```
 
 
+### Push fuzzing image to Hub
+```
+docker build --squash -t posidron/framboise:latest -t taskclusterprivate/framboise:v1 .
+docker push taskclusterprivate/framboise:v1
+```
+
 ### References
-* https://tools.taskcluster.net/task-creator/
 * https://docs.docker.com/engine/reference/builder/
 * https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker/
 * https://github.com/wsargent/docker-cheat-sheet
