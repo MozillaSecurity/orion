@@ -13,34 +13,34 @@
 * https://tools.taskcluster.net/task-creator/
 
 ### Build
-```
+```bash
 docker build --squash -t posidron/fuzzos:latest -t posidron/fuzzos:v1 .
 ```
 
 ### Run
-```
+```bash
 docker run -it --rm posidron/fuzzos:latest bash -li
 ```
 
 ### Run with custom environment
-```
+```bash
 docker run -e ENV_NAME=value -it --rm posidron/fuzzos:latest bash -li
 ```
 
 ### Push
-```
+```bash
 docker login --username=posidron
 docker push posidron/fuzzos:latest
 ```
 
 ### Overview
-```
+```bash
 docker images
 docker ps
 ```
 
 ### Destroy
-```
+```bash
 docker rmi -f $(docker images -a -q) &&  docker rm -f $(docker ps -a -q)
 ```
 
@@ -60,7 +60,7 @@ Dockerfile
 ```
 
 ### Xvfb wrapper
-```
+```bash
 #!/bin/bash -ex
 cd $HOME
 
@@ -72,7 +72,7 @@ sleep ${FUZZER_MAX_RUNTIME:-600}; kill $(ps -s $$ -o pid=)
 ```
 
 ### Dockerfile
-```
+```bash
 FROM posidron/fuzzos:latest
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
@@ -99,14 +99,14 @@ ENTRYPOINT ["framboise/xvfb.sh"]
 
 
 ### Build and push fuzzing image to private Hub
-```
+```bash
 docker build --squash -t posidron/framboise:latest -t taskclusterprivate/framboise:v1 .
 docker push taskclusterprivate/framboise:v1
 ```
 
 
 ### TaskCluster: TaskCreator
-```
+```json
 {
   "provisionerId": "aws-provisioner-v1",
   "workerType": "dbg-linux64",
