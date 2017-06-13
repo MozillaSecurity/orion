@@ -7,19 +7,19 @@
 
 ### Build
 ```bash
-docker build --squash -t taskcluster/fuzzos:latest -t taskcluster/fuzzos:v1 .
+docker build --squash -t taskclusterprivate/fuzzos:latest -t taskclusterprivate/fuzzos:v1 .
 ```
 
 ### Run
 ```bash
-docker run -it --rm taskcluster/fuzzos:latest bash -li
-docker run -e ENV_NAME=value -it --rm taskcluster/fuzzos:latest bash -li
+docker run -it --rm taskclusterprivate/fuzzos:latest bash -li
+docker run -e ENV_NAME=value -it --rm taskclusterprivate/fuzzos:latest bash -li
 ```
 
 ### Push
 ```bash
 docker login --username=XYZ
-docker push taskcluster/fuzzos:latest
+docker push taskclusterprivate/fuzzos:latest
 ```
 
 ### Overview
@@ -62,7 +62,7 @@ sleep ${FUZZER_MAX_RUNTIME:-600}; kill $(ps -s $$ -o pid=)
 
 ### Dockerfile
 ```bash
-FROM taskcluster/fuzzos:latest
+FROM taskclusterprivate/fuzzos:latest
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
