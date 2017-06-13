@@ -7,19 +7,19 @@
 
 ### Build
 ```bash
-docker build --squash -t posidron/fuzzos:latest -t posidron/fuzzos:v1 .
+docker build --squash -t taskcluster/fuzzos:latest -t taskcluster/fuzzos:v1 .
 ```
 
 ### Run
 ```bash
-docker run -it --rm posidron/fuzzos:latest bash -li
-docker run -e ENV_NAME=value -it --rm posidron/fuzzos:latest bash -li
+docker run -it --rm taskcluster/fuzzos:latest bash -li
+docker run -e ENV_NAME=value -it --rm taskcluster/fuzzos:latest bash -li
 ```
 
 ### Push
 ```bash
-docker login --username=posidron
-docker push posidron/fuzzos:latest
+docker login --username=XYZ
+docker push taskcluster/fuzzos:latest
 ```
 
 ### Overview
@@ -62,7 +62,7 @@ sleep ${FUZZER_MAX_RUNTIME:-600}; kill $(ps -s $$ -o pid=)
 
 ### Dockerfile
 ```bash
-FROM posidron/fuzzos:latest
+FROM taskcluster/fuzzos:latest
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
