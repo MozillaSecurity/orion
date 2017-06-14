@@ -136,8 +136,11 @@ metadata:
 * https://mozillians.org/en-US/group/sec-fuzzing/
 * https://tools.taskcluster.net/auth/roles/#mozillians-group:sec-fuzzing
 * https://tools.taskcluster.net/task-creator/
-
+* https://tools.taskcluster.net/aws-provisioner/#fuzzer/view
 * https://docs.taskcluster.net/
 * https://docs.docker.com/engine/reference/builder/
 * https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker/
 * https://github.com/wsargent/docker-cheat-sheet
+
+* https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker
+
