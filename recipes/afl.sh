@@ -1,14 +1,15 @@
-#!/bin/bash -ex
+#!/bin/sh -ex
 
 #### AFL
 
 cd $HOME
 
-curl -O http://lcamtuf.coredump.cx/afl/releases/afl-latest.tgz \
-  && mkdir afl \
-  && tar -xzf afl-latest.tgz -C afl --strip-components=1 \
-  && cd afl \
-  && make \
-  && make install \
-  && cd - \
-  && rm -f afl-latest.tgz
+git clone -v --depth 1 https://github.com/choller/afl.git
+cd afl
+make
+cd llvm_mode
+make
+cd ..
+make install
+cd ..
+rm -rf afl
