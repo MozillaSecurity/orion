@@ -15,8 +15,8 @@ apt-get install -y -q --no-install-recommends --no-install-suggests \
 # update-alternatives --config llvm-config
 
 update-alternatives --install \
-  /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-4.0  100 \
-  --slave /usr/bin/clang            clang            /usr/bin/clang-4.0 \
-  --slave /usr/bin/clang++          clang++          /usr/bin/clang++-4.0 \
-  --slave /usr/bin/lldb             lldb             /usr/bin/lldb-4.0 \
+  /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-4.0     100 \
+  --slave /usr/bin/clang            clang            /usr/bin/clang-4.0               \
+  --slave /usr/bin/clang++          clang++          /usr/bin/clang++-4.0             \
+  --slave /usr/bin/lldb             lldb             /usr/bin/lldb-4.0                \
   --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-4.0
