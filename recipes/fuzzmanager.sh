@@ -3,8 +3,10 @@
 cd $HOME
 
 git clone --depth 1 https://github.com/mozillasecurity/fuzzmanager.git
-pip install -r fuzzmanager/requirements.txt
-python fuzzmanager/setup.py install
+cd fuzzmanager
+pip install -r requirements.txt
+python2 setup.py install
+cd -
 
 cat > $HOME/.fuzzmanagerconf << EOL
 [Main]
