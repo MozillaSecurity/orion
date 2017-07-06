@@ -2,7 +2,7 @@
 
 cd $HOME
 
-git clone -v --depth 1 https://github.com/mozillasecurity/fuzzmanager.git
+git clone --depth 1 https://github.com/mozillasecurity/fuzzmanager.git
 pip install -r fuzzmanager/requirements.txt
 python fuzzmanager/setup.py install
 
