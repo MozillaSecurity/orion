@@ -44,7 +44,7 @@ COPY setup.sh /tmp
 COPY recipes /tmp/recipes
 RUN \
   cd /tmp/ \
-  && bash setup.sh \
+  && ./setup.sh \
   && rm -rf /tmp/*
 
 RUN \
