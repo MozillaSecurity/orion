@@ -33,6 +33,11 @@ docker ps
 docker rmi -f $(docker images -a -q) &&  docker rm -f $(docker ps -a -q)
 ```
 
+### Debug
+Overwrite the ENTRYPOINT command to use /bin/bash with a UID of 0 (root).
+```bash
+docker run -u 0 --entrypoint=/bin/bash -it --rm taskclusterprivate/peach:latest
+```
 
 
 ## Example setup for Framboise
@@ -143,4 +148,3 @@ metadata:
 * https://github.com/wsargent/docker-cheat-sheet
 
 * https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker
-
