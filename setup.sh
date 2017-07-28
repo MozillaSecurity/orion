@@ -4,6 +4,7 @@
 ./recipes/afl.sh
 ./recipes/fuzzfetch.sh
 ./recipes/fuzzmanager.sh
+./recipes/honggfuzz.sh
 
 apt-get clean -y \
 && apt-get autoclean -y \
