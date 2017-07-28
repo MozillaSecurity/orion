@@ -2,7 +2,7 @@
 
 ### Contents
 * OS: Ubuntu zesty
-* Pre-installed: AFL, FuzzManager, FuzzFetch
+* Pre-installed: AFL, Honggfuzz, FuzzManager, FuzzFetch
 
 
 ### Build
