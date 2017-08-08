@@ -1,9 +1,12 @@
-# FuzzOS
+![Logo](https://github.com/posidron/posidron.github.io/raw/master/static/images/fuzzos.png)
+
 
 ### Contents
 * OS: Ubuntu zesty
 * Pre-installed: AFL, Honggfuzz, FuzzManager, FuzzFetch
 
+
+[![Current Release](assets/overview.png)](assets/overview.png)
 
 ### Build
 ```bash
@@ -20,6 +23,7 @@ docker run -e ENV_NAME=value -it --rm taskclusterprivate/fuzzos:latest bash -li
 ```bash
 docker login --username=XYZ
 docker push taskclusterprivate/fuzzos:latest
+docker push taskclusterprivate/fuzzos:v1
 ```
 
 ### Overview
@@ -40,66 +44,11 @@ docker run -u 0 --entrypoint=/bin/bash -it --rm taskclusterprivate/fuzzos:latest
 ```
 
 
-## Example setup for Framboise
-
-### .dockerignore
-```
-*.md
-public
-tests
-.git
-Dockerfile
-.DS_Store
-.dockerignore
-```
-
-### Xvfb wrapper
-```bash
-#!/bin/bash -ex
-cd $HOME
-
-fuzzfetch -o $HOME -n firefox -a --fuzzing
-
-cd framboise
-xvfb-run -s '-screen 0 1024x768x24' $@ &
-sleep ${FUZZER_MAX_RUNTIME:-600}; kill $(ps -s $$ -o pid=)
-```
-
-### Dockerfile
-```bash
-FROM taskclusterprivate/fuzzos:latest
-
-LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
-
-COPY . framboise
-
-USER root
-RUN \
-  apt-get update -q \
-  && apt-get install -y -q --no-install-recommends --no-install-suggests \
-    firefox \
-  && apt-get clean -y \
-  && apt-get autoclean -y \
-  && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/ \
-  && rm -rf /root/.cache/* \
-  && cd framboise && python3 setup.py \
-  && chown -R worker:worker /home/worker
-
-USER worker
-ENTRYPOINT ["framboise/xvfb.sh"]
-#CMD ["/bin/bash", "--login"]
-```
-
-
-### Build and push fuzzing image to private Hub
-```bash
-docker build --squash -t posidron/framboise:latest -t taskclusterprivate/framboise:v1 .
-docker push taskclusterprivate/framboise:v1
-```
-
 
 ### TaskCluster: TaskCreator
+
+This is an example task configuration which shows how Framboise runs at TaskCluster.
+
 ```json
 provisionerId: aws-provisioner-v1
 workerType: fuzzer
@@ -136,7 +85,6 @@ metadata:
 
 
 ### References
-* https://hub.docker.com/u/posidron/
 * https://hub.docker.com/u/taskclusterprivate/
 * https://mozillians.org/en-US/group/sec-fuzzing/
 * https://tools.taskcluster.net/auth/roles/#mozillians-group:sec-fuzzing
@@ -146,5 +94,4 @@ metadata:
 * https://docs.docker.com/engine/reference/builder/
 * https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker/
 * https://github.com/wsargent/docker-cheat-sheet
-
 * https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker
