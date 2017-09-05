@@ -1,5 +1,6 @@
 #!/bin/bash -ex
 
+./recipes/fuzzos.sh
 ./recipes/llvm.sh
 ./recipes/afl.sh
 ./recipes/fuzzfetch.sh

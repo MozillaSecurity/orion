@@ -3,8 +3,8 @@
 #### LLVM
 
 curl http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository "deb http://apt.llvm.org/zesty/ llvm-toolchain-zesty main"
 apt-add-repository "deb http://apt.llvm.org/zesty/ llvm-toolchain-zesty-4.0 main"
+apt-add-repository "deb http://apt.llvm.org/zesty/ llvm-toolchain-zesty-5.0 main"
 
 apt-get update
 
