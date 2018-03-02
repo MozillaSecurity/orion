@@ -1,12 +1,14 @@
-FROM ubuntu:zesty
+FROM ubuntu:artful
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
 RUN useradd -d /home/worker -s /bin/bash -m worker
 WORKDIR /home/worker
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN \
   apt-get update -q \
+  && apt-get dist-upgrade -y \
   && apt-get install -y -q --no-install-recommends --no-install-suggests \
     apt-utils \
     bzip2 \
