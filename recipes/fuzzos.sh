@@ -9,6 +9,10 @@ cat << EOF | tee /etc/pip.conf > /dev/null
 [global]
 disable-pip-version-check = true
 no-cache-dir = false
+
+[install]
+ignore-installed = true
+upgrade-strategy = only-if-needed
 EOF
 
 # Ensure the machine uses core dumps with PID in the filename
