@@ -7,6 +7,7 @@
 ./recipes/fuzzmanager.sh
 ./recipes/honggfuzz.sh
 ./recipes/mdsw.sh
+./recipes/rr.sh
 
 apt-get clean -y \
 && apt-get autoclean -y \
