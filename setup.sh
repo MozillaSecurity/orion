@@ -9,9 +9,3 @@
 ./recipes/mdsw.sh
 ./recipes/rr.sh
 ./recipes/credstash.sh
-
-apt-get clean -y \
-&& apt-get autoclean -y \
-&& apt-get autoremove -y \
-&& rm -rf /var/lib/apt/lists/ \
-&& rm -rf /root/.cache/*
