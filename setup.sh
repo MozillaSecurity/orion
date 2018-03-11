@@ -8,6 +8,7 @@
 ./recipes/honggfuzz.sh
 ./recipes/mdsw.sh
 ./recipes/rr.sh
+./recipes/credstash.sh
 
 apt-get clean -y \
 && apt-get autoclean -y \
