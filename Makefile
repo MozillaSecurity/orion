@@ -26,8 +26,8 @@ clean: ## Clean local images and containers of FuzzOS.
 debug: ## Run FuzzOS container with root privileges.
 	docker run -u 0 --entrypoint=/bin/bash -it --rm $(LATEST)
 
-login:
-	docker log -u $(DOCKER_USER) -p $(DOCKER_PASS)
+login: ## Login to Docker Hub
+	docker login --username=$(DOCKER_USER)
 
 help: ## Show this help message.
 	@echo 'Usage: make [command] ...'
