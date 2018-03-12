@@ -1,0 +1,4 @@
+git+https://github.com/MozillaSecurity/ffpuppet.git
+git+ssh://git@loki/MozillaSecurity/loki.git
+git+ssh://git@sapphire/MozillaSecurity/sapphire.git
+git+https://github.com/MozillaSecurity/avalanche.git

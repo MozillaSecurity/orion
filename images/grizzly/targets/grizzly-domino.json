@@ -1,0 +1,8 @@
+{
+"--central --asan --fuzzing" : 30,
+"--inbound --asan --fuzzing" : 5,
+"--esr --asan": 1,
+"--central --debug --fuzzing" : 5,
+"--inbound --debug --fuzzing" : 5,
+"--esr --debug" : 1
+}
