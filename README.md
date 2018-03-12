@@ -3,28 +3,29 @@
 </p>
 
 <p align="center">
-Base builder image for Docker fuzzing containers or running at Mozilla TaskCluster and Amazon EC2.
+Base builder image for Docker fuzzing containers for running at Mozilla TaskCluster and Amazon EC2.
 </p>
 
 <p align="center">
-<a href="https://travis-ci.org/MozillaSecurity/fuzzos"><img src="https://api.travis-ci.org/MozillaSecurity/fuzzos.svg?branch=master" alt="Build Status"></a>
-<a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
+  <a href="https://travis-ci.org/MozillaSecurity/fuzzos"><img src="https://api.travis-ci.org/MozillaSecurity/fuzzos.svg?branch=master" alt="Build Status"></a>
+  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/automated/taskclusterprivate/fuzzos.svg" alt="Docker Automation Status"></a>
+  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/build/taskclusterprivate/fuzzos.svg" alt="Docker Build Status"></a>
+  <a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
 </p>
 
 
-> For spawning a cluster of Docker containers at EC2, see the parent project Laniakea.
+> For spawning a cluster of Docker containers at EC2, see the parent project <a href="https://github.com/MozillaSecurity/laniakea/">Laniakea</a>.
 
 
 <h2>Table of Contents</h2>
 
-* [OS](#Packages)
+* [OS](#OS)
 * [Packages](#Packages)
 * [Architecture](#Architecture)
 * [Instructions](#BuildInstructions)
   * [Usage](#Usage)
   * [Login](#Login)
 * [TaskCluster: TaskCreator Example](#TaskClusterTaskCreator)
-
 
 
 <a name="OS"><h2>OS</h2></a>
@@ -51,7 +52,7 @@ OS: Ubuntu Artful
 
 <a name="BuildInstructions"><h2>Build Instructions</h2></a>
 
-> The Makefile is intended for developing purposes only. FuzzOS is built automatically after each commit to this repository.
+> The Makefile is intended for developing purposes only. FuzzOS is built automatically after each push to this repository.
 
 <a name="Usage"><h3>Usage</h3></a>
 
@@ -104,16 +105,3 @@ metadata:
   owner: cdiehl@mozilla.com
   source: 'https://tools.taskcluster.net/task-creator/'
 ```
-
-
-### References
-* https://hub.docker.com/u/taskclusterprivate/
-* https://mozillians.org/en-US/group/sec-fuzzing/
-* https://tools.taskcluster.net/auth/roles/#mozillians-group:sec-fuzzing
-* https://tools.taskcluster.net/task-creator/
-* https://tools.taskcluster.net/aws-provisioner/#fuzzer/view
-* https://docs.taskcluster.net/
-* https://docs.docker.com/engine/reference/builder/
-* https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker/
-* https://github.com/wsargent/docker-cheat-sheet
-* https://dxr.mozilla.org/mozilla-central/source/taskcluster/docker
