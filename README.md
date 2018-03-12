@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-FuzzOS is the base builder image for Docker fuzzing containers running at Mozilla TaskCluster and Amazon EC2.
+Base builder image for Docker fuzzing containers or running at Mozilla TaskCluster and Amazon EC2.
 </p>
 
 <p align="center">
@@ -16,29 +16,22 @@ FuzzOS is the base builder image for Docker fuzzing containers running at Mozill
 
 
 <h2>Table of Contents</h2>
-<hr>
 
 * [OS](#Packages)
 * [Packages](#Packages)
 * [Architecture](#Architecture)
 * [Instructions](#BuildInstructions)
-  * [Login](#)
-  * [Build](#)
-  * [Run](#)
-  * [Push](#)
-  * [Overview](#)
-  * [Destroy](#)
+  * [Usage](#Usage)
+  * [Login](#Login)
 * [TaskCluster: TaskCreator Example](#TaskClusterTaskCreator)
 
 
 
 <a name="OS"><h2>OS</h2></a>
-<hr>
 
 OS: Ubuntu Artful
 
-<a name="Packages"><h2>Packages</h2></a>
-<hr>
+<a name="Packages"><h2>Pre-Installed Packages</h2></a>
 
 * credstash
 * fuzzfetch
@@ -49,9 +42,7 @@ OS: Ubuntu Artful
 * minidump
 * rr
 
-
 <a name="Architecture"><h2>Architecture</h2></a>
-<hr>
 
 <p align="center">
   <a href="assets/overview.png"><img src="assets/overview.png"></a>
@@ -59,55 +50,26 @@ OS: Ubuntu Artful
 
 
 <a name="BuildInstructions"><h2>Build Instructions</h2></a>
-<hr>
 
+> The Makefile is intended for developing purposes only. FuzzOS is built automatically after each commit to this repository.
+
+<a name="Usage"><h3>Usage</h3></a>
+
+```bash
+make help
+```
 
 <a name="Login"><h3>Login</h3></a>
 
-
 ```bash
-docker login --username=XYZ
-```
-
-### Build
-```bash
-docker build --squash -t taskclusterprivate/fuzzos:latest -t taskclusterprivate/fuzzos:v1 .
-```
-
-### Run
-```bash
-docker run -it --rm taskclusterprivate/fuzzos:latest bash -li
-docker run -e ENV_NAME=value -it --rm taskclusterprivate/fuzzos:latest bash -li
-```
-
-### Push
-```bash
-docker push taskclusterprivate/fuzzos:latest
-docker push taskclusterprivate/fuzzos:v1
-```
-
-### Overview
-```bash
-docker images
-docker ps
-```
-
-### Destroy
-```bash
-docker rmi -f $(docker images -a -q) &&  docker rm -f $(docker ps -a -q)
-```
-
-### Debug
-Overwrite the ENTRYPOINT command to use /bin/bash with a UID of 0 (root).
-```bash
-docker run -u 0 --entrypoint=/bin/bash -it --rm taskclusterprivate/fuzzos:latest
+DOCKER_USER=ABC make login
 ```
 
 
 
-### TaskCluster: TaskCreator
+<a name="TaskClusterTaskCreator"><h2>TaskCluster: TaskCreator Example</h2></a>
 
-This is an example task configuration which shows how Framboise runs at TaskCluster.
+This is an example task configuration which shows how Framboise would run at TaskCluster.
 
 ```json
 provisionerId: aws-provisioner-v1
