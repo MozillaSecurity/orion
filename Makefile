@@ -16,6 +16,7 @@ run: ## Run FuzzOS container.
 	docker run -it --rm $(LATEST) bash -li
 
 push: ## Push built image to repository.
+	docker push $(IMG)
 	docker push $(NAME)
 
 clean: ## Clean local images and containers of FuzzOS.
