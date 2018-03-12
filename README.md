@@ -1,12 +1,73 @@
-![Logo](https://github.com/posidron/posidron.github.io/raw/master/static/images/fuzzos.png)
+<p align="center">
+  <img src="https://github.com/posidron/posidron.github.io/raw/master/static/images/fuzzos.png" alt="Logo" />
+</p>
+
+<p align="center">
+FuzzOS is the base builder image for Docker fuzzing containers running at Mozilla TaskCluster and Amazon EC2.
+</p>
+
+<p align="center">
+<a href="https://travis-ci.org/MozillaSecurity/fuzzos"><img src="https://api.travis-ci.org/MozillaSecurity/fuzzos.svg?branch=master" alt="Build Status"></a>
+<a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
+</p>
 
 
-### Contents
-* OS: Ubuntu zesty
-* Pre-installed: AFL, Honggfuzz, FuzzManager, FuzzFetch
+> For spawning a cluster of Docker containers at EC2, see the parent project Laniakea.
 
 
-[![Current Release](assets/overview.png)](assets/overview.png)
+<h2>Table of Contents</h2>
+<hr>
+
+* [OS](#Packages)
+* [Packages](#Packages)
+* [Architecture](#Architecture)
+* [Instructions](#BuildInstructions)
+  * [Login](#)
+  * [Build](#)
+  * [Run](#)
+  * [Push](#)
+  * [Overview](#)
+  * [Destroy](#)
+* [TaskCluster: TaskCreator Example](#TaskClusterTaskCreator)
+
+
+
+<a name="OS"><h2>OS</h2></a>
+<hr>
+
+OS: Ubuntu Artful
+
+<a name="Packages"><h2>Packages</h2></a>
+<hr>
+
+* credstash
+* fuzzfetch
+* fuzzmanager
+* afl
+* honggfuzz
+* llvm
+* minidump
+* rr
+
+
+<a name="Architecture"><h2>Architecture</h2></a>
+<hr>
+
+<p align="center">
+  <a href="assets/overview.png"><img src="assets/overview.png"></a>
+</p>
+
+
+<a name="BuildInstructions"><h2>Build Instructions</h2></a>
+<hr>
+
+
+<a name="Login"><h3>Login</h3></a>
+
+
+```bash
+docker login --username=XYZ
+```
 
 ### Build
 ```bash
@@ -21,7 +82,6 @@ docker run -e ENV_NAME=value -it --rm taskclusterprivate/fuzzos:latest bash -li
 
 ### Push
 ```bash
-docker login --username=XYZ
 docker push taskclusterprivate/fuzzos:latest
 docker push taskclusterprivate/fuzzos:v1
 ```
