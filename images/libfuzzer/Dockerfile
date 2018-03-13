@@ -1,4 +1,4 @@
-FROM taskclusterprivate/fuzzos:latest
+FROM mozillasecurity/fuzzos:latest
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 

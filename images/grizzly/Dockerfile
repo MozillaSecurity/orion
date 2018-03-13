@@ -1,4 +1,4 @@
-FROM taskclusterprivate/fuzzos:latest
+FROM mozillasecurity/fuzzos:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
