@@ -8,8 +8,7 @@ Base builder image for Docker fuzzing containers for running at Mozilla TaskClus
 
 <p align="center">
   <a href="https://travis-ci.org/MozillaSecurity/fuzzos"><img src="https://api.travis-ci.org/MozillaSecurity/fuzzos.svg?branch=master" alt="Build Status"></a>
-  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/automated/taskclusterprivate/fuzzos.svg" alt="Docker Automation Status"></a>
-  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/build/taskclusterprivate/fuzzos.svg" alt="Docker Build Status"></a>
+  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/build/mozillasecurity/fuzzos.svg" alt="Docker Build Status"></a>
   <a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
 </p>
 
