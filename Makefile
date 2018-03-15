@@ -7,7 +7,7 @@ TAG = $$(git rev-parse --short HEAD)
 IMG = $(NAME):$(TAG)
 LATEST = $(NAME):latest
 
-.PHONY: build push clean login help
+.PHONY: build run push clean debug login ling_scripts lint_dockers lint help
 
 build: ## Build FuzzOS image.
 	docker build --no-cache --squash --compress -t $(IMG) -t $(LATEST) .
@@ -28,6 +28,20 @@ debug: ## Run FuzzOS container with root privileges.
 
 login: ## Login to Docker Hub
 	docker login --username=$(DOCKER_USER)
+
+lint_scripts: ## Lint shellscripts
+# Be compatible to MacOS where bash by default is v3.2 and does not support '**/*'
+	find . -type f \( -iname "*.bash" -o -iname "*.sh" \) | xargs shellcheck -x -a
+
+lint_dockers: ## Lint Dockerfiles
+	find . -type f -name "Dockerfile" | xargs hadolint \
+		--ignore DL3007 \
+		--ignore DL3002 \
+		--ignore DL3008 \
+		--ignore DL3013 \
+		--ignore DL3003
+
+lint: lint_scripts lint_dockers
 
 help: ## Show this help message.
 	@echo 'Usage: make [command] ...'

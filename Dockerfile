@@ -10,8 +10,8 @@ COPY setup.sh /tmp
 COPY recipes /tmp/recipes
 
 RUN \
-  apt-get update -q \
-  && apt-get install -y -q --no-install-recommends --no-install-suggests \
+  apt-get update -qq \
+  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
     apt-utils \
     bzip2 \
     curl \
@@ -33,12 +33,12 @@ RUN \
      CC=clang CXX=clang++ ./setup.sh \
   && rm -rf /tmp/* \
   && rm -rf /usr/share/man/ /usr/share/info/ \
-  && find /usr/share/doc -depth -type f ! -name copyright | xargs rm || true \
-  && find /usr/share/doc -empty | xargs rmdir || true \
+  && find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true \
+  && find /usr/share/doc -empty -exec rmdir {} + || true \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/ \
+  && rm -rf /var/lib/apt/lists/* \
   && rm -rf /root/.cache/*
 
 ENV USER      worker

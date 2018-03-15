@@ -32,7 +32,6 @@ RUN \
     ubuntu-restricted-addons \
     unzip \
     virtualenv \
-    wget \
     xvfb \
     zip \
   && apt-get install -q -y --no-install-recommends \
@@ -48,7 +47,7 @@ RUN \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/ \
+  && rm -rf /var/lib/apt/lists/* \
   && rm -rf /root/.cache/* \
   && pip install \
     psutil \

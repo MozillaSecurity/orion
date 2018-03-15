@@ -2,5 +2,5 @@
 
 #### FuzzFetch
 
-cd $HOME
+cd "$HOME"
 pip install git+https://github.com/mozillasecurity/fuzzfetch

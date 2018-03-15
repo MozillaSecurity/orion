@@ -6,9 +6,8 @@ COPY setup.sh .
 
 USER root
 RUN \
-  apt-get update -q \
-  && apt-get install -y -q --no-install-recommends --no-install-suggests \
-    wget \
+  apt-get update -qq \
+  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
     unzip \
     subversion \
     gcc \
@@ -17,7 +16,7 @@ RUN \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/ \
+  && rm -rf /var/lib/apt/lists/* \
   && rm -rf /root/.cache/* \
   && chown -R worker:worker /home/worker
 

@@ -6,17 +6,16 @@ COPY setup.sh .
 
 USER root
 RUN \
-  apt-get update -q \
-  && apt-get install -y -q --no-install-recommends --no-install-suggests \
+  apt-get update -qq \
+  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
     firefox \
     libpulse0 \
-    wget \
     unzip \
     subversion \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/ \
+  && rm -rf /var/lib/apt/lists/* \
   && rm -rf /root/.cache/* \
   && chown -R worker:worker /home/worker
 

@@ -6,9 +6,9 @@ curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 apt-add-repository "deb https://apt.llvm.org/artful/ llvm-toolchain-artful-4.0 main"
 apt-add-repository "deb https://apt.llvm.org/artful/ llvm-toolchain-artful-5.0 main"
 
-apt-get update
+apt-get update -qq
 
-apt-get install -y -q --no-install-recommends --no-install-suggests \
+apt-get install -y -qq --no-install-recommends --no-install-suggests \
   clang-4.0 \
   lld-4.0 \
   lldb-4.0 \

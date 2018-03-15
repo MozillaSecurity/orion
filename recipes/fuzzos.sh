@@ -2,7 +2,7 @@
 
 #### Base System Configuration
 
-cd $HOME
+cd "$HOME"
 
 # Quiet pip
 cat << EOF | tee /etc/pip.conf > /dev/null

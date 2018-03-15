@@ -2,9 +2,9 @@
 
 #### Honggfuzz
 
-cd $HOME
+cd "$HOME"
 
-apt-get install -y -q --no-install-recommends --no-install-suggests \
+apt-get install -y -qq --no-install-recommends --no-install-suggests \
   libunwind-dev \
   binutils-dev \
   libblocksruntime-dev

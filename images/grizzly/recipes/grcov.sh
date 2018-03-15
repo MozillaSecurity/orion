@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-cd $HOME
+cd "$HOME"
 git clone -v --depth 1 https://github.com/marco-c/grcov.git
 
 cd grcov

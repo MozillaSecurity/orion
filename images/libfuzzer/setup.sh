@@ -1,5 +1,5 @@
 #!/bin/bash -ex
-cd $HOME
+cd "$HOME"
 
 # Get fuzzmanager configuration from credstash
 credstash get fuzzmanagerconf > .fuzzmanagerconf
@@ -11,7 +11,7 @@ sigdir = $HOME/signatures
 EOF
 
 # FuzzFetch
-fuzzfetch -o $HOME -n firefox -a --fuzzing --tests gtest
+fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
 
 # Firefox with ASan-/Coverage/LibFuzzer
 cd firefox
@@ -20,16 +20,16 @@ cd firefox
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 
 # Corpora
-if [[ -n "${CORPORA}" ]]
+if [ -z "${CORPORA}" ]
 then
-  svn export --force ${FUZZDATA_URL}/${CORPORA} ../corpora/
+  svn export --force "${FUZZDATA_URL}/${CORPORA}" ../corpora/
   CORPORA="../corpora/"
 fi
 
 # Tokens
-if [[ -n "${TOKENS}" ]]
+if [ -z "${TOKENS}" ]
 then
-  svn export --force ${FUZZDATA_URL}/${TOKENS} ../tokens.dict
+  svn export --force "${FUZZDATA_URL}/${TOKENS}" ../tokens.dict
   TOKENS="-dict=../tokens.dict"
 fi
 
@@ -45,16 +45,16 @@ strict_init_order=true:\
 check_initialization_order=true:\
 allocator_may_return_null=true:\
 ${ASAN}
-export LIBFUZZER=${LIBFUZZER:-SdpParser}
-export LIBFUZZER_ARGS="-print_pcs=1 ${TOKENS} ${LIBFUZZER_ARGS}"
+export LIBFUZZER="${LIBFUZZER:-SdpParser}"
+export LIBFUZZER_ARGS=("-print_pcs=1" "${TOKENS}" "${LIBFUZZER_ARGS}")
 export MOZ_RUN_GTEST=1
 
 xvfb-run -s '-screen 0 1024x768x24' \
     ../fuzzmanager/misc/libfuzzer/libfuzzer.py \
         --sigdir ../signatures \
-        --tool LibFuzzer-${LIBFUZZER} \
-        --env ${ASAN_OPTIONS//:/ } \
-        --cmd ./firefox ${LIBFUZZER_ARGS} ${CORPORA}
+        --tool "LibFuzzer-${LIBFUZZER}" \
+        --env "${ASAN_OPTIONS//:/ }" \
+        --cmd ./firefox "${LIBFUZZER_ARGS[@]}" "${CORPORA}"
 
 # Minimize Crash
 #   xvfb-run -s '-screen 0 1024x768x24' ./firefox -minimize_crash=1 -max_total_time=60 crash-<hash>

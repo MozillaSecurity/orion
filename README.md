@@ -24,6 +24,7 @@ Base builder image for Docker fuzzing containers for running at Mozilla TaskClus
 * [Instructions](#BuildInstructions)
   * [Usage](#Usage)
   * [Login](#Login)
+  * [Testing](#Testing)
 * [TaskCluster: TaskCreator Example](#TaskClusterTaskCreator)
 
 
@@ -65,6 +66,11 @@ make help
 DOCKER_USER=ABC make login
 ```
 
+<a name="Testing"><h3>Testing</h3></a>
+
+```bash
+make -k lint
+```
 
 
 <a name="TaskClusterTaskCreator"><h2>TaskCluster: TaskCreator Example</h2></a>
