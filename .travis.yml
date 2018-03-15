@@ -1,0 +1,11 @@
+language: bash
+sudo: true
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y shellcheck
+env:
+  HADOLINT: "${HOME}/hadolint"
+install:
+  - curl -sL -o ${HADOLINT} "https://github.com/hadolint/hadolint/releases/download/v1.5.0/hadolint-$(uname -s)-$(uname -m)" && chmod u+x ${HADOLINT}
+script:
+  make -k lint
