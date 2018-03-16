@@ -17,16 +17,16 @@ fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 
 # LibFuzzer Corpora
-if [ -n "${CORPORA}" ]
+if [ -n "$CORPORA" ]
 then
-  svn export --force "${FUZZDATA_URL}/${CORPORA}" ./corpora/
+  svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
   CORPORA="./corpora/"
 fi
 
 # LibFuzzer Dictionary Tokens
-if [ -n "${TOKENS}" ]
+if [ -n "$TOKENS" ]
 then
-  svn export --force "${FUZZDATA_URL}/${TOKENS}" ./tokens.dict
+  svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
   TOKENS="-dict=./tokens.dict"
 fi
 
@@ -42,7 +42,7 @@ strict_init_order=true:\
 check_initialization_order=true:\
 allocator_may_return_null=true:\
 start_deactivated=true:\
-${ASAN}
+$ASAN
 
 # Run reporter for EC2
 tee run-ec2report.sh << EOF
@@ -56,14 +56,15 @@ chmod u+x run-ec2report.sh
 export FUZZER="${FUZZER:-SdpParser}"
 export LIBFUZZER=1
 export MOZ_RUN_GTEST=1
-LIBFUZZER_ARGS=("-print_pcs=1" "-handle_segv=0" "-handle_bus=0" "-handle_abrt=0" ${LIBFUZZER_ARGS} ${TOKENS} ${CORPORA})
+# shellcheck disable=SC2206
+LIBFUZZER_ARGS=("-print_pcs=1" "-handle_segv=0" "-handle_bus=0" "-handle_abrt=0" $LIBFUZZER_ARGS $TOKEN $CORPORA)
 
 # Run LibFuzzer
 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py \
   --fuzzmanager \
   --libfuzzer \
   --sigdir ./signatures \
-  --tool "LibFuzzer-${FUZZER}" \
+  --tool "LibFuzzer-$FUZZER" \
   --env "ASAN_OPTIONS=${ASAN_OPTIONS//:/ }" \
   --cmd ./firefox/firefox "${LIBFUZZER_ARGS[@]}"
 
