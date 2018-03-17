@@ -264,7 +264,6 @@ sleep 5
 screen -S grizzly -X screen ~/config/report_stats.sh
 for i in $(seq 1 $INSTANCES)
 do
-SC2166
   # shellcheck disable=SC2086
   if [ $i -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
   # shellcheck disable=SC2086
