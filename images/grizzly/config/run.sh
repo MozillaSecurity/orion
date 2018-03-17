@@ -110,7 +110,7 @@ then
   )
 fi
 
-# Checkout domino
+# Checkout ogopogo
 if [ "$CORPMAN" = "ogopogo" ]
 then
   retry git clone -v --depth 1 git@fuzzidl:MozillaSecurity/fuzzIDL.git
@@ -119,7 +119,7 @@ then
    npm run build
   )
   retry pip3 install -U git+https://github.com/MozillaSecurity/avalanche.git
-  retry pip3 install -U git+ssh://git@fuzzidl:jschwartzentruber/ogopogo.git
+  retry pip3 install -U git+ssh://git@ogopogo/jschwartzentruber/ogopogo.git
   export INPUT=~/fuzzIDL/fuzzDB.json
   export GRAMMAR_PATH=~/grizzly-private/grammars/
 fi
