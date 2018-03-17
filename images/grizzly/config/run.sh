@@ -178,7 +178,7 @@ then
   # pull down the source tree for grcov
   hg clone https://hg.mozilla.org/mozilla-central
 
-  REVISION=$(grep -Po "(?<=SourceStamp\\=).*" ~/firefox/platform.ini)
+  REVISION="$(grep -Po "(?<=SourceStamp\\=).*" ~/firefox/platform.ini)"
   export REVISION
 
   ( cd mozilla-central
@@ -192,7 +192,8 @@ fi
 
 # Give other macros defaults if needed
 i=$(echo "$FUZZPRIV" | tr '[:upper:]' '[:lower:]')
-if [ ! -z "$FUZZPRIV" ] && \( [ "$i" = "1" ] || [ "$i" = "t" ] || [ "$i" = "true" ] || [ "$i" = "y" ] || [ "$i" = "yes" ] || [ "$i" = "on" ] \)
+# shellcheck disable=SC2166
+if [ ! -z "$FUZZPRIV" -a \( "$i" = "1" -o "$i" = "t" -o "$i" = "true" -o "$i" = "y" -o "$i" = "yes" -o "$i" = "on" \) ]
 then
   retry git clone -v --branch legacy --depth 1 https://github.com/MozillaSecurity/fuzzpriv.git # for fuzzPriv extension
   FUZZPRIV=--extension=../fuzzpriv
@@ -202,7 +203,8 @@ else
 fi
 
 # 20% of the time enable accessibility
-if [ ! -z "$A11Y_SOMETIMES" ] && [ $((RANDOM % 5)) -eq 0 ]
+# shellcheck disable=SC2166
+if [ ! -z "$A11Y_SOMETIMES" -a $((RANDOM % 5)) -eq 0 ]
 then
   export GNOME_ACCESSIBILITY=1
 fi
@@ -262,8 +264,11 @@ sleep 5
 screen -S grizzly -X screen ~/config/report_stats.sh
 for i in $(seq 1 $INSTANCES)
 do
-  if [ "$i" -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
-  screen -S grizzly -X screen "$RUNNER" python grizzly.py ../firefox/firefox "$INPUT" "$CORPMAN" "$ACCEPTED_EXTENSIONS" "$CACHE" "$LAUNCH_TIMEOUT" "$MEM_LIMIT" "$PREFS" "$RELAUNCH" "$TIMEOUT" "$IGNORE" "$FUZZPRIV" "$GCOV_ITERATIONS" --fuzzmanager --xvfb
+SC2166
+  # shellcheck disable=SC2086
+  if [ $i -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
+  # shellcheck disable=SC2086
+  screen -S grizzly -X screen $RUNNER python grizzly.py ../firefox/firefox $INPUT $CORPMAN $ACCEPTED_EXTENSIONS $CACHE $LAUNCH_TIMEOUT $MEM_LIMIT $PREFS $RELAUNCH $TIMEOUT $IGNORE $FUZZPRIV $GCOV_ITERATIONS --fuzzmanager --xvfb
 done
 
 # need to keep the container running
