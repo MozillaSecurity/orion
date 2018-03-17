@@ -29,6 +29,7 @@ credstash get deploy-loki.pem > .ssh/id_ecdsa.loki
 credstash get deploy-sapphire.pem > .ssh/id_ecdsa.sapphire
 credstash get deploy-domino.pem > .ssh/id_ecdsa.domino
 credstash get deploy-fuzzidl.pem > .ssh/id_ecdsa.fuzzidl
+credstash get deploy-ogopogo.pem > .ssh/id_ecdsa.ogopogo
 chmod 0600 .ssh/id_*
 
 # Setup Additional Key Identities
@@ -63,6 +64,11 @@ Host fuzzidl
 HostName github.com
 IdentitiesOnly yes
 IdentityFile ~/.ssh/id_ecdsa.fuzzidl
+
+Host ogopogo
+HostName github.com
+IdentitiesOnly yes
+IdentityFile ~/.ssh/id_ecdsa.ogopogo
 EOF
 
 # Checkout fuzzer including framework, install everything
@@ -103,6 +109,21 @@ then
    npm run build
   )
 fi
+
+# Checkout domino
+if [ "$CORPMAN" = "ogopogo" ]
+then
+  retry git clone -v --depth 1 git@fuzzidl:MozillaSecurity/fuzzIDL.git
+  (cd fuzzIDL
+   npm install -ddd
+   npm run build
+  )
+  retry pip3 install -U git+https://github.com/MozillaSecurity/avalanche.git
+  retry pip3 install -U git+ssh://git@fuzzidl:jschwartzentruber/ogopogo.git
+  export INPUT=~/fuzzIDL/fuzzDB.json
+  export GRAMMAR_PATH=~/grizzly-private/grammars/
+fi
+
 
 # Download Audio corpus
 if [ "$CORPMAN" = "audio" ]
@@ -164,7 +185,8 @@ then
     hg update -r "$REVISION"
   )
 else
-  retry fuzzfetch -n firefox "$TARGET"
+  # shellcheck disable=SC2086
+  retry fuzzfetch -n firefox $TARGET
   chmod 0755 firefox
 fi
 
