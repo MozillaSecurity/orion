@@ -10,11 +10,17 @@ function retry {
 # Get fuzzmanager configuration from credstash
 credstash get fuzzmanagerconf > .fuzzmanagerconf
 
+# Set default toolname
+if [ -z "$TOOLNAME" ]
+then
+  TOOLNAME="grizzly-$CORPMAN"
+fi
+
 # Update fuzzmanager config for this instance
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
-tool = grizzly-$TOOLNAME
+tool = $TOOLNAME
 clientid = $(curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname)
 EOF
 
