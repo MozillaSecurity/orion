@@ -2,8 +2,6 @@ FROM mozillasecurity/fuzzos:latest
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
-COPY setup.sh .
-
 USER root
 RUN \
   apt-get update -qq \
@@ -18,5 +16,7 @@ RUN \
   && rm -rf /var/lib/apt/lists/* \
   && rm -rf /root/.cache/* \
   && chown -R worker:worker /home/worker
+
+COPY setup.sh .
 
 ENTRYPOINT ["./setup.sh"]
