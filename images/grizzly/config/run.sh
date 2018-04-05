@@ -10,11 +10,17 @@ function retry {
 # Get fuzzmanager configuration from credstash
 credstash get fuzzmanagerconf > .fuzzmanagerconf
 
+# Set default toolname
+if [ -z "$TOOLNAME" ]
+then
+  TOOLNAME="grizzly-$CORPMAN"
+fi
+
 # Update fuzzmanager config for this instance
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
-tool = grizzly-$TOOLNAME
+tool = $TOOLNAME
 clientid = $(curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname)
 EOF
 
@@ -29,6 +35,7 @@ credstash get deploy-loki.pem > .ssh/id_ecdsa.loki
 credstash get deploy-sapphire.pem > .ssh/id_ecdsa.sapphire
 credstash get deploy-domino.pem > .ssh/id_ecdsa.domino
 credstash get deploy-fuzzidl.pem > .ssh/id_ecdsa.fuzzidl
+credstash get deploy-ogopogo.pem > .ssh/id_ecdsa.ogopogo
 chmod 0600 .ssh/id_*
 
 # Setup Additional Key Identities
@@ -63,6 +70,11 @@ Host fuzzidl
 HostName github.com
 IdentitiesOnly yes
 IdentityFile ~/.ssh/id_ecdsa.fuzzidl
+
+Host ogopogo
+HostName github.com
+IdentitiesOnly yes
+IdentityFile ~/.ssh/id_ecdsa.ogopogo
 EOF
 
 # Checkout fuzzer including framework, install everything
@@ -103,6 +115,21 @@ then
    npm run build
   )
 fi
+
+# Checkout ogopogo
+if [ "$CORPMAN" = "ogopogo" ]
+then
+  retry git clone -v --depth 1 git@fuzzidl:MozillaSecurity/fuzzIDL.git
+  (cd fuzzIDL
+   npm install -ddd
+   npm run build
+  )
+  retry pip3 install -U git+https://github.com/MozillaSecurity/avalanche.git
+  retry pip3 install -U git+ssh://git@ogopogo/jschwartzentruber/ogopogo.git
+  export INPUT=~/fuzzIDL/fuzzDB.json
+  export GRAMMAR_PATH=~/grizzly-private/grammars/
+fi
+
 
 # Download Audio corpus
 if [ "$CORPMAN" = "audio" ]
@@ -157,20 +184,22 @@ then
   # pull down the source tree for grcov
   hg clone https://hg.mozilla.org/mozilla-central
 
-  REVISION=$(grep -Po "(?<=SourceStamp\\=).*" ~/firefox/platform.ini)
+  REVISION="$(grep -Po "(?<=SourceStamp\\=).*" ~/firefox/platform.ini)"
   export REVISION
 
   ( cd mozilla-central
     hg update -r "$REVISION"
   )
 else
-  retry fuzzfetch -n firefox "$TARGET"
+  # shellcheck disable=SC2086
+  retry fuzzfetch -n firefox $TARGET
   chmod 0755 firefox
 fi
 
 # Give other macros defaults if needed
 i=$(echo "$FUZZPRIV" | tr '[:upper:]' '[:lower:]')
-if [ ! -z "$FUZZPRIV" ] && \( [ "$i" = "1" ] || [ "$i" = "t" ] || [ "$i" = "true" ] || [ "$i" = "y" ] || [ "$i" = "yes" ] || [ "$i" = "on" ] \)
+# shellcheck disable=SC2166
+if [ ! -z "$FUZZPRIV" -a \( "$i" = "1" -o "$i" = "t" -o "$i" = "true" -o "$i" = "y" -o "$i" = "yes" -o "$i" = "on" \) ]
 then
   retry git clone -v --branch legacy --depth 1 https://github.com/MozillaSecurity/fuzzpriv.git # for fuzzPriv extension
   FUZZPRIV=--extension=../fuzzpriv
@@ -180,7 +209,8 @@ else
 fi
 
 # 20% of the time enable accessibility
-if [ ! -z "$A11Y_SOMETIMES" ] && [ $((RANDOM % 5)) -eq 0 ]
+# shellcheck disable=SC2166
+if [ ! -z "$A11Y_SOMETIMES" -a $((RANDOM % 5)) -eq 0 ]
 then
   export GNOME_ACCESSIBILITY=1
 fi
@@ -240,8 +270,10 @@ sleep 5
 screen -S grizzly -X screen ~/config/report_stats.sh
 for i in $(seq 1 $INSTANCES)
 do
-  if [ "$i" -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
-  screen -S grizzly -X screen "$RUNNER" python grizzly.py ../firefox/firefox "$INPUT" "$CORPMAN" "$ACCEPTED_EXTENSIONS" "$CACHE" "$LAUNCH_TIMEOUT" "$MEM_LIMIT" "$PREFS" "$RELAUNCH" "$TIMEOUT" "$IGNORE" "$FUZZPRIV" "$GCOV_ITERATIONS" --fuzzmanager --xvfb
+  # shellcheck disable=SC2086
+  if [ $i -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
+  # shellcheck disable=SC2086
+  screen -S grizzly -X screen $RUNNER python grizzly.py ../firefox/firefox $INPUT $CORPMAN $ACCEPTED_EXTENSIONS $CACHE $LAUNCH_TIMEOUT $MEM_LIMIT $PREFS $RELAUNCH $TIMEOUT $IGNORE $FUZZPRIV $GCOV_ITERATIONS --fuzzmanager --xvfb
 done
 
 # need to keep the container running

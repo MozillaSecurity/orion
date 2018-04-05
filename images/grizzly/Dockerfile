@@ -32,6 +32,7 @@ RUN \
     ubuntu-restricted-addons \
     unzip \
     virtualenv \
+    wget \
     xvfb \
     zip \
   && apt-get install -q -y --no-install-recommends \
