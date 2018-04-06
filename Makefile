@@ -35,11 +35,13 @@ lint_scripts: ## Lint shellscripts
 
 lint_dockers: ## Lint Dockerfiles
 	find . -type f -name "Dockerfile" | xargs hadolint \
-		--ignore DL3007 \
 		--ignore DL3002 \
+		--ignore DL3003 \
+		--ignore DL3007 \
 		--ignore DL3008 \
 		--ignore DL3013 \
-		--ignore DL3003
+		--ignore DL3018 \
+		--ignore DL4001
 
 lint: lint_scripts lint_dockers
 
