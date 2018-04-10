@@ -264,6 +264,20 @@ else
   RUNNER=~/config/forever.sh
 fi
 
+if [ "$RR" = "1" ]
+then
+  RR="--rr"
+else
+  RR=
+fi
+
+if [ "$S3REPORT" = "1" ]
+then
+  FUZZMANAGER="--s3-fuzzmanager"
+else
+  FUZZMANAGER="--fuzzmanager"
+fi
+
 cd grizzly
 screen -dmLS grizzly
 sleep 5
@@ -273,7 +287,7 @@ do
   # shellcheck disable=SC2086
   if [ $i -ne 1 ]; then sleep 30; fi # workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1386340
   # shellcheck disable=SC2086
-  screen -S grizzly -X screen $RUNNER python grizzly.py ../firefox/firefox $INPUT $CORPMAN $ACCEPTED_EXTENSIONS $CACHE $LAUNCH_TIMEOUT $MEM_LIMIT $PREFS $RELAUNCH $TIMEOUT $IGNORE $FUZZPRIV $GCOV_ITERATIONS --fuzzmanager --xvfb
+  screen -S grizzly -X screen $RUNNER python grizzly.py ../firefox/firefox $INPUT $CORPMAN $ACCEPTED_EXTENSIONS $CACHE $LAUNCH_TIMEOUT $MEM_LIMIT $PREFS $RELAUNCH $TIMEOUT $IGNORE $FUZZPRIV $GCOV_ITERATIONS $RR $FUZZMANAGER --xvfb
 done
 
 # need to keep the container running
