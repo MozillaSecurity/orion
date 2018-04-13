@@ -130,7 +130,6 @@ then
   export GRAMMAR_PATH=~/grizzly-private/grammars/
 fi
 
-
 # Download Audio corpus
 if [ "$CORPMAN" = "audio" ]
 then
@@ -150,6 +149,13 @@ then
   svn export https://github.com/mozillasecurity/fuzzdata.git/trunk/samples/ico grizzly/corpus/ico/
   svn export https://github.com/mozillasecurity/fuzzdata.git/trunk/samples/jpg grizzly/corpus/jpg/
   #svn export https://github.com/mozillasecurity/fuzzdata.git/trunk/samples/png grizzly/corpus/png/
+fi
+
+if [ "$CORPMAN" = "variable_font" ]
+then
+  mkdir grizzly/corpus
+  svn export https://github.com/mozillasecurity/fuzzdata.git/trunk/samples/woff2/variable grizzly/corpus/fonts/
+  export GRAMMAR_PATH=~/grizzly-private/grammars/
 fi
 
 # Download Video corpus
