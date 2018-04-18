@@ -248,7 +248,7 @@ fi
 
 if [ ! -z "$PREFS" ]
 then
-  PREFS="-p $PREFS"
+  PREFS="-p $(echo "$PREFS" | tr ":" "\n" | shuf | tail -n1)"
 fi
 
 if [ ! -z "$RELAUNCH" ]
