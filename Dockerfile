@@ -25,7 +25,7 @@ RUN \
     python3-pip \
     python3-setuptools \
     software-properties-common \
-    ssh \
+    openssh-client \
     xvfb \
   && locale-gen en_US.UTF-8 \
   && cd /tmp/ \
