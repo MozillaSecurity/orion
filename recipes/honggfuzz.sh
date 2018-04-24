@@ -9,6 +9,6 @@ apt-get install -y -qq --no-install-recommends --no-install-suggests \
   binutils-dev \
   libblocksruntime-dev
 
-git clone --depth=1 https://github.com/google/honggfuzz.git
+git clone --depth 1 --no-tags https://github.com/google/honggfuzz.git
 (cd honggfuzz && make)
 cp honggfuzz/honggfuzz /usr/local/bin/
