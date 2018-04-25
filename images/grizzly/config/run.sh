@@ -284,6 +284,7 @@ else
   FUZZMANAGER="--fuzzmanager"
 fi
 
+ulimit -c 0
 cd grizzly
 screen -dmLS grizzly
 sleep 5
