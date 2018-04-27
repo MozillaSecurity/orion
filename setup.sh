@@ -7,5 +7,6 @@
 ./recipes/fuzzmanager.sh
 ./recipes/honggfuzz.sh
 ./recipes/mdsw.sh
+./recipes/nodejs.sh
 ./recipes/rr.sh
 ./recipes/credstash.sh

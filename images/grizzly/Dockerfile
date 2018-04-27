@@ -5,9 +5,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 USER root
 COPY ddebs.list /etc/apt/sources.list.d/
 RUN \
-  apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622 \
-  && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-  && apt-get dist-upgrade -y \
+  apt-get dist-upgrade -y \
   && apt-get install -q -y \
     libasound2 \
     libcurl3 \
