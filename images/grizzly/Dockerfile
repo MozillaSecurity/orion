@@ -5,7 +5,8 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 USER root
 COPY ddebs.list /etc/apt/sources.list.d/
 RUN \
-  apt-get update -qq \
+  apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622 \
+  && apt-get update -qq \
   && apt-get dist-upgrade -y \
   && apt-get install -q -y \
     libasound2 \
