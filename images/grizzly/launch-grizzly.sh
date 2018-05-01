@@ -13,7 +13,8 @@ mkdir -p .ssh
 retry ssh-keyscan github.com >> .ssh/known_hosts
 
 # Get deployment keys from credstash
-credstash get deploy-grizzly-config.pem > .ssh/id_ecdsa.grizzly_config
+retry credstash get deploy-grizzly-config.pem > .ssh/id_ecdsa.grizzly_config
+chmod 0600 .ssh/id_ecdsa.grizzly_config
 
 # Setup Additional Key Identities
 cat << EOF >> .ssh/config
