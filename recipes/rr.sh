@@ -1,6 +1,8 @@
 #!/bin/bash -ex
 
-source ./recipes/common.sh
+#### Install rr
+
+. ./recipes/common.sh
 
 apt-install-auto \
   ccache \

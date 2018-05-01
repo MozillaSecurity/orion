@@ -2,9 +2,11 @@
 
 #### LLVM
 
+# shellcheck disable=SC1091
+. /etc/lsb-release
 curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository "deb https://apt.llvm.org/artful/ llvm-toolchain-artful-5.0 main"
-apt-add-repository "deb https://apt.llvm.org/artful/ llvm-toolchain-artful-6.0 main"
+apt-add-repository "deb https://apt.llvm.org/$DISTRIB_CODENAME/ llvm-toolchain-$DISTRIB_CODENAME-5.0 main"
+apt-add-repository "deb https://apt.llvm.org/$DISTRIB_CODENAME/ llvm-toolchain-$DISTRIB_CODENAME-6.0 main"
 
 apt-get update -qq
 

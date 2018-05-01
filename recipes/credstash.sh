@@ -1,4 +1,5 @@
 #!/bin/bash -ex
 
-# Install credstash
+#### Install credstash
+
 pip install credstash
