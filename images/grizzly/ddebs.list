@@ -1,3 +1,0 @@
-deb http://ddebs.ubuntu.com/ artful main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ artful-updates main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ artful-proposed main restricted universe multiverse

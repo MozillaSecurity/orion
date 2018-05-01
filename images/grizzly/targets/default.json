@@ -1,4 +1,0 @@
-{
-"--central --asan --fuzzing": 1,
-"--central --debug --fuzzing": 1
-}

@@ -3,7 +3,7 @@
 cd "$HOME"
 git clone -v --depth 1 https://github.com/marco-c/grcov.git
 
-cd grcov
+(cd grcov
 
 # from install.sh
 
@@ -13,4 +13,6 @@ LATEST_VERSION="$(curl -Ls 'https://api.github.com/repos/marco-c/grcov/releases/
 rm -f grcov "grcov-$PLATFORM.tar.bz2"
 curl -LO "https://github.com/marco-c/grcov/releases/download/$LATEST_VERSION/grcov-$PLATFORM.tar.bz2"
 tar xf "grcov-$PLATFORM.tar.bz2"
-rm "grcov-$PLATFORM.tar.bz2"
+install grcov /usr/local/bin/grcov
+)
+rm -rf grcov

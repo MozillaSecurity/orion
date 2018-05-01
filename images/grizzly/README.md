@@ -1,8 +1,3 @@
-#### Might be required
-```bash
---privileged
-```
-
 #### Example: Faulty
 ```bash
 CID=$(docker run \
