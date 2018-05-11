@@ -17,6 +17,6 @@ RUN \
   && rm -rf /root/.cache/* \
   && chown -R worker:worker /home/worker
 
+USER worker
 COPY setup.sh .
-
 ENTRYPOINT ["./setup.sh"]
