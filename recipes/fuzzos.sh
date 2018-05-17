@@ -9,7 +9,6 @@ disable-pip-version-check = true
 no-cache-dir = false
 
 [install]
-ignore-installed = true
 upgrade-strategy = only-if-needed
 EOF
 
