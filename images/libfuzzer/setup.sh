@@ -27,7 +27,11 @@ if [ -n "$CORPORA" ]
 then
   svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
   CORPORA="./corpora/"
+else
+  mkdir ./corpora
+  CORPORA="./corpora/"
 fi
+
 
 # LibFuzzer Dictionary Tokens
 if [ -n "$TOKENS" ]
