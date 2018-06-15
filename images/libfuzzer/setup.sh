@@ -19,7 +19,7 @@ FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 # ContentIPC
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
 then
-  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" .
+  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" $MOZ_IPC_MESSAGE_FUZZ_BLACKLIST
 fi
 
 # LibFuzzer Corpora
