@@ -16,6 +16,12 @@ fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
 # FuzzData
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 
+# ContentIPC
+if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
+then
+  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" .
+fi
+
 # LibFuzzer Corpora
 if [ -n "$CORPORA" ]
 then
