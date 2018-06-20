@@ -45,7 +45,7 @@ fi
 # Setup ASan
 ASAN_OPTIONS=\
 print_scariness=true:\
-strip_path_prefix=/home/worker/workspace/build/src/:\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
 dedup_token_length=1:\
 print_cmdline=true:\
 detect_stack_use_after_scope=true:\
