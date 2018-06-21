@@ -54,6 +54,7 @@ strict_init_order=true:\
 check_initialization_order=true:\
 allocator_may_return_null=true:\
 start_deactivated=true:\
+strict_string_checks=true:\
 $ASAN
 
 # Run reporter for EC2
