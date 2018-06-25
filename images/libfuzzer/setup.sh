@@ -54,7 +54,7 @@ detect_invalid_pointer_pairs=2:\
 strict_init_order=true:\
 check_initialization_order=true:\
 allocator_may_return_null=true:\
-start_deactivated=true:\
+start_deactivated=false:\
 strict_string_checks=true:\
 $ASAN
 
