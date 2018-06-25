@@ -43,6 +43,7 @@ then
 fi
 
 # Setup ASan
+ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
 ASAN_OPTIONS=\
 print_scariness=true:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
