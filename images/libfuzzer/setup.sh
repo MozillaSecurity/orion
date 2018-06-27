@@ -20,8 +20,8 @@ FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
 then
   mkdir -p settings/ipc
-  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ./$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST
-  export MOZ_IPC_MESSAGE_FUZZ_BLACKLIST=$HOME/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST
+  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
+  export MOZ_IPC_MESSAGE_FUZZ_BLACKLIST="$HOME/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
 fi
 
 # LibFuzzer Corpora
@@ -43,7 +43,7 @@ then
 fi
 
 # Setup ASan
-ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
 ASAN_OPTIONS=\
 print_scariness=true:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
