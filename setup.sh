@@ -2,6 +2,7 @@
 
 ./recipes/fuzzos.sh
 ./recipes/llvm.sh
+./recipes/rg.sh
 ./recipes/afl.sh
 ./recipes/fuzzfetch.sh
 ./recipes/credstash.sh
