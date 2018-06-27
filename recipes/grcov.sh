@@ -10,4 +10,3 @@ retry curl -LO "https://github.com/marco-c/grcov/releases/download/$LATEST_VERSI
 tar xf grcov-$PLATFORM.tar.bz2
 install grcov /usr/local/bin/grcov
 rm grcov grcov-$PLATFORM.tar.bz2
-

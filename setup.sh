@@ -10,3 +10,4 @@
 ./recipes/mdsw.sh
 ./recipes/nodejs.sh
 ./recipes/rr.sh
+./recipes/grcov.sh
