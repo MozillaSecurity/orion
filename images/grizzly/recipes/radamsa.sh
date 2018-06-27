@@ -2,7 +2,7 @@
 
 # Build radamsa
 cd /tmp
-git clone -v --depth 1 https://github.com/aoh/radamsa.git
+git clone -v --depth 1 https://gitlab.com/akihe/radamsa.git
 ( cd radamsa
   make
   make install

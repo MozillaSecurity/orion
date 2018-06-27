@@ -48,7 +48,6 @@ apt-get install -q -y --no-install-recommends \
     python-hiredis \
     python-pip \
     valgrind
-/tmp/recipes/grcov.sh
 /tmp/recipes/radamsa.sh
 apt-get clean -y
 apt-get autoclean -y
