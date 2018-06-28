@@ -42,6 +42,9 @@ OS: Ubuntu Artful
 * llvm
 * minidump
 * rr
+* grcov
+* ripgrep
+* nodejs
 
 <a name="Architecture"><h2>Architecture</h2></a>
 
