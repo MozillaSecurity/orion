@@ -10,6 +10,7 @@ RUN \
     libpulse0 \
     unzip \
     subversion \
+    mercurial \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
@@ -18,5 +19,5 @@ RUN \
   && chown -R worker:worker /home/worker
 
 USER worker
-COPY setup.sh .
+COPY *.sh ./
 ENTRYPOINT ["./setup.sh"]
