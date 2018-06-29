@@ -40,7 +40,7 @@ export GCOV_PREFIX="$WORKDIR/firefox"
 
 # %<---[fuzzer]---------------------------------------------------------------
 
-timeout -s 10 -k $((COVRUNTIME + 30)) "$COVRUNTIME" ./libfuzzer.sh
+timeout --foreground -s 2 -k $((COVRUNTIME + 30)) "$COVRUNTIME" ./libfuzzer.sh
 
 # %<---[coverage]-------------------------------------------------------------
 
