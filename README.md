@@ -19,6 +19,7 @@
 - [Table of Contents](#table-of-contents)
 - [OS](#os)
 - [Pre-Installed Packages](#pre-installed-packages)
+- [Run](#run)
 - [Architecture](#architecture)
 - [Build Instructions](#build-instructions)
   - [Usage](#usage)
@@ -43,6 +44,13 @@ OS: Ubuntu Artful
 - grcov
 - ripgrep
 - nodejs
+
+## Run
+
+```bash
+docker search fuzzos
+docker run -it --rm mozillasecurity/fuzzos:latest bash -li
+```
 
 ## Architecture
 
