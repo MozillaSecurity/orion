@@ -49,7 +49,7 @@ OS: Ubuntu Artful
 <a name="Architecture"><h2>Architecture</h2></a>
 
 <p align="center">
-  <a href="assets/overview.png"><img src="assets/overview.png"></a>
+  <a href="docs/assets/overview.png"><img src="docs/assets/overview.png"></a>
 </p>
 
 
