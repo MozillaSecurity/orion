@@ -3,113 +3,73 @@
 </p>
 
 <p align="center">
-Base builder image for Docker fuzzing containers for running at Mozilla TaskCluster and Amazon EC2.
+  Base builder image for Docker fuzzing containers which can be run at Mozilla TaskCluster, Amazon EC2 or locally.
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/MozillaSecurity/fuzzos"><img src="https://api.travis-ci.org/MozillaSecurity/fuzzos.svg?branch=master" alt="Build Status"></a>
-  <a href="https://hub.docker.com"><img src="https://img.shields.io/docker/build/mozillasecurity/fuzzos.svg" alt="Docker Build Status"></a>
-  <a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
+  <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://images.microbadger.com/badges/version/mozillasecurity/fuzzos.svg"></a>
+  <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://images.microbadger.com/badges/image/mozillasecurity/fuzzos.svg"></a>
+  <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://img.shields.io/docker/pulls/mozillasecurity/fuzzos.svg"></a>
 </p>
 
+> For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
 
-> For spawning a cluster of Docker containers at EC2, see the parent project <a href="https://github.com/MozillaSecurity/laniakea/">Laniakea</a>.
+## Table of Contents
 
+- [Table of Contents](#table-of-contents)
+- [OS](#os)
+- [Pre-Installed Packages](#pre-installed-packages)
+- [Architecture](#architecture)
+- [Build Instructions](#build-instructions)
+  - [Usage](#usage)
+  - [Login](#login)
+  - [Testing](#testing)
+- [Documentation](#documentation)
 
-<h2>Table of Contents</h2>
-
-* [OS](#OS)
-* [Packages](#Packages)
-* [Architecture](#Architecture)
-* [Instructions](#BuildInstructions)
-  * [Usage](#Usage)
-  * [Login](#Login)
-  * [Testing](#Testing)
-* [TaskCluster: TaskCreator Example](#TaskClusterTaskCreator)
-
-
-<a name="OS"><h2>OS</h2></a>
+## OS
 
 OS: Ubuntu Artful
 
-<a name="Packages"><h2>Pre-Installed Packages</h2></a>
+## Pre-Installed Packages
 
-* credstash
-* fuzzfetch
-* fuzzmanager
-* afl
-* honggfuzz
-* llvm
-* minidump
-* rr
-* grcov
-* ripgrep
-* nodejs
+- credstash
+- fuzzfetch
+- fuzzmanager
+- afl
+- honggfuzz
+- llvm
+- minidump
+- rr
+- grcov
+- ripgrep
+- nodejs
 
-<a name="Architecture"><h2>Architecture</h2></a>
+## Architecture
 
-<p align="center">
-  <a href="docs/assets/overview.png"><img src="docs/assets/overview.png"></a>
-</p>
+[![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/fuzzos/master/docs/assets/overview.png)
 
-
-<a name="BuildInstructions"><h2>Build Instructions</h2></a>
+## Build Instructions
 
 > The Makefile is intended for developing purposes only. FuzzOS is built automatically after each push to this repository.
 
-<a name="Usage"><h3>Usage</h3></a>
+### Usage
 
-```bash
+```
 make help
 ```
 
-<a name="Login"><h3>Login</h3></a>
+### Login
 
 ```bash
 DOCKER_USER=ABC make login
 ```
 
-<a name="Testing"><h3>Testing</h3></a>
+### Testing
 
 ```bash
 make -k lint
 ```
 
+## Documentation
 
-<a name="TaskClusterTaskCreator"><h2>TaskCluster: TaskCreator Example</h2></a>
-
-This is an example task configuration which shows how Framboise would run at TaskCluster.
-
-```json
-provisionerId: aws-provisioner-v1
-workerType: fuzzer
-schedulerId: gecko-level-1
-priority: lowest
-retries: 5
-created: '2017-06-06T22:05:12.240Z'
-deadline: '2017-06-07T22:05:12.240Z'
-expires: '2018-06-07T22:05:12.240Z'
-scopes:
-  - 'docker-worker:image:taskclusterprivate/framboise:*'
-payload:
-  image: 'taskclusterprivate/framboise:v1'
-  command:
-    - ./framboise.py
-    - '-settings'
-    - settings/framboise.linux.docker.yaml
-    - '-fuzzer'
-    - '1:Canvas2D'
-    - '-debug'
-    - '-restart'
-  maxRunTime: 600
-  env:
-    FUZZER_MAX_RUNTIME: 570
-routes:
-  - notify.email.cdiehl@mozilla.com.on-failed
-  - notify.irc-user.posidron.on-any
-metadata:
-  name: 'Fuzzer: framboise'
-  description: 'Fuzzer: framboise'
-  owner: cdiehl@mozilla.com
-  source: 'https://tools.taskcluster.net/task-creator/'
-```
+- https://github.com/mozillasecurity/fuzzos/wiki
