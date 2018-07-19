@@ -1,5 +1,7 @@
 # Linter
 
+Common linters Dockerized for easier usage in CI
+
 ```
 docker pull mozillasecurity/linter
 ```
