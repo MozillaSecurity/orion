@@ -30,18 +30,21 @@ login: ## Login to Docker Hub
 	docker login --username=$(DOCKER_USER)
 
 lint_scripts: ## Lint shellscripts
-# Be compatible to MacOS where bash by default is v3.2 and does not support '**/*'
-	find . -type f \( -iname "*.bash" -o -iname "*.sh" \) | xargs shellcheck -x -a
+	find . -not -path '*/\.*' \
+		-exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
+		-print \
+        | xargs docker run --rm -v $$(PWD):/mnt linter shellcheck -x -Calways
 
 lint_dockers: ## Lint Dockerfiles
-	find . -type f -name "Dockerfile" | xargs hadolint \
-		--ignore DL3002 \
-		--ignore DL3003 \
-		--ignore DL3007 \
-		--ignore DL3008 \
-		--ignore DL3013 \
-		--ignore DL3018 \
-		--ignore DL4001
+	find . -type f -name "Dockerfile"
+    | xargs docker run --rm -v $(PWD):/mnt linter hadolint \
+        --ignore DL3002 \
+        --ignore DL3003 \
+        --ignore DL3007 \
+        --ignore DL3008 \
+        --ignore DL3013 \
+        --ignore DL3018 \
+        --ignore DL4001
 
 lint: lint_scripts lint_dockers
 
