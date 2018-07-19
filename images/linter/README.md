@@ -18,7 +18,7 @@ docker run --rm -v $(PWD):/mnt linter hadolint <Dockerfile>
 #### Batch
 ```bash
 find . -type f -name "Dockerfile" | xargs \
-    docker --rm run -v $(PWD):/mnt linter hadolint \
+    docker run --run -v $(PWD):/mnt linter hadolint \
         --ignore DLXXXX \
         <...>
 ```
