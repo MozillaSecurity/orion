@@ -12,13 +12,13 @@ docker pull mozillasecurity/linter
 
 #### Single
 ```bash
-docker run --rm -v $(PWD):/mnt linter hadolint <Dockerfile>
+docker run --rm -v $(PWD):/mnt mozillasecurity/linter hadolint <Dockerfile>
 ```
 
 #### Batch
 ```bash
 find . -type f -name "Dockerfile" | xargs \
-    docker run --run -v $(PWD):/mnt linter hadolint \
+    docker run --run -v $(PWD):/mnt mozillasecurity/linter hadolint \
         --ignore DLXXXX \
         <...>
 ```
@@ -29,13 +29,13 @@ find . -type f -name "Dockerfile" | xargs \
 
 #### Single
 ```bash
-docker run --rm -v $(PWD):/mnt linter shellcheck -x -Calways <shellscript>
+docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -Calways <shellscript>
 ```
 
 #### Batch
 ```bash
 find . -type f \( -iname "*.bash" -o -iname "*.sh" \) | xargs \
-    docker run --rm -v $(PWD):/mnt linter shellcheck -x -Calways
+    docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -Calways
 ```
 
 In case there are bash scripts like 'hooks' without file-type extension while ignoring all scripts which are in hidden directories.
@@ -45,5 +45,5 @@ find . \
     -not -path '*/\.*' \
     -exec sh -c '[ $(file -b --mime-type {}) == "text/x-shellscript" ]' sh '{}' ';' \
     -print | xargs \
-        docker run --rm -v $(PWD):/mnt linter shellcheck -x -Calways
+        docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -Calways
 ```
