@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-. ./recipes/common.sh
+source base/recipes/common.sh
 
 #### rg (ripgrep)
 

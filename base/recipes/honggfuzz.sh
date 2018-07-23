@@ -2,7 +2,7 @@
 
 #### Honggfuzz
 
-. ./recipes/common.sh
+source base/recipes/common.sh
 
 apt-get install -y -qq --no-install-recommends --no-install-suggests \
     libunwind8 \

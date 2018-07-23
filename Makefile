@@ -9,7 +9,7 @@ login: ## Login to Docker Hub
 lint_scripts: ## Lint shellscripts
 	find . -not -path '*/\.*' \
 	       -exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
-	       -print | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -Calways
+	       -print | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -a -Calways
 
 lint_dockers: ## Lint Dockerfiles
 	find . -type f -name "Dockerfile" | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter hadolint \
@@ -19,7 +19,8 @@ lint_dockers: ## Lint Dockerfiles
 		--ignore DL3008 \
 		--ignore DL3013 \
 		--ignore DL3018 \
-		--ignore DL4001
+		--ignore DL4001 \
+		--ignore DL4006
 
 lint: lint_scripts lint_dockers
 

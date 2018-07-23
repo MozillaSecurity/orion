@@ -2,7 +2,7 @@
 
 #### Install rr
 
-. ./recipes/common.sh
+source base/recipes/common.sh
 
 apt-install-auto \
   ccache \
