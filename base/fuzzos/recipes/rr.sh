@@ -2,7 +2,7 @@
 
 #### Install rr
 
-source base/recipes/common.sh
+source base/fuzzos/recipes/common.sh
 
 apt-install-auto \
   ccache \
