@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="https://github.com/posidron/posidron.github.io/raw/master/static/images/fuzzos.png" alt="Logo" />
+  <img src="https://github.com/posidron/posidron.github.io/raw/master/static/images/orion.png" alt="Logo" />
 </p>
 
 <p align="center">
-  Base builder image for Docker fuzzing containers which can be run at Mozilla TaskCluster, Amazon EC2 or locally.
+  Monorepo for building and publishing multiple 🐳  containers as microservices within a single repository.
 </p>
-
 <p align="center">
-  <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://images.microbadger.com/badges/version/mozillasecurity/fuzzos.svg"></a>
+<a href="https://travis-ci.org/MozillaSecurity/orion"><img src="https://travis-ci.org/MozillaSecurity/orion.svg?branch=master"></a>
+<br/><br/>
+FuzzOS<br>
   <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://images.microbadger.com/badges/image/mozillasecurity/fuzzos.svg"></a>
-  <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://img.shields.io/docker/pulls/mozillasecurity/fuzzos.svg"></a>
 </p>
 
 > For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
@@ -17,19 +17,24 @@
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-- [OS](#os)
+- [FuzzOS](#fuzzos)
 - [Pre-Installed Packages](#pre-installed-packages)
 - [Run](#run)
+- [Documentation](#documentation)
 - [Architecture](#architecture)
 - [Build Instructions](#build-instructions)
   - [Usage](#usage)
-  - [Login](#login)
   - [Testing](#testing)
-- [Documentation](#documentation)
+  - [Login](#login)
 
-## OS
 
-OS: Ubuntu Artful
+This repository is a monorepo of various microservices and home of FuzzOS. CI and CD are performed with Travis and the Monorepo Manager script. Each image is either tagged with the latest revision, nightly or latest. For further information take either a look into the Wiki or the corresponding README.md of each microservice.
+
+
+
+## FuzzOS
+
+Base: Ubuntu Artful
 
 ## Pre-Installed Packages
 
@@ -52,13 +57,15 @@ docker search fuzzos
 docker run -it --rm mozillasecurity/fuzzos:latest bash -li
 ```
 
+## Documentation
+
+- https://github.com/mozillasecurity/fuzzos/wiki
+
 ## Architecture
 
 [![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/fuzzos/master/docs/assets/overview.png)
 
 ## Build Instructions
-
-> The Makefile is intended for developing purposes only. FuzzOS is built automatically after each push to this repository.
 
 ### Usage
 
@@ -66,18 +73,14 @@ docker run -it --rm mozillasecurity/fuzzos:latest bash -li
 make help
 ```
 
+### Testing
+
+```bash
+make lint
+```
+
 ### Login
 
 ```bash
 DOCKER_USER=ABC make login
 ```
-
-### Testing
-
-```bash
-make -k lint
-```
-
-## Documentation
-
-- https://github.com/mozillasecurity/fuzzos/wiki
