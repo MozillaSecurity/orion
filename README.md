@@ -28,7 +28,7 @@ FuzzOS<br>
     - [Login](#login)
 
 
-This repository is a monorepo of various microservices and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base) (a multipurpose purpose base image). CI and CD is performed with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and then only that service is will be rebuild; other services are not affected from the build service. Each image is either tagged with the latest revision, nightly or latest. For further information take either a look into the Wiki or the corresponding README.md of each microservice.
+This repository is a monorepo of various microservices and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos) (a multipurpose purpose base image). CI and CD is performed with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and then only that service is will be rebuild; other services are not affected from the build service. Each image is either tagged with the latest revision, nightly or latest. For further information take either a look into the Wiki or the corresponding README.md of each microservice.
 
 ### FuzzOS
 
