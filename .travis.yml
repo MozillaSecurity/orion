@@ -1,6 +1,15 @@
-language: bash
-sudo: true
+sudo: required
+language: generic
 services:
-  - docker
+- docker
 script:
-  make lint
+- set -e
+- make lint
+- echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
+- python3 ./monorepo.py -ci travis -build -deliver -path base/
+- python3 ./monorepo.py -ci travis -build -deliver -path services/
+env:
+  global:
+  - DOCKER_ORG=posidron
+  - secure: dtjosCfZdk7wD97SV9Qnq1JFiOPK63hG8rmQvPkzGeIXar03npJ/iQdQmoJJtwEDqAYJmBPiUFLSYoIujSIsNlCaVH+pCjmC0as6xzRxBOkan3ek/3WbR9xXhWwmzyKvA5WsAf/4LmLef/KcoM69ciLtz8eyfQYJ1n6DfoQ0JHBvxpSleMwJoT/5cGvcFpjhkAZ8ysmwoh/FEVnh/ONz07lLx5DqMPa7SbiHdBCzQUCndARv0I313iIzQLN4DrEzo1dUV+/QED0btLpXHZcx8/QzrUwfKnJJN531Q/705ceM5tKwmz25o113bMN7tik4WCgtqt4njB+beHfl2QGCuBXtS6s1RBvsx5nOCHRoTjen7V/apHZEHJZCfKgZONzho8+3Jn3Sd8XKzXTijVoAY0g7J59/5oXqgyhPD/85zNL6Vu3xAfLcfVA2e72jGNy84HzSWQbVnPW5pivwP2PMSzr0BUa/fkQfY9/skkyiViXOaI+RQCzTA4yflnCjWJ+hl73UBS5TsI2PTAWZ87Eg7QvaAoUxaVlOCc7XEvwiJlwpnjy2WBfOYMLkkqab1k/Ook6jN6pgKLjzsgM2rAj/sXCRj8TTbsyHxeQaexeCb791xnzygQL01505FUwmhrMOXJGbZIjiMGObQjth7MXs8Xvx3OsiIn0RvnOWOoo+uJQ=
+  - secure: Mh0bRPkrBRh28vxSPnPCRSii0PRccBVeoQ8XPUqOHOXf/PcOW5o9I8gjPW9SATdjagqCku9kw65noXCjOg+smtWo0jIrGNw0Zoky2dUwQ6TxMnXneA1QFiT9Akh5VXRbIj5IQbgO9vBUpI1xEsHJXiszbO3GMWyi+Lk1J8QdxwBlCbwyfiKlKs72FsHhL9uXytXc/pyP5Grl//+MpQcx350t5VF91W0TcOnZ6FbK27FDMja6Rur6XDQROk7zmvaH1/FLvSEFqMReKxq3m1tdGyH6AkE4pM3zGXorPvFTwp7BPwXMsyYaoifzN7Unbx8ZEGjq+X+8TaZFNRjoQQDoTK/aR5PDwBS587SpnDIovh1c2o9HEmLpceWq44ObpB71VN0Mqxu8fQcmJrAxk/53XH/ORyc3JUR9LLNM+uT1tj2+zQvm7/E2FCGhXflbMYFF2OoPQkXe8La/0lqMpkirsQzTBsHZmOYM528OMLIFspsZZHQWdAHhaj6MrZgD17wzvi8xtZQfWXo5OQrwCcqfO2NliyOCv/sff9d4Y7FdZa4q2fV0cUtgV5qsnqrjdvCCDeujnKYMBPugrBKTQ0e75nGXvogTHiPHzUjtm9sbhlNcB43IRg2j2q313KjOEJH3MAsGUchZg243IUE9S4+zDGVBDI/uW19cjpYLYq0/zow=
