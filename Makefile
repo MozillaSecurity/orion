@@ -9,7 +9,7 @@ login: ## Login to Docker Hub
 lint_scripts: ## Lint shellscripts
 	find . -not -path '*/\.*' \
 	       -exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
-	       -print | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck
+	       -print | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -Calways
 
 lint_dockers: ## Lint Dockerfiles
 	find . -type f -name "Dockerfile" | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter hadolint \
