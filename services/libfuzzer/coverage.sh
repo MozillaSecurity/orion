@@ -6,28 +6,20 @@
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
 
+export REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
+
 # Fetch a Firefox coverage build and its coverage notes files plus gtest.
-# We might have a volume attached which mounts a build into the container.
+# - We might have a volume attached which mounts a build into the container.
 if [[ ! -d "$WORKDIR/firefox" ]]
 then
-    #python -m fuzzfetch --coverage --tests gtest -n firefox -o "$WORKDIR"
-    python -m fuzzfetch \
-        --build gecko.v2.mozilla-central.latest.firefox.linux64-fuzzing-asan-opt-cov \
-        --tests gtest \
-        -n firefox \
-        -o "$WORKDIR"
+    python -m fuzzfetch --build "$REVISION" --coverage --tests gtest -n firefox -o "$WORKDIR"
     chmod -R 755 firefox
-    (cd firefox \
-    && curl -LO https://index.taskcluster.net/v1/task/gecko.v2.mozilla-central.latest.firefox.linux64-fuzzing-asan-opt-cov/artifacts/public/build/target.code-coverage-gcno.zip \
-    && unzip target.code-coverage-gcno.zip)
 fi
 
 # Download mozilla-central source code.
-# We might have a volume attached which mounts the source into the container.
-REVISION=$(rg -Nor '$1' "SourceStamp=(.*)" "$WORKDIR/firefox/platform.ini")
+# - We might have a volume attached which mounts the source into the container.
 if [[ ! -d "$WORKDIR/mozilla-central" ]]
 then
-    export REVISION
     hg clone -r "$REVISION" https://hg.mozilla.org/mozilla-central
 else
     (cd mozilla-central && hg update -r "$REVISION")
