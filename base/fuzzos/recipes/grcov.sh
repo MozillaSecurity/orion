@@ -1,5 +1,6 @@
 #!/bin/bash -ex
 
+# shellcheck disable=SC1091
 source ./recipes/common.sh
 
 #### grcov
