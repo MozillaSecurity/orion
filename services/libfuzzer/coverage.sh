@@ -39,7 +39,6 @@ timeout --foreground -s 2 -k $((COVRUNTIME + 30)) "$COVRUNTIME" ./libfuzzer.sh
 
 # Collect coverage count data.
 grcov "$WORKDIR/firefox" \
-    --llvm \
     -t coveralls+ \
     --commit-sha "$REVISION" \
     --token NONE \
