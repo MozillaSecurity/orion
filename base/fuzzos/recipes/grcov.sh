@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-source base/fuzzos/recipes/common.sh
+source ./recipes/common.sh
 
 #### grcov
 
