@@ -6,7 +6,8 @@
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
 
-export REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
+REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
+export REVISION
 
 # Fetch a Firefox coverage build and its coverage notes files plus gtest.
 # - We might have a volume attached which mounts a build into the container.
