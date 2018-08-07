@@ -13,7 +13,7 @@ export REVISION
 # - We might have a volume attached which mounts a build into the container.
 if [[ ! -d "$WORKDIR/firefox" ]]
 then
-    python -m fuzzfetch --build "$REVISION" --coverage --tests gtest -n firefox -o "$WORKDIR"
+    fuzzfetch --build "$REVISION" --coverage --tests gtest -n firefox -o "$WORKDIR"
     chmod -R 755 firefox
 fi
 
