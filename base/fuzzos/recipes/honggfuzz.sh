@@ -2,7 +2,8 @@
 
 #### Honggfuzz
 
-source base/fuzzos/recipes/common.sh
+# shellcheck disable=SC1091
+source ./recipes/common.sh
 
 apt-get install -y -qq --no-install-recommends --no-install-suggests \
     libunwind8 \

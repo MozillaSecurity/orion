@@ -1,6 +1,7 @@
 #!/bin/bash -ex
 
-source base/fuzzos/recipes/common.sh
+# shellcheck disable=SC1091
+source ./recipes/common.sh
 
 #### rg (ripgrep)
 

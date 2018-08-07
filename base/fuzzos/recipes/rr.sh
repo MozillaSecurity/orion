@@ -2,7 +2,8 @@
 
 #### Install rr
 
-source base/fuzzos/recipes/common.sh
+# shellcheck disable=SC1091
+source ./recipes/common.sh
 
 apt-install-auto \
   ccache \
