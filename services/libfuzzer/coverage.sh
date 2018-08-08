@@ -1,5 +1,5 @@
 #!/bin/bash -xu
-# shellcheck disable=SC2016
+# shellcheck disable=SC2016,SC2046
 
 # %<---[setup]----------------------------------------------------------------
 
@@ -13,7 +13,7 @@ export REVISION
 # - We might have a volume attached which mounts a build into the container.
 if [[ ! -d "$WORKDIR/firefox" ]]
 then
-    fuzzfetch --build "$REVISION" --asan --fuzzing --coverage --tests gtest -n firefox -o "$WORKDIR"
+    fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n firefox -o "$WORKDIR"
     chmod -R 755 firefox
 fi
 
@@ -43,7 +43,7 @@ grcov "$WORKDIR/firefox" \
     --commit-sha "$REVISION" \
     --token NONE \
     -s "$WORKDIR/mozilla-central" \
-    -p "$(rg -Nor '$1' "pathprefix = (.*)" "$WORKDIR/firefox/firefox.fuzzmanagerconf")" \
+    -p $(rg -Nor '$1' "pathprefix = (.*)" "$WORKDIR/firefox/firefox.fuzzmanagerconf") \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.
