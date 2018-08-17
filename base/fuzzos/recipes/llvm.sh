@@ -1,12 +1,10 @@
 #!/bin/bash -ex
 
-#### LLVM
+#### Install LLVM
 
-# shellcheck disable=SC1091
-. /etc/lsb-release
 curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository "deb https://apt.llvm.org/$DISTRIB_CODENAME/ llvm-toolchain-$DISTRIB_CODENAME-5.0 main"
-apt-add-repository "deb https://apt.llvm.org/$DISTRIB_CODENAME/ llvm-toolchain-$DISTRIB_CODENAME-6.0 main"
+apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-5.0 main"
+apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-6.0 main"
 
 apt-get update -qq
 

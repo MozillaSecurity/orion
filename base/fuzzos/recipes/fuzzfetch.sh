@@ -1,5 +1,5 @@
 #!/bin/bash -ex
 
-#### FuzzFetch
+#### Install FuzzFetch
 
 pip install git+https://github.com/mozillasecurity/fuzzfetch

@@ -8,7 +8,7 @@
 ./recipes/credstash.sh
 ./recipes/fuzzmanager.sh
 ./recipes/honggfuzz.sh
-./recipes/mdsw.sh
+./recipes/breakpad.sh
 ./recipes/nodejs.sh
 ./recipes/rr.sh
 ./recipes/grcov.sh

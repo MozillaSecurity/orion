@@ -21,3 +21,18 @@ function apt-install-auto () {
   apt-get -y -qq --no-install-recommends --no-install-suggests install "${new[@]}"
   apt-mark auto "${new[@]}"
 }
+
+function get-latest-github-release {
+  # shellcheck disable=SC2016
+  curl -Ls "https://api.github.com/repos/$1/releases/latest" | rg -Nor '$1' '"tag_name": "(.+)"'
+}
+
+# In a chrooted 32-bit environment "uname -m" would still return 64-bit.
+function is-64-bit {
+  if [ "$(getconf LONG_BIT)" = "64" ];
+  then
+    echo true
+  else
+    echo false
+  fi
+}

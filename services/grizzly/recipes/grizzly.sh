@@ -1,20 +1,26 @@
 #!/bin/bash -ex
 
-# shellcheck disable=SC1091
-. /etc/lsb-release
-cat << EOF >/etc/apt/sources.list.d/ddebs.list
-deb http://ddebs.ubuntu.com/ $DISTRIB_CODENAME main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ $DISTRIB_CODENAME-updates main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ $DISTRIB_CODENAME-proposed main restricted universe multiverse
+apt-get update -y -qq
+
+cat << EOF > /etc/apt/sources.list.d/ddebs.list
+deb http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
+deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
 EOF
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C8CAB6595FDFF622
-apt-get update -qq
+
+curl -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
+# apt install ubuntu-dbgsym-keyring
+
+apt-get update -y -qq
+
+# Todo: These packages seem to be missing in Bionic 18.04
+#    libegl1-mesa-dbgsym \
+#    libgl1-mesa-glx-dbgsym \
+
 apt-get install -q -y \
     libasound2 \
     libcurl3 \
-    libegl1-mesa-dbgsym \
     libgl1-mesa-dri-dbgsym \
-    libgl1-mesa-glx-dbgsym \
     libglapi-mesa-dbgsym \
     libglu1-mesa \
     libglu1-mesa-dbgsym \
@@ -32,11 +38,11 @@ apt-get install -q -y \
     screen \
     subversion \
     ubuntu-restricted-addons \
-    unzip \
     virtualenv \
     wget \
     xvfb \
     zip
+
 apt-get install -q -y --no-install-recommends \
     build-essential \
     gdb \
@@ -46,15 +52,19 @@ apt-get install -q -y --no-install-recommends \
     mercurial \
     nano \
     python-hiredis \
-    python-pip \
     valgrind
+
 /tmp/recipes/radamsa.sh
+
 apt-get clean -y
 apt-get autoclean -y
 apt-get autoremove -y
+
 rm -rf /var/lib/apt/lists/*
 rm -rf /root/.cache/*
+
 pip install \
     psutil \
     git+https://github.com/cgoldberg/xvfbwrapper.git
+
 chown -R worker:worker /home/worker

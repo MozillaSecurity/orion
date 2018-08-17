@@ -1,20 +1,23 @@
 #!/bin/bash -ex
 
-#### Install rr
-
 # shellcheck disable=SC1091
 source ./recipes/common.sh
+
+#### Install rr
 
 apt-install-auto \
   ccache \
   cmake \
   make \
-  g++-multilib gdb \
+  g++-multilib \
+  gdb \
   pkg-config \
   coreutils \
   python-pexpect \
-  manpages-dev git \
-  ninja-build \
+  manpages-dev \
+  ninja-build
+
+apt-get install -q -y \
   capnproto \
   libcapnp-dev
 

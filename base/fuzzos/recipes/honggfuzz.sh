@@ -1,14 +1,15 @@
 #!/bin/bash -ex
 
-#### Honggfuzz
-
 # shellcheck disable=SC1091
 source ./recipes/common.sh
 
+#### Install Honggfuzz
+
 apt-get install -y -qq --no-install-recommends --no-install-suggests \
-    libunwind8 \
-    libbinutils \
-    libblocksruntime0
+  libunwind8 \
+  libbinutils \
+  libblocksruntime0
+
 apt-install-auto \
   libunwind-dev \
   binutils-dev \

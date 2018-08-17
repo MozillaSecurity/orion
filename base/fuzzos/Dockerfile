@@ -1,4 +1,4 @@
-FROM ubuntu:artful
+FROM ubuntu:18.04
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
@@ -17,15 +17,17 @@ RUN \
     curl \
     dbus \
     git \
+    gpg-agent \
     locales \
     make \
+    openssh-client \
     python \
     python-pip \
     python-setuptools \
     python3-pip \
     python3-setuptools \
     software-properties-common \
-    openssh-client \
+    unzip \
     xvfb \
   && locale-gen en_US.UTF-8 \
   && cd /tmp/ \

@@ -8,7 +8,6 @@ RUN \
   && apt-get install -y -qq --no-install-recommends --no-install-suggests \
     firefox \
     libpulse0 \
-    unzip \
     subversion \
     mercurial \
   && apt-get clean -y \
