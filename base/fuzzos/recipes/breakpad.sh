@@ -5,7 +5,7 @@
 
 TMPD="$(mktemp -d -p. breakpad.tools.XXXXXXXXXX)"
 ( cd "$TMPD"
-  curl -L https://s3.amazonaws.com/getsentry-builds/getsentry/breakpad-tools/breakpad-tools-linux.zip -o breakpad-tools-linux.zip
+  curl -LO https://s3.amazonaws.com/getsentry-builds/getsentry/breakpad-tools/breakpad-tools-linux.zip
   unzip -j breakpad-tools-linux.zip minidump_stackwalk -d /usr/local/bin/
 )
 
