@@ -2,6 +2,10 @@ sudo: required
 language: generic
 services:
 - docker
+addons:
+  apt:
+    packages:
+      - docker-ce
 script:
 - set -e
 - make lint
