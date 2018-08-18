@@ -106,6 +106,7 @@ class DockerHub(CD):
         self.dockerfile = dockerfile
         self.service = service
         self.version = version
+        self.root = os.path.dirname(self.dockerfile)
 
     def build(self):
         """Builds docker image with tags.
@@ -135,9 +136,42 @@ class DockerHub(CD):
         ])
 
     def test(self):
-        """Runs structural container tests against the image.
+        """Runs structural container tests against an image.
         """
         self.logger.info('Testing container %s', self.service)
+
+        # Do we have a |tests| folder for this service?
+        testpath = os.path.join(self.root, 'tests')
+        if not os.path.isdir(testpath):
+            return
+
+        # Collect all test YAML configurations.
+        confs = []
+        for filename in os.listdir(testpath):
+            if filename.endswith('_test.yaml') or filename.endswith('_test.yml'):
+                confs.append(os.path.join('/tmp/tests', filename))
+        if not confs:
+            return
+
+        # Build the command which will fetch and run the container-structure-test image.
+        command = [
+            'docker', 'run', '--rm',
+            '-v', '/var/run/docker.sock:/var/run/docker.sock',
+            '-v', '{}/:/tmp/tests/'.format(testpath),
+            'gcr.io/gcp-runtimes/container-structure-test:latest',
+            'test',
+            '--quiet',
+            '--image', '{}/{}:latest'.format(DockerHub.ORG, self.service)
+        ]
+        for name in confs:
+            command.append('--config')
+            command.append(name)
+
+        self.logger.info(command)
+        try:
+            subprocess.check_call(command)
+        except subprocess.CalledProcessError as err:
+            raise MonorepoManagerException(err)
 
 
 class Git(Common):
@@ -152,6 +186,18 @@ class Git(Common):
         """Returns the HEAD revision id of the repository.
         """
         return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
+
+    def has_trigger(self, commit_range, path='.'):
+        """Returns folders which changed within a commit range.
+        """
+        self.logger.info('Finding containers that changed in "%s"', commit_range)
+        diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
+
+        folders = {
+            os.path.dirname(line).decode('utf-8') for line in diff if os.path.dirname(line)
+        }
+        self.logger.info('The following folders contain changes: %s', folders)
+        return folders
 
 
 class Travis(CI):
@@ -171,18 +217,6 @@ class Travis(CI):
         self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') == 'cron'
         self.is_pull_request = os.environ.get('TRAVIS_PULL_REQUEST')
         self.branch = os.environ.get('TRAVIS_BRANCH')
-
-    def has_trigger(self, commit_range, path='.'):
-        """Returns folders which changed within a commit range.
-        """
-        self.logger.info('Finding containers that changed in "%s"', commit_range)
-        diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
-
-        folders = {
-            os.path.dirname(line).decode('utf-8') for line in diff if os.path.dirname(line)
-        }
-        self.logger.info('The following folders contain changes: %s', folders)
-        return folders
 
     def deliver(self, folder, options, version):
         """Runs the build process and optionally tests and pushes it to the registry.
@@ -216,7 +250,7 @@ class Travis(CI):
             if not self.commit_range:
                 raise MonorepoManagerException('Could not find a commit range - not doing anything.')
             # We only rebuild and optionally publish each service which has new changes.
-            for folder in self.has_trigger(self.commit_range, options.path):
+            for folder in Git().has_trigger(self.commit_range, options.path):
                 if self.is_test(folder):
                     # Test folders do not qualify for rebuilds.
                     self.logger.debug('Folder %s is test folder, ignoring.', folder)
@@ -242,6 +276,7 @@ class MonorepoManager:
 
         m = parser.add_argument_group('Mandatory Arguments') # pylint: disable=invalid-name
         m.add_argument('-ci',
+                       required=True,
                        metavar='backend',
                        type=str,
                        help='Name of the used CI backend.')
@@ -253,7 +288,7 @@ class MonorepoManager:
                        help='Set folder explicitly.')
         o.add_argument('-build',
                        action='store_true',
-                       default=True,
+                       default=False,
                        help='Build Docker images')
         o.add_argument('-deliver',
                        action='store_true',
@@ -261,7 +296,7 @@ class MonorepoManager:
                        help='Push Docker images')
         o.add_argument('-test',
                        action='store_true',
-                       default=True,
+                       default=False,
                        help='Test Docker containers')
         o.add_argument('-h', '-help', '--help',
                        action='help',
