@@ -106,7 +106,7 @@ class DockerHub(CD):
         self.dockerfile = dockerfile
         self.service = service
         self.version = version
-        self.root = os.path.dirname(self.dockerfile)
+        self.root = os.path.abspath(os.path.dirname(self.dockerfile))
 
     def build(self):
         """Builds docker image with tags.
