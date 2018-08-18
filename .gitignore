@@ -3,3 +3,7 @@
 
 # JetBrains
 .idea/
+
+# VSCode
+.vscode/
+
