@@ -10,8 +10,8 @@ script:
 - set -e
 - make lint
 - echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
-- python3 ./monorepo.py -ci travis -build -deliver -path base/
-- python3 ./monorepo.py -ci travis -build -deliver -path services/
+- python3 ./monorepo.py -ci travis -build -test -deliver -path base/
+- python3 ./monorepo.py -ci travis -build -test -deliver -path services/
 env:
   global:
   - DOCKER_ORG=mozillasecurity
