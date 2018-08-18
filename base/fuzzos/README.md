@@ -4,7 +4,7 @@
 
 ## OS
 
-OS: Ubuntu Artful
+OS: Ubuntu 18.04
 
 ## Pre-Installed Packages
 
@@ -14,7 +14,7 @@ OS: Ubuntu Artful
 - afl
 - honggfuzz
 - llvm
-- minidump
+- breakpad
 - rr
 - grcov
 - ripgrep

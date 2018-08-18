@@ -20,7 +20,7 @@ FuzzOS<br>
 - [Table of Contents](#table-of-contents)
   - [FuzzOS](#fuzzos)
   - [Pre-Installed Packages](#pre-installed-packages)
-  - [Run](#run)
+  - [Run FuzzOS](#run-fuzzos)
   - [Documentation](#documentation)
   - [Architecture](#architecture)
   - [Build Instructions](#build-instructions)
@@ -33,7 +33,7 @@ This repository is a monorepo of various microservices and home of [FuzzOS](http
 
 ### FuzzOS
 
-Base: Ubuntu Artful
+Base: Ubuntu 18.04
 
 ### Pre-Installed Packages
 
@@ -43,13 +43,13 @@ Base: Ubuntu Artful
 - afl
 - honggfuzz
 - llvm
-- minidump
+- breakpad
 - rr
 - grcov
 - ripgrep
 - nodejs
 
-### Run
+### Run FuzzOS
 
 ```bash
 docker search fuzzos
@@ -74,9 +74,24 @@ make help
 
 #### Testing
 
+Before a build task is initiated in Travis-CI, each Shellscript and Dockerfile undergo a linting process which may or may not abort each succeeding task.
+
+Locally:
+
 ```bash
 make lint
 ```
+
+Each service folder may contain a `tests` folder in which [Container Structure Tests](https://github.com/GoogleContainerTools/container-structure-test) are defined. The Monorepo Manager will run these tests
+with the `-test` flag set in Travis-CI after the build process is completed and before deployming the images to the registry.
+
+Locally:
+
+```bash
+make test
+```
+
+
 
 #### Login
 
