@@ -83,7 +83,7 @@ make lint
 ```
 
 Each service folder may contain a `tests` folder in which [Container Structure Tests](https://github.com/GoogleContainerTools/container-structure-test) are defined. The Monorepo Manager will run these tests
-with the `-test` flag set in Travis-CI after the build process is completed and before deployming the images to the registry.
+with the `-test` flag set in Travis-CI after the build process is completed and before deploying the images to the registry.
 
 Locally:
 
