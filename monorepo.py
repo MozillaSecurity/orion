@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
-'''
+"""
 A script that aids in building and publishing multiple 🐳 containers as microservices within a single repository,
 aka monorepo.
-'''
+"""
 
 __author__ = 'Christoph Diehl <cdiehl@mozilla.com>'
 
@@ -14,27 +14,69 @@ import argparse
 import subprocess
 
 
-class Common():
+class MonorepoManagerException(Exception):
+    """Exception class for Monorepo Manager."""
+    pass
+
+
+class Common:
     """Common methods and functions shared across CI and CD.
     """
 
     def __init__(self):
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    @staticmethod
-    def get_service(folder):
-        dockerfile = os.path.join(folder, 'Dockerfile')
-        service = os.path.split(os.path.dirname(dockerfile))[-1]
-        return [service, dockerfile]
+    @classmethod
+    def get_service(cls, folder):
+        """The child folder within its parent folder is usually the service containing the Dockerfile.
+        """
+        service = os.sep.join(folder.split(os.sep)[0:2])
+        dockerfile = os.path.join(service, 'Dockerfile')
+        service_name = folder.split(os.sep)[1]
+        return service_name, dockerfile
 
-    @staticmethod
-    def find_services(root):
+    @classmethod
+    def get_service_in_hierarchy(cls, folder):
+        """Locates a service in an arbitrary large hierarchy and determines the service name.
+        """
+        service_path = cls.find_service_in_parent(folder)
+        if service_path is None:
+            return None, None
+        service_name = service_path.split(os.sep)[-1]
+        dockerfile = os.path.join(service_path, 'Dockerfile')
+        return service_name, dockerfile
+
+    @classmethod
+    def find_service_in_parent(cls, folder):
+        """Searches backwards in the hierarchy to find the service containing the Dockerfile.
+        """
+        content = os.listdir(folder)
+
+        if 'Dockerfile' in content:
+            return folder
+
+        folders = folder.split(os.sep)
+        if len(folders) > 1:
+            folders.pop()
+            return cls.find_service_in_parent(os.sep.join(folders))
+        return None
+
+    @classmethod
+    def find_services(cls, root):
+        """Searches forward to find all services. Usually used in cron tasks to rebuild every container.
+        """
         folders = []
         for dirpath, _, files in os.walk(root):
             for fname in files:
                 if fname == 'Dockerfile':
                     folders.append(dirpath)
         return folders
+
+    @classmethod
+    def is_test(cls, folder):
+        """Whether the folder is a container structure test folder.
+        """
+        return os.path.basename(folder) == 'tests'
 
 
 class CI(Common):
@@ -66,6 +108,8 @@ class DockerHub(CD):
         self.version = version
 
     def build(self):
+        """Builds docker image with tags.
+        """
         self.logger.info('Building image for %s', self.dockerfile)
         subprocess.check_call([
             'docker', 'build',
@@ -78,6 +122,8 @@ class DockerHub(CD):
         ])
 
     def push(self):
+        """Pushes docker image with defined tag and tag latest to registry.
+        """
         self.logger.info('Pushing image for %s', self.service)
         subprocess.check_call([
             'docker', 'push',
@@ -87,6 +133,11 @@ class DockerHub(CD):
             'docker', 'push',
             '{}/{}:{}'.format(DockerHub.ORG, self.service, self.version)
         ])
+
+    def test(self):
+        """Runs structural container tests against the image.
+        """
+        self.logger.info('Testing container %s', self.service)
 
 
 class Git(Common):
@@ -98,6 +149,8 @@ class Git(Common):
 
     @staticmethod
     def revision():
+        """Returns the HEAD revision id of the repository.
+        """
         return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
 
 
@@ -120,6 +173,8 @@ class Travis(CI):
         self.branch = os.environ.get('TRAVIS_BRANCH')
 
     def has_trigger(self, commit_range, path='.'):
+        """Returns folders which changed within a commit range.
+        """
         self.logger.info('Finding containers that changed in "%s"', commit_range)
         diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
 
@@ -129,54 +184,69 @@ class Travis(CI):
         self.logger.info('The following folders contain changes: %s', folders)
         return folders
 
-    def deliver(self, folder, options):
-        [service, dockerfile] = self.get_service(folder)
-        version = 'nightly' if self.is_cron else Git.revision()
-        if os.path.exists(dockerfile):
-            docker = DockerHub(dockerfile, service, version)
-            if options.build:
-                docker.build()
+    def deliver(self, folder, options, version):
+        """Runs the build process and optionally tests and pushes it to the registry.
+        """
+        service, dockerfile = self.get_service_in_hierarchy(folder)
+        if not dockerfile:
+            self.logger.error('Service "%s" contains no Dockerfile!', service)
+            return
 
-            if options.deliver \
-                and self.is_pull_request == 'false' \
-                and self.branch == 'master':
-                docker.push()
+        docker = DockerHub(dockerfile, service, version)
+        if options.build:
+            docker.build()
+
+        if options.test:
+            docker.test()
+
+        if options.deliver \
+            and self.is_pull_request == 'false' \
+            and self.branch == 'master':
+            docker.push()
 
     def run(self, options):
+        """Initiates the CI/CD run at Travis.
+        """
+        version = 'nightly' if self.is_cron else Git.revision()
         if self.is_cron:
-            # This is a cron task, we rebuild and publish every found image.
+            # This is a cron task. We rebuild and optionally publish every found service!
             for folder in self.find_services(options.path):
-                self.deliver(folder, options)
+                self.deliver(folder, options, version)
         else:
             if not self.commit_range:
-                self.logger.warning('Could not find a commit range - not doing anything.')
-                return
-            # We only rebuild and publish each image which has new changes.
+                raise MonorepoManagerException('Could not find a commit range - not doing anything.')
+            # We only rebuild and optionally publish each service which has new changes.
             for folder in self.has_trigger(self.commit_range, options.path):
-                self.deliver(folder, options)
+                if self.is_test(folder):
+                    # Test folders do not qualify for rebuilds.
+                    self.logger.debug('Folder %s is test folder, ignoring.', folder)
+                    continue
+                self.deliver(folder, options, version)
 
 
-class MonorepoManager():
+class MonorepoManager:
     """Command-line interface for MonorepoManager.
     """
 
     @staticmethod
     def parse_args():
+        """Arguments for the MonorepoManager.
+        """
         parser = argparse.ArgumentParser(
             add_help=False,
             description='Monorepo Manager',
-            epilog='The exit status is 0 for non-failures and -1 for failures.',
+            epilog='The exit status is 0 for non-failures and 1 for failures.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             prog='Monorepo'
         )
 
-        m = parser.add_argument_group('Mandatory Arguments')
+        m = parser.add_argument_group('Mandatory Arguments') # pylint: disable=invalid-name
         m.add_argument('-ci',
                        metavar='backend',
                        type=str,
                        help='Name of the used CI backend.')
 
-        o = parser.add_argument_group('Optional Arguments')
+        o = parser.add_argument_group('Optional Arguments') # pylint: disable=invalid-name
         o.add_argument('-path',
                        type=str,
                        default=os.path.relpath(os.getcwd()),
@@ -189,6 +259,10 @@ class MonorepoManager():
                        action='store_true',
                        default=False,
                        help='Push Docker images')
+        o.add_argument('-test',
+                       action='store_true',
+                       default=True,
+                       help='Test Docker containers')
         o.add_argument('-h', '-help', '--help',
                        action='help',
                        help=argparse.SUPPRESS)
@@ -201,13 +275,21 @@ class MonorepoManager():
 
     @classmethod
     def main(cls):
+        """Entrypoint for the MonorepoManager.
+        """
         logging.basicConfig(format='[Monorepo] %(name)s (%(funcName)s) %(levelname)s: %(message)s',
                             level=logging.DEBUG)
 
         args = cls.parse_args()
 
         if args.ci == 'travis':
-            Travis().run(args)
+            try:
+                Travis().run(args)
+            except MonorepoManagerException as msg:
+                logging.error(msg)
+                return 1
+
+        return 0
 
 
 if __name__ == '__main__':
