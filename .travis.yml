@@ -12,6 +12,7 @@ script:
 - echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin
 - python3 ./monorepo.py -ci travis -build -test -deliver -path base/
 - python3 ./monorepo.py -ci travis -build -test -deliver -path services/
+- docker logout
 env:
   global:
   - DOCKER_ORG=mozillasecurity
