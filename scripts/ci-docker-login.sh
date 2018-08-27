@@ -19,7 +19,7 @@ Expire-Date: 0
 %echo done
 EOF
 
-key=$(gpg --no-auto-check-trustdb --list-secret-keys | grep ^sec | cut -d/ -f2 | cut -d" " -f1)
+key=$(gpg2 --no-auto-check-trustdb --list-secret-keys | grep ^sec | cut -d/ -f2 | cut -d" " -f1)
 pass init "$key"
 
 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
