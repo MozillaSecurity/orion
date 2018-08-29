@@ -5,6 +5,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 import xml.etree.ElementTree
 import zipfile
 import requests
@@ -18,6 +19,14 @@ HOME = os.path.expanduser("~")
 
 LOG = logging.getLogger("emulator_install")
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+
+def si(number):
+    suffixes = ['', 'k', 'M', 'G', 'T']
+    while number > 1024:
+        number /= 1024.0
+        suffixes.pop(0)
+    return '%0.2f%s' % (number, suffixes.pop(0))
 
 
 def makedirs(*dirs):
@@ -41,7 +50,7 @@ def _get_sdk_file(url, xpath, out_path='.'):
     parts = urlparse(url)
     url_base = parts.scheme + '://' + parts.netloc + os.path.dirname(parts.path)
     xml_string = requests.get(url).content
-    LOG.info("Downloaded manifest: %s (%d bytes)", url, len(xml_string))
+    LOG.info("Downloaded manifest: %s (%sB)", url, si(len(xml_string)))
     root = xml.etree.ElementTree.fromstring(xml_string)
     urls = [i.text for i in root.findall(xpath)]
     assert len(urls) == 1
@@ -50,10 +59,20 @@ def _get_sdk_file(url, xpath, out_path='.'):
     try:
         downloaded = 0
         with open(ziptmp, "wb") as zipf:
-            for chunk in requests.get(url_base + '/' + urls[0]).iter_content(1024 * 1024):
+            response = requests.get(url_base + '/' + urls[0], stream=True)
+            total_size = int(response.headers['Content-Length'])
+            start_time = report_time = time.time()
+            LOG.info("Downloading package: %s (%sB total)", urls[0], si(total_size))
+            for chunk in response.iter_content(1024 * 1024):
                 zipf.write(chunk)
                 downloaded += len(chunk)
-        LOG.info("Downloaded package: %s (%d bytes)", urls[0], downloaded)
+                now = time.time()
+                if (now - report_time) > 30 and downloaded != total_size:
+                    LOG.info(".. still downloading (%0.1f%%, %sB/s)", 100.0 * downloaded / total_size,
+                             si(float(downloaded) / (now - start_time)))
+                    report_time = now
+        assert downloaded == total_size
+        LOG.info(".. downloaded (%sB/s)", si(float(downloaded) / (time.time() - start_time)))
         with zipfile.ZipFile(ziptmp) as zipf:
             for info in zipf.infolist():
                 zipf.extract(info, out_path)
