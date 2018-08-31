@@ -34,7 +34,6 @@ apt-get install -q -y \
     python-dev \
     python-setuptools \
     python-wheel \
-    redis-server \
     screen \
     subversion \
     ubuntu-restricted-addons \
@@ -51,9 +50,9 @@ apt-get install -q -y --no-install-recommends \
     libgtk-3-0-dbgsym \
     mercurial \
     nano \
-    python-hiredis \
     valgrind
 
+/tmp/recipes/redis.sh
 /tmp/recipes/radamsa.sh
 
 apt-get clean -y
