@@ -19,7 +19,6 @@ apt-get update -y -qq
 
 apt-get install -q -y \
     libasound2 \
-    libcurl3 \
     libgl1-mesa-dri-dbgsym \
     libglapi-mesa-dbgsym \
     libglu1-mesa \
