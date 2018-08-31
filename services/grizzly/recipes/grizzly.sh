@@ -19,6 +19,7 @@ apt-get update -y -qq
 
 apt-get install -q -y \
     libasound2 \
+    libdbus-glib-1-2 \
     libgl1-mesa-dri-dbgsym \
     libglapi-mesa-dbgsym \
     libglu1-mesa \
