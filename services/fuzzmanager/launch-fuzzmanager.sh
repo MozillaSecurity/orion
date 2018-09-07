@@ -1,4 +1,6 @@
 #!/bin/bash -ex
 
-echo "Simulate running manage.py"
-# python manage.py runserver
+#### Execute FuzzManager in runserver mode
+
+cd /home/fuzzmanager/FuzzManager/server
+# python3 manage.py runserver
