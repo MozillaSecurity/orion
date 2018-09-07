@@ -9,7 +9,8 @@ ENV DEBIAN_FRONTEND noninteractive
 COPY recipes /tmp/recipes
 
 RUN \
-  apt-get update -qq \
+  echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list \
+  && apt-get update -qq \
   && apt-get install -y -qq --no-install-recommends --no-install-suggests \
     apache2-utils \
     apt-utils \
