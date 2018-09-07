@@ -22,16 +22,16 @@ RUN \
   && locale-gen en_US.UTF-8 \
   && cd /tmp/ \
   && LANG=en_US.UTF8 LC_ALL=en_US.UTF-8 \
-     /tmp/recipes/fuzzmanager.sh
-  # && rm -rf /tmp/* \
-  # && rm -rf /usr/share/man/ /usr/share/info/ \
-  # && find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true \
-  # && find /usr/share/doc -empty -exec rmdir {} + || true \
-  # && apt-get clean -y \
-  # && apt-get autoclean -y \
-  # && apt-get autoremove -y \
-  # && rm -rf /var/lib/apt/lists/* \
-  # && rm -rf /root/.cache/*
+     /tmp/recipes/fuzzmanager.sh \
+  && rm -rf /tmp/* \
+  && rm -rf /usr/share/man/ /usr/share/info/ \
+  && find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true \
+  && find /usr/share/doc -empty -exec rmdir {} + || true \
+  && apt-get clean -y \
+  && apt-get autoclean -y \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -rf /root/.cache/*
 
 ENV USER      fuzzmanager
 ENV HOME      /home/fuzzmanager
