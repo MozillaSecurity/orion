@@ -1,10 +1,8 @@
 #!/bin/bash -ex
 
-echo "Simulate installing FuzzManager"
-
 #### Install FuzzManager
 
-# cd /home/worker
-# git clone --depth 1 --no-tags https://github.com/mozillasecurity/fuzzmanager.git
-# pip install ./fuzzmanager
+cd /home/fuzzmanager
+git clone --depth 1 --no-tags https://github.com/mozillasecurity/FuzzManager.git
+python3 -m pip install ./FuzzManager
 # pip install boto
