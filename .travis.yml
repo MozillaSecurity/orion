@@ -10,8 +10,8 @@ script:
 - set -e
 - make lint
 - ./scripts/ci-docker-login.sh
-- python3 ./monorepo.py -ci travis -build -test -deliver -path base/
-- python3 ./monorepo.py -ci travis -build -test -deliver -path services/
+- python3 ./monorepo.py -ci travis -build -deliver -path base/
+- python3 ./monorepo.py -ci travis -build -deliver -path services/
 after_script:
 - docker logout
 env:
