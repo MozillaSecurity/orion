@@ -2,16 +2,16 @@
 
 #### Install FuzzManager and its server mode requirements
 
-cd /home/fuzzmanager
+cd $HOME
 git clone --depth 1 --no-tags https://github.com/mozillasecurity/FuzzManager.git
-python3 -m pip install /home/fuzzmanager/FuzzManager
+python3 -m pip install $HOME/FuzzManager
 
-cd /home/fuzzmanager/FuzzManager
+cd $HOME/FuzzManager
 python3 -m pip install --upgrade -r server/requirements.txt
 
 ### Set up FuzzManager
 
-cd /home/fuzzmanager/FuzzManager/server/
+cd $HOME/FuzzManager/server/
 python3 manage.py migrate
 python3 manage.py shell <<- EOF
 from django.contrib.auth.models import User
@@ -21,12 +21,12 @@ EOF
 AUTHTOKEN="$(python3 manage.py get_auth_token fuzzmanager)"
 
 # Temporarily go to the home directory of the fuzzmanager user for htpasswd
-pushd /home/fuzzmanager
+pushd $HOME
 htpasswd -cb .htpasswd fuzzmanager "${AUTHTOKEN}"
 popd
 
 # Create a FuzzManager configuration file
-cat << EOF > /home/fuzzmanager/.fuzzmanagerconf
+cat << EOF > $HOME/.fuzzmanagerconf
 [Main]
 serverhost = 127.0.0.1
 serverport = 8000

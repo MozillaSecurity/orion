@@ -2,5 +2,5 @@
 
 #### Execute FuzzManager in runserver mode
 
-cd /home/fuzzmanager/FuzzManager/server
+cd $HOME/FuzzManager/server
 python3 manage.py runserver
