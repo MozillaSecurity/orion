@@ -4,7 +4,7 @@
 
 HOME="/home/fuzzmanager"
 cd $HOME
-if [[ ! -d "$HOME/FuzzManager" ]] then
+if [[ ! -d "$HOME/FuzzManager" ]] ; then
     git clone --depth 1 --no-tags https://github.com/MozillaSecurity/FuzzManager.git
     python3 -m pip install $HOME/FuzzManager
 fi
