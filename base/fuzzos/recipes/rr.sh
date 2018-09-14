@@ -21,6 +21,8 @@ apt-get install -q -y \
   capnproto \
   libcapnp-dev
 
+pip3 install pexpect
+
 TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
 ( cd "$TMPD"
   git clone --depth 1 --no-tags https://github.com/mozilla/rr.git
