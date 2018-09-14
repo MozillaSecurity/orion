@@ -119,7 +119,7 @@ LIBFUZZER_ARGS=($LIBFUZZER_ARGS $TOKEN $CORPORA)
 # TODO: We need to auto-detect this based on the machine
 if [ -z "$LIBFUZZER_INSTANCES" ]
 then
-  LIBFUZZER_INSTANCES=`nproc`
+  LIBFUZZER_INSTANCES=$(nproc)
 fi
 
 # Support auto reduction, format is "MIN,PERCENT".
@@ -131,10 +131,11 @@ then
 fi
 
 # Run LibFuzzer
+# shellcheck disable=SC2086
 $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --fuzzmanager \
   --libfuzzer $LIBFUZZER_AUTOREDUCE_ARGS \
-  --libfuzzer-instances $LIBFUZZER_INSTANCES \
+  --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
   --stats "./stats" \
   --sigdir "$HOME/signatures" \
   --tool "libFuzzer-$FUZZER" \
