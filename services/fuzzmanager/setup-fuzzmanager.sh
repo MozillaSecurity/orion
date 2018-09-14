@@ -2,6 +2,7 @@
 
 #### Install FuzzManager and its server mode requirements
 
+HOME="/home/fuzzmanager"
 cd $HOME
 git clone --depth 1 --no-tags https://github.com/mozillasecurity/FuzzManager.git
 python3 -m pip install $HOME/FuzzManager
