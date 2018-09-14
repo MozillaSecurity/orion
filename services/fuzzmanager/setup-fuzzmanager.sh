@@ -6,11 +6,11 @@ HOME="/home/fuzzmanager"
 cd $HOME
 if [[ ! -d "$HOME/FuzzManager" ]] ; then
     git clone --depth 1 --no-tags https://github.com/MozillaSecurity/FuzzManager.git
-    python3 -m pip install $HOME/FuzzManager
+    python3 -m pip install --user --upgrade $HOME/FuzzManager
 fi
 
 cd $HOME/FuzzManager
-python3 -m pip install --upgrade -r server/requirements.txt
+python3 -m pip install --user --upgrade -r server/requirements.txt
 
 ### Set up FuzzManager
 
