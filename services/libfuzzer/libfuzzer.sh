@@ -123,11 +123,11 @@ then
   LIBFUZZER_INSTANCES=$(nproc)
 fi
 
-# Support auto reduction, format is "MIN,PERCENT".
+# Support auto reduction, format is "MIN;PERCENT".
 LIBFUZZER_AUTOREDUCE_ARGS=""
 if [ -n "$LIBFUZZER_AUTOREDUCE" ]
 then
-  IFS=',' read -r -a LIBFUZZER_AUTOREDUCE_PARAMS <<< "$LIBFUZZER_AUTOREDUCE"
+  IFS=';' read -r -a LIBFUZZER_AUTOREDUCE_PARAMS <<< "$LIBFUZZER_AUTOREDUCE"
   LIBFUZZER_AUTOREDUCE_ARGS="--libfuzzer-auto-reduce-min ${LIBFUZZER_AUTOREDUCE_PARAMS[0]} --libfuzzer-auto-reduce ${LIBFUZZER_AUTOREDUCE_PARAMS[1]}"
 fi
 
