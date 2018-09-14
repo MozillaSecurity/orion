@@ -66,6 +66,7 @@ then
   fi
 
   # Download the corpus from S3
+  # shellcheck disable=SC2086
   $AFL_LIBFUZZER_DAEMON $CORPUS_DOWNLOAD_ARGS $S3_PROJECT_ARGS --s3-corpus-download corpora/
 elif [ -n "$CORPORA" ]
 then
