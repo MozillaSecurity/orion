@@ -35,3 +35,8 @@ serverauthtoken = ${AUTHTOKEN}
 sigdir = /home/fuzzmanager/sigdir/
 tool = your-favourite-tool
 EOF
+
+#### Execute FuzzManager in runserver mode
+
+cd $HOME/FuzzManager/server
+python3 manage.py runserver
