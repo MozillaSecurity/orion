@@ -38,4 +38,7 @@ ENV LC_ALL    en_US.UTF-8
 RUN chown -R fuzzmanager:fuzzmanager /home/fuzzmanager
 USER fuzzmanager
 COPY setup-fuzzmanager.sh /home/fuzzmanager/
-CMD ["/home/fuzzmanager/setup-fuzzmanager.sh"]
+RUN /home/fuzzmanager/setup-fuzzmanager.sh
+WORKDIR /home/fuzzmanager/FuzzManager/server
+ENTRYPOINT ["python3", "manage.py"]
+CMD ["runserver", "0.0.0.0:8000"]
