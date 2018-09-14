@@ -10,6 +10,7 @@ RUN \
     libpulse0 \
     subversion \
     mercurial \
+    screen \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \

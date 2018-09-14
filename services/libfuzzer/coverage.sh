@@ -17,15 +17,6 @@ then
     chmod -R 755 firefox
 fi
 
-# Download mozilla-central source code.
-# - We might have a volume attached which mounts the source into the container.
-if [[ ! -d "$WORKDIR/mozilla-central" ]]
-then
-    hg clone -r "$REVISION" https://hg.mozilla.org/mozilla-central
-else
-    (cd mozilla-central && hg update -r "$REVISION")
-fi
-
 # Setup required coverage environment variables.
 export COVERAGE=1
 export GCOV_PREFIX_STRIP=6
@@ -42,15 +33,14 @@ grcov "$WORKDIR/firefox" \
     -t coveralls+ \
     --commit-sha "$REVISION" \
     --token NONE \
-    -s "$WORKDIR/mozilla-central" \
     -p $(rg -Nor '$1' "pathprefix = (.*)" "$WORKDIR/firefox/firefox.fuzzmanagerconf") \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.
 python -m CovReporter.CovReporter \
     --repository mozilla-central \
-    --description "FuzzOS-LibFuzzer ($FUZZER,rt=$COVRUNTIME)" \
-    --tool "FuzzOS-LibFuzzer-$FUZZER" \
+    --description "libFuzzer ($FUZZER,rt=$COVRUNTIME)" \
+    --tool "libFuzzer-$FUZZER" \
     --submit "$WORKDIR/coverage.json"
 
 # Disable our pool.
