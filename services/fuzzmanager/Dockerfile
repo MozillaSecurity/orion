@@ -37,5 +37,5 @@ ENV LC_ALL    en_US.UTF-8
 
 RUN chown -R fuzzmanager:fuzzmanager /home/fuzzmanager
 USER fuzzmanager
-COPY launch-fuzzmanager.sh /home/fuzzmanager/
-CMD ["/home/fuzzmanager/launch-fuzzmanager.sh"]
+COPY setup-fuzzmanager.sh /home/fuzzmanager/
+CMD ["/home/fuzzmanager/setup-fuzzmanager.sh"]
