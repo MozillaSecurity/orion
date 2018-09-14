@@ -6,8 +6,6 @@ RUN useradd -d /home/fuzzmanager -s /bin/bash -m fuzzmanager
 WORKDIR /home/fuzzmanager
 ENV DEBIAN_FRONTEND noninteractive
 
-COPY recipes /tmp/recipes
-
 RUN \
   echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list \
   && apt-get update -qq \
