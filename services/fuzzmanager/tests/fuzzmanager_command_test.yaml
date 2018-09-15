@@ -1,0 +1,28 @@
+schemaVersion: "2.0.0"
+
+# Basic checks to make sure the application is installed and able to run.
+
+commandTests:
+  - name: "python installation"
+    command: "python3"
+    args: ["--version"]
+    expectedOutput: ["Python 3.6"]
+
+  - name: "FuzzManager installation"
+    command: "python3"
+    args: ["-m", "Collector.Collector", "--version"]
+    expectedOutput: ["Collector/Collector.py v"]
+    exitCode: 0
+
+  - name: "FuzzManager user (Exists)"
+    command: "python3"
+    args: ["/home/fuzzmanager/FuzzManager/server/manage.py", "get_auth_token", "fuzzmanager"]
+    # A random token key will be generated but a newline is always created
+    expectedOutput: ["\n"]
+    exitCode: 0
+
+  - name: "FuzzManager user (Does not exist)"
+    command: "python3"
+    args: ["/home/fuzzmanager/FuzzManager/server/manage.py", "get_auth_token", "absentuser"]
+    expectedOutput: ["User matching query does not exist"]
+    exitCode: 1
