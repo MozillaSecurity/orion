@@ -44,7 +44,7 @@ python -m CovReporter.CovReporter \
     --submit "$WORKDIR/coverage.json"
 
 # Disable our pool.
-if [[ $EC2SPOTMANAGER_POOLID ]]
+if [ -n "$EC2SPOTMANAGER_POOLID" ]
 then
     python -m EC2Reporter --disable "$EC2SPOTMANAGER_POOLID"
 fi
