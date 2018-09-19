@@ -14,6 +14,12 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
+# On EC2, we need to set the clientid based on our public hostname
+if curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname > ec2-hostname ;
+then
+  echo "clientid = $(cat ec2-hostname)" >> .fuzzmanagerconf
+fi
+
 # Firefox with ASan-/Coverage/LibFuzzer
 # We might have a volume attached which mounts Firefox into the container.
 if [[ ! -d "$HOME/firefox" ]]
