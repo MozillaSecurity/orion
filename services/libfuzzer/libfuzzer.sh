@@ -1,22 +1,37 @@
 #!/bin/bash -ex
 cd "$HOME"
 
-# Get FuzzManager configuration from credstash
+# shellcheck disable=SC1090
+source ~/.globals.sh
+is-64-bit
+
+# Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -f "$HOME/.fuzzmanagerconf" ]]
 then
   credstash get fuzzmanagerconf > .fuzzmanagerconf
 fi
 
-# Update FuzzManager config for this instance
+# Update FuzzManager config for this instance.
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
-# Firefox with ASan-/Coverage/LibFuzzer
-# We might have a volume attached which mounts Firefox into the container.
-if [[ ! -d "$HOME/firefox" ]]
+# Update Fuzzmanager config with EC2 hostname.
+ec2-hostname
+
+# Our default target is Firefox, but we support targetting the JS engine instead.
+# In either case, we check if the target is already mounted into the container.
+TARGET_BIN="firefox/firefox"
+if [ -n "$JS" ]
+then
+  if [[ ! -d "$HOME/js" ]]
+  then
+    fuzzfetch -o "$HOME" -n js -a --fuzzing --target js
+  fi
+  TARGET_BIN="js/fuzz-tests"
+elif [[ ! -d "$HOME/firefox" ]]
 then
   fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
 fi
@@ -141,7 +156,7 @@ $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --sigdir "$HOME/signatures" \
   --tool "libFuzzer-$FUZZER" \
   --env "ASAN_OPTIONS=${ASAN_OPTIONS//:/ }" \
-  --cmd "$HOME/firefox/firefox" "${LIBFUZZER_ARGS[@]}"
+  --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
 
 # Minimize Crash
 #   xvfb-run -s '-screen 0 1024x768x24' ./firefox -minimize_crash=1 -max_total_time=60 crash-<hash>

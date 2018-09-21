@@ -55,4 +55,6 @@ ENV CXX       clang++
 RUN chown -R worker:worker /home/worker
 USER worker
 
+COPY recipes/common.sh .globals.sh
+
 CMD ["/bin/bash", "--login"]
