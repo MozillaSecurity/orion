@@ -1,7 +1,9 @@
 #!/bin/bash -ex
 cd "$HOME"
 
+# shellcheck disable=SC1090
 source ~/.globals.sh
+is-64-bit
 
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.

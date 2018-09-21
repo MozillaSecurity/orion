@@ -8,7 +8,6 @@ ENV DEBIAN_FRONTEND noninteractive
 
 COPY setup.sh /tmp
 COPY recipes /tmp/recipes
-COPY recipes/common.sh /home/worker/.globals.sh
 
 RUN \
   apt-get update -qq \
@@ -55,5 +54,7 @@ ENV CXX       clang++
 
 RUN chown -R worker:worker /home/worker
 USER worker
+
+COPY recipes/common.sh .globals.sh
 
 CMD ["/bin/bash", "--login"]
