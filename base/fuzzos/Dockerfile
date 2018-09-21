@@ -8,6 +8,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 COPY setup.sh /tmp
 COPY recipes /tmp/recipes
+COPY recipes/common.sh /home/worker/.globals.sh
 
 RUN \
   apt-get update -qq \

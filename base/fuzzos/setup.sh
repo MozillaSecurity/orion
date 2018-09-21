@@ -12,3 +12,6 @@
 ./recipes/nodejs.sh
 ./recipes/rr.sh
 ./recipes/grcov.sh
+
+echo "source /home/worker/.globals.sh" >> /home/worker/.bashrc
+

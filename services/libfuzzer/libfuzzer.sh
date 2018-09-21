@@ -1,24 +1,23 @@
 #!/bin/bash -ex
 cd "$HOME"
 
-# Get FuzzManager configuration from credstash
+source ~/.globals.sh
+
+# Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -f "$HOME/.fuzzmanagerconf" ]]
 then
   credstash get fuzzmanagerconf > .fuzzmanagerconf
 fi
 
-# Update FuzzManager config for this instance
+# Update FuzzManager config for this instance.
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
-# On EC2, we need to set the clientid based on our public hostname
-if curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname > ec2-hostname ;
-then
-  echo "clientid = $(cat ec2-hostname)" >> .fuzzmanagerconf
-fi
+# Update Fuzzmanager config with EC2 hostname.
+ec2-hostname
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
