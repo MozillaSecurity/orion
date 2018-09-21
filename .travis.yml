@@ -9,7 +9,7 @@ addons:
       - python3
       - python3-pip
 before_script:
-  - pip3 install -r requirements.txt
+  - sudo pip3 install -r requirements.txt
 script:
   - set -e
   - make lint
@@ -21,6 +21,7 @@ after_script:
 env:
   global:
     - DOCKER_ORG=mozillasecurity
+    - TRAVIS_EVENT_TYPE=cron
     - secure: niM2Qdx4hqM7kAoY8ywqE+HP8MY5MJJAkib0uWbOsPMES/rMvilSZDxSvLHzdjfRxFRNgbbo3UrHlfoxlHA5vnn1G8QJit+MiR0JzAdboDvHuSKoQtpg1QfR2Wc4dRqgTYAAJf3RL0qjmKuyN+99DSCc3/zgnRJYX+ovTGdtN0AJcqnJewwlwXqHTUUU/xzmLDdHAtWXOEAixyUmlYIdZjTZ4ZRE336xQGMS6HDuOygPqf0KI807pt+/nVuZNSXCerHUa9yNTt+HlhqIGFOa/JxnXKYG1MDN7xFBRh8u4BGWk//gPNRPTUdEsqdI8KuLi+8Hn2+tI6OLRyJ6Q3XZx++5QhC/KvJ4eOhHeniTwNr4cZBXPtnqbSzbp0XI8bG+iiHF55uJzvGmGDNl55pTYdFaHgHRcmCSKYkZII1dnF/8BPGZN2zuRNNSOj7rihRr0KlX/6ZwjMbAn5OdMWeS7XixzGulXznvfiimiuzhQmZIq0N0Q+CgceK8E0waLXSvIeZNOiL8KTB4I4AA7RgfP02ud+PYIMZvrkJ0JrGv7H+yPwXIGDAk9RrxxF5IDxT5JnH23ovFpuyHSAxjKnVbLrhLve4udi/HqNyguUdXeYZaP3YI7miLt4i+EKUfmuuDFY7x4/VtLYqw/CBpviqixs6SQ6iu8Pah/tcuYSKH7GU=
     - secure: xGDp6TVRpSQq+TjQL/RB+7SajjyW72v/1f6sSQh1C1equpoBexdjCatPqHslBQrZIawWIqtx2yARRqwtP9VvCvZ01FbC0igXuYCSjRQDBazNzCJJnA4POTirIeV7fo6g18ws3XTUWFiPuYeB0T3CGzg3FfpvNO2T43YF2fxvy0Wv/miBzsGWAD/q9WSSLNBP/IGxPHbqQQdZmTE9eHhIXGJF3FJz6kc4IMFm5yQGKaUg2PrunHiJxAUXlvZCZpZt170snQohoSuUZme4f+eAVbeKfvfW4vxg9JPc+gmara4aTOW5Q7NIqCKbe23qLMwemyPvjJoj1AW1Vy1DsrcF/t2gkfudy1TAebOo/X4Y8iKjW/Wb028VbGDH4m7sxAcnzH62H8WsD/dG+16LcH4u8rSMTNpjbDViXQExS5SDUxnxELvfLxZuQNZ2PufdzlF5TfYnWgWFiq+Omy3yDKk3jE88CNb0cb735JYJikxeXCT+3v1IyH0ifANQ/EG7/Ln53bqboYf/XUztZhj8iaelrohD4aOysfeWgQrdhCtuy3c0rgZCrRtneNsLoaIp0DK4tvAczkK/byynLehFOSgOkUT3NKJaQbLtVHyUOsXAT9U8b/DaFyl15BGwSMV434t9XA1OWpOGF6gGyKmeHGod8Lm/KQfNNULj7SBpgrhFJ0Q=
 notifications:
