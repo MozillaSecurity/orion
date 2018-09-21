@@ -1,6 +1,6 @@
 schemaVersion: "2.0.0"
 
 metadataTest:
-  entrypoint: []
-  cmd: ["/bin/bash", "--login"]
-  workdir: /home/fuzzmanager
+  entrypoint: ["python3", "manage.py"]
+  cmd: ["runserver", "0.0.0.0:8000"]
+  workdir: /home/fuzzmanager/FuzzManager/server
