@@ -13,6 +13,11 @@ import logging
 import argparse
 import subprocess
 
+import json
+import yaml
+import http.client
+import urllib.parse
+
 
 class MonorepoManagerException(Exception):
     """Exception class for Monorepo Manager."""
@@ -234,8 +239,8 @@ class Travis(CI):
             docker.test()
 
         if options.deliver \
-            and self.is_pull_request == 'false' \
-            and self.branch == 'master':
+                and self.is_pull_request == 'false' \
+                and self.branch == 'master':
             docker.push()
 
     def run(self, options):
@@ -258,12 +263,61 @@ class Travis(CI):
                 self.deliver(folder, options, version)
 
 
+class TravisAPI(CI):
+    """Travis CI REST API bridge for local build managment.
+
+    To obtain a Travis token run either:
+
+        travis login --org | --com
+        travis token --org | --com
+
+    or visit: https://travis-ci.org/profile
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self, options, branch="master"):
+        """Triggers a build at Travis CI with the Travis REST API.
+        """
+        if not hasattr(options, 'token') or not len(options.token):
+            raise MonorepoManagerException('No Travis token provided.')
+
+        tld = 'com' if options.pro else 'org'
+        url = 'api.travis-ci.{0}'.format(tld)
+        repo = options.repo.replace('/', '%2F')
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Travis-API-Version': 3,
+            'Authorization': 'token {0}'.format(options.token)
+        }
+        conf = options.conf.read()
+        request = {
+            'request': {
+                'branch': branch,
+                'config': json.loads(json.dumps(yaml.safe_load(conf)))
+            }
+        }
+        params = json.dumps(request)
+
+        connection = http.client.HTTPSConnection(url)
+        self.logger.debug('Sending HTTP headers: {0}'.format(headers))
+        self.logger.debug('Sending request body: {0}'.format(params))
+        connection.request('POST', '/repo/{0}/requests'.format(repo), params, headers)
+
+        response = connection.getresponse()
+        self.logger.info(response.read().decode())
+
+
 class MonorepoManager:
     """Command-line interface for MonorepoManager.
     """
 
-    @staticmethod
-    def parse_args():
+    HOME = os.path.dirname(os.path.abspath(__file__))
+
+    @classmethod
+    def parse_args(cls):
         """Arguments for the MonorepoManager.
         """
         parser = argparse.ArgumentParser(
@@ -274,14 +328,14 @@ class MonorepoManager:
             prog='Monorepo'
         )
 
-        m = parser.add_argument_group('Mandatory Arguments') # pylint: disable=invalid-name
+        m = parser.add_argument_group('Mandatory Arguments')  # pylint: disable=invalid-name
         m.add_argument('-ci',
                        required=True,
                        metavar='backend',
                        type=str,
                        help='Name of the used CI backend.')
 
-        o = parser.add_argument_group('Optional Arguments') # pylint: disable=invalid-name
+        o = parser.add_argument_group('Optional Arguments')  # pylint: disable=invalid-name
         o.add_argument('-path',
                        type=str,
                        default=os.path.relpath(os.getcwd()),
@@ -298,6 +352,23 @@ class MonorepoManager:
                        action='store_true',
                        default=False,
                        help='Test Docker containers')
+        o.add_argument('-token',
+                       type=str,
+                       default='',
+                       help='Travis API token')
+        o.add_argument('-repo',
+                       type=str,
+                       default='mozillasecurity/orion',
+                       help='Travis repository slug')
+        o.add_argument('-pro',
+                       action='store_true',
+                       default=False,
+                       help='Travis professional account')
+        o.add_argument('-conf',
+                       metavar='path',
+                       type=argparse.FileType(),
+                       default=os.path.join(cls.HOME, '.travis.yml'),
+                       help='Travis build configuration')
         o.add_argument('-h', '-help', '--help',
                        action='help',
                        help=argparse.SUPPRESS)
@@ -320,6 +391,13 @@ class MonorepoManager:
         if args.ci == 'travis':
             try:
                 Travis().run(args)
+            except MonorepoManagerException as msg:
+                logging.error(msg)
+                return 1
+
+        if args.ci == 'travis-api':
+            try:
+                TravisAPI().run(args)
             except MonorepoManagerException as msg:
                 logging.error(msg)
                 return 1
