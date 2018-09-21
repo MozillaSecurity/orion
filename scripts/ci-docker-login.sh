@@ -1,7 +1,7 @@
 #!/bin/bash -exu
 sudo apt-get install -y -qq --no-install-recommends --no-install-suggests pass
 
-LATEST_VERSION=$(curl -Ls https://api.github.com/repos/docker/docker-credential-helpers/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
+LATEST_VERSION=$(curl -vLs --retry 5 https://api.github.com/repos/docker/docker-credential-helpers/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
 echo "$LATEST_VERSION"
 curl -LO "https://github.com/docker/docker-credential-helpers/releases/download/$LATEST_VERSION/docker-credential-pass-$LATEST_VERSION-amd64.tar.gz"
 tar xvf "docker-credential-pass-$LATEST_VERSION-amd64.tar.gz"
