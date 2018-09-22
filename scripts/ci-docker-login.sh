@@ -1,9 +1,4 @@
 #!/bin/bash -exu
-TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
-if [ "$TRAVIS_PULL_REQUEST" = "true" ]; then
- exit 0
-fi
-
 sudo apt-get install -y -qq --no-install-recommends --no-install-suggests pass
 
 LATEST_VERSION=$(curl -Ls --retry 5 "https://$GH_TOKEN@api.github.com/repos/docker/docker-credential-helpers/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
