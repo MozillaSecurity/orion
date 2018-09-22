@@ -24,7 +24,8 @@ setup-fuzzmanager-hostname
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 TARGET_BIN="firefox/firefox"
-if [ -n "$JS" ]
+JS=${JS:-0}
+if [ "$JS" = 1 ]
 then
   if [[ ! -d "$HOME/js" ]]
   then
