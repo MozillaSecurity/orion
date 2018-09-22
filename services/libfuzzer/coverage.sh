@@ -18,7 +18,7 @@ export GCOV_PREFIX="$WORKDIR/firefox"
 # In either case, we check if the target is already mounted into the container.
 # For coverage, we also are pinned to a given revision and we need to fetch coverage builds.
 TARGET_BIN="firefox/firefox"
-JS=${JS:-0}
+export JS=${JS:-0}
 if [ "$JS" = 1 ]
 then
   if [[ ! -d "$HOME/js" ]]
