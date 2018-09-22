@@ -18,8 +18,8 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
-# Update Fuzzmanager config with EC2 hostname.
-ec2-hostname
+# Update Fuzzmanager config with suitable hostname based on the execution environment.
+setup-fuzzmanager-hostname
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
