@@ -27,7 +27,7 @@ FuzzOS<br>
     - [Usage](#usage)
     - [Testing](#testing)
     - [Login](#login)
-
+  - [Playground](#playground)
 
 This repository is a monorepo of various microservices and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos) (a multipurpose base image). CI and CD is performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest revision, nightly or latest. For further information take either a look into the Wiki or the corresponding README.md of each microservice.
 
@@ -91,10 +91,19 @@ Locally:
 make test
 ```
 
-
-
 #### Login
 
 ```bash
 DOCKER_USER=ABC make login
 ```
+
+### Playground
+
+Play with Docker is a project sponsored by Docker Inc.
+
+- Browse to [PWD](https://labs.play-with-docker.com)
+- Login with your Docker account.
+- Press `ADD NEW INSTANCE` and enter `docker run --rm -it mozillasecurity/fuzzos`
+- You can optionally login via SSH and upload files via drag 'n' drop.
+
+Keep in mind that this is only for testing purpose and to read their motd.
