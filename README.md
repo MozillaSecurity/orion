@@ -99,11 +99,14 @@ DOCKER_USER=ABC make login
 
 ### Playground
 
-Play with Docker is a project sponsored by Docker Inc.
+"Play With Docker" is a project sponsored by Docker Inc.
 
 - Browse to [PWD](https://labs.play-with-docker.com)
 - Login with your Docker account.
 - Press `ADD NEW INSTANCE` and enter `docker run --rm -it mozillasecurity/fuzzos`
-- You can optionally login via SSH and upload files via drag 'n' drop.
+
+You can upload files via drag 'n' drop or optionally login via SSH.
+It is also possible to let PWD point to your `docker-compose` configuration and setup a swarm. Example:
+`https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/XYZ/docker-compose.yml`
 
 Keep in mind that this is only for testing purpose and to read their motd.
