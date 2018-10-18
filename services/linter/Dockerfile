@@ -17,3 +17,5 @@ RUN apk --no-cache add \
     && rm -rf shellcheck-latest
 
 WORKDIR /mnt
+
+CMD ["/bin/bash"]
