@@ -35,8 +35,8 @@ RUN \
      CC=clang CXX=clang++ ./setup.sh \
   && rm -rf /tmp/* \
   && rm -rf /usr/share/man/ /usr/share/info/ \
-  && find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true \
-  && find /usr/share/doc -empty -exec rmdir {} + || true \
+  && (find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true) \
+  && (find /usr/share/doc -empty -exec rmdir {} + || true) \
   && apt-get clean -y \
   && apt-get autoclean -y \
   && apt-get autoremove -y \
