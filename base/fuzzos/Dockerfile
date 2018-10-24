@@ -20,6 +20,7 @@ RUN \
     gpg-agent \
     locales \
     make \
+    nano \
     openssh-client \
     python \
     python-pip \
