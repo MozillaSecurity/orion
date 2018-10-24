@@ -34,8 +34,9 @@ function apt-install-auto () {
 }
 
 function get-latest-github-release () {
+  # Bypass GitHub API RateLimit. Note that we do not follow the redirect.
   # shellcheck disable=SC2016
-  curl -Ls "https://api.github.com/repos/$1/releases/latest" | rg -Nor '$1' '"tag_name": "(.+)"'
+  retry curl -s "https://github.com/$1/releases/latest" | rg -Nor '$1' 'tag/(.+)"'
 }
 
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
