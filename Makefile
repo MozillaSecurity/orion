@@ -4,17 +4,17 @@
 .PHONY: login ling_scripts lint_dockers lint test help
 
 login: ## Login to Docker Hub
-	docker login --username=$(DOCKER_USER)
+	docker login --username="$(DOCKER_USER)"
 
 lint_scripts: ## Lint shellscripts
 	docker pull mozillasecurity/linter
 	find . -not -path '*/\.*' \
-	       -exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
-	       -print | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter shellcheck -x -a -Calways
+		-exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
+		-print | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter shellcheck -x -a -Calways
 
 lint_dockers: ## Lint Dockerfiles
 	docker pull mozillasecurity/linter
-	find . -type f -name "Dockerfile" | xargs docker run --rm -v $(PWD):/mnt mozillasecurity/linter hadolint \
+	find . -type f -name "Dockerfile" | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
 		--ignore DL3002 \
 		--ignore DL3003 \
 		--ignore DL3007 \
@@ -29,7 +29,7 @@ lint: lint_scripts lint_dockers
 test:
 	docker run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v $(PWD)/base/fuzzos/tests:/tests \
+		-v "$(PWD)/base/fuzzos/tests":/tests \
 		gcr.io/gcp-runtimes/container-structure-test:latest \
 			test \
 			--quiet \
