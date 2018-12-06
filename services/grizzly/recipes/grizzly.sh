@@ -16,19 +16,19 @@ apt-get update -y -qq
 # Todo: These packages seem to be missing in Bionic 18.04
 #    libegl1-mesa-dbgsym \
 #    libgl1-mesa-glx-dbgsym \
+#    libgl1-mesa-dri-dbgsym \
+#    libglapi-mesa-dbgsym \
+#    mesa-va-drivers-dbgsym \
 
 apt-get install -q -y \
     libasound2 \
     libdbus-glib-1-2 \
-#    libgl1-mesa-dri-dbgsym \
-#    libglapi-mesa-dbgsym \
     libglu1-mesa \
     libglu1-mesa-dbgsym \
     libosmesa6 \
     libosmesa6-dbgsym \
     libpulse0 \
     libwayland-egl1-mesa-dbgsym \
-#    mesa-va-drivers-dbgsym \
     nodejs \
     p7zip-full \
     python-dev \
