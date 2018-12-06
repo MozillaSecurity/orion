@@ -19,6 +19,7 @@ apt-get update -y -qq
 #    libgl1-mesa-dri-dbgsym \
 #    libglapi-mesa-dbgsym \
 #    mesa-va-drivers-dbgsym \
+#    libosmesa6-dbgsym \
 
 apt-get install -q -y \
     libasound2 \
@@ -26,7 +27,6 @@ apt-get install -q -y \
     libglu1-mesa \
     libglu1-mesa-dbgsym \
     libosmesa6 \
-    libosmesa6-dbgsym \
     libpulse0 \
     libwayland-egl1-mesa-dbgsym \
     nodejs \
