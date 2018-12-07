@@ -6,7 +6,7 @@
 
 OS: Ubuntu 18.04
 
-## Pre-Installed Packages
+### Pre-Installed Packages
 
 - credstash
 - fuzzfetch
@@ -19,7 +19,10 @@ OS: Ubuntu 18.04
 - grcov
 - ripgrep
 - nodejs
-
+- nano
+- python3
+- ssh
+- git
 
 ## Run
 

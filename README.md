@@ -48,6 +48,10 @@ Base: Ubuntu 18.04
 - grcov
 - ripgrep
 - nodejs
+- nano
+- python3
+- ssh
+- git
 
 ### Run FuzzOS
 
@@ -62,7 +66,7 @@ docker run -it --rm mozillasecurity/fuzzos:latest bash -li
 
 ### Architecture
 
-[![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/fuzzos/master/docs/assets/overview.png)
+[![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/orion/master/docs/assets/overview.png)
 
 ### Build Instructions
 
