@@ -112,7 +112,7 @@ class AndroidHelper(object):
 
         # get latest Google APIs system image
         _get_sdk_file(IMAGES_URL,
-                      "./remotePackage[@path='system-images;android-25;google_apis;x86']"
+                      "./remotePackage[@path='system-images;android-25;google_apis;x86_64']"
                       "/channelRef[@ref='channel-0']/.."
                       "/archives/archive/complete/url",
                       api25_gapi)
@@ -148,7 +148,7 @@ class AndroidHelper(object):
         with open(avd_cfg, "w") as fp:
             print("AvdId=" + self.avd_name, file=fp)
             print("PlayStore.enabled=false", file=fp)
-            print("abi.type=x86", file=fp)
+            print("abi.type=x86_64", file=fp)
             print("avd.ini.displayname=" + self.avd_name, file=fp)
             print("avd.ini.encoding=UTF-8", file=fp)
             print("disk.dataPartition.size=800M", file=fp)
@@ -159,7 +159,7 @@ class AndroidHelper(object):
             print("hw.battery=yes", file=fp)
             print("hw.camera.back=emulated", file=fp)
             print("hw.camera.front=emulated", file=fp)
-            print("hw.cpu.arch=x86", file=fp)
+            print("hw.cpu.arch=x86_64", file=fp)
             print("hw.cpu.ncore=4", file=fp)
             print("hw.dPad=no", file=fp)
             print("hw.device.hash2=MD5:524882cfa9f421413193056700a29392", file=fp)
@@ -179,7 +179,7 @@ class AndroidHelper(object):
             print("hw.sensors.orientation=yes", file=fp)
             print("hw.sensors.proximity=yes", file=fp)
             print("hw.trackBall=no", file=fp)
-            print("image.sysdir.1=system-images/android-25/google_apis/x86/", file=fp)
+            print("image.sysdir.1=system-images/android-25/google_apis/x86_64/", file=fp)
             print("runtime.network.latency=none", file=fp)
             print("runtime.network.speed=full", file=fp)
             print("sdcard.size=%dM" % (self.sdcard_size,), file=fp)
@@ -192,7 +192,7 @@ class AndroidHelper(object):
             print("tag.id=google_apis", file=fp)
             print("vm.heapSize=256", file=fp)
 
-        shutil.copy(os.path.join(api25_gapi, "x86", "userdata.img"), avd_dir)
+        shutil.copy(os.path.join(api25_gapi, "x86_64", "userdata.img"), avd_dir)
 
         sdcard = os.path.join(avd_dir, "sdcard.img")
         mksd = os.path.join(sdk, "emulator", "mksdcard")
@@ -324,7 +324,7 @@ def main():
     aparse.add_argument("actions", nargs="*", choices=["avd", "install", "firstboot", "kill", "run",
                                                        "wait-for-boot-completed"])
     aparse.add_argument("--android-port", default=5554, type=int, help="Port to run emulator on (default: 5554)")
-    aparse.add_argument("--avd-name", default="x86", help="Name of AVD to create/use (default: x86)")
+    aparse.add_argument("--avd-name", default="x86_64", help="Name of AVD to create/use (default: x86_64)")
     aparse.add_argument("--no-window", action="store_true", help="Pass -no-window to emulator")
     aparse.add_argument("--sdcard", default=500, type=int, help="SD card size in MB (default: 500)")
     aparse.add_argument("--snapshot", default="never", choices=["never", "always", "save", "load"],
