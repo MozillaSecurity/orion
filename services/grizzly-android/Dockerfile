@@ -6,6 +6,7 @@ USER root
 COPY recipes/ /tmp/recipes/
 RUN /tmp/recipes/all.sh \
     && rm -rf /tmp/recipes
+COPY recipes/kvm.sh /home/worker/
 
-USER worker
-CMD ["/home/worker/launch-grizzly.sh"]
+USER root
+CMD ["/bin/sh", "-c", "/home/worker/kvm.sh && su worker -c /home/worker/launch-grizzly.sh"]
