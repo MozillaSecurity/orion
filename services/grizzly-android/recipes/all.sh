@@ -12,4 +12,8 @@ pip install -r /tmp/recipes/requirements.txt
 python /tmp/recipes/emulator.py install avd
 
 chown -R worker:worker /home/worker
-adduser worker kvm
+
+addgroup kvm
+usermod -a -G kvm worker
+chgrp kvm /dev/kvm
+chmod 0660 /dev/kvm
