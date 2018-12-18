@@ -9,7 +9,6 @@ locally by yourself and/or you want to develop on the image, then the following 
 
 ```bash
 REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
-export REVISION
 
 fuzzfetch --build "$REVISION" --fuzzing --coverage -a --tests gtest -n firefox
 hg clone -r "$REVISION" https://hg.mozilla.org/mozilla-central
