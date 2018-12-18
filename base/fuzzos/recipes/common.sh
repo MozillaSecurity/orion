@@ -52,7 +52,7 @@ function is-64-bit () {
 # On EC2 we need to set the clientid based on our public hostname.
 function setup-fuzzmanager-hostname () {
   export ec2_hostname
-  ec2_hostname=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+  ec2_hostname=$(curl -s --connect-timeout 20 http://169.254.169.254/latest/meta-data/public-hostname)
   if [ -n "$ec2_hostname" ]
   then
     echo "$ec2_hostname"
