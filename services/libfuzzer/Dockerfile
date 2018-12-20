@@ -20,4 +20,4 @@ RUN \
 
 USER worker
 COPY *.sh ./
-ENTRYPOINT ["./setup.sh"]
+CMD ["./setup.sh"]
