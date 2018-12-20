@@ -1,4 +1,9 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
+set -e
+set -x
+
+# Constants
+EC2_METADATA_URL="http://169.254.169.254/latest/meta-data"
 
 # Re-tries a certain command 9 times with a 30 seconds pause between each try.
 function retry () {
@@ -49,16 +54,27 @@ function is-64-bit () {
   fi
 }
 
-# On EC2 we need to set the clientid based on our public hostname.
-function setup-fuzzmanager-hostname () {
-  export ec2_hostname
-  ec2_hostname=$(curl -s --connect-timeout 20 http://169.254.169.254/latest/meta-data/public-hostname)
-  if [ -n "$ec2_hostname" ]
+# Determine the relative hostname based on the outside environment.
+function relative-hostname {
+  choice=${1,,}
+  case $choice in
+    ec2)
+      retry curl -s --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
+      ;;
+    *)
+      hostname
+      ;;
+  esac
+}
+
+# Add relative hostname to the FuzzManager configuration.
+function setup-fuzzmanager-hostname {
+  name=$(relative-hostname "$1")
+  if [ -z "$name" ]
   then
-    echo "$ec2_hostname"
-    echo "clientid = $ec2_hostname" >> "$HOME/.fuzzmanagerconf"
-  else
-    hostname
-    echo "clientid = $(hostname)" >> "$HOME/.fuzzmanagerconf"
+    echo "WARNING: hostname was not determined correctly."
+    name=$(hostname)
   fi
+  echo "Using '$name' as hostname."
+  echo "clientid = $name" >> "$HOME/.fuzzmanagerconf"
 }
