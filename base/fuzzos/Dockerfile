@@ -2,60 +2,26 @@ FROM ubuntu:18.04
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
-RUN useradd -d /home/worker -s /bin/bash -m worker
-WORKDIR /home/worker
+ENV USER            worker
+ENV HOME            /home/worker
+ENV LOGNAME         worker
+ENV HOSTNAME        taskcluster-worker
+ENV CC              clang
+ENV CXX             clang++
 ENV DEBIAN_FRONTEND noninteractive
+
+RUN useradd -d $HOME -s /bin/bash -m $USER
+WORKDIR $HOME
 
 COPY setup.sh /tmp
 COPY recipes /tmp/recipes
 
-RUN \
-  apt-get update -qq \
-  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
-    apt-utils \
-    bzip2 \
-    curl \
-    dbus \
-    git \
-    gpg-agent \
-    locales \
-    make \
-    nano \
-    openssh-client \
-    python \
-    python-pip \
-    python-setuptools \
-    python3-pip \
-    python3-setuptools \
-    software-properties-common \
-    unzip \
-    xvfb \
-  && locale-gen en_US.UTF-8 \
-  && cd /tmp/ \
-  && LANG=en_US.UTF8 LC_ALL=en_US.UTF-8 \
-     CC=clang CXX=clang++ ./setup.sh \
-  && rm -rf /tmp/* \
-  && rm -rf /usr/share/man/ /usr/share/info/ \
-  && (find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true) \
-  && (find /usr/share/doc -empty -exec rmdir {} + || true) \
-  && apt-get clean -y \
-  && apt-get autoclean -y \
-  && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -rf /root/.cache/*
+RUN cd /tmp && ./setup.sh
 
-ENV USER      worker
-ENV HOME      /home/worker
-ENV LOGNAME   worker
-ENV HOSTNAME  taskcluster-worker
-ENV LANG      en_US.UTF-8
-ENV LC_ALL    en_US.UTF-8
-ENV CC        clang
-ENV CXX       clang++
+ENV LANG   en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
-RUN chown -R worker:worker /home/worker
-USER worker
-
-COPY recipes/common.sh .globals.sh
+RUN chown -R worker:worker $HOME
+USER $USER
 
 CMD ["/bin/bash", "--login"]

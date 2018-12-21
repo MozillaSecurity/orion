@@ -1,6 +1,12 @@
-#!/bin/sh -ex
+#!/usr/bin/env bash
+
+set -e
+set -x
 
 #### Base System Configuration
+
+# Generate locales
+locale-gen en_US.UTF-8
 
 # Quiet pip
 cat << EOF | tee /etc/pip.conf > /dev/null
@@ -20,3 +26,19 @@ kernel.core_uses_pid = 1
 # Allow ptrace of any process
 kernel.yama.ptrace_scope = 0
 EOF
+
+#### Base Environment Configuration
+
+mkdir ~/.bin
+
+cat << 'EOF' >> ~/.bashrc
+# FuzzOS
+export PATH=$HOME/.bin:$PATH
+EOF
+
+# Add `cleanup.sh` to let images perform standard cleanup operations.
+cp "${0%/*}/cleanup.sh" ~/.bin/cleanup.sh
+
+# Add shared `common.sh` to Bash
+cp "${0%/*}/common.sh" ~/.common.sh
+printf "source ~/.common.sh\n" >> ~/.bashrc

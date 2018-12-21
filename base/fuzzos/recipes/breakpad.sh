@@ -1,4 +1,7 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
+
+set -e
+set -x
 
 #### Install Breakpad Tools
 # https://developer.mozilla.org/en-US/docs/Mozilla/Debugging/Debugging_a_minidump#Using_other_tools_to_inspect_minidump_data

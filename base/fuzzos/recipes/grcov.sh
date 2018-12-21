@@ -1,7 +1,10 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 
-# shellcheck disable=SC1091
-source ./recipes/common.sh
+set -e
+set -x
+
+# shellcheck source=base/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
 
 #### Install grcov
 

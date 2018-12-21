@@ -1,17 +1,44 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 
-./recipes/fuzzos.sh
-./recipes/llvm.sh
-./recipes/rg.sh
-./recipes/afl.sh
-./recipes/fuzzfetch.sh
-./recipes/credstash.sh
-./recipes/fuzzmanager.sh
-./recipes/honggfuzz.sh
-./recipes/breakpad.sh
-./recipes/nodejs.sh
-./recipes/rr.sh
-./recipes/grcov.sh
+set -e
+set -x
 
-echo "source /home/worker/.globals.sh" >> /home/worker/.bashrc
+#### Bootstrap Packages
 
+apt-get update -qq
+apt-get install -y -qq --no-install-recommends --no-install-suggests \
+    apt-utils \
+    bzip2 \
+    curl \
+    dbus \
+    git \
+    gpg-agent \
+    locales \
+    make \
+    nano \
+    openssh-client \
+    python \
+    python-pip \
+    python-setuptools \
+    python3-pip \
+    python3-setuptools \
+    software-properties-common \
+    unzip \
+    xvfb
+
+cd recipes
+
+./fuzzos.sh
+./llvm.sh
+./rg.sh
+./afl.sh
+./fuzzfetch.sh
+./credstash.sh
+./fuzzmanager.sh
+./honggfuzz.sh
+./breakpad.sh
+./nodejs.sh
+./rr.sh
+./grcov.sh
+
+./cleanup.sh

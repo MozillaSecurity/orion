@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-set -e
-set -x
+
+# NOTE
+# This is shared resource file and is added and sourced in `.bashrc`.
+# You need to manually source it if you want to use it in any build recipe.
 
 # Constants
 EC2_METADATA_URL="http://169.254.169.254/latest/meta-data"
@@ -78,3 +80,4 @@ function setup-fuzzmanager-hostname {
   echo "Using '$name' as hostname."
   echo "clientid = $name" >> "$HOME/.fuzzmanagerconf"
 }
+
