@@ -19,10 +19,12 @@ lint_dockers: ## Lint Dockerfiles
 		--ignore DL3003 \
 		--ignore DL3007 \
 		--ignore DL3008 \
+		--ignore DL3009 \
 		--ignore DL3013 \
 		--ignore DL3018 \
 		--ignore DL4001 \
-		--ignore DL4006
+		--ignore DL4006 \
+		--ignore SC2086
 
 lint: lint_scripts lint_dockers
 
