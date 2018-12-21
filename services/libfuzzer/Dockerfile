@@ -9,15 +9,12 @@ RUN \
     firefox \
     libpulse0 \
     subversion \
-    mercurial \
     screen \
-  && apt-get clean -y \
-  && apt-get autoclean -y \
-  && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/* \
-  && rm -rf /root/.cache/* \
-  && chown -R worker:worker /home/worker
+  && "$HOME/.bin/cleanup.sh"
 
-USER worker
+RUN chown -R worker:worker $HOME
+USER $USER
+
 COPY *.sh ./
+
 CMD ["./setup.sh"]
