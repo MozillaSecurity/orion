@@ -41,7 +41,7 @@ timeout --foreground -s 2 -k $((COVRUNTIME + 30)) "$COVRUNTIME" ./libfuzzer.sh
 # %<---[coverage]-------------------------------------------------------------
 
 # Collect coverage count data.
-grcov "$GCOV_PREFIX" \
+RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     -t coveralls+ \
     --commit-sha "$REVISION" \
     --token NONE \
