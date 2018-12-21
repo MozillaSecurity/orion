@@ -2,7 +2,7 @@
 cd "$HOME"
 
 # shellcheck disable=SC1090
-source ~/.globals.sh
+source ~/.common.sh
 
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
