@@ -1,5 +1,7 @@
-#!/bin/bash -x
+#!/usr/bin/env bash
 # shellcheck disable=SC2016,SC2046
+set -e
+set -x
 
 # %<---[setup]----------------------------------------------------------------
 
@@ -54,9 +56,3 @@ python -m CovReporter.CovReporter \
     --description "libFuzzer ($FUZZER,rt=$COVRUNTIME)" \
     --tool "libFuzzer-$FUZZER" \
     --submit "$WORKDIR/coverage.json"
-
-# Disable our pool.
-if [ -n "$EC2SPOTMANAGER_POOLID" ]
-then
-    python -m EC2Reporter --disable "$EC2SPOTMANAGER_POOLID"
-fi

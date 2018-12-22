@@ -81,3 +81,10 @@ function setup-fuzzmanager-hostname {
   echo "clientid = $name" >> "$HOME/.fuzzmanagerconf"
 }
 
+# Disable AWS EC2 pool; suitable as trap function.
+function disable-ec2-pool {
+  if [[ -n $1 ]]
+  then
+      python -m EC2Reporter --disable "$1"
+  fi
+}
