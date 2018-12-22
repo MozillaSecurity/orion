@@ -38,7 +38,7 @@ fi
 
 # %<---[fuzzer]---------------------------------------------------------------
 
-timeout --foreground -s 2 -k $((COVRUNTIME + 30)) "$COVRUNTIME" ./libfuzzer.sh
+timeout -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh || :
 
 # %<---[coverage]-------------------------------------------------------------
 
