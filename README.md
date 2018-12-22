@@ -25,13 +25,13 @@ FuzzOS<br>
 
 ### What is Orion?
 
-Orion is a build environment for services we run in our Fuzzing infrastructure (i.e [LibFuzzer](https://github.com/MozillaSecurity/orion/tree/master/services/libfuzzer)) and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos) a multipurpose base image which most of our fuzzing services use as a base.
+Orion is a build environment for services we run in our Fuzzing infrastructure (i.e [LibFuzzer](https://github.com/MozillaSecurity/orion/tree/master/services/libfuzzer)) and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos) a multipurpose image which most of our fuzzing services use as a base.
 
 > For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
 
 ### How does it operate?
 
-CI and CD are performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest `revision`, `nightly` or `latest` before being published to the Docker registry. For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
+CI and CD are performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest `revision`, `nightly` or `latest` before being published to the [Docker registry](https://hub.docker.com/u/mozillasecurity/). For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
 
 ### Build Instructions and Development
 
