@@ -13,64 +13,27 @@ FuzzOS<br>
   <a href="https://microbadger.com/images/mozillasecurity/fuzzos"><img src="https://images.microbadger.com/badges/image/mozillasecurity/fuzzos.svg"></a>
 </p>
 
-> For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
-
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-  - [FuzzOS](#fuzzos)
-  - [Pre-Installed Packages](#pre-installed-packages)
-  - [Run FuzzOS](#run-fuzzos)
-  - [Documentation](#documentation)
-  - [Architecture](#architecture)
-  - [Build Instructions](#build-instructions)
+  - [What is Orion?](#what-is-orion?)
+  - [How does it operate?](#how-does-it-operate?)
+  - [Build Instructions](#build-instructions-and-development)
     - [Usage](#usage)
     - [Testing](#testing)
-    - [Login](#login)
-  - [Playground](#playground)
+  - [Architecture](#architecture)
 
-<p style="text-align: justify">
-This repository is a monorepo of various microservices and home of <a href="https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos">FuzzOS</a> (a multipurpose base image). CI and CD is performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest revision, nightly or latest. For further information take either a look into the Wiki or the corresponding README.md of each microservice.
-</p>
+### What is Orion?
 
-### FuzzOS
+Orion is a build environment for services we run in our Fuzzing infrastructure (i.e [LibFuzzer](https://github.com/MozillaSecurity/orion/tree/master/services/libfuzzer)) and home of [FuzzOS](https://github.com/MozillaSecurity/orion/tree/master/base/fuzzos) a multipurpose base image which most of our fuzzing services use as a base.
 
-Base: Ubuntu 18.04
+> For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
 
-### Pre-Installed Packages
+### How does it operate?
 
-- credstash
-- fuzzfetch
-- fuzzmanager
-- afl
-- honggfuzz
-- llvm
-- breakpad
-- rr
-- grcov
-- ripgrep
-- nodejs
-- nano
-- python3
-- ssh
-- git
+CI and CD are performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest `revision`, `nightly` or `latest` before being published to the Docker registry. For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
 
-### Run FuzzOS
-
-```bash
-docker search fuzzos
-docker run -it --rm mozillasecurity/fuzzos:latest bash -li
-```
-
-### Documentation
-
-- https://github.com/mozillasecurity/fuzzos/wiki
-
-### Architecture
-
-[![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/orion/master/docs/assets/overview.png)
-
-### Build Instructions
+### Build Instructions and Development
 
 #### Usage
 
@@ -80,39 +43,10 @@ make help
 
 #### Testing
 
-Before a build task is initiated in Travis-CI, each Shellscript and Dockerfile undergo a linting process which may or may not abort each succeeding task.
+Before a build task is initiated in Travis CI, each Shellscript and Dockerfile undergo a linting process which may or may not abort each succeeding task. To ensure your Dockerfile passes, you are encouraged to run `make lint` before pushing your commit.
 
-Locally:
+Each service folder may contain a `tests` folder in which [Container Structure Tests](https://github.com/GoogleContainerTools/container-structure-test) are defined. The Monorepo Manager will run these tests with the `-test` flag set in the CI after the build process is completed and before deploying the images to the registry. To ensure your modifications to a Dockerfile and/or recipes did not cause breakage, you are encouraged to run `make test` before pusing your commit.
 
-```bash
-make lint
-```
+### Architecture
 
-Each service folder may contain a `tests` folder in which [Container Structure Tests](https://github.com/GoogleContainerTools/container-structure-test) are defined. The Monorepo Manager will run these tests
-with the `-test` flag set in Travis-CI after the build process is completed and before deploying the images to the registry.
-
-Locally:
-
-```bash
-make test
-```
-
-#### Login
-
-```bash
-DOCKER_USER=ABC make login
-```
-
-### Playground
-
-"Play With Docker" is a project sponsored by Docker Inc.
-
-- Browse to [PWD](https://labs.play-with-docker.com)
-- Login with your Docker account.
-- Press `ADD NEW INSTANCE` and enter `docker run --rm -it mozillasecurity/fuzzos`
-
-You can upload files via drag 'n' drop or optionally login via SSH.
-It is also possible to let PWD point to your `docker-compose` configuration and setup a swarm. Example:
-`https://labs.play-with-docker.com/?stack=https://raw.githubusercontent.com/XYZ/docker-compose.yml`
-
-Keep in mind that this is only for testing purpose and to read their motd.
+[![](docs/assets/overview.png)](https://raw.githubusercontent.com/MozillaSecurity/orion/master/docs/assets/overview.png)
