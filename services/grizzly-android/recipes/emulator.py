@@ -117,6 +117,14 @@ class AndroidHelper(object):
                       "/archives/archive/complete/url",
                       api25_gapi)
 
+        # get latest build-tools for linux
+        # required for: aapt
+        _get_sdk_file(REPO_URL,
+                      ".//remotePackage[@path='build-tools;28.0.3']"
+                      "/channelRef[@ref='channel-0']/.."
+                      "/archives/archive/[host-os='linux']/complete/url",
+                      sdk)
+
         # get latest platform-tools for linux
         _get_sdk_file(REPO_URL,
                       ".//remotePackage[@path='platform-tools']"
