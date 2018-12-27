@@ -2,8 +2,7 @@
 
 # Exit because PRs do not have access to secrets.
 # The MonorepoManager executes a PR build though but does prevent a push for PRs.
-TRAVIS_PULL_REQUEST=${TRAVIS_PULL_REQUEST:--1}
-if [ "$TRAVIS_PULL_REQUEST" > -1 ]; then
+if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
  exit 0
 fi
 
