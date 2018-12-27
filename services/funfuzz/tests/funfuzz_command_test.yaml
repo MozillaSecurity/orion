@@ -7,4 +7,4 @@ commandTests:
     command: "python3"
     args: ["-m", "funfuzz", "--version"]
     expectedOutput: ["no such option"]
-    exitCode: 2
+    exitCode: 1

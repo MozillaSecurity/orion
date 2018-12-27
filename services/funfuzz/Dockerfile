@@ -16,6 +16,16 @@ ENV HOSTNAME  worker
 ENV LANG      en_US.UTF-8
 ENV LC_ALL    en_US.UTF-8
 
+ENV PATH="${HOME}/.cargo/bin:${HOME}/.local/bin:${PATH}"
+ENV LD_LIBRARY_PATH=.
+ENV ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
+# Expand bash shell history length
+ENV HISTTIMEFORMAT="%h %d %H:%M:%S "
+ENV HISTSIZE=10000
+# Modify bash prompt
+ENV PS1="[\u@\h \d \t \W ] $ "
+
 USER $USER
 COPY setup.sh $HOME
 RUN $HOME/setup.sh
