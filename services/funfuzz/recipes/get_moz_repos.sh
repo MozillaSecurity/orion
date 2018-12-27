@@ -16,8 +16,8 @@ mkdir -p trees/
 pushd "$HOME/trees/"
 # Note: hg clone works but we may want to switch to other script prior to deployment
 # $HG_FLAGS clone https://hg.mozilla.org/mozilla-central mozilla-central
-# wget -O- https://git.io/fxxh4 | bash -s -- / mozilla-central trees/
-# wget -O- https://git.io/fxxh4 | bash -s -- /releases/ mozilla-beta trees/
+# curl -Ls https://git.io/fxxh4 | bash -s -- / mozilla-central trees/
+# curl -Ls https://git.io/fxxh4 | bash -s -- /releases/ mozilla-beta trees/
 popd
 
 popd
