@@ -6,5 +6,5 @@ commandTests:
   - name: "funfuzz installation"
     command: "python3"
     args: ["-m", "funfuzz", "--version"]
-    expectedOutput: ["no such option"]
-    exitCode: 1
+    expectedOutput: ["hg info: Mercurial Distributed SCM"]
+    exitCode: 2
