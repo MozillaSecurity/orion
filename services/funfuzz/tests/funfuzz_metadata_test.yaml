@@ -1,0 +1,6 @@
+schemaVersion: "2.0.0"
+
+metadataTest:
+  entrypoint: ["python3"]
+  cmd: ["-m", "funfuzz", "--version"]
+  workdir: /home/funfuzz/funfuzz

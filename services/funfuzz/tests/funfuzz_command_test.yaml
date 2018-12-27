@@ -1,0 +1,10 @@
+schemaVersion: "2.0.0"
+
+# Basic checks to make sure the application is installed and able to run.
+
+commandTests:
+  - name: "funfuzz installation"
+    command: "python3"
+    args: ["-m", "funfuzz", "--version"]
+    expectedOutput: ["no such option"]
+    exitCode: 2
