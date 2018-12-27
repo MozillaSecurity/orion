@@ -1,6 +1,6 @@
 schemaVersion: "2.0.0"
 
 metadataTest:
-  entrypoint: ["/bin/bash"]
-  cmd: ["--login"]
+  entrypoint: ["/bin/bash", "--login"]
+  cmd: []
   workdir: /home/worker/funfuzz
