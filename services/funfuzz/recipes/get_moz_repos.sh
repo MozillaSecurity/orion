@@ -10,8 +10,7 @@ function retry {
 
 pushd "$HOME"
 
-HG_FLAGS="retry $HOME/.local/bin/hg "
-
+# HG_FLAGS="retry $HOME/.local/bin/hg "
 # Clone repositories using get_hg_repo.sh
 mkdir -p trees/
 pushd "$HOME/trees/"
