@@ -44,7 +44,6 @@ apt-get install -q -y --no-install-recommends --no-install-suggests \
 apt-get install -q -y --no-install-recommends --no-install-suggests \
     aria2 \
     screen \
-    sudo \
     vim
 
 rm -rf /usr/share/man/ /usr/share/info/
