@@ -42,3 +42,15 @@ apt-get install -q -y --no-install-recommends --no-install-suggests \
     aria2 \
     screen \
     vim
+
+rm -rf /usr/share/man/ /usr/share/info/
+
+find /usr/share/doc -depth -type f ! -name copyright -exec rm {} + || true
+find /usr/share/doc -empty -exec rmdir {} + || true
+
+apt-get clean -y
+apt-get autoclean -y
+apt-get autoremove -y
+
+rm -rf /var/lib/apt/lists/*
+rm -rf /root/.cache/*
