@@ -12,4 +12,6 @@ pushd "/tmp"
 ./recipes/set_bashrc_options.sh
 # Note: set core file options on host prior to deployment
 
+"$HOME/.bin/cleanup.sh"
+
 popd
