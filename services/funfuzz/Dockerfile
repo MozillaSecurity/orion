@@ -28,7 +28,7 @@ ENV PS1="[\u@\h \d \t \W ] $ "
 
 USER $USER
 COPY setup.sh $HOME
-RUN $HOME/setup.sh
+RUN "$HOME/setup.sh"
 
 USER root
 RUN "$HOME/.bin/cleanup.sh"
