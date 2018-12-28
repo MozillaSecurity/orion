@@ -6,7 +6,7 @@ WORKDIR /home/worker/funfuzz
 USER root
 COPY recipes /tmp/recipes
 RUN /tmp/recipes/install_prerequisites.sh \
-    && rm -rf /tmp/recipes/install_prerequisites.sh \
+    && rm -f /tmp/recipes/install_prerequisites.sh \
     && chown -R worker:worker /home/worker
 
 ENV USER      worker
