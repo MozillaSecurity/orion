@@ -2,7 +2,7 @@
 
 pushd "$HOME"
 
-cat << 'EOF' >> .bashrc
+cat << EOF >> .bashrc
 
 ulimit -c unlimited
 
