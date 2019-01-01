@@ -1,0 +1,10 @@
+schemaVersion: "2.0.0"
+
+# Basic checks to make sure the application is installed and able to run.
+
+commandTests:
+  - name: "funfuzz installation"
+    command: "python3"
+    args: ["-m", "funfuzz", "--version"]
+    expectedOutput: ["hg info: Mercurial Distributed SCM"]
+    exitCode: 2
