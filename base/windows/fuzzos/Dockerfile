@@ -70,20 +70,20 @@ ENV PYTHON_VERSION 3.7.2 `
     PYTHON_DOWNLOAD_URL https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-amd64.exe
 RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; `
     Invoke-WebRequest -UseBasicParsing $env:PYTHON_DOWNLOAD_URL -OutFile python.exe; `
-	  Start-Process python.exe -Wait `
-		  -ArgumentList @( `
-        '/quiet', `
-        'InstallAllUsers=1', `
-        'TargetDir=C:\Python', `
-        'PrependPath=1', `
-        'Shortcuts=0', `
-        'Include_doc=0', `
-        'Include_pip=1', `
-        'Include_test=0', `
-        'Include_tcltk=0' `
-		); `
+      Start-Process python.exe -Wait `
+        -ArgumentList @( `
+            '/quiet', `
+            'InstallAllUsers=1', `
+            'TargetDir=C:\Python', `
+            'PrependPath=1', `
+            'Shortcuts=0', `
+            'Include_doc=0', `
+            'Include_pip=1', `
+            'Include_test=0', `
+            'Include_tcltk=0' `
+        ); `
     Remove-Item python.exe -Force; `
-	$env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine); `
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine); `
     python -m pip install --upgrade pip;
 
 
