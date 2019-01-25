@@ -14,7 +14,7 @@ lint_scripts: ## Lint shellscripts
 
 lint_dockers: ## Lint Dockerfiles
 	docker pull mozillasecurity/linter
-	find . -type f -name "Dockerfile" | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
+	find . -type f -name "Dockerfile" ! -path '*/windows/*' | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
 		--ignore DL3002 \
 		--ignore DL3003 \
 		--ignore DL3007 \
