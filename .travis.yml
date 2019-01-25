@@ -14,7 +14,7 @@ script:
   - set -e
   - make lint
   - ./scripts/ci-docker-login.sh
-  - python3 ./monorepo.py -ci travis -build -test -deliver -path base/fuzzos/linux/
+  - python3 ./monorepo.py -ci travis -build -test -deliver -path base/linux/fuzzos/
   - python3 ./monorepo.py -ci travis -build -test -deliver -path services/
 after_script:
   - docker logout
