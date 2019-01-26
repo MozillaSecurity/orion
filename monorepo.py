@@ -47,7 +47,7 @@ class Common:
         service_path = cls.find_service_in_parent(folder)
         if service_path is None:
             return None, None
-        service_name = service_path.split(os.sep)[-1]
+        service_name = service_path.rstrip(os.sep).split(os.sep)[-1]
         dockerfile = os.path.join(service_path, 'Dockerfile')
         return service_name, dockerfile
 
