@@ -1,10 +1,10 @@
-FROM alpine:latest
+FROM alpine:latest AS builder
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 
-RUN apk add \
+RUN apk --no-cache add \
         python3 \
-    && apk add --virtual \
+    && apk --no-cache add --virtual \
         build-deps \
         build-base \
         libressl-dev \
@@ -16,7 +16,7 @@ RUN apk add \
 
 FROM alpine:latest
 
-COPY --from=0 /root/wheels /root/wheels
+COPY --from=builder /root/wheels /root/wheels
 
 RUN apk add --no-cache python3 \
     && pip3 install --no-index --find-links=/root/wheels credstash \ 
