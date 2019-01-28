@@ -1,5 +1,7 @@
 ![Logo](https://github.com/posidron/posidron.github.io/raw/master/static/images/fuzzos.png)
 
+[![](https://images.microbadger.com/badges/image/mozillasecurity/fuzzos-windows.svg)](https://microbadger.com/images/mozillasecurity/fuzzos-windows "Get your own image badge on microbadger.com")
+
 ## OS
 
 OS: Windows 10 Version 1809
