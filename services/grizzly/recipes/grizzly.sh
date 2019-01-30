@@ -62,8 +62,11 @@ apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
 rm -rf /root/.cache/*
 
+# otherwise setup-grizzly.sh fails
+pip uninstall -y numpy
 pip install \
     psutil \
+    virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git
 
 chown -R worker:worker /home/worker
