@@ -20,6 +20,7 @@ apt-get update -y -qq
 #    libglapi-mesa-dbgsym \
 #    mesa-va-drivers-dbgsym \
 #    libosmesa6-dbgsym \
+#    libwayland-egl1-mesa-dbgsym \
 
 apt-get install -q -y \
     libasound2 \
@@ -28,7 +29,6 @@ apt-get install -q -y \
     libglu1-mesa-dbgsym \
     libosmesa6 \
     libpulse0 \
-    libwayland-egl1-mesa-dbgsym \
     nodejs \
     p7zip-full \
     python-dev \
