@@ -27,29 +27,25 @@ apt-get install -q -y \
     libdbus-glib-1-2 \
     libglu1-mesa \
     libglu1-mesa-dbgsym \
+    libcairo2-dbgsym \
     libosmesa6 \
     libpulse0 \
-    nodejs \
+    mercurial \
     p7zip-full \
     python-dev \
-    python-setuptools \
     python-wheel \
     screen \
     subversion \
     ubuntu-restricted-addons \
     virtualenv \
     wget \
-    xvfb \
     zip
 
 apt-get install -q -y --no-install-recommends \
     build-essential \
     gdb \
-    libcairo2-dbgsym \
     libgtk-3-0 \
     libgtk-3-0-dbgsym \
-    mercurial \
-    nano \
     valgrind
 
 /tmp/recipes/redis.sh
