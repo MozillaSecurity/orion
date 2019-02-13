@@ -1,7 +1,7 @@
 #!/bin/bash -ex
 
 # install build requirements
-apt-get update -y -qq
+apt-get update -qq
 apt-get install -q -y --no-install-recommends \
         build-essential \
         ca-certificates \
@@ -20,7 +20,7 @@ mv android-ndk-*/ android-ndk
 rm /tmp/android-ndk.zip
 
 # checkout llvm
-svn co -q "https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_701/final@349247" llvm
+svn export -q "https://llvm.org/svn/llvm-project/llvm/tags/RELEASE_701/final@349247" llvm
 
 # configure and build
 rm -rf build
