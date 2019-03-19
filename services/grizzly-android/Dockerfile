@@ -15,7 +15,7 @@ RUN /tmp/recipes/all.sh \
 COPY recipes/kvm.sh /home/worker/
 
 COPY --from=symbolizer-build \
-    /root/build/bin/llvm-symbolizer \
+    /root/android-x86_64-llvm-symbolizer \
     /home/worker/android-ndk/prebuilt/android-x86_64/llvm-symbolizer/llvm-symbolizer
 COPY --from=symbolizer-build \
     /root/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/6.0.2/lib/linux/libclang_rt.asan-x86_64-android.so \

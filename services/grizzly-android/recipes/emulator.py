@@ -86,19 +86,20 @@ def _get_sdk_file(url, xpath, out_path="."):
 
 class AndroidHelper(object):
 
-    def __init__(self, android_port=5554, avd_name=None, no_window=False, sdcard_size=500, use_snapshot=False):
+    def __init__(self, android_port=5554, avd_name=None, no_window=False, sdcard_size=500, use_snapshot=False, writable=False):
         self.android_port = android_port
         self.avd_name = avd_name
         self.no_window = no_window
         self.sdcard_size = sdcard_size
         self.use_snapshot = use_snapshot
+        self.writable = writable
 
     def install(self):
         # create folder structure
         android = makedirs(HOME, ".android")
         makedirs(android, "avd")
         sdk = makedirs(android, "sdk")
-        api25_gapi = makedirs(sdk, "system-images", "android-25", "google_apis")
+        api_gapi = makedirs(sdk, "system-images", "android-28", "google_apis")
         # this is a hack and without it for some reason the following error can happen:
         # PANIC: Cannot find AVD system path. Please define ANDROID_SDK_ROOT
         makedirs(sdk, "platforms")
@@ -112,18 +113,10 @@ class AndroidHelper(object):
 
         # get latest Google APIs system image
         _get_sdk_file(IMAGES_URL,
-                      "./remotePackage[@path='system-images;android-25;google_apis;x86_64']"
+                      "./remotePackage[@path='system-images;android-28;google_apis;x86_64']"
                       "/channelRef[@ref='channel-0']/.."
                       "/archives/archive/complete/url",
-                      api25_gapi)
-
-        # get latest build-tools for linux
-        # required for: aapt
-        _get_sdk_file(REPO_URL,
-                      ".//remotePackage[@path='build-tools;28.0.3']"
-                      "/channelRef[@ref='channel-0']/.."
-                      "/archives/archive/[host-os='linux']/complete/url",
-                      sdk)
+                      api_gapi)
 
         # get latest platform-tools for linux
         _get_sdk_file(REPO_URL,
@@ -137,11 +130,11 @@ class AndroidHelper(object):
         android = makedirs(HOME, ".android")
         avd_path = makedirs(android, "avd")
         sdk = os.path.join(android, "sdk")
-        api25_gapi = os.path.join(sdk, "system-images", "android-25", "google_apis")
+        api_gapi = os.path.join(sdk, "system-images", "android-28", "google_apis")
 
         # create an avd
         avd_ini = os.path.join(avd_path, self.avd_name + ".ini")
-        assert not os.path.isfile(avd_ini)
+        assert not os.path.isfile(avd_ini), "File exists %r" % avd_ini
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         os.mkdir(avd_dir)
 
@@ -149,17 +142,17 @@ class AndroidHelper(object):
             print("avd.ini.encoding=UTF-8", file=fp)
             print("path=" + avd_dir, file=fp)
             print("path.rel=avd/" + self.avd_name + ".avd", file=fp)
-            print("target=android-25", file=fp)
+            print("target=android-28", file=fp)
 
         avd_cfg = os.path.join(avd_dir, "config.ini")
-        assert not os.path.isfile(avd_cfg)
+        assert not os.path.isfile(avd_cfg), "File exists %r" % avd_cfg
         with open(avd_cfg, "w") as fp:
             print("AvdId=" + self.avd_name, file=fp)
             print("PlayStore.enabled=false", file=fp)
             print("abi.type=x86_64", file=fp)
             print("avd.ini.displayname=" + self.avd_name, file=fp)
             print("avd.ini.encoding=UTF-8", file=fp)
-            print("disk.dataPartition.size=800M", file=fp)
+            print("disk.dataPartition.size=3000M", file=fp)
             print("fastboot.forceColdBoot=no", file=fp)
             print("hw.accelerometer=yes", file=fp)
             print("hw.arc=false", file=fp)
@@ -182,12 +175,12 @@ class AndroidHelper(object):
             print("hw.lcd.height=1920", file=fp)
             print("hw.lcd.width=1080", file=fp)
             print("hw.mainKeys=no", file=fp)
-            print("hw.ramSize=3072", file=fp)
+            print("hw.ramSize=6144", file=fp)
             print("hw.sdCard=yes", file=fp)
             print("hw.sensors.orientation=yes", file=fp)
             print("hw.sensors.proximity=yes", file=fp)
             print("hw.trackBall=no", file=fp)
-            print("image.sysdir.1=system-images/android-25/google_apis/x86_64/", file=fp)
+            print("image.sysdir.1=system-images/android-28/google_apis/x86_64/", file=fp)
             print("runtime.network.latency=none", file=fp)
             print("runtime.network.speed=full", file=fp)
             print("sdcard.size=%dM" % (self.sdcard_size,), file=fp)
@@ -200,11 +193,11 @@ class AndroidHelper(object):
             print("tag.id=google_apis", file=fp)
             print("vm.heapSize=256", file=fp)
 
-        shutil.copy(os.path.join(api25_gapi, "x86_64", "userdata.img"), avd_dir)
+        shutil.copy(os.path.join(api_gapi, "x86_64", "userdata.img"), avd_dir)
 
         sdcard = os.path.join(avd_dir, "sdcard.img")
         mksd = os.path.join(sdk, "emulator", "mksdcard")
-        assert os.path.isfile(mksd)
+        assert os.path.isfile(mksd), "Missing %s" % mksd
         subprocess.check_output([mksd, "%dM" % (self.sdcard_size,), sdcard])
         shutil.copy(sdcard, sdcard + ".firstboot")
 
@@ -236,6 +229,9 @@ class AndroidHelper(object):
                 if os.path.isfile(sdcard):
                     os.unlink(sdcard)
                 shutil.copy(sdcard + ".firstboot", sdcard)
+
+        if self.writable:
+            args.append("-writable-system")
 
         args.extend(("-port", "%d" % (self.android_port,)))
         args.append("@" + self.avd_name)
@@ -337,6 +333,7 @@ def main():
     aparse.add_argument("--sdcard", default=500, type=int, help="SD card size in MB (default: 500)")
     aparse.add_argument("--snapshot", default="never", choices=["never", "always", "save", "load"],
                         help="Use snapshots for fast reset (default: never)")
+    aparse.add_argument("--writable", action="store_true", help="Allow remount /system (default: False)")
     aparse.add_argument("--xvfb", action="store_true", help="Run emulator under XVFB")
     args = aparse.parse_args()
 
@@ -349,7 +346,7 @@ def main():
         if xvfb is not None:
             xvfb.start()
 
-        ah = AndroidHelper(args.android_port, args.avd_name, args.no_window, args.sdcard, args.snapshot)
+        ah = AndroidHelper(args.android_port, args.avd_name, args.no_window, args.sdcard, args.snapshot, args.writable)
         for action in args.actions:
             getattr(ah, action.replace("-", "_"))()
     finally:
