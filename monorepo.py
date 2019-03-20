@@ -9,20 +9,21 @@ __author__ = 'Christoph Diehl <cdiehl@mozilla.com>'
 
 import os
 import sys
+import json
 import logging
 import argparse
 import subprocess
-
-import json
-import yaml
 import http.client
-import urllib.parse
+
+try:
+    import yaml
+except ImportError as error:
+    print("Consider: pip3 install -r requirements.txt")
+    sys.exit(1)
 
 
 class MonorepoManagerException(Exception):
     """Exception class for Monorepo Manager."""
-    pass
-
 
 class Common:
     """Common methods and functions shared across CI and CD.
@@ -280,7 +281,7 @@ class TravisAPI(CI):
     def run(self, options, branch="master"):
         """Triggers a build at Travis CI with the Travis REST API.
         """
-        if not hasattr(options, 'token') or not len(options.token):
+        if not hasattr(options, 'token') or not options.token:
             raise MonorepoManagerException('No Travis token provided.')
 
         tld = 'com' if options.pro else 'org'
@@ -302,8 +303,8 @@ class TravisAPI(CI):
         params = json.dumps(request)
 
         connection = http.client.HTTPSConnection(url)
-        self.logger.debug('Sending HTTP headers: {0}'.format(headers))
-        self.logger.debug('Sending request body: {0}'.format(params))
+        self.logger.debug('Sending HTTP headers: %s', headers)
+        self.logger.debug('Sending request body: %s', params)
         connection.request('POST', '/repo/{0}/requests'.format(repo), params, headers)
 
         response = connection.getresponse()

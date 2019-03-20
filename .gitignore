@@ -1,9 +1,3 @@
 # MacOS
 .DS_Store
 
-# JetBrains
-.idea/
-
-# VSCode
-.vscode/
-
