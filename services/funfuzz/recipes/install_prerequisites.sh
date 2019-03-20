@@ -4,9 +4,11 @@ apt-get update -y -qq
 # Required to use apt-key
 apt-get install -q -y --no-install-recommends --no-install-suggests dirmngr
 
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553
+apt-key adv --recv-key --keyserver keyserver.ubuntu.com \
+    8B48AD6246925553 \
+    7638D0442B90D010 \
+    04EE7237B7D453EC
 echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list
-
 apt-get update -y -qq
 
 # Prior to deployment, check that apt-get requirements are also installed via other recipes in FuzzOS, e.g. ccache
