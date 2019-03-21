@@ -5,7 +5,7 @@ LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
 RUN apk --no-cache add \
     curl \
     && HADOLINT_VERSION=$( \
-        curl -sL "https://github.com/hadolint/hadolint/releases/latest" \
+        curl -s "https://github.com/hadolint/hadolint/releases/latest" \
         | grep -o 'tag/[v.0-9]*' \
         | awk -F/ '{print $2}' \
     ) \
