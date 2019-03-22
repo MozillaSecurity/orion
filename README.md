@@ -31,7 +31,7 @@ Orion is a build environment for services we run in our Fuzzing infrastructure (
 
 ### How does it operate?
 
-CI and CD are performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only than that service will be rebuild; other services are not affected from the build service at the time except during cron tasks where all images are rebuild. Each image is either tagged with the latest `revision`, `nightly` or `latest` before being published to the [Docker registry](https://hub.docker.com/u/mozillasecurity/). For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
+CI and CD are performed autonomous with Travis and the Monorepo manager script. A build process gets initiated only if a file of a particular service has been modified and only then will that service will be rebuilt; other services are not affected from the build service at the time except during cron tasks where all images are rebuilt. Each image is either tagged with the latest `revision`, `nightly` or `latest` before being published to the [Docker registry](https://hub.docker.com/u/mozillasecurity/). For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
 
 ### Build Instructions and Development
 
