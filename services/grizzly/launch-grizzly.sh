@@ -27,7 +27,11 @@ EOF
 
 # Checkout fuzzer including framework, install everything
 retry git clone -v --depth 1 --no-tags git@grizzly-config:MozillaSecurity/grizzly-config.git config
-./config/aws/setup-grizzly.sh
+if [ "$BEARSPRAY" = "1" ]; then
+    ./config/aws/setup-bearspray.sh
+else
+    ./config/aws/setup-grizzly.sh
+fi
 
 # need to keep the container running
 while true
