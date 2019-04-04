@@ -1,10 +1,22 @@
-FROM ubuntu:18.04 AS symbolizer-build
+FROM alpine:latest AS symbolizer-build
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-COPY recipes/ /tmp/recipes
-WORKDIR /root
-RUN /tmp/recipes/android-ndk.sh
+WORKDIR /out
+
+# install build requirements
+RUN apk add --no-cache \
+        curl \
+        p7zip
+
+# download and extract android-ndk
+RUN curl --retry 5 -L https://dl.google.com/android/repository/android-ndk-r17b-linux-x86_64.zip -o /tmp/android-ndk.zip \
+    && 7z x /tmp/android-ndk.zip \
+    && mv android-ndk-*/ android-ndk \
+    && rm /tmp/android-ndk.zip
+
+# download symbolizer from build server
+RUN curl --retry 5 -LO https://build.fuzzing.mozilla.org/builds/android-x86_64-llvm-symbolizer
 
 FROM mozillasecurity/grizzly:latest
 
@@ -20,13 +32,13 @@ RUN /tmp/recipes/all.sh \
 COPY recipes/kvm.sh /home/worker/
 
 COPY --from=symbolizer-build \
-    /root/android-x86_64-llvm-symbolizer \
+    /out/android-x86_64-llvm-symbolizer \
     /home/worker/android-ndk/prebuilt/android-x86_64/llvm-symbolizer/llvm-symbolizer
 COPY --from=symbolizer-build \
-    /root/${CLANG_PATH}/lib/linux/libclang_rt.asan-x86_64-android.so \
+    /out/${CLANG_PATH}/lib/linux/libclang_rt.asan-x86_64-android.so \
     /home/worker/${CLANG_PATH}/lib/linux/libclang_rt.asan-x86_64-android.so
 COPY --from=symbolizer-build \
-    /root/${CLANG_PATH}/lib/linux/libclang_rt.asan-i686-android.so \
+    /out/${CLANG_PATH}/lib/linux/libclang_rt.asan-i686-android.so \
     /home/worker/${CLANG_PATH}/lib/linux/libclang_rt.asan-i686-android.so
 RUN chown -R worker:worker /home/worker/android-ndk
 
