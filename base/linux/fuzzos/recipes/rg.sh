@@ -11,7 +11,9 @@ source "${0%/*}/common.sh"
 
 #### Install rg (ripgrep)
 
-STABLE_VERSION="0.10.0"
-curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/${STABLE_VERSION}/ripgrep_${STABLE_VERSION}_amd64.deb"
-apt install "./ripgrep_${STABLE_VERSION}_amd64.deb"
-rm "ripgrep_${STABLE_VERSION}_amd64.deb"
+VERSION="0.10.0"
+DOWNLOAD_URL="https://github.com/BurntSushi/ripgrep/releases/download/${VERSION}/ripgrep_${VERSION}_amd64.deb"
+
+curl -LO "$DOWNLOAD_URL"
+apt install "./ripgrep_${VERSION}_amd64.deb"
+rm "ripgrep_${VERSION}_amd64.deb"
