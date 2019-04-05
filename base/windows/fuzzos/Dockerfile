@@ -87,7 +87,7 @@ RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tl
     python -m pip install --upgrade pip;
 
 
-ENV LLVM_VERSION 7.0.1 `
+ENV LLVM_VERSION 8.0.0 `
     LLVM_DOWNLOAD_URL https://releases.llvm.org/${LLVM_VERSION}/LLVM-${LLVM_VERSION}-win64.exe
 RUN [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; `
     Invoke-WebRequest -UseBasicParsing $env:LLVM_DOWNLOAD_URL -OutFile llvm.exe; `
