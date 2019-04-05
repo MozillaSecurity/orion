@@ -35,6 +35,7 @@ env:
     - IMAGE=services/credstash
     - IMAGE=services/grizzly-android
     - IMAGE=services/u2f-hid-rs
+    - IMAGE=services/fuzzmanager
 
 before_script:
   - sudo pip3 install -r requirements.txt
