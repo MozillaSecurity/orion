@@ -55,3 +55,9 @@ commandTests:
     command: "minidump_stackwalk"
     expectedError: ["minidump_stackwalk: Missing minidump file"]
     exitCode: 1
+
+  - name: "halfempty installation"
+    command: "halfempty"
+    args: ["-h"]
+    expectedOutput: ["Usage:"]
+    exitCode: 0

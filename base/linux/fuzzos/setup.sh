@@ -43,5 +43,6 @@ cd recipes
 ./nodejs.sh
 ./rr.sh
 ./grcov.sh
+./halfempty.sh
 
 ./cleanup.sh

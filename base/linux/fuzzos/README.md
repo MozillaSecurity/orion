@@ -11,8 +11,8 @@ OS: Ubuntu 18.04
 - credstash
 - fuzzfetch
 - fuzzmanager
-- afl
 - honggfuzz
+- halfempty
 - llvm
 - breakpad
 - rr
