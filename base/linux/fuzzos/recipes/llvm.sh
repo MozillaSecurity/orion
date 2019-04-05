@@ -6,17 +6,19 @@ set -x
 #### Install LLVM
 
 curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-6.0 main"
+apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-8 main"
 
 apt-get update -qq
 apt-get install -y -qq --no-install-recommends --no-install-suggests \
-  clang-6.0 \
-  lld-6.0 \
-  lldb-6.0
+  clang-8 \
+  lld-8 \
+  lldb-8 \
+  libfuzzer-8-dev \
+  libc++-8-dev libc++abi-8-dev
 
 update-alternatives --install \
-  /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-6.0     100 \
-  --slave /usr/bin/clang            clang            /usr/bin/clang-6.0               \
-  --slave /usr/bin/clang++          clang++          /usr/bin/clang++-6.0             \
-  --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-6.0     \
-  --slave /usr/bin/lldb             lldb             /usr/bin/lldb-6.0
+  /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-8     100 \
+  --slave /usr/bin/clang            clang            /usr/bin/clang-8               \
+  --slave /usr/bin/clang++          clang++          /usr/bin/clang++-8             \
+  --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-8     \
+  --slave /usr/bin/lldb             lldb             /usr/bin/lldb-8

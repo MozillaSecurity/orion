@@ -10,7 +10,9 @@ TMPD="$(mktemp -d -p. afl.build.XXXXXXXXXX)"
   git clone -v --depth 1 --no-tags https://github.com/choller/afl.git
   ( cd afl
     make
-    make -C llvm_mode
+    # Disabled due to SIGSEGV in Clang > 6.
+    # Read https://bugs.llvm.org/show_bug.cgi?id=39321 for possible workarounds.
+    # make -C llvm_mode
     make install
   )
 )
