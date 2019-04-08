@@ -32,6 +32,7 @@ apt-get install -y -qq --no-install-recommends --no-install-suggests \
 cd recipes
 
 ./fuzzos.sh
+./htop.sh
 ./llvm.sh
 ./rg.sh
 ./afl.sh
