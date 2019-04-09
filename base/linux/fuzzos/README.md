@@ -8,21 +8,25 @@ OS: Ubuntu 18.04
 
 ### Pre-Installed Packages
 
-- credstash
-- fuzzfetch
-- fuzzmanager
-- honggfuzz
-- halfempty
-- llvm
-- breakpad
-- rr
-- grcov
-- ripgrep
-- nodejs
-- nano
-- python3
-- ssh
-- git
+| Program     | Version |
+| ----------- | ------- |
+| credstash   |         |
+| fuzzfetch   |         |
+| fuzzmanager |         |
+| fuzzfetch   |         |
+| fuzzmanager |         |
+| honggfuzz   |         |
+| halfempty   |         |
+| llvm 8      | 8       |
+| breakpad    |         |
+| rr          |         |
+| grcov       |         |
+| ripgrep     |         |
+| nodejs      |         |
+| nano        |         |
+| python      | 3       |
+| ssh         |         |
+| git         |         |
 
 ## Run
 

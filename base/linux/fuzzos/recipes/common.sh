@@ -3,9 +3,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-# NOTE
-# This is shared resource file and is added and sourced in `.bashrc`.
+##############################################################################
+# NOTE: This is shared resource file which is added and sourced in `.bashrc`.
 # You need to manually source it if you want to use it in any build recipe.
+##############################################################################
 
 # Constants
 EC2_METADATA_URL="http://169.254.169.254/latest/meta-data"
