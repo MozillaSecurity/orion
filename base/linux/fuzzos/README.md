@@ -13,8 +13,6 @@ OS: Ubuntu 18.04
 | credstash   |         |
 | fuzzfetch   |         |
 | fuzzmanager |         |
-| fuzzfetch   |         |
-| fuzzmanager |         |
 | honggfuzz   |         |
 | halfempty   |         |
 | llvm 8      | 8       |
