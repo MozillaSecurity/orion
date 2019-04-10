@@ -78,4 +78,4 @@ script:
   - ./monorepo.py -ci travis -build -test -deliver -path $IMAGE
 
 after_script:
-  - docker logout
+  - travis_retry docker logout
