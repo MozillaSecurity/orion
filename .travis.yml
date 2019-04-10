@@ -20,6 +20,8 @@ git:
   depth: 5
   quiet: true
 
+bundler_args: --retry 3
+
 conditions: v1
 
 stages:
@@ -35,10 +37,10 @@ env:
     - secure: UGiZHzBqKP1y2nIpJinie9AITtEqUz7gXTEBBEULskrrNLbrmE1UqTdBACNgr4Q/RLodgAN2AQ/IQITsM9Ye7vRddrb7/tJmQitTpVTup2mQqyfrffEkov5KjJjVY01uSWAUEQaZ8BNRMgClfS/kTer8SIaOxlXgYAUrLtMWqx53stmDJo0QRQfyk0/lyg5FxNQuWHMtZniJbd62LuJUAqB6MTIG9yt4wc+mv1NuEP1YaCrQEvcnm8QDfhRs3YQQnBY/K7fGh9Tba7NOJ5+tEUUKENtEY6PmfXjABxG29oppK83/1r3QaNJslFbUnsXQ9jINJwxJR9Cgx/6NugaPAy6ZCZUP5KORqjm1pqepw3vlQ5KkCp9kXcVoJoivEx7wnVBT7Yu+dc8jS1oOz7+yJ3ji2X+ok9m4aNerWjp+FC30NyhZ4lTHWvWvSEzjm61MdjdGcJKNS+7qiXXd4qPEIc6ZJw+QnsGyBWxySeUpeTMVw97H27Hb8OO1NxCDrf2teM6b2fX0aaqITNaCZdAE4sXICNdUAdPGTRAEsnYDk/d99G13cFLkS6O5oDmHqlpUi0+rjDfzhef4wN9SYxIPZIAuaUJvFpHVJjVz5Vd+jLHS3H+60IbDduJieqAz9Fnf5d4Se9CMPGRTi3iKIZ4fkJMtz/Vjp+cJgVwmKTj8TXQ=
 
 before_script:
-  - sudo pip3 install -r requirements.txt
+  - travis_retry sudo pip3 install -r requirements.txt
   - set -e
   - make lint
-  - ./scripts/ci-docker-login.sh
+  - travis_retry ./scripts/ci-docker-login.sh
 
 jobs:
   allow_failures:
