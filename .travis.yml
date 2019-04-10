@@ -38,6 +38,7 @@ env:
 
 before_script:
   - travis_retry sudo pip3 install -r requirements.txt
+  - docker run --rm --privileged multiarch/qemu-user-static:register --reset
   - set -e
   - make lint
   - travis_retry ./scripts/ci-docker-login.sh
