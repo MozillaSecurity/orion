@@ -95,7 +95,7 @@ then
   # Use a static corpus instead
   svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
 else
-  mkdir ./corpora
+  mkdir -p ./corpora
 fi
 
 CORPORA="./corpora/"
