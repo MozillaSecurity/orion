@@ -42,4 +42,15 @@ Alternatively use a command from above and attach `bash -li` to overwrite the de
 
 You can obain the paths for `TOKENS` and `CORPORA` from the https://github.com/mozillasecurity/fuzzdata repository and these will automatically get fetched into the container.
 
+If you want to use local corpora you can mount the folder containing the corpora into the container.
+
+```bash
+docker run \
+ -h `hostname` \
+ -v ~/.fuzzmanagerconf:/home/worker/.fuzzmanagerconf \
+ -v LOCAL_FOLDER:/home/worker/corpora/ \
+ -e FUZZER=Dav1dDecode \
+ --rm -it mozillasecurity/libfuzzer
+```
+
 In case you run the container on EC2 or a similar service, you can use `-e SHIP=<ProviderName>` and omit the `-h` parameter, which will determine the correct hostname of the container host for sending it to FuzzManager.
