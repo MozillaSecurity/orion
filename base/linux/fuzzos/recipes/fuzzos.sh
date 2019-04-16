@@ -30,6 +30,13 @@ kernel.core_uses_pid = 1
 kernel.yama.ptrace_scope = 0
 EOF
 
+# Ensure we retry metadata requests in case of glitches
+# https://github.com/boto/boto/issues/1868
+cat << EOF | tee /etc/boto.cfg > /dev/null
+[Boto]
+metadata_service_num_attempts = 10
+EOF
+
 #### Base Environment Configuration
 
 mkdir ~/.bin
