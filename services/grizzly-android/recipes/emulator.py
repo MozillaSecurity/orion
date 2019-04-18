@@ -129,6 +129,13 @@ class AndroidHelper(object):
                       "/archives/archive/[host-os='linux']/complete/url",
                       sdk)
 
+        # required for: aapt
+        _get_sdk_file(REPO_URL,
+                      ".//remotePackage[@path='build-tools;28.0.3']"
+                      "/channelRef[@ref='channel-0']/.."
+                      "/archives/archive/[host-os='linux']/complete/url",
+                      sdk)
+
     def avd(self):
         # create folder structure
         android = makedirs(HOME, ".android")
