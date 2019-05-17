@@ -17,6 +17,7 @@ apt-get install -y -qq --no-install-recommends --no-install-suggests \
     git \
     gpg-agent \
     locales \
+    less \
     make \
     nano \
     openssh-client \
