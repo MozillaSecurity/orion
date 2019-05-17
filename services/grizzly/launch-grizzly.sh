@@ -15,6 +15,14 @@ eval "$(ssh-agent -s)"
 mkdir -p .ssh
 retry ssh-keyscan github.com >> .ssh/known_hosts
 
+# Get AWS credentials for GCE to be able to read from Credstash
+if curl --connect-timeout 2 --retry 2 -sf -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/>/dev/null
+then
+  mkdir -p .aws
+  retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > .aws/credentials
+  chmod 0600 .aws/credentials
+fi
+
 # Get deployment keys from credstash
 retry credstash get deploy-grizzly-config.pem > .ssh/id_ecdsa.grizzly_config
 chmod 0600 .ssh/id_ecdsa.grizzly_config
