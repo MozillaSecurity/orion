@@ -10,21 +10,22 @@ OS: Ubuntu 18.04
 
 | Program     | Version |
 | ----------- | ------- |
+| berglas     |         |
+| breakpad    |         |
 | credstash   |         |
 | fuzzfetch   |         |
 | fuzzmanager |         |
-| honggfuzz   |         |
-| halfempty   |         |
-| llvm 8      | 8       |
-| breakpad    |         |
-| rr          |         |
-| grcov       |         |
-| ripgrep     |         |
-| nodejs      |         |
-| nano        |         |
-| python      | 3       |
-| ssh         |         |
 | git         |         |
+| grcov       |         |
+| halfempty   |         |
+| honggfuzz   |         |
+| llvm        | 8       |
+| nano        |         |
+| nodejs      |         |
+| python      | 3       |
+| ripgrep     |         |
+| rr          |         |
+| ssh         |         |
 
 ## Run
 
