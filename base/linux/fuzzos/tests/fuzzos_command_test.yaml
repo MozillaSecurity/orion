@@ -32,7 +32,7 @@ commandTests:
 
   - name: "grcov installation"
     command: "grcov"
-    expectedError: [".*Missing required directory argument.*"]
+    expectedError: ["error: The following required arguments were not provided"]
     exitCode: 1
 
   - name: "ripgrep installation"
