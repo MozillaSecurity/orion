@@ -13,11 +13,10 @@ RUN apk add --no-cache \
         curl \
         p7zip
 
-# download and extract android-ndk
-RUN curl --retry 5 -L https://dl.google.com/android/repository/android-ndk-r17b-linux-x86_64.zip -o /tmp/android-ndk.zip \
-    && 7z x /tmp/android-ndk.zip \
-    && mv android-ndk-*/ android-ndk \
-    && rm /tmp/android-ndk.zip
+# download and extract clang
+RUN curl --retry 5 -L https://index.taskcluster.net/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-8-android-cross.latest/artifacts/public/build/clang.tar.xz -o /tmp/clang.tar.xz \
+    && tar xJf /tmp/clang.tar.xz clang/lib64/clang/8.0.0/lib/linux/ \
+    && rm /tmp/clang.tar.xz
 
 # download symbolizer from build server
 RUN curl --retry 5 -LO https://build.fuzzing.mozilla.org/builds/android-x86_64-llvm-symbolizer
@@ -26,9 +25,10 @@ FROM mozillasecurity/grizzly:latest
 
 USER root
 
-ARG BUILD_CLANG_VERSION=6.0.2
+ARG BUILD_CLANG_VERSION=8.0.0
 ENV CLANG_VERSION ${BUILD_CLANG_VERSION}
-ENV CLANG_PATH android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}
+ENV CLANG_SRC clang/lib64/clang/${CLANG_VERSION}
+ENV CLANG_DEST android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}
 
 COPY recipes/ /tmp/recipes/
 RUN /tmp/recipes/all.sh \
@@ -39,11 +39,11 @@ COPY --from=symbolizer-build \
     /out/android-x86_64-llvm-symbolizer \
     /home/worker/android-ndk/prebuilt/android-x86_64/llvm-symbolizer/llvm-symbolizer
 COPY --from=symbolizer-build \
-    /out/${CLANG_PATH}/lib/linux/libclang_rt.asan-x86_64-android.so \
-    /home/worker/${CLANG_PATH}/lib/linux/libclang_rt.asan-x86_64-android.so
+    /out/${CLANG_SRC}/lib/linux/libclang_rt.asan-x86_64-android.so \
+    /home/worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-x86_64-android.so
 COPY --from=symbolizer-build \
-    /out/${CLANG_PATH}/lib/linux/libclang_rt.asan-i686-android.so \
-    /home/worker/${CLANG_PATH}/lib/linux/libclang_rt.asan-i686-android.so
+    /out/${CLANG_SRC}/lib/linux/libclang_rt.asan-i686-android.so \
+    /home/worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-i686-android.so
 RUN chown -R worker:worker /home/worker/android-ndk
 
 CMD ["/bin/sh", "-c", "/home/worker/kvm.sh && su worker -c /home/worker/launch-grizzly.sh"]
