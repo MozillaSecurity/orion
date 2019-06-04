@@ -51,6 +51,7 @@ RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     -t coveralls+ \
     --commit-sha "$REVISION" \
     --token NONE \
+    --guess-directory-when-missing \
     -p $(rg -Nor '$1' "pathprefix = (.*)" "$WORKDIR/${TARGET_BIN}.fuzzmanagerconf") \
     > "$WORKDIR/coverage.json"
 
