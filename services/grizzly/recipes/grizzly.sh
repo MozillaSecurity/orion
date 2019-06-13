@@ -80,6 +80,7 @@ fi
 
 /tmp/recipes/redis.sh
 /tmp/recipes/radamsa.sh
+/tmp/recipes/cloudwatch.sh
 
 apt-get clean -y
 apt-get autoclean -y

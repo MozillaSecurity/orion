@@ -10,7 +10,8 @@ USER root
 COPY recipes/ /tmp/recipes/
 RUN /tmp/recipes/grizzly.sh \
     && rm -rf /tmp/recipes
-
-USER worker
+COPY screenlog-to-cloudwatch.py /usr/local/bin/
 COPY launch-grizzly.sh /home/worker/
+COPY launch-grizzly-worker.sh /home/worker/
+
 CMD ["/home/worker/launch-grizzly.sh"]
