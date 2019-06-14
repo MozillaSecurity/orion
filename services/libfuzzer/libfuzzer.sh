@@ -24,8 +24,11 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
-# Update Fuzzmanager config with suitable hostname based on the execution environment.
-setup-fuzzmanager-hostname "$SHIP"
+if [ -z "$VIRGO" ];
+then
+  # Update Fuzzmanager config with suitable hostname based on the execution environment.
+  setup-fuzzmanager-hostname "$SHIP"
+fi
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
