@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -46,10 +47,11 @@ class LogWatcher(object):
             self.agent = None
 
     def write_conf(self):
+        pool_id = os.environ.get("EC2SPOTMANAGER_POOLID", 0)
         collect_list = []
         collect_template = {
             "file_path": "/home/user/grizzly-auto-run/screenlog.0",
-            "log_group_name": "grizzly-{instance_id}",
+            "log_group_name": "grizzly-instance-logs",
             "log_stream_name": "screenlog.0",
             "timestamp_format": "%Y-%m-%d %H:%M:%S",
             "timezone": "UTC",
@@ -70,7 +72,7 @@ class LogWatcher(object):
         }
         for log_file in self.watched:
             collect_template["file_path"] = str(log_file.resolve())
-            collect_template["log_stream_name"] = log_file.name
+            collect_template["log_stream_name"] = f"{pool_id}-{{instance_id}}-{log_file.name}"
             collect_list.append(collect_template.copy())
 
         with CONF_PATH.open("w") as conf_fp:
