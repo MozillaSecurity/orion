@@ -46,4 +46,4 @@ COPY --from=symbolizer-build \
     /home/worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-i686-android.so
 RUN chown -R worker:worker /home/worker/android-ndk
 
-CMD ["/bin/sh", "-c", "/home/worker/kvm.sh && su worker -c /home/worker/launch-grizzly.sh"]
+CMD ["/bin/sh", "-c", "/home/worker/kvm.sh && /home/worker/launch-grizzly.sh"]
