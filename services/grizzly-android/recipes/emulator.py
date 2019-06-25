@@ -163,7 +163,7 @@ class AndroidHelper(object):
             print("abi.type=x86_64", file=fp)
             print("avd.ini.displayname=" + self.avd_name, file=fp)
             print("avd.ini.encoding=UTF-8", file=fp)
-            print("disk.dataPartition.size=3000M", file=fp)
+            print("disk.dataPartition.size=5000M", file=fp)
             print("fastboot.forceColdBoot=no", file=fp)
             print("hw.accelerometer=yes", file=fp)
             print("hw.arc=false", file=fp)
