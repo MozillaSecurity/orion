@@ -10,6 +10,7 @@
 
 # Constants
 EC2_METADATA_URL="http://169.254.169.254/latest/meta-data"
+GCE_METADATA_URL="http://169.254.169.254/computeMetadata/v1"
 
 # Re-tries a certain command 9 times with a 30 seconds pause between each try.
 function retry () {
@@ -60,6 +61,11 @@ function is-64-bit () {
   fi
 }
 
+# Curl with headers set for accessing GCE metadata service
+function curl-gce {
+  curl -H "Metadata-Flavor: Google" "$@"
+}
+
 # Determine the relative hostname based on the outside environment.
 function relative-hostname {
   choice=${1,,}
@@ -67,10 +73,38 @@ function relative-hostname {
     ec2)
       retry curl -s --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
       ;;
+    gce)
+      local IFS='.'
+      # read external IP as an array of octets
+      read -ra octets <<< "$(retry curl-gce -s --connect-timeout 25 "$GCE_METADATA_URL/instance/network-interfaces/0/access-configs/0/external-ip")"
+      # reverse the array into "stetco"
+      stetco=()
+      for i in "${octets[@]}"; do
+        stetco=("$i" "${stetco[@]}")
+      done
+      # output hostname
+      echo "${stetco[*]}.bc.googleusercontent.com"
+      ;;
     *)
-      hostname
+      hostname -f
       ;;
   esac
+}
+
+# Add AWS credentials based on the given provider
+function setup-aws-credentials {
+  if [[ ! -f "$HOME/.aws/credentials" ]]
+  then
+    choice=${1,,}
+    case $choice in
+      gce)
+        # Get AWS credentials for GCE to be able to read from Credstash
+        mkdir -p "$HOME/.aws"
+        retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > "$HOME/.aws/credentials"
+        chmod 0600 "$HOME/.aws/credentials"
+        ;;
+    esac
+  fi
 }
 
 # Add relative hostname to the FuzzManager configuration.
@@ -79,7 +113,7 @@ function setup-fuzzmanager-hostname {
   if [ -z "$name" ]
   then
     echo "WARNING: hostname was not determined correctly."
-    name=$(hostname)
+    name=$(hostname -f)
   fi
   echo "Using '$name' as hostname."
   echo "clientid = $name" >> "$HOME/.fuzzmanagerconf"

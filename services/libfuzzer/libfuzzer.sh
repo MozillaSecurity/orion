@@ -11,6 +11,9 @@ cd "$HOME"
 # shellcheck disable=SC1090
 source ~/.common.sh
 
+# In some environments, we require credentials for talking to credstash
+setup-aws-credentials "$SHIP"
+
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -f "$HOME/.fuzzmanagerconf" ]]
