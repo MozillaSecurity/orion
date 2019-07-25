@@ -51,41 +51,114 @@ def makedirs(*dirs):
         dirs = [os.path.join(dirs[0], dirs[1])] + list(dirs[2:])
 
 
-def _get_sdk_file(url, xpath, out_path="."):
-    parts = urlparse(url)
-    url_base = parts.scheme + "://" + parts.netloc + os.path.dirname(parts.path)
-    xml_string = requests.get(url).content
-    LOG.info("Downloaded manifest: %s (%sB)", url, si(len(xml_string)))
-    root = xml.etree.ElementTree.fromstring(xml_string)
-    urls = [i.text for i in root.findall(xpath)]
-    assert len(urls) == 1
-    tmp_fp, ziptmp = tempfile.mkstemp(suffix=".zip")
-    os.close(tmp_fp)
-    try:
-        downloaded = 0
-        with open(ziptmp, "wb") as zipf:
-            response = requests.get(url_base + "/" + urls[0], stream=True)
-            total_size = int(response.headers["Content-Length"])
-            start_time = report_time = time.time()
-            LOG.info("Downloading package: %s (%sB total)", urls[0], si(total_size))
-            for chunk in response.iter_content(1024 * 1024):
-                zipf.write(chunk)
-                downloaded += len(chunk)
-                now = time.time()
-                if (now - report_time) > 30 and downloaded != total_size:
-                    LOG.info(".. still downloading (%0.1f%%, %sB/s)", 100.0 * downloaded / total_size,
-                             si(float(downloaded) / (now - start_time)))
-                    report_time = now
-        assert downloaded == total_size
-        LOG.info(".. downloaded (%sB/s)", si(float(downloaded) / (time.time() - start_time)))
-        with zipfile.ZipFile(ziptmp) as zipf:
-            for info in zipf.infolist():
-                zipf.extract(info, out_path)
-                perm = info.external_attr >> 16
-                perm |= stat.S_IREAD  # make sure we're not accidentally setting this to 0
-                os.chmod(os.path.join(out_path, info.filename), perm)
-    finally:
-        os.unlink(ziptmp)
+class AndroidSDKRepo(object):
+
+    def __init__(self, url):
+        parts = urlparse(url)
+        self.url_base = parts.scheme + "://" + parts.netloc + os.path.dirname(parts.path)
+        xml_string = requests.get(url).content
+        LOG.info("Downloaded manifest: %s (%sB)", url, si(len(xml_string)))
+        self.root = xml.etree.ElementTree.fromstring(xml_string)
+
+    @staticmethod
+    def read_revision(element):
+        rev = element.find("revision")
+        major = rev.find("major")
+        major = int(major.text) if major is not None else None
+        minor = rev.find("minor")
+        minor = int(minor.text) if minor is not None else None
+        micro = rev.find("micro")
+        micro = int(micro.text) if micro is not None else None
+        return (major, minor, micro)
+
+    def get_file(self, package_path, out_path=".", host="linux", extract_package_path=True):
+        package = self.root.find(".//remotePackage[@path='%s']/channelRef[@ref='channel-0']/.." % (package_path,))
+        if host is None:
+            url = package.find("./archives/archive/complete/url")
+        else:
+            url = package.find("./archives/archive/[host-os='%s']/complete/url" % (host,))
+
+        # figure out where to extract package to
+        path_parts = package_path.split(";")
+        intermediates = path_parts[:-1]
+        manifest_path = os.path.join(out_path, *path_parts)
+        manifest_path = os.path.join(manifest_path, "package.xml")
+        if not extract_package_path:
+            makedirs(out_path, *path_parts)
+            # out_path doesn't change
+        elif intermediates:
+            makedirs(out_path, *intermediates)
+            out_path = os.path.join(out_path, *intermediates)
+
+        # check for an existing manifest
+        if os.path.isfile(manifest_path):
+            # compare the remote version with local
+            remote_rev = self.read_revision(package)
+            local_rev = self.read_revision(xml.etree.ElementTree.parse(manifest_path).find("localPackage"))
+            if remote_rev <= local_rev:
+                fmt_rev = ".".join("" if ver is None else ("%d" % (ver,)) for ver in local_rev).strip(".")
+                LOG.info("Installed %s revision %s is sufficiently new", package_path, fmt_rev)
+                return
+
+        tmp_fp, ziptmp = tempfile.mkstemp(suffix=".zip")
+        os.close(tmp_fp)
+        try:
+            downloaded = 0
+            with open(ziptmp, "wb") as zipf:
+                response = requests.get(self.url_base + "/" + url.text, stream=True)
+                total_size = int(response.headers["Content-Length"])
+                start_time = report_time = time.time()
+                LOG.info("Downloading package: %s (%sB total)", url.text, si(total_size))
+                for chunk in response.iter_content(1024 * 1024):
+                    zipf.write(chunk)
+                    downloaded += len(chunk)
+                    now = time.time()
+                    if (now - report_time) > 30 and downloaded != total_size:
+                        LOG.info(".. still downloading (%0.1f%%, %sB/s)", 100.0 * downloaded / total_size,
+                                 si(float(downloaded) / (now - start_time)))
+                        report_time = now
+            assert downloaded == total_size
+            LOG.info(".. downloaded (%sB/s)", si(float(downloaded) / (time.time() - start_time)))
+            with zipfile.ZipFile(ziptmp) as zipf:
+                for info in zipf.infolist():
+                    zipf.extract(info, out_path)
+                    perm = info.external_attr >> 16
+                    perm |= stat.S_IREAD  # make sure we're not accidentally setting this to 0
+                    os.chmod(os.path.join(out_path, info.filename), perm)
+        finally:
+            os.unlink(ziptmp)
+
+        # write manifest
+        xml.etree.ElementTree.register_namespace("common", "http://schemas.android.com/repository/android/common/01")
+        xml.etree.ElementTree.register_namespace("generic", "http://schemas.android.com/repository/android/generic/01")
+        xml.etree.ElementTree.register_namespace("sys-img", "http://schemas.android.com/sdk/android/repo/sys-img2/01")
+        xml.etree.ElementTree.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
+        manifest = xml.etree.ElementTree.Element("{http://schemas.android.com/repository/android/common/01}repository")
+        license = package.find("uses-license")
+        manifest.append(self.root.find("./license[@id='%s']" % (license.get("ref"),)))
+        local_package = xml.etree.ElementTree.SubElement(manifest, "localPackage")
+        local_package.set("path", package_path)
+        local_package.set("obsolete", "false")
+        local_package.append(package.find("type-details"))
+        local_package.append(package.find("revision"))
+        local_package.append(package.find("display-name"))
+        local_package.append(license)
+        deps = package.find("dependencies")
+        if deps is not None:
+            local_package.append(deps)
+        manifest_bytes = (b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+                          xml.etree.ElementTree.tostring(manifest, encoding="UTF-8"))
+        # etree doesn't support xmlns in attribute values, so insert them manually
+        if b"xmlns:generic=" not in manifest_bytes and b"\"generic:" in manifest_bytes:
+            manifest_bytes = manifest_bytes.replace(
+                b"<common:repository ",
+                b'<common:repository xmlns:generic="http://schemas.android.com/repository/android/generic/01" ')
+        if b"xmlns:sys-img=" not in manifest_bytes and b"\"sys-img:" in manifest_bytes:
+            manifest_bytes = manifest_bytes.replace(
+                b"<common:repository ",
+                b'<common:repository xmlns:sys-img="http://schemas.android.com/sdk/android/repo/sys-img2/01" ')
+        with open(manifest_path, "wb") as manifest_fp:
+            manifest_fp.write(manifest_bytes)
 
 
 class AndroidHelper(object):
@@ -103,38 +176,24 @@ class AndroidHelper(object):
         android = makedirs(HOME, ".android")
         makedirs(android, "avd")
         sdk = makedirs(android, "sdk")
-        api_gapi = makedirs(sdk, "system-images", "android-28", "google_apis")
+        sdk_repo = AndroidSDKRepo(REPO_URL)
+        img_repo = AndroidSDKRepo(IMAGES_URL)
+
+        # get latest emulator for linux
+        sdk_repo.get_file("emulator", sdk)
+
+        # get latest Google APIs system image
+        img_repo.get_file("system-images;android-28;google_apis;x86_64", sdk, host=None)
+
+        # get latest platform-tools for linux
+        sdk_repo.get_file("platform-tools", sdk)
+
+        # required for: aapt
+        sdk_repo.get_file("build-tools;28.0.3", sdk, extract_package_path=False)
+
         # this is a hack and without it for some reason the following error can happen:
         # PANIC: Cannot find AVD system path. Please define ANDROID_SDK_ROOT
         makedirs(sdk, "platforms")
-
-        # get latest emulator for linux
-        _get_sdk_file(REPO_URL,
-                      ".//remotePackage[@path='emulator']"
-                      "/channelRef[@ref='channel-0']/.."
-                      "/archives/archive/[host-os='linux']/complete/url",
-                      sdk)
-
-        # get latest Google APIs system image
-        _get_sdk_file(IMAGES_URL,
-                      "./remotePackage[@path='system-images;android-28;google_apis;x86_64']"
-                      "/channelRef[@ref='channel-0']/.."
-                      "/archives/archive/complete/url",
-                      api_gapi)
-
-        # get latest platform-tools for linux
-        _get_sdk_file(REPO_URL,
-                      ".//remotePackage[@path='platform-tools']"
-                      "/channelRef[@ref='channel-0']/.."
-                      "/archives/archive/[host-os='linux']/complete/url",
-                      sdk)
-
-        # required for: aapt
-        _get_sdk_file(REPO_URL,
-                      ".//remotePackage[@path='build-tools;28.0.3']"
-                      "/channelRef[@ref='channel-0']/.."
-                      "/archives/archive/[host-os='linux']/complete/url",
-                      sdk)
 
     def avd(self):
         # create folder structure
