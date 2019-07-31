@@ -29,7 +29,7 @@ function sys-update () {
 
 # `apt-get install` command with retry functionality.
 function sys-embed () {
-    retry apt-get install -y -qq --no-install-recommends --no-install-suggests @$
+    retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@"
 }
 
 # Calls `apt-get install` on it's arguments but marks them as automatically installed.
@@ -41,7 +41,7 @@ function apt-install-auto () {
       new+=("$pkg")
     fi
   done
-  apt-get -y -qq --no-install-recommends --no-install-suggests install "${new[@]}"
+  sys-embed "${new[@]}"
   apt-mark auto "${new[@]}"
 }
 
