@@ -31,7 +31,7 @@ ENV CLANG_SRC clang/lib64/clang/${CLANG_VERSION}
 ENV CLANG_DEST android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}
 
 COPY recipes/ /tmp/recipes/
-RUN /tmp/recipes/all.sh \
+RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes
 COPY recipes/kvm.sh /home/worker/
 

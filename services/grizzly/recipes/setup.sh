@@ -1,9 +1,14 @@
-#!/bin/bash -ex
+#!/bin/bash
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+set -e
+set -x
 set -o pipefail
+
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.common.sh
 
 # Setup the Ubuntu debug symbol server (https://wiki.ubuntu.com/DebuggingProgramCrash)
 cat << EOF > /etc/apt/sources.list.d/ddebs.list
@@ -16,7 +21,7 @@ curl -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
 #apt-get install ubuntu-dbgsym-keyring
 #apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
 
-apt-get update -y -qq
+sys-update
 
 packages=(
     libasound2
@@ -36,6 +41,7 @@ packages=(
     zip
 )
 
+# packages with *unwanted* recommends
 packages_with_recommends=(
     build-essential
     gdb
@@ -61,8 +67,8 @@ dbgsym_packages=(
     mesa-vdpau-drivers
 )
 
-apt-get install -q -y "${packages[@]}"
-apt-get install -q -y --no-install-recommends "${packages_with_recommends[@]}"
+apt-get install -y -qq "${packages[@]}"
+sys-embed "${packages_with_recommends[@]}"
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
 # For each package, install the corresponding dbgsym package (same version).
@@ -75,19 +81,12 @@ for pkg in "${dbgsym_packages[@]}"; do
     fi
 done
 if [ ${#dbgsym_installs[@]} -ne 0 ]; then
-    apt-get install -q -y "${dbgsym_installs[@]}"
+    sys-embed "${dbgsym_installs[@]}"
 fi
 
 /tmp/recipes/redis.sh
 /tmp/recipes/radamsa.sh
 /tmp/recipes/cloudwatch.sh
-
-apt-get clean -y
-apt-get autoclean -y
-apt-get autoremove -y
-
-rm -rf /var/lib/apt/lists/*
-rm -rf /root/.cache/*
 
 # otherwise setup-grizzly.sh fails
 pip uninstall -y numpy
@@ -95,5 +94,7 @@ pip install \
     psutil \
     virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git
+
+~/.bin/cleanup.sh
 
 chown -R worker:worker /home/worker

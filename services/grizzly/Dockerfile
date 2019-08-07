@@ -8,7 +8,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 USER root
 COPY recipes/ /tmp/recipes/
-RUN /tmp/recipes/grizzly.sh \
+RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes
 COPY screenlog-to-cloudwatch.py /usr/local/bin/
 COPY launch-grizzly.sh /home/worker/
