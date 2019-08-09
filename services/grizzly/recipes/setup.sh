@@ -25,6 +25,7 @@ sys-update
 
 packages=(
     libasound2
+    libc6-dbg
     libdbus-glib-1-2
     libglu1-mesa
     libosmesa6
