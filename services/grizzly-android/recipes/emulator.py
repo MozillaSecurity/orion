@@ -279,7 +279,7 @@ class AndroidHelper(object):
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
 
-        args = []
+        args = ["-selinux", "permissive"]
 
         if self.no_window:
             args.append("-no-window")
