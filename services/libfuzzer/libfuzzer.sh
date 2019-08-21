@@ -113,18 +113,22 @@ then
   # Download the corpus from S3
   # shellcheck disable=SC2086
   $AFL_LIBFUZZER_DAEMON $CORPUS_DOWNLOAD_ARGS $S3_PROJECT_ARGS --s3-corpus-download corpora/
-elif [ -n "$CORPORA" ]
-then
-  # Use a static corpus instead
-  svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
 elif [ -n "$OSSFUZZ_PROJECT" ]
 then
   # Use synced corpora from OSSFuzz.
   mkdir -p ./corpora
   ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
-  set +x
-  cp "./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER/*" ./corpora/ 2>/dev/null
-  set -x
+  CORPORA_PATH="./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER"
+  if [ -d $CORPORA_PATH ]
+  then
+    set +x
+    cp $CORPORA_PATH/* ./corpora/ || true
+    set -x
+  fi
+elif [ -n "$CORPORA" ]
+then
+  # Use a static corpus instead
+  svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
 else
   mkdir -p ./corpora
 fi
