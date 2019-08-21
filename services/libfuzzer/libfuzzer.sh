@@ -6,7 +6,10 @@
 set -e
 set -x
 
-cd "$HOME"
+# %<---[Setup]----------------------------------------------------------------
+
+WORKDIR=${WORKDIR:-$HOME}
+cd "$WORKDIR" || exit
 
 # shellcheck disable=SC1090
 source ~/.common.sh
@@ -14,11 +17,23 @@ source ~/.common.sh
 # In some environments, we require credentials for talking to credstash
 setup-aws-credentials "$SHIP"
 
+if [[ -n "$OSSFUZZ_PROJECT" ]]
+then
+  if  [[ ! -d "$HOME/oss-fuzz" ]]
+  then
+    retry git clone --depth 1 https://github.com/google/oss-fuzz
+  fi
+  if [[ ! -f "$HOME/.boto" ]]
+  then
+    retry credstash get ossfuzz.gutils >> ~/.boto
+  fi
+fi
+
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -f "$HOME/.fuzzmanagerconf" ]]
 then
-  credstash get fuzzmanagerconf > .fuzzmanagerconf
+  retry credstash get fuzzmanagerconf > .fuzzmanagerconf
 fi
 
 # Update FuzzManager config for this instance.
@@ -27,11 +42,13 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
 
-if [ -z "$VIRGO" ];
+if [ -z "$VIRGO" ]
 then
   # Update Fuzzmanager config with suitable hostname based on the execution environment.
   setup-fuzzmanager-hostname "$SHIP"
 fi
+
+# %<---[Target]---------------------------------------------------------------
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
@@ -41,21 +58,20 @@ if [ "$JS" = 1 ]
 then
   if [[ ! -d "$HOME/js" ]]
   then
-    fuzzfetch -o "$HOME" -n js -a --fuzzing --target js
+    retry fuzzfetch -o "$HOME" -n js -a --fuzzing --target js
   fi
   TARGET_BIN="js/fuzz-tests"
 elif [[ ! -d "$HOME/firefox" ]]
 then
-  fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
+  retry fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
 fi
 
-# FuzzData
-FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
+# %<---[Constants]------------------------------------------------------------
 
-# AFL/LibFuzzer management tool
+FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 AFL_LIBFUZZER_DAEMON="./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py"
 
-# ContentIPC
+# IPC
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
 then
   mkdir -p settings/ipc
@@ -66,7 +82,8 @@ fi
 S3_PROJECT_ARGS=""
 S3_QUEUE_UPLOAD_ARGS=""
 
-# LibFuzzer Corpora
+# %<---[Corpora]--------------------------------------------------------------
+
 if [ -n "$S3_PROJECT" ]
 then
   # Use S3 for corpus management and synchronization. Each instance will download the corpus
@@ -100,20 +117,30 @@ elif [ -n "$CORPORA" ]
 then
   # Use a static corpus instead
   svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
+elif [ -n "$OSSFUZZ_PROJECT" ]
+then
+  # Use synced corpora from OSSFuzz.
+  mkdir -p ./corpora
+  ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
+  set +x
+  cp "./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER/*" ./corpora/ 2>/dev/null
+  set -x
 else
   mkdir -p ./corpora
 fi
 
 CORPORA="./corpora/"
 
-# LibFuzzer Dictionary Tokens
+# %<---[Tokens]---------------------------------------------------------------
+
 if [ -n "$TOKENS" ]
 then
   svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
   TOKENS="-dict=./tokens.dict"
 fi
 
-# Setup ASan
+# %<---[Sanitizer]------------------------------------------------------------
+
 export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
 ASAN_OPTIONS=\
 print_scariness=true:\
@@ -129,7 +156,8 @@ start_deactivated=false:\
 strict_string_checks=true:\
 $ASAN
 
-# Run reporter for EC2
+# %<---[StatusFile]-----------------------------------------------------------
+
 tee run-ec2report.sh << EOF
 #!/bin/bash
 ./fuzzmanager/EC2Reporter/EC2Reporter.py --report-from-file ./stats --keep-reporting 60 --random-offset 30
@@ -137,15 +165,13 @@ EOF
 chmod u+x run-ec2report.sh
 screen -t ec2report -dmS ec2report ./run-ec2report.sh
 
-# Setup LibFuzzer
+# %<---[LibFuzzer]------------------------------------------------------------
+
 export FUZZER="${FUZZER:-SdpParser}"
 export LIBFUZZER=1
 export MOZ_RUN_GTEST=1
 # shellcheck disable=SC2206
 LIBFUZZER_ARGS=($LIBFUZZER_ARGS $TOKEN $CORPORA)
-
-# How many instances to run in parallel
-# TODO: We need to auto-detect this based on the machine
 if [ -z "$LIBFUZZER_INSTANCES" ]
 then
   LIBFUZZER_INSTANCES=$(nproc)
@@ -170,14 +196,3 @@ $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --tool "libFuzzer-$FUZZER" \
   --env "ASAN_OPTIONS=${ASAN_OPTIONS//:/ }" \
   --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
-
-# Minimize Crash
-#   xvfb-run -s '-screen 0 1024x768x24' ./firefox -minimize_crash=1 -max_total_time=60 crash-<hash>
-#
-# ASan Options
-#   detect_deadlocks=true
-#   handle_ioctl=true
-#   intercept_tls_get_addr=true
-#   leak_check_at_exit=true # LSAN not enabled in --enable-fuzzing
-#   strict_string_checks=false # GLib textdomain() error
-#   detect_stack_use_after_return=false # nsXPConnect::InitStatics() error

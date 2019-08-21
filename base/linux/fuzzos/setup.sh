@@ -47,5 +47,6 @@ cd recipes
 ./grcov.sh
 ./halfempty.sh
 ./berglas.sh
+./gsutil.sh
 
 ./cleanup.sh

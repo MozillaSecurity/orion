@@ -7,10 +7,13 @@
 set -e
 set -x
 
-# %<---[setup]----------------------------------------------------------------
+# %<---[Setup]----------------------------------------------------------------
 
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
+
+# shellcheck disable=SC1090
+source ~/.common.sh
 
 REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
 export REVISION
@@ -29,22 +32,22 @@ if [ "$JS" = 1 ]
 then
   if [[ ! -d "$HOME/js" ]]
   then
-    fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n js -o "$WORKDIR" --target js
+    retry fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n js -o "$WORKDIR" --target js
   fi
   chmod -R 755 js
   TARGET_BIN="js/fuzz-tests"
   export GCOV_PREFIX="$WORKDIR/js"
 elif [[ ! -d "$HOME/firefox" ]]
 then
-  fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n firefox -o "$WORKDIR"
+  retry fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n firefox -o "$WORKDIR"
   chmod -R 755 firefox
 fi
 
-# %<---[fuzzer]---------------------------------------------------------------
+# %<---[LibFuzzer]------------------------------------------------------------
 
 timeout -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh || :
 
-# %<---[coverage]-------------------------------------------------------------
+# %<---[Coverage]-------------------------------------------------------------
 
 # Collect coverage count data.
 RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \

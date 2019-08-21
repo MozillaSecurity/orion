@@ -16,9 +16,8 @@ RUN \
     screen \
   && "$HOME/.bin/cleanup.sh"
 
+COPY *.sh ./
 RUN chown -R worker:worker $HOME
 USER $USER
-
-COPY *.sh ./
 
 CMD ["./setup.sh"]
