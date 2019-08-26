@@ -11,4 +11,5 @@ set -x
 cd "$HOME"
 git clone --depth 1 --no-tags https://github.com/mozillasecurity/fuzzmanager.git
 pip install ./fuzzmanager
+pip3 install ./fuzzmanager
 pip install boto
