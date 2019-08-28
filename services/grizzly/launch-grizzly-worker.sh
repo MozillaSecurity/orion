@@ -1,23 +1,20 @@
-#!/bin/bash -ex
+#!/usr/bin/env bash
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-function retry {
-  # shellcheck disable=SC2015
-  for _ in {1..9}; do
-    "$@" && return || sleep 30
-  done
-  "$@"
-}
+set -e
+set -x
+
+# shellcheck disable=SC1090
+source ~/.common.sh
 
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 retry ssh-keyscan github.com >> .ssh/known_hosts
 
 # Get AWS credentials for GCE to be able to read from Credstash
-if curl --connect-timeout 2 --retry 2 -sf -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/>/dev/null
-then
+if [[ "$EC2SPOTMANAGER_PROVIDER" = "GCE" ]]; then
   mkdir -p .aws
   retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > .aws/credentials
   chmod 0600 .aws/credentials
@@ -38,8 +35,8 @@ EOF
 
 # Checkout fuzzer including framework, install everything
 retry git clone -v --depth 1 --no-tags git@grizzly-config:MozillaSecurity/grizzly-config.git config
-if [ "$BEARSPRAY" = "1" ]; then
-    ./config/aws/setup-bearspray.sh
+if [[ "$BEARSPRAY" = "1" ]]; then
+  ./config/aws/setup-bearspray.sh
 else
-    ./config/aws/setup-grizzly.sh
+  ./config/aws/setup-grizzly.sh
 fi

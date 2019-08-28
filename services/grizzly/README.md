@@ -17,29 +17,29 @@ CID=$(docker run \
 -e INPUT=grammars/html-fuzz.gmr \
 -e PREFS=prefs/prefs-default-e10s.js \
 -e RELAUNCH=100 \
--dit taskclusterprivate/grizzly:latest /bin/bash)
+-dit mozillasecurity/grizzly:latest /bin/bash)
 docker exec -it $CID /bin/bash
 ```
 
 #### Example: Domino
 ```bash
 CID=$(docker run \
--e DOMINO_ROOT=/home/worker/DOMfuzz2 \
--e CORPMAN=domino \
--e TARGET="-a --fuzzing" \
+-e DOMINO_ROOT=domino \
+-e CORPMAN=dominode \
+-e TARGET=asan \
+-e IGNORE="log-limit memory timeout" \
+-e BEARSPRAY=1 \
 -e CACHE=5 \
--e INSTANCES=3 \
+-e INSTANCES_PER_CORE=0 \
 -e TOOLNAME=grizzly-domino \
--e TIMEOUT=120 \
--e INPUT=grammars/html-fuzz.gmr \
+-e TIMEOUT=90 \
+-e INPUT=domino/package.json \
 -e PREFS=prefs/prefs-default-e10s.js \
--e RELAUNCH=50 \
+-e RELAUNCH=250 \
 -e MEM_LIMIT=7000 \
--e INPUT=/home/worker/DOMfuzz2/reftests/ \
--e ACCEPTED_EXTENSIONS="html xhtml" \
--e FUZZPRIV=true \
--dit taskclusterprivate/grizzly:latest /bin/bash)
-docker exec -it $CID /bin/bash
+-v $HOME/.aws:/home/worker/.aws \
+-dit mozillasecurity/grizzly:latest)
+docker exec -uworker -it $CID /bin/bash
 ```
 
 #### Run

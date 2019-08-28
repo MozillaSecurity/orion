@@ -70,7 +70,7 @@ function curl-gce {
 function relative-hostname {
   choice=${1,,}
   case $choice in
-    ec2)
+    ec2 | ec2spot)
       retry curl -s --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
       ;;
     gce)
