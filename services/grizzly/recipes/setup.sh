@@ -90,8 +90,6 @@ fi
 /tmp/recipes/radamsa.sh
 /tmp/recipes/cloudwatch.sh
 
-# otherwise setup-grizzly.sh fails
-pip uninstall -y numpy
 pip install \
     psutil \
     virtualenv \
