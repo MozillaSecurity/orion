@@ -86,6 +86,7 @@ if [ ${#dbgsym_installs[@]} -ne 0 ]; then
 fi
 
 /tmp/recipes/redis.sh
+/tmp/recipes/fuzzfetch.sh
 /tmp/recipes/radamsa.sh
 /tmp/recipes/cloudwatch.sh
 
