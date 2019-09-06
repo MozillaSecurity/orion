@@ -75,7 +75,7 @@ AFL_LIBFUZZER_DAEMON="./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py"
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
 then
   mkdir -p settings/ipc
-  svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
+  retry svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
   export MOZ_IPC_MESSAGE_FUZZ_BLACKLIST="$HOME/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
 fi
 
@@ -128,7 +128,7 @@ then
 elif [ -n "$CORPORA" ]
 then
   # Use a static corpus instead
-  svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
+  retry svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
 else
   mkdir -p ./corpora
 fi
@@ -139,7 +139,7 @@ CORPORA="./corpora/"
 
 if [ -n "$TOKENS" ]
 then
-  svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
+  retry svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
   TOKENS="-dict=./tokens.dict"
 fi
 
