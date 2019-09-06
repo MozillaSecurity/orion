@@ -146,6 +146,7 @@ fi
 # %<---[Sanitizer]------------------------------------------------------------
 
 export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
 ASAN_OPTIONS=\
 print_scariness=true:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
@@ -159,6 +160,17 @@ allocator_may_return_null=true:\
 start_deactivated=false:\
 strict_string_checks=true:\
 $ASAN
+
+export ASAN_OPTIONS=${ASAN_OPTIONS//:/ }
+
+UBSAN_OPTIONS=\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
+print_stacktrace=1:\
+print_summary=1:\
+halt_on_error=1:\
+$UBSAN
+
+export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 # %<---[StatusFile]-----------------------------------------------------------
 
@@ -198,5 +210,4 @@ $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --stats "./stats" \
   --sigdir "$HOME/signatures" \
   --tool "libFuzzer-$FUZZER" \
-  --env "ASAN_OPTIONS=${ASAN_OPTIONS//:/ }" \
   --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
