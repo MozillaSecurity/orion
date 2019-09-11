@@ -184,8 +184,7 @@ screen -t ec2report -dmS ec2report ./run-ec2report.sh
 # %<---[LibFuzzer]------------------------------------------------------------
 
 export FUZZER="${FUZZER:-SdpParser}"
-export LIBFUZZER=1
-export MOZ_RUN_GTEST=1
+
 # shellcheck disable=SC2206
 LIBFUZZER_ARGS=($LIBFUZZER_ARGS $TOKEN $CORPORA)
 if [ -z "$LIBFUZZER_INSTANCES" ]
