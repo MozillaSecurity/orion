@@ -11,6 +11,11 @@ source "${0%/*}/common.sh"
 
 #### Install rr
 
+if is-arm64; then
+  echo "[INFO] rr is currently not supported on any ARM architecture."
+  exit
+fi
+
 apt-install-auto \
   ccache \
   cmake \
@@ -23,7 +28,7 @@ apt-install-auto \
   manpages-dev \
   ninja-build
 
-apt-get install -q -y \
+sys-embed \
   capnproto \
   libcapnp-dev
 
@@ -31,7 +36,7 @@ pip3 install pexpect
 
 TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  git clone --depth 1 --no-tags https://github.com/mozilla/rr.git
+  git-clone https://github.com/mozilla/rr
   ( cd rr
     PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
     sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt

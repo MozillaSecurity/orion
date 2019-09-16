@@ -6,6 +6,9 @@
 set -e
 set -x
 
+# shellcheck source=base/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### Install gsutil
 
-pip3 install gsutil
+retry pip3 install gsutil

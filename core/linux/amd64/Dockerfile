@@ -1,0 +1,3 @@
+FROM ubuntu@sha256:ca013ac5c09f9a9f6db8370c1b759a29fe997d64d6591e9a75b71748858f7da0
+
+LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>

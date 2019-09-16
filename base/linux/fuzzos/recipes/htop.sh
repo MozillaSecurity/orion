@@ -9,13 +9,9 @@ set -x
 # shellcheck source=base/fuzzos/recipes/common.sh
 source "${0%/*}/common.sh"
 
-
 #### Install: htop
 
-apt-get install htop
-
-rm /usr/bin/top
-
+sys-embed htop
 echo "alias top=\"htop\"" >> ~/.bashrc
 
-
+rm /usr/bin/top

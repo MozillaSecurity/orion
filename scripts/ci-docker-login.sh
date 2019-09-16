@@ -1,4 +1,11 @@
-#!/bin/bash -exu
+#!/usr/bin/env bash
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+set -e
+set -x
+set -u
 
 # Exit because PRs do not have access to secrets.
 # The MonorepoManager executes a PR build though but does prevent a push for PRs.

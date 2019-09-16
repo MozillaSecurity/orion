@@ -16,6 +16,7 @@ apt-get install -y -qq --no-install-recommends --no-install-suggests \
     dbus \
     git \
     gpg-agent \
+    jq \
     locales \
     less \
     make \
@@ -25,6 +26,7 @@ apt-get install -y -qq --no-install-recommends --no-install-suggests \
     python-pip \
     python-setuptools \
     python3-pip \
+    python3-dev \
     python3-setuptools \
     software-properties-common \
     unzip \

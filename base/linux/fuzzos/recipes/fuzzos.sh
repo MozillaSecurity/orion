@@ -39,17 +39,17 @@ EOF
 
 #### Base Environment Configuration
 
-mkdir ~/.bin
+cat<< 'EOF' >> ~/.bashrc
 
-cat << 'EOF' >> ~/.bashrc
 # FuzzOS
-export PATH=$HOME/.bin:$PATH
-export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]# \[\033[0m\]'
+export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
 EOF
 
+mkdir -p ~/.local/bin
+
 # Add `cleanup.sh` to let images perform standard cleanup operations.
-cp "${0%/*}/cleanup.sh" ~/.bin/cleanup.sh
+cp "${0%/*}/cleanup.sh" ~/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
-cp "${0%/*}/common.sh" ~/.common.sh
-printf "source ~/.common.sh\n" >> ~/.bashrc
+cp "${0%/*}/common.sh" ~/.local/bin/common.sh
+printf "source ~/.local/bin/common.sh\n" >> ~/.bashrc

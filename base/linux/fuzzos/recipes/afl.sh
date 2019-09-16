@@ -6,16 +6,24 @@
 set -e
 set -x
 
+# shellcheck source=base/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### AFL
+
+export CC=clang
+export CXX=clang++
+
+if is-arm64; then
+  export AFL_NO_X86=1
+fi
 
 TMPD="$(mktemp -d -p. afl.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  git clone -v --depth 1 --no-tags https://github.com/choller/afl.git
-  ( cd afl
-    make
-    # Disabled due to SIGSEGV in Clang > 6.
-    # Read https://bugs.llvm.org/show_bug.cgi?id=39321 for possible workarounds.
-    # make -C llvm_mode
+  git-clone "https://github.com/google/AFL"
+  ( cd AFL
+    make &> /dev/null
+    make -C llvm_mode
     make install
   )
 )

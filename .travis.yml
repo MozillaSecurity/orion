@@ -50,9 +50,23 @@ jobs:
     - stage: Requirements
       env: IMAGE=services/linter
       name: Linter
-    - stage: Base
+
+    - stage: Core
+      env: IMAGE=core/linux/amd64
+      name: AMD64
+      env: IMAGE=core/linux/arm64
+      name: ARM64
+
+    - stage: Create Core Manifest
+      script: scripts/docker-manifest.sh mozillasecurity core
+
+    - stage: FuzzOS
       env: IMAGE=base/linux
       name: FuzzOS
+
+    - stage: Create Core Manifest
+      script: scripts/docker-manifest.sh mozillasecurity fuzzos
+
     - stage: Grizzly
       env: IMAGE=services/grizzly
       name: Grizzly

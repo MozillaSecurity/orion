@@ -6,13 +6,18 @@
 set -e
 set -x
 
+# shellcheck source=base/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### Install Breakpad Tools
-# https://developer.mozilla.org/en-US/docs/Mozilla/Debugging/Debugging_a_minidump#Using_other_tools_to_inspect_minidump_data
 
 TMPD="$(mktemp -d -p. breakpad.tools.XXXXXXXXXX)"
 ( cd "$TMPD"
-  curl -LO https://s3.amazonaws.com/getsentry-builds/getsentry/breakpad-tools/breakpad-tools-linux.zip
-  unzip -j breakpad-tools-linux.zip minidump_stackwalk -d /usr/local/bin/
+  git-clone "https://github.com/google/breakpad"
+  cd breakpad
+  git-clone "https://chromium.googlesource.com/linux-syscall-support" src/third_party/lss
+  ./configure
+  make
+  make install
 )
-
 rm -rf "$TMPD"

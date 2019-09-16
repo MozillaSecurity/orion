@@ -5,11 +5,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 """
-A script that aids in building and publishing multiple 🐳 containers as microservices within a single repository,
-aka monorepo.
+A script that aids in building and publishing multiple 🐳 containers as microservices within a
+single repository aka monorepo.
 """
 
-__author__ = 'Christoph Diehl <cdiehl@mozilla.com>'
+__author__ = "Christoph Diehl <cdiehl@mozilla.com>"
+__version__ = "2.0.0"
 
 import os
 import sys
@@ -29,6 +30,7 @@ except ImportError as error:
 class MonorepoManagerException(Exception):
     """Exception class for Monorepo Manager."""
 
+
 class Common:
     """Common methods and functions shared across CI and CD.
     """
@@ -41,7 +43,7 @@ class Common:
         """The child folder within its parent folder is usually the service containing the Dockerfile.
         """
         service = os.sep.join(folder.split(os.sep)[0:2])
-        dockerfile = os.path.join(service, 'Dockerfile')
+        dockerfile = os.path.join(service, "Dockerfile")
         service_name = folder.split(os.sep)[1]
         return service_name, dockerfile
 
@@ -52,8 +54,16 @@ class Common:
         service_path = cls.find_service_in_parent(folder)
         if service_path is None:
             return None, None
-        service_name = service_path.rstrip(os.sep).split(os.sep)[-1]
-        dockerfile = os.path.join(service_path, 'Dockerfile')
+        # In case we have a service meta file we retrieve the image name and
+        # potential other meta information from it, otherwise the image name
+        # is here derived from the folder name.
+        service_name = None
+        meta = cls.read_service_metadata(service_path)
+        if meta and meta.get("image_name"):
+            service_name = meta["image_name"]
+        else:
+            service_name = service_path.rstrip(os.sep).split(os.sep)[-1]
+        dockerfile = os.path.join(service_path, "Dockerfile")
         return service_name, dockerfile
 
     @classmethod
@@ -61,10 +71,8 @@ class Common:
         """Searches backwards in the hierarchy to find the service containing the Dockerfile.
         """
         content = os.listdir(folder)
-
-        if 'Dockerfile' in content:
+        if "Dockerfile" in content:
             return folder
-
         folders = folder.split(os.sep)
         if len(folders) > 1:
             folders.pop()
@@ -78,7 +86,7 @@ class Common:
         folders = []
         for dirpath, _, files in os.walk(root):
             for fname in files:
-                if fname == 'Dockerfile':
+                if fname == "Dockerfile":
                     folders.append(dirpath)
         return folders
 
@@ -86,127 +94,179 @@ class Common:
     def is_test(cls, folder):
         """Whether the folder is a container structure test folder.
         """
-        return os.path.basename(folder) == 'tests'
+        return os.path.basename(folder) == "tests"
+
+    @classmethod
+    def read_service_metadata(cls, root, filename="service.yaml"):
+        """Reads optional metadata information file for the service.
+        """
+        service_meta = os.path.join(root, filename)
+        if os.path.isfile(service_meta):
+            with open(service_meta) as fo:
+                return yaml.safe_load(fo.read())
+        return None
 
 
 class CI(Common):
     """CI base class.
     """
 
-    def __init__(self):
-        super().__init__()
-
 
 class CD(Common):
     """CD base class.
     """
 
-    def __init__(self):
-        super().__init__()
-
 
 class DockerHub(CD):
-    """DockerHub helper class.
+    """DockerHub auxiliary class.
     """
 
-    ORG = os.environ.get('DOCKER_ORG')
+    ORG = os.environ.get("DOCKER_ORG")
 
     def __init__(self, dockerfile, service, version):
         super().__init__()
         self.dockerfile = dockerfile
         self.service = service
         self.version = version
+        self.tags = []
         self.root = os.path.abspath(os.path.dirname(self.dockerfile))
+        self.metadata = self.read_service_metadata(self.root)
 
     def build(self):
         """Builds docker image with tags.
         """
-        self.logger.info('Building image for %s', self.dockerfile)
-        subprocess.check_call([
-            'docker', 'build',
-            '--pull',
-            '--compress',
-            '-t', '{}/{}:{}'.format(DockerHub.ORG, self.service, self.version),
-            '-t', '{}/{}:latest'.format(DockerHub.ORG, self.service),
-            '-f', self.dockerfile,
-            os.path.dirname(self.dockerfile)
-        ])
+        self.logger.info("Building image for %s", self.dockerfile)
+
+        version_prefix = None
+        build_args = None
+
+        if self.metadata:
+            # In case we have a metadata file but image_name is undefined,
+            # fall back to the automatic retrived name based on the folder.
+            self.service = self.metadata.get("image_name", self.service)
+            version_prefix = self.metadata.get("version_prefix", "")
+            build_args = self.metadata.get("build_args", [])
+
+        repository = "{}/{}".format(DockerHub.ORG, self.service)
+
+        if version_prefix:
+            version_prefix += "-"
+
+        version1 = "{}{}".format(version_prefix, self.version)
+        version2 = "{}{}".format(version_prefix, "latest")
+
+        self.tags.append("{}:{}".format(repository, version1))
+        self.tags.append("{}:{}".format(repository, version2))
+
+        # fmt: off
+        command = [
+            "docker",
+            "build",
+            "--pull",
+            "--compress",
+            "-t", self.tags[0],
+            "-t", self.tags[1],
+            "-f", self.dockerfile,
+        ]
+        # fmt: on
+
+        if build_args:
+            for arg in build_args:
+                command.extend(["--build-args", arg])
+
+        command.append(os.path.dirname(self.dockerfile))
+
+        self.logger.info(command)
+        try:
+            subprocess.check_call(command)
+        except subprocess.CalledProcessError as error:
+            raise MonorepoManagerException(error)
 
     def push(self):
         """Pushes docker image with defined tag and tag latest to registry.
         """
-        self.logger.info('Pushing image for %s', self.service)
-        subprocess.check_call([
-            'docker', 'push',
-            '{}/{}:latest'.format(DockerHub.ORG, self.service)
-        ])
-        subprocess.check_call([
-            'docker', 'push',
-            '{}/{}:{}'.format(DockerHub.ORG, self.service, self.version)
-        ])
+        self.logger.info("Pushing image for %s", self.service)
+
+        for tag in self.tags:
+            command = ["docker", "push", tag]
+            self.logger.info(command)
+            try:
+                subprocess.check_call(command)
+            except subprocess.CalledProcessError as error:
+                raise MonorepoManagerException(error)
 
     def test(self):
         """Runs structural container tests against an image.
         """
-        self.logger.info('Testing container %s', self.service)
+        self.logger.info("Testing container %s", self.service)
 
         # Do we have a |tests| folder for this service?
-        testpath = os.path.join(self.root, 'tests')
+        testpath = os.path.join(self.root, "tests")
         if not os.path.isdir(testpath):
             return
 
         # Collect all test YAML configurations.
         confs = []
         for filename in os.listdir(testpath):
-            if filename.endswith('_test.yaml') or filename.endswith('_test.yml'):
-                confs.append(os.path.join('/tmp/tests', filename))
+            if filename.endswith("_test.yaml") or filename.endswith("_test.yml"):
+                confs.append(os.path.join("/tmp/tests", filename))
         if not confs:
             return
 
         # Build the command which will fetch and run the container-structure-test image.
+        # fmt: off
         command = [
-            'docker', 'run', '--rm',
-            '-v', '/var/run/docker.sock:/var/run/docker.sock',
-            '-v', '{}/:/tmp/tests/'.format(testpath),
-            'gcr.io/gcp-runtimes/container-structure-test:latest',
-            'test',
-            '--quiet',
-            '--image', '{}/{}:latest'.format(DockerHub.ORG, self.service)
+            "docker",
+            "run",
+            "--rm",
+            "-v", "/var/run/docker.sock:/var/run/docker.sock",
+            "-v", "{}/:/tmp/tests/".format(testpath),
+            "gcr.io/gcp-runtimes/container-structure-test:latest",
+            "test",
+            "--quiet",
+            "--image",
+            "{}/{}:latest".format(DockerHub.ORG, self.service),
         ]
+        # fmt: on
+
         for name in confs:
-            command.append('--config')
-            command.append(name)
+            command.extend(["--config", name])
 
         self.logger.info(command)
         try:
             subprocess.check_call(command)
-        except subprocess.CalledProcessError as err:
-            raise MonorepoManagerException(err)
+        except subprocess.CalledProcessError as error:
+            raise MonorepoManagerException(error)
 
 
 class Git(Common):
     """Git utility class.
     """
 
-    def __init__(self):
-        super().__init__()
-
     @staticmethod
     def revision():
         """Returns the HEAD revision id of the repository.
         """
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
+        return (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            .strip()
+            .decode("utf-8")
+        )
 
-    def has_trigger(self, commit_range, path='.'):
+    def has_trigger(self, commit_range, path="."):
         """Returns folders which changed within a commit range.
         """
         self.logger.info('Finding containers that changed in "%s"', commit_range)
-        diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
+        diff = subprocess.check_output(
+            ["git", "diff", "--name-only", commit_range, path]
+        ).split()
 
         folders = {
-            os.path.dirname(line).decode('utf-8') for line in diff if os.path.dirname(line)
+            os.path.dirname(line).decode("utf-8")
+            for line in diff
+            if os.path.dirname(line)
         }
-        self.logger.info('The following folders contain changes: %s', folders)
+        self.logger.info("The following folders contain changes: %s", folders)
         return folders
 
 
@@ -221,17 +281,24 @@ class Travis(CI):
         TRAVIS_EVENT_TYPE   - In case of a cron task we want to force build nightlies.
     """
 
+    PUSH_BRANCH = "master"
+
     def __init__(self):
         super().__init__()
-        self.commit_range = os.environ.get('TRAVIS_COMMIT_RANGE', '').replace('...', '..')
-        self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') == 'cron'
-        self.is_pull_request = os.environ.get('TRAVIS_PULL_REQUEST')
-        self.branch = os.environ.get('TRAVIS_BRANCH')
+        # fmt: off
+        self.commit_range = os.environ.get("TRAVIS_COMMIT_RANGE", "").replace("...", "..")
+        self.is_cron = os.environ.get("TRAVIS_EVENT_TYPE") == "cron"
+        self.is_pull_request = os.environ.get("TRAVIS_PULL_REQUEST")
+        self.branch = os.environ.get("TRAVIS_BRANCH")
+        # fmt: on
 
-    def deliver(self, folder, options, version):
+    def start(self, folder, options, version):
         """Runs the build process and optionally tests and pushes it to the registry.
         """
         service, dockerfile = self.get_service_in_hierarchy(folder)
+        if not service:
+            self.logger.error("Unable to obtain service name.")
+            return
         if not dockerfile:
             self.logger.error('Service "%s" contains no Dockerfile!', service)
             return
@@ -243,29 +310,31 @@ class Travis(CI):
         if options.test:
             docker.test()
 
-        if options.deliver \
-                and self.is_pull_request == 'false' \
-                and self.branch == 'master':
-            docker.push()
+        if options.deliver:
+            if self.is_pull_request == "false" and self.branch == self.PUSH_BRANCH:
+                docker.push()
 
     def run(self, options):
         """Initiates the CI/CD run at Travis.
         """
-        version = 'nightly' if self.is_cron else Git.revision()
+        version = "nightly" if self.is_cron else Git.revision()
         if self.is_cron:
-            # This is a cron task. We rebuild and optionally publish every found service!
+            # This is a cron task.
+            # We rebuild and optionally publish every found service!
             for folder in self.find_services(options.path):
-                self.deliver(folder, options, version)
+                self.start(folder, options, version)
         else:
             if not self.commit_range:
-                raise MonorepoManagerException('Could not find a commit range - not doing anything.')
+                raise MonorepoManagerException(
+                    "Could not find a commit range - not doing anything."
+                )
             # We only rebuild and optionally publish each service which has new changes.
             for folder in Git().has_trigger(self.commit_range, options.path):
                 if self.is_test(folder):
                     # Test folders do not qualify for rebuilds.
-                    self.logger.debug('Folder %s is test folder, ignoring.', folder)
+                    self.logger.debug("Folder %s is test folder, ignoring.", folder)
                     continue
-                self.deliver(folder, options, version)
+                self.start(folder, options, version)
 
 
 class TravisAPI(CI):
@@ -279,37 +348,34 @@ class TravisAPI(CI):
     or visit: https://travis-ci.org/profile
     """
 
-    def __init__(self):
-        super().__init__()
-
     def run(self, options, branch="master"):
         """Triggers a build at Travis CI with the Travis REST API.
         """
-        if not hasattr(options, 'token') or not options.token:
-            raise MonorepoManagerException('No Travis token provided.')
+        if not hasattr(options, "token") or not options.token:
+            raise MonorepoManagerException("No Travis token provided.")
 
-        tld = 'com' if options.pro else 'org'
-        url = 'api.travis-ci.{0}'.format(tld)
-        repo = options.repo.replace('/', '%2F')
+        tld = "com" if options.pro else "org"
+        url = "api.travis-ci.{0}".format(tld)
+        repo = options.repo.replace("/", "%2F")
         headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Travis-API-Version': 3,
-            'Authorization': 'token {0}'.format(options.token)
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Travis-API-Version": 3,
+            "Authorization": "token {0}".format(options.token),
         }
         conf = options.conf.read()
         request = {
-            'request': {
-                'branch': branch,
-                'config': json.loads(json.dumps(yaml.safe_load(conf)))
+            "request": {
+                "branch": branch,
+                "config": json.loads(json.dumps(yaml.safe_load(conf))),
             }
         }
         params = json.dumps(request)
 
         connection = http.client.HTTPSConnection(url)
-        self.logger.debug('Sending HTTP headers: %s', headers)
-        self.logger.debug('Sending request body: %s', params)
-        connection.request('POST', '/repo/{0}/requests'.format(repo), params, headers)
+        self.logger.debug("Sending HTTP headers: %s", headers)
+        self.logger.debug("Sending request body: %s", params)
+        connection.request("POST", "/repo/{0}/requests".format(repo), params, headers)
 
         response = connection.getresponse()
         self.logger.info(response.read().decode())
@@ -327,12 +393,13 @@ class MonorepoManager:
         """
         parser = argparse.ArgumentParser(
             add_help=False,
-            description='Monorepo Manager',
-            epilog='The exit status is 0 for non-failures and 1 for failures.',
+            description="Monorepo Manager",
+            epilog="The exit status is 0 for non-failures and 1 for failures.",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            prog='Monorepo'
+            prog="Monorepo",
         )
 
+        # fmt: off
         m = parser.add_argument_group('Mandatory Arguments')  # pylint: disable=invalid-name
         m.add_argument('-ci',
                        required=True,
@@ -381,26 +448,28 @@ class MonorepoManager:
                        action='version',
                        version='%(prog)s rev {}'.format(Git.revision()),
                        help=argparse.SUPPRESS)
-
+        # fmt: on
         return parser.parse_args()
 
     @classmethod
     def main(cls):
         """Entrypoint for the MonorepoManager.
         """
-        logging.basicConfig(format='[Monorepo] %(name)s (%(funcName)s) %(levelname)s: %(message)s',
-                            level=logging.DEBUG)
+        logging.basicConfig(
+            format="[Monorepo] %(name)s (%(funcName)s) %(levelname)s: %(message)s",
+            level=logging.DEBUG,
+        )
 
         args = cls.parse_args()
 
-        if args.ci == 'travis':
+        if args.ci == "travis":
             try:
                 Travis().run(args)
             except MonorepoManagerException as msg:
                 logging.error(msg)
                 return 1
 
-        if args.ci == 'travis-api':
+        if args.ci == "travis-api":
             try:
                 TravisAPI().run(args)
             except MonorepoManagerException as msg:
@@ -410,5 +479,5 @@ class MonorepoManager:
         return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(MonorepoManager.main())
