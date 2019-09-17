@@ -3,7 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 #FROM ubuntu:18.04
-ARG IMAGE=posidron/core
+ARG IMAGE=mozillasecurity/core
 FROM $IMAGE
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>

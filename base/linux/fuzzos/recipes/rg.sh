@@ -26,4 +26,4 @@ TMPD="$(mktemp -d -p. rg.build.XXXXXXXXXX)"
   retry curl -LO "$DOWNLOAD_URL"
   apt install ./ripgrep_${VERSION}_*.deb
 )
-rm -rf "$TMP"
+rm -rf "$TMPD"

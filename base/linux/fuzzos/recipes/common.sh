@@ -52,7 +52,7 @@ function get-latest-github-release () {
 }
 
 function git-clone () {
-   retry git clone --depth 1 --no-tags "$1" "${2:-$(basename $1)}"
+   retry git clone --depth 1 --no-tags "$1" "${2:-$(basename "$1")}"
 }
 
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
@@ -66,7 +66,7 @@ function is-64-bit () {
 }
 
 function is-arm64 () {
-  if [ $(uname -i) = "aarch64" ];
+  if [ "$(uname -i)" = "aarch64" ];
   then
     true
   else
@@ -75,7 +75,7 @@ function is-arm64 () {
 }
 
 function is-amd64 () {
-  if [ $(uname -i) = "x86_64" ];
+  if [ "$(uname -i)" = "x86_64" ];
   then
     true
   else
@@ -151,5 +151,5 @@ function disable-ec2-pool {
 
 # Show sorted list of largest files and folders.
 function size () {
-  du -cha $1 2>/dev/null | sort -rh | head -n 100
+  du -cha "$1" 2>/dev/null | sort -rh | head -n 100
 }

@@ -23,8 +23,8 @@ if is-arm64; then
 
     ./install.sh
     retry cargo install --force grcov
-    mv $HOME/.cargo/bin/grcov /usr/local/bin/
-    rm -rf $HOME/.cargo/registry
+    mv "$HOME/.cargo/bin/grcov" /usr/local/bin/
+    rm -rf "$HOME/.cargo/registry"
     /usr/local/lib/rustlib/uninstall.sh
   )
   rm -rf "$TMPD"
