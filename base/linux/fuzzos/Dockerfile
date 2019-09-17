@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 ARG IMAGE=mozillasecurity/core:latest
+# hadolint ignore=DL3006
 FROM $IMAGE
 
 LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
