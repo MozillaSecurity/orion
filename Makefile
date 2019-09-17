@@ -8,13 +8,13 @@ login: ## Login to Docker Hub
 	docker login --username="$(DOCKER_USER)"
 
 lint_scripts: ## Lint shellscripts
-	docker pull mozillasecurity/linter
+	docker pull mozillasecurity/linter:latest
 	find . -not -path '*/\.*' \
 		-exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
 		-print | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter shellcheck -x -a -Calways
 
 lint_dockers: ## Lint Dockerfiles
-	docker pull mozillasecurity/linter
+	docker pull mozillasecurity/linter:latest
 	find . -type f -name "Dockerfile" ! -path '*/windows/*' | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
 		--ignore DL3002 \
 		--ignore DL3003 \
