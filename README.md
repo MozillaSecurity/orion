@@ -16,11 +16,13 @@ FuzzOS<br>
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
-  - [What is Orion?](#what-is-orion?)
-  - [How does it operate?](#how-does-it-operate?)
-  - [Build Instructions](#build-instructions-and-development)
+  - [What is Orion?](#what-is-orion)
+  - [How does it operate?](#how-does-it-operate)
+  - [Build Instructions and Development](#build-instructions-and-development)
     - [Usage](#usage)
     - [Testing](#testing)
+    - [Known Issues](#known-issues)
+    - [error creating overlay mount to /var/lib/docker/overlay2/<...>/merged: device or resource busy](#error-creating-overlay-mount-to-varlibdockeroverlay2merged-device-or-resource-busy)
   - [Architecture](#architecture)
 
 ### What is Orion?
@@ -37,6 +39,23 @@ CI and CD are performed autonomous with Travis and the Monorepo manager script. 
 
 #### Usage
 
+You can build, test and push locally, which is great for testing outside of Travis. In order to do
+that run the command below and adjust the path to the service you want to interact and the
+repository `DOCKER_ORG` to which you intent to push. `DOCKER_ORG` is used as tag name for the image.
+
+> Note that you might want to edit the `service.yaml` of the image too, if you intent to make use of
+> custom `build_args`, parent images and manifest destinations.
+
+```bash
+#!/usr/bin/env bash
+export DOCKER_ORG=<DOCKER_USERNAME>
+export TRAVIS_PULL_REQUEST=false
+export TRAVIS_BRANCH=master
+export TRAVIS_EVENT_TYPE=cron
+./monorepo.py -ci travis -build -test -deliver -path core/linux
+./monorepo.py -ci travis -build -test -deliver -path base/linux/fuzzos
+```
+
 ```
 make help
 ```
@@ -46,6 +65,22 @@ make help
 Before a build task is initiated in Travis CI, each Shellscript and Dockerfile undergo a linting process which may or may not abort each succeeding task. To ensure your Dockerfile passes, you are encouraged to run `make lint` before pushing your commit.
 
 Each service folder may contain a `tests` folder in which [Container Structure Tests](https://github.com/GoogleContainerTools/container-structure-test) are defined. The Monorepo Manager will run these tests with the `-test` flag set in the CI after the build process is completed and before deploying the images to the registry. To ensure your modifications to a Dockerfile and/or recipes did not cause breakage, you are encouraged to run `make test` before pusing your commit.
+
+#### Known Issues
+
+#### error creating overlay mount to /var/lib/docker/overlay2/<...>/merged: device or resource busy
+
+Workaround: https://github.com/docker/for-linux/issues/711
+
+```
+$ sudo systemctl stop docker
+$ sudo nano /etc/docker/daemon.json
+{
+  "max-concurrent-uploads": 1
+}
+$ sudo systemctl start docker
+$ docker push [...]
+```
 
 ### Architecture
 

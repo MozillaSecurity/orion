@@ -9,7 +9,7 @@ set -x
 #### Base System Configuration
 
 # Generate locales
-locale-gen en_US.UTF-8
+locale-gen en_US.utf8
 
 # Quiet pip
 cat << EOF | tee /etc/pip.conf > /dev/null

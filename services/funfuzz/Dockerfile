@@ -36,7 +36,7 @@ COPY setup.sh $HOME
 RUN "$HOME/setup.sh"
 
 USER root
-RUN "$HOME/.bin/cleanup.sh"
+RUN "$HOME/.local/bin/cleanup.sh"
 
 USER $USER
 ENTRYPOINT ["/bin/bash", "--login"]

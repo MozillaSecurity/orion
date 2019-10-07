@@ -95,6 +95,6 @@ pip install \
     virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git
 
-~/.bin/cleanup.sh
+~/.local/bin/cleanup.sh
 
 chown -R worker:worker /home/worker

@@ -21,11 +21,6 @@ bundler_args: --retry 3
 
 conditions: v1
 
-stages:
-  - Requirements
-  - Base
-  - Grizzly
-
 env:
   global:
     - DOCKER_ORG=mozillasecurity
@@ -39,6 +34,14 @@ before_script:
   - make lint
   - travis_retry ./scripts/ci-docker-login.sh
 
+# Defines the order build stages within jobs.include below.
+stages:
+  - Requirements
+  - Core
+  - FuzzOS
+  - Grizzly
+  - Services
+
 jobs:
   allow_failures:
     - env: IMAGE=services/libfuzzer
@@ -50,23 +53,10 @@ jobs:
     - stage: Requirements
       env: IMAGE=services/linter
       name: Linter
-
     - stage: Core
-      env: IMAGE=core/linux/amd64
-      name: AMD64
-      env: IMAGE=core/linux/arm64
-      name: ARM64
-
-    - stage: Create Core Manifest
-      script: scripts/docker-manifest.sh mozillasecurity core
-
+      env: IMAGE=core/linux
     - stage: FuzzOS
-      env: IMAGE=base/linux
-      name: FuzzOS
-
-    - stage: Create Core Manifest
-      script: scripts/docker-manifest.sh mozillasecurity fuzzos
-
+      env: IMAGE=base/linux/fuzzos
     - stage: Grizzly
       env: IMAGE=services/grizzly
       name: Grizzly
