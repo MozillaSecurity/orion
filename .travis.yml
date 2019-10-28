@@ -1,7 +1,11 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-language: generic
+version: ~> 1.0
+
+language: shell
+os: linux
+dist: xenial
 
 services:
   - docker
@@ -23,6 +27,7 @@ conditions: v1
 
 env:
   global:
+    - TRAVIS_EVENT_TYPE=cron
     - DOCKER_ORG=mozillasecurity
     - secure: niM2Qdx4hqM7kAoY8ywqE+HP8MY5MJJAkib0uWbOsPMES/rMvilSZDxSvLHzdjfRxFRNgbbo3UrHlfoxlHA5vnn1G8QJit+MiR0JzAdboDvHuSKoQtpg1QfR2Wc4dRqgTYAAJf3RL0qjmKuyN+99DSCc3/zgnRJYX+ovTGdtN0AJcqnJewwlwXqHTUUU/xzmLDdHAtWXOEAixyUmlYIdZjTZ4ZRE336xQGMS6HDuOygPqf0KI807pt+/nVuZNSXCerHUa9yNTt+HlhqIGFOa/JxnXKYG1MDN7xFBRh8u4BGWk//gPNRPTUdEsqdI8KuLi+8Hn2+tI6OLRyJ6Q3XZx++5QhC/KvJ4eOhHeniTwNr4cZBXPtnqbSzbp0XI8bG+iiHF55uJzvGmGDNl55pTYdFaHgHRcmCSKYkZII1dnF/8BPGZN2zuRNNSOj7rihRr0KlX/6ZwjMbAn5OdMWeS7XixzGulXznvfiimiuzhQmZIq0N0Q+CgceK8E0waLXSvIeZNOiL8KTB4I4AA7RgfP02ud+PYIMZvrkJ0JrGv7H+yPwXIGDAk9RrxxF5IDxT5JnH23ovFpuyHSAxjKnVbLrhLve4udi/HqNyguUdXeYZaP3YI7miLt4i+EKUfmuuDFY7x4/VtLYqw/CBpviqixs6SQ6iu8Pah/tcuYSKH7GU=
     - secure: ReLLjRohAue6lznHh8uxg2Xx0E1yc2IG/XEqKcT1p71etGYDB49cLXwAUJoQO5ZXgg5MyZC4h7paBWacl6Gn9kCsYalmVBK4GLmu8kGjNkSYV/Pbj8tTs7RKf3pfA+YAQRHof2PqeuZDWvMRcZTFaIZspqVpGjKFQnL5QGk5VteEDYYp+buLbTUkn68qknb1OA6rzfIWotKy43r6T6fgoeGDfTBwuWWDV1YEwjEPja5LhohFXb1NVjsLgUMZQ3MopQg53LjynCgH5PwVPbCWuOuyNVthDq/Hr4T02HBj/eGnsKBHjxv/xtoEGhc4yJUhX+kHR1jXiMfmUKRxyQ2H2mOQ2YIAziijLE6htwrNxQn2NgO0zav/GXIFfALJMAi2MQ+l8mqaVZ7QuO6iN8QRjNzyh5dhEWXpFa54tqwa8rTnYvL6FXZ5MtGXa+IWIT2RBbqpLUiqtkkG0P8xkoo7sVauAjt9hBKOcOjDMtbCgyN8J7geW5gTPcSB74TiHV+UWk9qivSVWQaqwO2k6eM5aMs4JPBAzZoOfAPzBnjyRSWMKZyWB9YERk2D1puPEbxc2/8A1U2jT7dsN1eLFwUDTA7yerAELsLzw3iYE3e2fogpyoof+OY5RTR2OTPPWAazwg69phvrhZCHLxcgqFbTfbbFwjTOAOxwRcwvVNGaW0Q=
@@ -30,7 +35,6 @@ env:
 
 before_script:
   - ./scripts/prepare-docker.sh
-  - travis_retry sudo pip3 install -r requirements.txt
   - set -e
   - make lint
   - travis_retry ./scripts/ci-docker-login.sh
