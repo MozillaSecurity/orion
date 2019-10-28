@@ -22,7 +22,8 @@ curl -LO "https://github.com/docker/docker-credential-helpers/releases/download/
 tar xvf "docker-credential-pass-$LATEST_VERSION-amd64.tar.gz"
 sudo mv docker-credential-pass /usr/local/bin
 
-export GPG_TTY=$(tty)
+GPG_TTY=$(tty)
+export GPG_TTY
 
 # Setup a dummy secret key for the `pass` credentials store initialization required by the Docker client.
 gpg2 --batch --gen-key <<-EOF
