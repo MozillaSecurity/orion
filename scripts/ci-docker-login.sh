@@ -20,14 +20,13 @@ LATEST_VERSION=$(curl -Ls --retry 5 "https://$GH_TOKEN@api.github.com/repos/dock
 echo "$LATEST_VERSION"
 curl -LO "https://github.com/docker/docker-credential-helpers/releases/download/$LATEST_VERSION/docker-credential-pass-$LATEST_VERSION-amd64.tar.gz"
 tar xvf "docker-credential-pass-$LATEST_VERSION-amd64.tar.gz"
+chmod a+x docker-credential-pass
 sudo mv docker-credential-pass /usr/local/bin
-
-GPG_TTY=$(tty)
-export GPG_TTY
 
 # Setup a dummy secret key for the `pass` credentials store initialization required by the Docker client.
 gpg2 --batch --gen-key <<-EOF
 %echo Generating a standard key
+%no-protection
 Key-Type: DSA
 Key-Length: 1024
 Subkey-Type: ELG-E
@@ -46,3 +45,4 @@ pass init "$key"
 # Uses previously setup `credsStore` in ~/.docker/config.json as credentials store.
 # We perform a `docker logout` after the session in Travis ends.
 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
