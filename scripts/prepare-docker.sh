@@ -10,7 +10,7 @@ set -u
 update_docker_configuration() {
   echo "INFO: Updating Docker CLI configuration ..."
   mkdir -p ~/.docker
-  echo '{"experimental": enabled}' | tee ~/.docker/config.json
+  echo '{"experimental": "enabled"}' | tee ~/.docker/config.json
 
   echo "INFO: Updating Docker Daemon configuration ..."
   echo '{"experimental": true}' | sudo tee /etc/docker/daemon.json
@@ -22,5 +22,4 @@ update_docker_configuration() {
   sudo service docker restart
 }
 
-docker --version
 update_docker_configuration
