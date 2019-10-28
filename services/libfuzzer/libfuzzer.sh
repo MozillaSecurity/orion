@@ -119,9 +119,10 @@ then
   mkdir -p ./corpora
   ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
   CORPORA_PATH="./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER"
-  if [ -d $CORPORA_PATH ]
+  if [ -d "$CORPORA_PATH" ]
   then
     set +x
+    # shellcheck disable=SC2086
     cp $CORPORA_PATH/* ./corpora/ || true
     set -x
   fi
