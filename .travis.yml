@@ -3,6 +3,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 language: generic
 
+dist: bionic
+
 services:
   - docker
 
