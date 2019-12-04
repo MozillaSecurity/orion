@@ -224,7 +224,7 @@ class Travis(CI):
     def __init__(self):
         super().__init__()
         self.commit_range = os.environ.get('TRAVIS_COMMIT_RANGE', '').replace('...', '..')
-        self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') == 'cron'
+        self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') in {'cron', 'api'}
         self.is_pull_request = os.environ.get('TRAVIS_PULL_REQUEST')
         self.branch = os.environ.get('TRAVIS_BRANCH')
 
