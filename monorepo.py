@@ -200,6 +200,13 @@ class Git(Common):
     def has_trigger(self, commit_range, path='.'):
         """Returns folders which changed within a commit range.
         """
+        commits = subprocess.check_output(['git', 'show', '--shortstat', commit_range]).decode('utf-8')
+
+        # look in commit message for a force-rebuild command
+        if '/force-rebuild' in commits:
+            self.logger.info('/force-rebuild command found.')
+            return self.find_services(path)
+
         self.logger.info('Finding containers that changed in "%s"', commit_range)
         diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
 
@@ -207,6 +214,7 @@ class Git(Common):
             os.path.dirname(line).decode('utf-8') for line in diff if os.path.dirname(line)
         }
         self.logger.info('The following folders contain changes: %s', folders)
+
         return folders
 
 
@@ -224,7 +232,7 @@ class Travis(CI):
     def __init__(self):
         super().__init__()
         self.commit_range = os.environ.get('TRAVIS_COMMIT_RANGE', '').replace('...', '..')
-        self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') in {'cron', 'api'}
+        self.is_cron = os.environ.get('TRAVIS_EVENT_TYPE') == 'cron'
         self.is_pull_request = os.environ.get('TRAVIS_PULL_REQUEST')
         self.branch = os.environ.get('TRAVIS_BRANCH')
 
