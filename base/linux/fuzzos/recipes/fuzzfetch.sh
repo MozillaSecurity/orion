@@ -8,5 +8,4 @@ set -x
 
 #### Install FuzzFetch
 
-# >= 0.9.2
 pip3 install git+https://github.com/mozillasecurity/fuzzfetch
