@@ -17,6 +17,9 @@ cat << EOF | tee /etc/pip.conf > /dev/null
 disable-pip-version-check = true
 no-cache-dir = false
 
+[list]
+format = columns
+
 [install]
 upgrade-strategy = only-if-needed
 EOF
