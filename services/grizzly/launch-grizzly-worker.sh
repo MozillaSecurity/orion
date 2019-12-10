@@ -18,6 +18,10 @@ if [[ "$EC2SPOTMANAGER_PROVIDER" = "GCE" ]]; then
   mkdir -p .aws
   retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > .aws/credentials
   chmod 0600 .aws/credentials
+elif [[ "$TASK_ID" != "" ]]; then
+  mkdir -p .aws
+  curl -L http://taskcluster/secrets/v1/secret/project/fuzzing/credstash-aws-auth | python -c 'import json, sys; a = json.load(sys.stdin); open(".aws/credentials", "w").write(a["secret"]["key"])' &&
+  chmod 0600 .aws/credentials
 fi
 
 # Get deployment keys from credstash
