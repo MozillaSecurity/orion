@@ -15,8 +15,8 @@ echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc
 apt-get update -y -qq
 
 # Prior to deployment, check that apt-get requirements are also installed via other recipes in FuzzOS, e.g. ccache
-# Check using `hg --cwd ~/trees/mozilla-central/ diff -r edf1f05e9d00:ad6f51d4af0b python/mozboot/mozboot/debian.py`
-# Retrieved on 2018-12-26: https://hg.mozilla.org/mozilla-central/file/ad6f51d4af0b/python/mozboot/mozboot/debian.py
+# Check using `hg --cwd ~/trees/mozilla-central/ diff -r 95ad10e13fb1:0f6958f49842 python/mozboot/mozboot/debian.py`
+# Retrieved on 2019-12-12: https://hg.mozilla.org/mozilla-central/file/0f6958f49842/python/mozboot/mozboot/debian.py
 apt-get install -q -y --no-install-recommends --no-install-suggests \
     apache2-utils \
     autoconf2.13 \
@@ -25,7 +25,6 @@ apt-get install -q -y --no-install-recommends --no-install-suggests \
     libcurl4-openssl-dev \
     libdbus-1-dev \
     libdbus-glib-1-dev \
-    libgconf2-dev \
     libgtk-3-dev \
     libgtk2.0-dev \
     libpulse-dev \
@@ -39,7 +38,6 @@ apt-get install -q -y --no-install-recommends --no-install-suggests \
     zip
 
 apt-get install -q -y --no-install-recommends --no-install-suggests \
-    lib32z1 \
     libc6-dbg \
     valgrind
 
