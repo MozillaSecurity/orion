@@ -8,7 +8,7 @@ pushd "$HOME"
 # Populate Mercurial settings.
 cat << EOF > .hgrc
 [ui]
-username = gkw
+username = funfuzz
 merge = internal:merge
 ssh = ssh -C -v
 

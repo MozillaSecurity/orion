@@ -3,21 +3,21 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-apt-get update -y -qq
+sys-update
 # Required to use apt-key
-apt-get install -q -y --no-install-recommends --no-install-suggests dirmngr
+sys-embed dirmngr
 
 apt-key adv --recv-key --keyserver keyserver.ubuntu.com \
     8B48AD6246925553 \
     7638D0442B90D010 \
     04EE7237B7D453EC
 echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list
-apt-get update -y -qq
+sys-update
 
 # Prior to deployment, check that apt-get requirements are also installed via other recipes in FuzzOS, e.g. ccache
 # Check using `hg --cwd ~/trees/mozilla-central/ diff -r 95ad10e13fb1:0f6958f49842 python/mozboot/mozboot/debian.py`
 # Retrieved on 2019-12-12: https://hg.mozilla.org/mozilla-central/file/0f6958f49842/python/mozboot/mozboot/debian.py
-apt-get install -q -y --no-install-recommends --no-install-suggests \
+sys-embed \
     apache2-utils \
     autoconf2.13 \
     build-essential \
@@ -37,11 +37,11 @@ apt-get install -q -y --no-install-recommends --no-install-suggests \
     yasm \
     zip
 
-apt-get install -q -y --no-install-recommends --no-install-suggests \
+sys-embed \
     libc6-dbg \
     valgrind
 
-apt-get install -q -y --no-install-recommends --no-install-suggests \
+sys-embed \
     aria2 \
     screen \
     vim
