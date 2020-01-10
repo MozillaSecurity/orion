@@ -43,5 +43,6 @@ sys-embed \
 
 sys-embed \
     aria2 \
+    libnspr4 \
     screen \
     vim
