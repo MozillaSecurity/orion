@@ -11,9 +11,10 @@ source "${0%/*}/common.sh"
 
 #### Install pernosco-submit
 
-apt-install-auto \
+sys-embed \
   zstd
 
-git clone --depth 1 --no-tags https://github.com/Pernosco/pernosco-submit.git
+curl -L "https://raw.githubusercontent.com/Pernosco/pernosco-submit/master/pernosco-submit" > /usr/local/bin/pernosco-submit
+chmod +x /usr/local/bin/pernosco-submit
 
 pip3 install awscli
