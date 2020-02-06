@@ -6,7 +6,7 @@ FROM python:3.5-slim
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ADD pip.conf /etc/pip.conf
+COPY pip.conf /etc/pip.conf
 
 WORKDIR /root
 
