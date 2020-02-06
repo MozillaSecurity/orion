@@ -19,9 +19,12 @@ RUN apt-get update -qq \
         libc6-dev \
         make \
         mercurial \
+        openssh-client \
         patch \
         xz-utils \
     && pip -q install tox \
+    && mkdir .ssh \
+    && ssh-keyscan github.com > .ssh/known_hosts \
     && git init repo \
     && cd repo \
     && git config advice.detachedHead false \
