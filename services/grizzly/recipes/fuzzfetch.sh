@@ -6,6 +6,9 @@
 set -e
 set -x
 
-#### Install FuzzFetch
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.common.sh
 
-pip install git+https://github.com/mozillasecurity/fuzzfetch
+#### Install FuzzFetch (for Python 2)
+
+retry pip install git+https://github.com/mozillasecurity/fuzzfetch

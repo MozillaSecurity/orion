@@ -6,10 +6,13 @@
 set -e
 set -x
 
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source "${0%/*}/recipes/common.sh"
+
 #### Bootstrap Packages
 
-apt-get update -qq
-apt-get install -y -qq --no-install-recommends --no-install-suggests \
+sys-update
+sys-embed \
     apt-utils \
     bzip2 \
     curl \
@@ -48,5 +51,6 @@ cd recipes
 ./halfempty.sh
 ./berglas.sh
 ./gsutil.sh
+./radamsa.sh
 
 ./cleanup.sh

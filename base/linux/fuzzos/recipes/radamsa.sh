@@ -4,10 +4,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # Build radamsa
-cd /tmp
-git clone -v --depth 1 https://gitlab.com/akihe/radamsa.git
-( cd radamsa
-  make
-  make install
+TMPD="$(mktemp -d -p. radamsa.build.XXXXXXXXXX)"
+( cd "$TMPD"
+  git clone --depth 1 --no-tags https://gitlab.com/akihe/radamsa.git
+  ( cd radamsa
+    CC=clang make
+    make install
+  )
 )
-rm -rf radamsa
+rm -rf "$TMPD"

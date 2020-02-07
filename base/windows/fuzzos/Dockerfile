@@ -7,7 +7,7 @@ ARG core=mcr.microsoft.com/windows/servercore:1809
 ARG target=mcr.microsoft.com/windows/nanoserver:1809
 FROM $core as download
 
-LABEL maintainer Christoph Diehl cdiehl@mozilla.com
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 SHELL ["powershell", "-ExecutionPolicy", "Bypass", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 

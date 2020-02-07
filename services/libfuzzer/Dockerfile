@@ -4,7 +4,7 @@
 
 FROM mozillasecurity/fuzzos:latest
 
-LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 USER root
 RUN \

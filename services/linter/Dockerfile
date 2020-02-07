@@ -4,18 +4,19 @@
 
 FROM alpine:latest
 
-LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-RUN apk --no-cache add \
-    curl \
+RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+    && retry apk --no-cache add \
+      curl \
     && HADOLINT_VERSION=$( \
-        curl -s "https://github.com/hadolint/hadolint/releases/latest" \
+        curl --retry 5 -s "https://github.com/hadolint/hadolint/releases/latest" \
         | grep -o 'tag/[v.0-9]*' \
         | awk -F/ '{print $2}' \
     ) \
-    && curl -sL -o /bin/hadolint "https://github.com/hadolint/hadolint/releases/download/$HADOLINT_VERSION/hadolint-Linux-x86_64" \
+    && curl --retry 5 -sL -o /bin/hadolint "https://github.com/hadolint/hadolint/releases/download/$HADOLINT_VERSION/hadolint-Linux-x86_64" \
     && chmod +x /bin/hadolint \
-    && curl -sL https://storage.googleapis.com/shellcheck/shellcheck-latest.linux.x86_64.tar.xz \
+    && curl --retry 5 -sL https://storage.googleapis.com/shellcheck/shellcheck-latest.linux.x86_64.tar.xz \
        | tar -xJ \
     && mv shellcheck-latest/shellcheck /bin/shellcheck \
     && rm -rf shellcheck-latest

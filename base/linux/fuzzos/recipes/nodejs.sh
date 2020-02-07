@@ -6,7 +6,10 @@
 set -e
 set -x
 
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### Install NodeJS
 
 curl -sL https://deb.nodesource.com/setup_10.x | bash -
-apt-get install -y nodejs
+sys-embed nodejs

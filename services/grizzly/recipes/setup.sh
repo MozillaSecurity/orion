@@ -17,7 +17,7 @@ deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe
 deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
 EOF
 
-curl -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
+curl --retry 5 -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
 #apt-get install ubuntu-dbgsym-keyring
 #apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
 
@@ -68,7 +68,7 @@ dbgsym_packages=(
     mesa-vdpau-drivers
 )
 
-apt-get install -y -qq "${packages[@]}"
+retry apt-get install -y -qq "${packages[@]}"
 sys-embed "${packages_with_recommends[@]}"
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
@@ -87,10 +87,9 @@ fi
 
 /tmp/recipes/redis.sh
 /tmp/recipes/fuzzfetch.sh
-/tmp/recipes/radamsa.sh
 /tmp/recipes/cloudwatch.sh
 
-pip install \
+retry pip install \
     psutil \
     virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git

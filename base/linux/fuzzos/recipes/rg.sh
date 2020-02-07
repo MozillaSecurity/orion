@@ -15,5 +15,5 @@ VERSION="0.10.0"
 DOWNLOAD_URL="https://github.com/BurntSushi/ripgrep/releases/download/${VERSION}/ripgrep_${VERSION}_amd64.deb"
 
 curl -LO "$DOWNLOAD_URL"
-apt install "./ripgrep_${VERSION}_amd64.deb"
+dpkg -i "./ripgrep_${VERSION}_amd64.deb"
 rm "ripgrep_${VERSION}_amd64.deb"

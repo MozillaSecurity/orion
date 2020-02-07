@@ -9,7 +9,6 @@ set -x
 # shellcheck source=base/linux/fuzzos/recipes/common.sh
 source "${0%/*}/common.sh"
 
-
 #### Install: htop
 
 apt-get install htop
@@ -17,5 +16,3 @@ apt-get install htop
 rm /usr/bin/top
 
 echo "alias top=\"htop\"" >> ~/.bashrc
-
-

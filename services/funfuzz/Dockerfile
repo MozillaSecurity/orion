@@ -4,7 +4,7 @@
 
 FROM mozillasecurity/fuzzos:latest
 
-LABEL maintainer Gary Kwong <gkwong@mozilla.com>
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 WORKDIR /home/worker/funfuzz
 
 USER root

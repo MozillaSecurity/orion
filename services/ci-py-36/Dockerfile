@@ -10,8 +10,9 @@ COPY pip.conf /etc/pip.conf
 
 WORKDIR /root
 
-RUN apt-get update -qq \
-    && apt-get install -y -qq --no-install-recommends --no-install-suggests \
+RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+    && retry apt-get update -qq \
+    && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         bzip2 \
         curl \
         git \
@@ -22,9 +23,7 @@ RUN apt-get update -qq \
         openssh-client \
         patch \
         xz-utils \
-    && pip -q install tox \
+    && retry pip -q install tox \
     && mkdir .ssh \
-    && ssh-keyscan github.com > .ssh/known_hosts \
+    && retry ssh-keyscan github.com > .ssh/known_hosts \
     && rm -rf /var/lib/apt/lists/*
-
-ENTRYPOINT ["/bin/bash"]

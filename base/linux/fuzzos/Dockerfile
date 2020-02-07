@@ -4,7 +4,7 @@
 
 FROM ubuntu:18.04
 
-LABEL maintainer Christoph Diehl <cdiehl@mozilla.com>
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 ENV USER            worker
 ENV HOME            /home/worker

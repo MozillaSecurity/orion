@@ -6,6 +6,10 @@
 set -e
 set -x
 
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.common.sh
+
+cd /tmp
 curl --connect-timeout 10 --retry 5 -LO https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
 dpkg -i amazon-cloudwatch-agent.deb
 rm amazon-cloudwatch-agent.deb

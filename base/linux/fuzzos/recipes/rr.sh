@@ -23,7 +23,7 @@ apt-install-auto \
   manpages-dev \
   ninja-build
 
-apt-get install -q -y \
+sys-embed \
   capnproto \
   libcapnp-dev
 

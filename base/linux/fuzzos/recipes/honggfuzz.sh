@@ -11,7 +11,7 @@ source "${0%/*}/common.sh"
 
 #### Install Honggfuzz
 
-apt-get install -y -qq --no-install-recommends --no-install-suggests \
+sys-embed \
   libunwind8 \
   libbinutils \
   libblocksruntime0
