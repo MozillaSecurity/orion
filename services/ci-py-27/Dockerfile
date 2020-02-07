@@ -25,11 +25,6 @@ RUN apt-get update -qq \
     && pip -q install tox \
     && mkdir .ssh \
     && ssh-keyscan github.com > .ssh/known_hosts \
-    && git init repo \
-    && cd repo \
-    && git config advice.detachedHead false \
     && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /root/repo
 
 ENTRYPOINT ["/bin/bash"]
