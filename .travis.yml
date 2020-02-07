@@ -71,6 +71,16 @@ jobs:
       name: FuzzManager
     - env: IMAGE=services/u2f-hid-rs
       name: U2F-HID Rust
+    - env: IMAGE=services/ci-py-27
+      name: CI Python 2.7
+    - env: IMAGE=services/ci-py-35
+      name: CI Python 3.5
+    - env: IMAGE=services/ci-py-36
+      name: CI Python 3.6
+    - env: IMAGE=services/ci-py-37
+      name: CI Python 3.7
+    - env: IMAGE=services/ci-py-38
+      name: CI Python 3.8
 
 script:
   - ./monorepo.py -ci travis -build -test -deliver -path $IMAGE
