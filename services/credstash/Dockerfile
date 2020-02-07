@@ -6,7 +6,7 @@ FROM alpine:latest AS builder
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apk --no-cache add \
         build-base \
         libressl-dev \
@@ -20,7 +20,7 @@ FROM alpine:latest
 
 COPY --from=builder /root/wheels /root/wheels
 
-RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apk add --no-cache python3 libressl \
     && python3 -m pip install --no-index --find-links=/root/wheels credstash \
     && rm -rf /root/wheels \

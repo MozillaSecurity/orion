@@ -10,7 +10,7 @@ COPY pip.conf /etc/pip.conf
 
 WORKDIR /root
 
-RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         bzip2 \

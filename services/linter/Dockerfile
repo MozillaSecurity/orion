@@ -6,7 +6,7 @@ FROM alpine:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-RUN function retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apk --no-cache add \
       curl \
     && HADOLINT_VERSION=$( \
