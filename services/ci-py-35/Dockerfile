@@ -15,6 +15,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         bzip2 \
         curl \
+        gcc \
         git \
         jshon \
         libc6-dev \
