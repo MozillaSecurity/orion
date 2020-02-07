@@ -1,20 +1,30 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 .PHONY: login ling_scripts lint_dockers lint test help
+
+SHELL=bash
+BASH_FUNC_retry%%=() { \
+	i=0; \
+	while [ $$i -lt 9 ]; do \
+		"$$@" && return || { echo "$$@ failed, retrying after 30s..." 1>&2; sleep 30; }; \
+		i="$${i+1}"; \
+	done; \
+	"$$@"; \
+}
+export BASH_FUNC_retry%%
 
 login: ## Login to Docker Hub
 	docker login --username="$(DOCKER_USER)"
 
 lint_scripts: ## Lint shellscripts
-	docker pull mozillasecurity/linter
+	retry docker pull mozillasecurity/linter
 	find . -not -path '*/\.*' \
 		-exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
 		-print | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter shellcheck -x -a -Calways
 
 lint_dockers: ## Lint Dockerfiles
-	docker pull mozillasecurity/linter
+	retry docker pull mozillasecurity/linter
 	find . -type f -name "Dockerfile" ! -path '*/windows/*' | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
 		--ignore DL3002 \
 		--ignore DL3003 \
