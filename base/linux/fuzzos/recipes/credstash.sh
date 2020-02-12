@@ -8,4 +8,4 @@ set -x
 
 #### Install credstash
 
-pip install credstash
+python3 -m pip install credstash

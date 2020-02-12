@@ -170,7 +170,6 @@ class DockerHub(CD):
             '-v', '{}/:/tmp/tests/'.format(testpath),
             'gcr.io/gcp-runtimes/container-structure-test:latest',
             'test',
-            '--quiet',
             '--image', '{}/{}:latest'.format(DockerHub.ORG, self.service)
         ]
         for name in confs:
