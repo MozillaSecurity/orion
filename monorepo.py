@@ -199,12 +199,13 @@ class Git(Common):
     def has_trigger(self, commit_range, path='.'):
         """Returns folders which changed within a commit range.
         """
+        all_services = self.find_services(path)
         commits = subprocess.check_output(['git', 'show', '--shortstat', commit_range]).decode('utf-8')
 
         # look in commit message for a force-rebuild command
         if '/force-rebuild' in commits:
             self.logger.info('/force-rebuild command found.')
-            return self.find_services(path)
+            return all_services
 
         self.logger.info('Finding containers that changed in "%s"', commit_range)
         diff = subprocess.check_output(['git', 'diff', '--name-only', commit_range, path]).split()
@@ -214,7 +215,46 @@ class Git(Common):
         }
         self.logger.info('The following folders contain changes: %s', folders)
 
-        return folders
+        service_folders = set()
+        for folder in folders:
+            if self.is_test(folder):
+                # Test folders do not qualify for rebuilds.
+                self.logger.debug('Folder %s is test folder, ignoring.', folder)
+                continue
+            service_folders.add(self.find_service_in_parent(folder))
+        folders = service_folders
+
+        # also look for images dependent on changed folders
+        dependents = {}
+        folder_by_service = {}
+        service_by_folder = {}
+        for folder in all_services:
+            service, dockerfile = self.get_service_in_hierarchy(folder)
+            folder_by_service[service] = folder
+            service_by_folder[folder] = service
+            with open(dockerfile) as dockerfile_fp:
+                for line in dockerfile_fp:
+                    if line.startswith("FROM "):
+                        parent = line.split(" ", 1)[1].strip()
+                        if parent.startswith(DockerHub.ORG + "/"):
+                            parent_service = parent.split("/", 1)[1].split(":", 1)[0]
+                            dependents.setdefault(parent_service, [])
+                            dependents[parent_service].append(service)
+
+        to_check = {service_by_folder[folder] for folder in folders}
+        checked = set()
+        dependent_folders = set()
+        while to_check - checked:
+            service = list(to_check - checked)[0]
+            dependent_folders.add(folder_by_service[service])
+            checked.add(service)
+            to_check |= set(dependents.get(service, []))
+        dependent_folders -= folders
+
+        if dependent_folders:
+            self.logger.info('The following folders depend on changed folders: %s', dependent_folders)
+
+        return folders | dependent_folders
 
 
 class Travis(CI):
@@ -268,10 +308,6 @@ class Travis(CI):
                 raise MonorepoManagerException('Could not find a commit range - not doing anything.')
             # We only rebuild and optionally publish each service which has new changes.
             for folder in Git().has_trigger(self.commit_range, options.path):
-                if self.is_test(folder):
-                    # Test folders do not qualify for rebuilds.
-                    self.logger.debug('Folder %s is test folder, ignoring.', folder)
-                    continue
                 self.deliver(folder, options, version)
 
 
