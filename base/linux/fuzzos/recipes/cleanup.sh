@@ -15,6 +15,5 @@ apt-get autoclean -y
 apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
 rm -rf /var/log/*
-rm -rf /usr/share/python-wheels/*
 rm -rf /root/.cache/*
 rm -rf /tmp/*
