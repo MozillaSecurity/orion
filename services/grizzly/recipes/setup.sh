@@ -32,8 +32,8 @@ packages=(
     libpulse0
     mercurial
     p7zip-full
-    python-dev
-    python-wheel
+    python3-dev
+    python3-wheel
     screen
     subversion
     ubuntu-restricted-addons
@@ -86,10 +86,9 @@ if [ ${#dbgsym_installs[@]} -ne 0 ]; then
 fi
 
 /tmp/recipes/redis.sh
-/tmp/recipes/fuzzfetch.sh
 /tmp/recipes/cloudwatch.sh
 
-retry pip install \
+retry python3 -m pip install \
     psutil \
     virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git

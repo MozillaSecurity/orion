@@ -9,6 +9,6 @@ set -x
 # shellcheck source=base/linux/fuzzos/recipes/common.sh
 source ~/.common.sh
 
-sys-embed redis-server python-hiredis
+sys-embed redis-server python3-hiredis
 
 sed -i 's/^bind .*/bind 127.0.0.1/' /etc/redis/redis.conf
