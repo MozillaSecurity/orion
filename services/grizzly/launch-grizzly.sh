@@ -10,7 +10,7 @@ su worker -c /home/worker/launch-grizzly-worker.sh
 
 # need to keep the container running
 while true; do
-  if [[ -n "$EC2SPOTMANAGER_PROVIDER" ]]; then
+  if [[ -n "$EC2SPOTMANAGER_PROVIDER" || -n "$TASKCLUSTER_PROXY_URL" ]]; then
     # this will fail if we aren't in the cloud
     /usr/local/bin/screenlog-to-cloudwatch.py || true
   fi

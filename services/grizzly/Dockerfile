@@ -14,4 +14,5 @@ COPY screenlog-to-cloudwatch.py /usr/local/bin/
 COPY launch-grizzly.sh /home/worker/
 COPY launch-grizzly-worker.sh /home/worker/
 
+ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
 CMD ["/home/worker/launch-grizzly.sh"]

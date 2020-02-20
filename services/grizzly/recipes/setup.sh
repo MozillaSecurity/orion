@@ -86,6 +86,7 @@ if [ ${#dbgsym_installs[@]} -ne 0 ]; then
 fi
 
 /tmp/recipes/redis.sh
+/tmp/recipes/fuzzing_tc.sh
 /tmp/recipes/cloudwatch.sh
 
 retry python3 -m pip install \
