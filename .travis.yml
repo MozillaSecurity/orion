@@ -81,6 +81,10 @@ jobs:
       name: CI Python 3.7
     - env: IMAGE=services/ci-py-38
       name: CI Python 3.8
+    - env: IMAGE=services/ci-node-10
+      name: CI Node 10
+    - env: IMAGE=services/ci-node-12
+      name: CI Node 12
 
 script:
   - ./monorepo.py -ci travis -build -test -deliver -path $IMAGE
