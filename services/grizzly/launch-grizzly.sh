@@ -5,6 +5,7 @@
 
 set -e
 set -x
+set -o pipefail
 
 su worker -c /home/worker/launch-grizzly-worker.sh
 
