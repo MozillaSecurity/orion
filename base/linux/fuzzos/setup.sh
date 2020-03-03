@@ -53,5 +53,6 @@ cd recipes
 ./berglas.sh
 ./gsutil.sh
 ./radamsa.sh
+./remote_syslog.sh
 
 ./cleanup.sh
