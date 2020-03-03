@@ -47,7 +47,10 @@ class LogWatcher(object):
             self.agent = None
 
     def write_conf(self):
-        pool_id = os.environ.get("EC2SPOTMANAGER_POOLID", 0)
+        if "TASKCLUSTER_FUZZING_POOL" in os.environ:
+            pool_id = "tc-" + os.environ["TASKCLUSTER_FUZZING_POOL"]
+        else:
+            pool_id = os.environ.get("EC2SPOTMANAGER_POOLID", 0)
         collect_list = []
         collect_template = {
             "file_path": "/home/user/grizzly-auto-run/screenlog.0",
