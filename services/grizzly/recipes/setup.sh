@@ -95,5 +95,6 @@ retry python3 -m pip install \
     git+https://github.com/cgoldberg/xvfbwrapper.git
 
 ~/.bin/cleanup.sh
+mkdir -p /home/worker/.ssh
 
 chown -R worker:worker /home/worker
