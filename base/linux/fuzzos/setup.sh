@@ -19,6 +19,7 @@ sys-embed \
     dbus \
     git \
     gpg-agent \
+    jshon \
     locales \
     less \
     make \
