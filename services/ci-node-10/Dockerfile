@@ -19,7 +19,9 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         openssh-client \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -d /home/worker -s /bin/bash -m worker \
-    && echo -e "LANGUAGE=en\nLANG=en_US.UTF-8\nLC_ALL=en_US.UTF-8" >> /etc/environment \
+    && echo "LANGUAGE=en" >> /etc/environment \
+    && echo "LANG=en_US.UTF-8" >> /etc/environment \
+    && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
     && sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen \
     && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
     && locale-gen en_US.UTF-8
