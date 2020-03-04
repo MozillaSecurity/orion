@@ -11,7 +11,7 @@ source "${0%/*}/common.sh"
 
 #### Install LLVM
 
-curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+retry curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-8 main"
 
 sys-update

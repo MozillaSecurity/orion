@@ -94,7 +94,6 @@ retry python3 -m pip install \
     virtualenv \
     git+https://github.com/cgoldberg/xvfbwrapper.git
 
-~/.bin/cleanup.sh
-mkdir -p /home/worker/.ssh
+~/.local/bin/cleanup.sh
 
 chown -R worker:worker /home/worker

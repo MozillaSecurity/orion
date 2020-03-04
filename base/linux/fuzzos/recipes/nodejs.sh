@@ -11,5 +11,5 @@ source "${0%/*}/common.sh"
 
 #### Install NodeJS
 
-curl -sL https://deb.nodesource.com/setup_10.x | bash -
+curl --retry 5 -sL https://deb.nodesource.com/setup_10.x | bash -
 sys-embed nodejs

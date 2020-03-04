@@ -24,12 +24,12 @@ function retry () {
 
 # `apt-get update` command with retry functionality.
 function sys-update () {
-    retry apt-get update -qq
+  retry apt-get update -qq
 }
 
 # `apt-get install` command with retry functionality.
 function sys-embed () {
-    retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@"
+  retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@"
 }
 
 # Calls `apt-get install` on it's arguments but marks them as automatically installed.
@@ -51,19 +51,41 @@ function get-latest-github-release () {
   retry curl -s "https://github.com/$1/releases/latest" | rg -Nor '$1' 'tag/(.+)"'
 }
 
+function git-clone () {
+   retry git clone --depth 1 --no-tags "$1" "${2:-$(basename "$1")}"
+}
+
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
 function is-64-bit () {
   if [ "$(getconf LONG_BIT)" = "64" ];
   then
-    echo true
+    true
   else
-    echo false
+    false
+  fi
+}
+
+function is-arm64 () {
+  if [ "$(uname -i)" = "aarch64" ];
+  then
+    true
+  else
+    false
+  fi
+}
+
+function is-amd64 () {
+  if [ "$(uname -i)" = "x86_64" ];
+  then
+    true
+  else
+    false
   fi
 }
 
 # Curl with headers set for accessing GCE metadata service
 function curl-gce {
-  curl -H "Metadata-Flavor: Google" "$@"
+  retry curl -H "Metadata-Flavor: Google" -s --connect-timeout 25 "$@"
 }
 
 # Determine the relative hostname based on the outside environment.
@@ -76,7 +98,7 @@ function relative-hostname {
     gce)
       local IFS='.'
       # read external IP as an array of octets
-      read -ra octets <<< "$(retry curl-gce -s --connect-timeout 25 "$GCE_METADATA_URL/instance/network-interfaces/0/access-configs/0/external-ip")"
+      read -ra octets <<< "$(curl-gce "$GCE_METADATA_URL/instance/network-interfaces/0/access-configs/0/external-ip")"
       # reverse the array into "stetco"
       stetco=()
       for i in "${octets[@]}"; do
@@ -126,6 +148,11 @@ function setup-fuzzmanager-hostname {
 function disable-ec2-pool {
   if [[ -n $1 ]]
   then
-      python -m EC2Reporter --disable "$1"
+    python3 -m EC2Reporter --disable "$1"
   fi
+}
+
+# Show sorted list of largest files and folders.
+function size () {
+  du -cha "$1" 2>/dev/null | sort -rh | head -n 100
 }

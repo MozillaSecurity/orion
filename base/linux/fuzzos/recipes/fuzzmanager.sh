@@ -6,10 +6,13 @@
 set -e
 set -x
 
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### Install FuzzManager
 
 cd "$HOME"
-git clone --depth 1 --no-tags https://github.com/mozillasecurity/fuzzmanager.git
-pip install ./fuzzmanager
+
+git-clone https://github.com/mozillasecurity/fuzzmanager
 pip3 install ./fuzzmanager
-pip install boto
+pip3 install boto

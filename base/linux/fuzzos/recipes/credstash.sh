@@ -6,6 +6,12 @@
 set -e
 set -x
 
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
 #### Install credstash
 
-python3 -m pip install credstash
+apt-install-auto gcc libssl-dev
+sys-embed libssl1.1
+
+pip3 install credstash

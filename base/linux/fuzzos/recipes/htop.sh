@@ -11,8 +11,7 @@ source "${0%/*}/common.sh"
 
 #### Install: htop
 
-apt-get install htop
+sys-embed htop
+echo "alias top=\"htop\"" >> ~/.bashrc
 
 rm /usr/bin/top
-
-echo "alias top=\"htop\"" >> ~/.bashrc

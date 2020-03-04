@@ -2,7 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM mozillasecurity/fuzzos:latest
+ARG IMAGE=mozillasecurity/fuzzos:latest
+# hadolint ignore=DL3006
+FROM $IMAGE
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
@@ -14,7 +16,7 @@ RUN \
     libpulse0 \
     subversion \
     screen \
-  && "$HOME/.bin/cleanup.sh"
+  && "$HOME/.local/bin/cleanup.sh"
 
 COPY *.sh ./
 RUN chown -R worker:worker $HOME

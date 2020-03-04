@@ -23,7 +23,7 @@ DOWNLOAD_URL="https://github.com/googleprojectzero/halfempty/archive/v$VERSION.t
 
 TMPD="$(mktemp -d -p. halfempty.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  curl -L "$DOWNLOAD_URL" | tar -xzv
+  retry curl -L "$DOWNLOAD_URL" | tar -xzv
   cd "$NAME-$VERSION"
   make
   mv "$NAME" /usr/local/bin/

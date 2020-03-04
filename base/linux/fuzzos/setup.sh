@@ -20,6 +20,7 @@ sys-embed \
     git \
     gpg-agent \
     jshon \
+    jq \
     locales \
     less \
     make \
@@ -29,6 +30,7 @@ sys-embed \
     python-pip \
     python-setuptools \
     python3-pip \
+    python3-dev \
     python3-setuptools \
     python3-venv \
     software-properties-common \

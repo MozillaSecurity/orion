@@ -6,8 +6,17 @@
 set -e
 set -x
 
-#### Install Berglas secrets management tool for GCP
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source "${0%/*}/common.sh"
+
+#### Install Berglas
+
+# A tool for managing secrets on Google Cloud.
 # https://github.com/GoogleCloudPlatform/berglas
 
-curl -L https://storage.googleapis.com/berglas/master/linux_amd64/berglas -o /usr/local/bin/berglas
-chmod +x /usr/local/bin/berglas
+AMD64_DOWNLOAD_URL="https://storage.googleapis.com/berglas/master/linux_amd64/berglas"
+
+if is-amd64; then
+  retry curl -L "$AMD64_DOWNLOAD_URL" -o /usr/local/bin/berglas
+  chmod +x /usr/local/bin/berglas
+fi

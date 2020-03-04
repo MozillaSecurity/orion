@@ -1,8 +1,10 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-language: generic
+version: ~> 1.0
 
+language: shell
+os: linux
 dist: bionic
 
 services:
@@ -24,11 +26,6 @@ bundler_args: --retry 3
 
 conditions: v1
 
-stages:
-  - Requirements
-  - Base
-  - Grizzly
-
 env:
   global:
     - DOCKER_ORG=mozillasecurity
@@ -36,10 +33,18 @@ env:
     - secure: D8Lw/hCz3x2mH4tWc1QhuABdtKuBfEv4/5SmkQpBf4CTZ0SOjTyfOlzVrDwCgzz/YS4UHJgN1Oo2yg8TVy9Jggoe7Iz4h/cX8enpklQBLo6+wYgQqJMliHkAQzit7cTN7W50ujc9E73MCqV2MYtDfKeZlsjftelvtJCq4fRKHyYH4GQKNj/OVWD6aJ4T/o9gfcRjmh3NRfS8blXDx8AMsdIML0k6Av4nflxLLQytWUxPzWkSOHMSKLqOD3E9OboDMCCN4ANzdhRCd31y6JoXpb0yRdaksPWJnbwc1vuf3Gm8laxTtKfc9WcYj4ZhxgwWwAcm2900LdAgQmwOERGDSqpnq3RewTo5WhbziMSfPL3h/bIC7cSsTrqcMmdcIgBuWDoVCgRlN24vhcpKxMCzxJsJ8HscqAVUsZpsYQvX+FwXxARyvslm78ih3UH6KfeUI1b514B8XiGU/F4CIQOy7JRfxusFb7KdHhzHlnKmQxUG24v8hBOwjx7pqInIF5L4JrW2nVzL3cexMHqsm85B/OSZ+kwcpNi/c9ZOhuZW35vvTg56CLpe8cPa28+A+Oepko6yP7I0c0topeghDjfpl/YQHKG1qjczp9jLTnOzYngs4rD6nqn5MEJwzjrMzmJgVRdDrXgz93Das6wYqMN/cAXeDFZLovpetCDB48Z6Zms=
 
 before_script:
-  - travis_retry sudo pip3 install -r requirements.txt
+  - ./scripts/prepare-docker.sh
   - set -e
   - make lint
   - travis_retry ./scripts/ci-docker-login.sh
+
+# Defines the order build stages within jobs.include below.
+stages:
+  - Requirements
+  - Core
+  - FuzzOS
+  - Grizzly
+  - Services
 
 jobs:
   allow_failures:
@@ -52,9 +57,10 @@ jobs:
     - stage: Requirements
       env: IMAGE=services/linter
       name: Linter
-    - stage: Base
-      env: IMAGE=base/linux
-      name: FuzzOS
+    - stage: Core
+      env: IMAGE=core/linux
+    - stage: FuzzOS
+      env: IMAGE=base/linux/fuzzos
     - stage: Grizzly
       env: IMAGE=services/grizzly
       name: Grizzly

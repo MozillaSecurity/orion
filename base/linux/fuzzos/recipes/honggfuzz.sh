@@ -23,7 +23,7 @@ apt-install-auto \
 
 TMPD="$(mktemp -d -p. honggfuzz.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  git clone --depth 1 --no-tags https://github.com/google/honggfuzz.git
+  git-clone https://github.com/google/honggfuzz
   ( cd honggfuzz
     CC=clang make
     install honggfuzz /usr/local/bin/

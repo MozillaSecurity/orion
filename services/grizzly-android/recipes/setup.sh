@@ -15,7 +15,7 @@ sys-embed qemu-kvm
 pip install -r /tmp/recipes/requirements.txt
 python /tmp/recipes/emulator.py install avd
 
-~/.bin/cleanup.sh
+~/.local/bin/cleanup.sh
 
 chown -R worker:worker /home/worker
 usermod -a -G kvm worker
