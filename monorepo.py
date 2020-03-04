@@ -12,13 +12,14 @@ single repository aka monorepo.
 __author__ = "Christoph Diehl <cdiehl@mozilla.com>"
 __version__ = "2.0.0"
 
-import os
-import sys
+import argparse
+import http.client
 import json
 import logging
-import argparse
+import os
+import pathlib
 import subprocess
-import http.client
+import sys
 
 try:
     import yaml
@@ -45,45 +46,47 @@ class Common:
         service_path = cls.find_service_in_parent(folder)
         if service_path is None:
             return None
-        return os.path.join(service_path, "service.yaml")
+        return service_path / "service.yaml"
 
     @classmethod
     def find_service_in_parent(cls, folder):
         """Searches backwards in the hierarchy to find the service containing the Dockerfile.
         """
-        content = os.listdir(folder)
-        if "service.yaml" in content:
-            return folder
-        folders = folder.split(os.sep)
-        if len(folders) > 1:
-            folders.pop()
-            return cls.find_service_in_parent(os.sep.join(folders))
-        return None
+        folder = folder.resolve()
+        while True:
+            content = {file.name for file in folder.iterdir()}
+            if "service.yaml" in content:
+                return folder
+
+            parent = folder.parent
+            if parent == folder.parent:
+                return None
+
+            folder = parent
 
     @classmethod
     def find_services(cls, root):
         """Searches forward to find all services. Usually used in cron tasks to rebuild every container.
         """
-        folders = []
-        for dirpath, _, files in os.walk(root):
-            for fname in files:
-                if fname == "service.yaml":
-                    folders.append(dirpath)
-        return folders
+        for child in root.iterdir():
+            if child.is_dir():
+                yield from cls.find_services(child)
+            elif child.name == "service.yaml":
+                yield root
 
     @classmethod
     def is_test(cls, folder):
         """Whether the folder is a container structure test folder.
         """
-        return os.path.basename(folder) == "tests"
+        return folder.name == "tests"
 
     @classmethod
-    def read_service_metadata(cls, filename="service.yaml"):
+    def read_service_metadata(cls, file="service.yaml"):
         """Reads the metadata information file of the service.
         """
-        if os.path.isfile(filename):
-            with open(filename) as fo:
-                return yaml.safe_load(fo.read())
+        file = pathlib.Path(file)
+        if file.is_file():
+            return yaml.safe_load(file.read_text())
         return None
 
 
@@ -109,8 +112,8 @@ class DockerHub(CD):
         self.image_name = image_name
         self.version = version
         self.tags = []
-        self.root = os.path.abspath(os.path.dirname(self.dockerfile))
-        self.repository = "{}/{}".format(DockerHub.ORG, self.image_name)
+        self.root = self.dockerfile.parent.resolve()
+        self.repository = f"{DockerHub.ORG}/{self.image_name}"
 
     def build(self, arch="", options=None):
         """Builds a Docker image.
@@ -125,11 +128,11 @@ class DockerHub(CD):
         if arch:
             version_prefix = arch + "-"
 
-        version1 = "{}{}".format(version_prefix, self.version)
-        version2 = "{}{}".format(version_prefix, "latest")
+        version1 = f"{version_prefix}{self.version}"
+        version2 = f"{version_prefix}latest"
 
-        self.tags.append("{}:{}".format(self.repository, version1))
-        self.tags.append("{}:{}".format(self.repository, version2))
+        self.tags.append(f"{self.repository}:{version1}")
+        self.tags.append(f"{self.repository}:{version2}")
 
         # Generate the build command.
         # fmt: off
@@ -141,13 +144,13 @@ class DockerHub(CD):
             "--compress",
             "-t", self.tags[0],
             "-t", self.tags[1],
-            "-f", self.dockerfile,
+            "-f", str(self.dockerfile),
         ]
         # fmt: on
         if build_args:
             for arg in build_args:
                 command.extend(["--build-arg", arg])
-        command.append(self.root)
+        command.append(str(self.root))
 
         self._run(command)
 
@@ -159,8 +162,8 @@ class DockerHub(CD):
         for tag in self.tags:
             self._run(["docker", "push", tag])
 
-    def manifest(self, path):
-        self._run(path.split())
+    def manifest(self, cmd):
+        self._run(cmd)
 
     def test(self, arch=None):
         """Runs structural container tests against an image.
@@ -168,32 +171,32 @@ class DockerHub(CD):
         self.logger.info("Testing container integrity of image: %s", self.image_name)
 
         # Do we have a |tests| folder for this service?
-        testpath = os.path.join(self.root, "tests")
-        if not os.path.isdir(testpath):
+        testpath = self.root / "tests"
+        if not testpath.is_dir():
             return
 
         # Collect all container test configurations.
         confs = []
-        for filename in os.listdir(testpath):
-            if filename.endswith("_test.yaml") or filename.endswith("_test.yml"):
-                confs.append(os.path.join("/tmp/tests", filename))
+        for file in testpath.iterdir():
+            if file.name.endswith("_test.yaml") or file.name.endswith("_test.yml"):
+                confs.append(pathlib.Path("/tmp/tests") / file.name)
         if not confs:
             return
 
         # Build the command which will fetch and run the container-structure-test image.
-        version = "{}-latest".format(arch) if arch else "latest"
+        version = f"{arch}-latest" if arch else "latest"
         # fmt: off
         command = [
             "docker", "run", "--rm",
             "-v", "/var/run/docker.sock:/var/run/docker.sock",
-            "-v", "{}/:/tmp/tests/".format(testpath),
+            "-v", f"{testpath}/:/tmp/tests/",
             "gcr.io/gcp-runtimes/container-structure-test:latest",
             "test",
-            "--image", "{}:{}".format(self.repository, version),
+            "--image", f"{self.repository}:{version}",
         ]
         # fmt: on
         for name in confs:
-            command.extend(["--config", name])
+            command.extend(["--config", str(name)])
 
         # Run the tests.
         self._run(command)
@@ -220,6 +223,7 @@ class Git(Common):
     def has_trigger(self, commit_range, path="."):
         """Returns folders which changed within a commit range.
         """
+        path = pathlib.Path(path)
         commits = subprocess.check_output(["git", "show", "--shortstat", commit_range]).decode("utf-8")
 
         # look in commit message for a force-rebuild command
@@ -229,13 +233,13 @@ class Git(Common):
 
         self.logger.info('Finding containers that changed in "%s"', commit_range)
 
-        command = ["git", "diff", "--name-only", commit_range, path]
-        diff = subprocess.check_output(command).split()
+        command = ["git", "diff", "--name-only", commit_range, str(path)]
+        diff = [pathlib.Path(line) for line in subprocess.check_output(command).decode("utf-8").split()]
 
         folders = {
-            os.path.dirname(line).decode("utf-8")
+            line.resolve().parent
             for line in diff
-            if os.path.dirname(line)
+            if line.parents
         }
         self.logger.info("The following folders contain changes: %s", folders)
 
@@ -267,8 +271,8 @@ class Travis(CI):
     def start(self, service_dir, options, version):
         """Runs the build process and optionally tests and pushes to the registry.
         """
-        service_file = os.path.join(service_dir, "service.yaml")
-        if not os.path.isfile(service_file):
+        service_file = service_dir / "service.yaml"
+        if not service_file.is_file():
             self.logger.error("Meta information missing for: %s", service_dir)
             return
         logging.info("Reading service meta information from: %s", service_file)
@@ -296,7 +300,7 @@ class Travis(CI):
                 dockerfile = None
                 if arch_opts:
                     dockerfile = architectures[arch].get("dockerfile")
-                dockerfile = os.path.join(service_dir, dockerfile or "Dockerfile")
+                dockerfile = service_dir / (dockerfile or "Dockerfile")
 
                 docker = DockerHub(dockerfile, image_name, version)
                 if options.build:
@@ -311,7 +315,7 @@ class Travis(CI):
                         docker.push()
                 # fmt: on
         else:
-            dockerfile = os.path.join(service_dir, "Dockerfile")
+            dockerfile = service_dir / "Dockerfile"
 
             docker = DockerHub(dockerfile, image_name, version)
             if options.build:
@@ -337,7 +341,7 @@ class Travis(CI):
             # This is a cron task.
             # We rebuild and optionally publish every found service.
             for service_dir in self.find_services(options.path):
-                self.start(os.path.abspath(service_dir), options, version)
+                self.start(service_dir.resolve(), options, version)
         else:
             if not self.commit_range:
                 raise MonorepoManagerException(
@@ -370,19 +374,19 @@ class TravisAPI(CI):
             raise MonorepoManagerException("No Travis token provided.")
 
         tld = "com" if options.pro else "org"
-        url = "api.travis-ci.{0}".format(tld)
+        url = f"api.travis-ci.{tld}"
         repo = options.repo.replace("/", "%2F")
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
             "Travis-API-Version": 3,
-            "Authorization": "token {0}".format(options.token),
+            "Authorization": f"token {options.token}",
         }
-        conf = options.conf.read()
+        conf = options.conf.read_text()
         request = {
             "request": {
                 "branch": branch,
-                "config": json.loads(json.dumps(yaml.safe_load(conf))),
+                "config": yaml.safe_load(conf),
             }
         }
         params = json.dumps(request)
@@ -390,7 +394,7 @@ class TravisAPI(CI):
         connection = http.client.HTTPSConnection(url)
         self.logger.debug("Sending HTTP headers: %s", headers)
         self.logger.debug("Sending request body: %s", params)
-        connection.request("POST", "/repo/{0}/requests".format(repo), params, headers)
+        connection.request("POST", f"/repo/{repo}/requests", params, headers)
 
         response = connection.getresponse()
         self.logger.info(response.read().decode())
@@ -400,7 +404,7 @@ class MonorepoManager:
     """Command-line interface for MonorepoManager.
     """
 
-    HOME = os.path.dirname(os.path.abspath(__file__))
+    HOME = pathlib.Path(__file__).resolve().parent
 
     @classmethod
     def parse_args(cls):
@@ -424,8 +428,8 @@ class MonorepoManager:
 
         o = parser.add_argument_group('Optional Arguments')  # pylint: disable=invalid-name
         o.add_argument('-path',
-                       type=str,
-                       default=os.path.relpath(os.getcwd()),
+                       type=pathlib.Path,
+                       default=pathlib.Path.cwd(),
                        help='Set folder explicitly.')
         o.add_argument('-build',
                        action='store_true',
@@ -453,15 +457,15 @@ class MonorepoManager:
                        help='Travis professional account')
         o.add_argument('-conf',
                        metavar='path',
-                       type=argparse.FileType(),
-                       default=os.path.join(cls.HOME, '.travis.yml'),
+                       type=pathlib.Path,
+                       default=cls.HOME / ".travis.yml",
                        help='Travis build configuration')
         o.add_argument('-h', '-help', '--help',
                        action='help',
                        help=argparse.SUPPRESS)
         o.add_argument('-version',
                        action='version',
-                       version='%(prog)s rev {}'.format(Git.revision()),
+                       version=f"%(prog)s rev {Git.revision()}",
                        help=argparse.SUPPRESS)
         # fmt: on
         return parser.parse_args()
