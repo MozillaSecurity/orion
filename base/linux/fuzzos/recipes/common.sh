@@ -85,6 +85,9 @@ function relative-hostname {
       # output hostname
       echo "${stetco[*]}.bc.googleusercontent.com"
       ;;
+    taskcluster)
+      echo "task-${TASK_ID}-run-${RUN_ID}"
+      ;;
     *)
       hostname -f
       ;;
