@@ -18,6 +18,10 @@ addons:
       - python3-pip
       - python3-setuptools
 
+branches:
+  only:
+    - master
+
 git:
   depth: 5
   quiet: true
