@@ -3,7 +3,4 @@ arch:
   amd64:
     build_args:
       - IMAGE=mozillasecurity/core:amd64-latest
-  arm64:
-    build_args:
-      - IMAGE=mozillasecurity/core:arm64-latest
 manifest: ./scripts/docker-manifest.sh mozillasecurity fuzzos

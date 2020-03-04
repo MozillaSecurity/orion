@@ -10,14 +10,29 @@ set -u
 USER="$1"
 IMAGE="$2"
 
-docker manifest create \
-  "$USER/$IMAGE":latest \
-  "$USER/$IMAGE":amd64-latest \
-  "$USER/$IMAGE":arm64-latest
+images=(
+  "$USER/$IMAGE":latest
+)
 
-docker manifest annotate "$USER/$IMAGE":latest "$USER/$IMAGE":amd64-latest --os linux --arch amd64
-docker manifest annotate "$USER/$IMAGE":latest "$USER/$IMAGE":arm64-latest --os linux --arch arm64 --variant v8
+for arch in amd64 arm64; do
+  if docker image inspect "$USER/$IMAGE:$arch-latest" >&/dev/null; then
+    images+=("$USER/$IMAGE:$arch-latest")
+  fi
+done
 
-docker manifest push -p "$USER/$IMAGE":latest
+# shellcheck disable=SC2086
+docker manifest create "${images[@]}"
+
+if docker image inspect "$USER/$IMAGE:amd64-latest" >&/dev/null; then
+  docker manifest annotate "$USER/$IMAGE":latest "$USER/$IMAGE":amd64-latest --os linux --arch amd64
+fi
+if docker image inspect "$USER/$IMAGE:arm64-latest" >&/dev/null; then
+  docker manifest annotate "$USER/$IMAGE":latest "$USER/$IMAGE":arm64-latest --os linux --arch arm64 --variant v8
+fi
+
+# don't actually push the manifest for PRs
+if [ -z "$TRAVIS_PULL_REQUEST_BRANCH" ]; then
+  docker manifest push -p "$USER/$IMAGE":latest
+fi
 
 docker manifest inspect "$USER/$IMAGE":latest
