@@ -7,6 +7,9 @@ set -e
 set -x
 set -o pipefail
 
+wait_token="$1"
+shift
+
 # shellcheck disable=SC1090
 source ~/.common.sh
 
@@ -21,7 +24,7 @@ if [[ "$EC2SPOTMANAGER_PROVIDER" = "GCE" ]]; then
   chmod 0600 .aws/credentials
 elif [[ -n "$TASKCLUSTER_PROXY_URL" ]]; then
   mkdir -p .aws
-  curl -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/credstash-aws-auth" | python -c 'import json, sys; a = json.load(sys.stdin); open(".aws/credentials", "w").write(a["secret"]["key"])' &&
+  curl -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/credstash-aws-auth" | jshon -e secret -e key -u > .aws/credentials
   chmod 0600 .aws/credentials
 fi
 
@@ -40,8 +43,4 @@ EOF
 
 # Checkout fuzzer including framework, install everything
 retry git clone -v --depth 1 --no-tags git@grizzly-config:MozillaSecurity/grizzly-config.git config
-if [[ "$BEARSPRAY" = "1" ]]; then
-  ./config/aws/setup-bearspray.sh
-else
-  ./config/aws/setup-grizzly.sh
-fi
+./config/aws/setup-bearspray.sh "$wait_token"
