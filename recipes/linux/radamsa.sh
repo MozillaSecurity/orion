@@ -6,24 +6,19 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### AFL
+# Wget is used in the make process
+apt-install-auto wget
 
-export CC=clang
-export CXX=clang++
-
-if is-arm64; then
-  export AFL_NO_X86=1
-fi
-
-TMPD="$(mktemp -d -p. afl.build.XXXXXXXXXX)"
+# Build radamsa
+TMPD="$(mktemp -d -p. radamsa.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  git-clone "https://github.com/google/AFL"
-  ( cd AFL
-    make &> /dev/null
-    make -C llvm_mode
+  git clone --depth 1 --no-tags https://gitlab.com/akihe/radamsa.git
+  ( cd radamsa
+    export CC=clang
+    make
     make install
   )
 )

@@ -10,7 +10,7 @@ set -o pipefail
 wait_token="$1"
 shift
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
 eval "$(ssh-agent -s)"

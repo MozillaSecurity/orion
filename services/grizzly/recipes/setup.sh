@@ -7,7 +7,7 @@ set -e
 set -x
 set -o pipefail
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
 # Setup the Ubuntu debug symbol server (https://wiki.ubuntu.com/DebuggingProgramCrash)

@@ -6,10 +6,13 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install NodeJS
+#### Install FuzzManager
 
-curl --retry 5 -sL https://deb.nodesource.com/setup_10.x | bash -
-sys-embed nodejs
+cd "$HOME"
+
+git-clone https://github.com/mozillasecurity/fuzzmanager
+pip3 install ./fuzzmanager
+pip3 install boto

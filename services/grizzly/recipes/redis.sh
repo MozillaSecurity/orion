@@ -6,7 +6,7 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
 sys-embed redis-server python3-hiredis

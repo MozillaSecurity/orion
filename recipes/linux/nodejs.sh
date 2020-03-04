@@ -6,12 +6,10 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install credstash
+#### Install NodeJS
 
-apt-install-auto gcc libssl-dev
-sys-embed libssl1.1
-
-pip3 install credstash
+curl --retry 5 -sL https://deb.nodesource.com/setup_10.x | bash -
+sys-embed nodejs

@@ -6,7 +6,7 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install Breakpad Tools

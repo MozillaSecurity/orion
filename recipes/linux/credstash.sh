@@ -6,9 +6,12 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install gsutil
+#### Install credstash
 
-retry pip3 install gsutil
+apt-install-auto gcc libssl-dev
+sys-embed libssl1.1
+
+pip3 install credstash

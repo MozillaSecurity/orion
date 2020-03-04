@@ -19,8 +19,9 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN useradd -d $HOME -s /bin/bash -m $USER
 WORKDIR $HOME
 
-COPY setup.sh /tmp
-COPY recipes /tmp/recipes
+COPY base/linux/fuzzos/setup.sh /tmp
+COPY recipes/linux/ /tmp/recipes
+COPY base/linux/etc/pip.conf /etc/pip.conf
 
 RUN cd /tmp && ./setup.sh
 

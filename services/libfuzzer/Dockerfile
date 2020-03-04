@@ -18,7 +18,7 @@ RUN \
     screen \
   && "$HOME/.local/bin/cleanup.sh"
 
-COPY *.sh ./
+COPY services/libfuzzer/*.sh ./
 RUN chown -R worker:worker $HOME
 USER $USER
 

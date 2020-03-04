@@ -6,7 +6,7 @@ FROM mozillasecurity/fuzzos:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-COPY setup.sh .
+COPY services/u2f-hid-rs/setup.sh .
 
 USER root
 RUN \

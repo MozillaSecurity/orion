@@ -5,13 +5,21 @@
 
 set -e
 set -x
+set -o pipefail
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install LLVM
 
-retry curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+apt-install-auto \
+  ca-certificates \
+  curl \
+  software-properties-common \
+  gpg \
+  gpg-agent
+
+curl -sL --retry 5 https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-8 main"
 
 sys-update

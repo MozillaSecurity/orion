@@ -150,7 +150,7 @@ class DockerHub(CD):
         if build_args:
             for arg in build_args:
                 command.extend(["--build-arg", arg])
-        command.append(str(self.root))
+        command.append(str(MonorepoManager.HOME))
 
         self._run(command)
 

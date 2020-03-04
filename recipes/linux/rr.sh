@@ -5,8 +5,9 @@
 
 set -e
 set -x
+set -o pipefail
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install rr
@@ -17,33 +18,39 @@ if is-arm64; then
 fi
 
 apt-install-auto \
-  ccache \
+  capnproto \
   cmake \
-  make \
+  file \
   g++-multilib \
   gdb \
+  git \
+  libcapnp-dev \
+  ninja-build \
   pkg-config \
-  coreutils \
-  python-pexpect \
-  manpages-dev \
-  ninja-build
+  python3-pexpect
 
-sys-embed \
-  capnproto \
-  libcapnp-dev
-
-pip3 install pexpect
+export CC=clang
+export CXX=clang++
 
 TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  git-clone https://github.com/mozilla/rr
+  retry git clone --depth 1 --no-tags https://github.com/mozilla/rr.git
   ( cd rr
     PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
     sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt
+    git apply << EOF
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1548,3 +1548,4 @@
++ set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+ 
+ include (CPack)
+ 
+EOF
   )
   mkdir obj
   ( cd obj
-    CC=clang CXX=clang++ cmake -G Ninja ../rr
+    CC=clang CXX=clang++ cmake -G Ninja -Dstrip=TRUE ../rr
     cmake --build .
     cpack -G DEB
     dpkg -i dist/rr-*.deb

@@ -8,7 +8,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 WORKDIR /home/worker/funfuzz
 
 USER root
-COPY recipes /tmp/recipes
+COPY services/funfuzz/recipes /tmp/recipes
 
 RUN /tmp/recipes/install_prerequisites.sh \
     && rm -f /tmp/recipes/install_prerequisites.sh \

@@ -6,13 +6,9 @@
 set -e
 set -x
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install FuzzManager
+#### Install gsutil
 
-cd "$HOME"
-
-git-clone https://github.com/mozillasecurity/fuzzmanager
-pip3 install ./fuzzmanager
-pip3 install boto
+retry pip3 install gsutil

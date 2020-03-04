@@ -11,7 +11,7 @@ set -x
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
 
-# shellcheck source=base/linux/fuzzos/recipes/common.sh
+# shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
 # In some environments, we require credentials for talking to credstash

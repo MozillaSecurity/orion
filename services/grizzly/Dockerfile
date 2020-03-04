@@ -7,13 +7,13 @@ FROM mozillasecurity/fuzzos:latest
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 USER root
-COPY recipes/ /tmp/recipes/
+COPY services/grizzly/recipes/ /tmp/recipes/
 RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes
-COPY screenlog-to-cloudwatch.py /usr/local/bin/
-COPY rwait.py /usr/local/bin/rwait
-COPY launch-grizzly.sh /home/worker/
-COPY launch-grizzly-worker.sh /home/worker/
+COPY services/grizzly/screenlog-to-cloudwatch.py /usr/local/bin/
+COPY services/grizzly/rwait.py /usr/local/bin/rwait
+COPY services/grizzly/launch-grizzly.sh /home/worker/
+COPY services/grizzly/launch-grizzly-worker.sh /home/worker/
 
 ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
 CMD ["/home/worker/launch-grizzly.sh"]
