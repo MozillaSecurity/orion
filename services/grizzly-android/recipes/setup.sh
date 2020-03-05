@@ -12,8 +12,8 @@ source ~/.local/bin/common.sh
 sys-update
 sys-embed qemu-kvm
 
-pip install -r /tmp/recipes/requirements.txt
-python /tmp/recipes/emulator.py install avd
+pip3 install -r /tmp/recipes/requirements.txt
+python3 /tmp/recipes/emulator.py install avd
 
 ~/.local/bin/cleanup.sh
 
