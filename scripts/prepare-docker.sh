@@ -6,6 +6,7 @@
 set -e
 set -x
 set -u
+set -o pipefail
 
 update_docker_configuration() {
   echo "INFO: Updating Docker CLI configuration ..."

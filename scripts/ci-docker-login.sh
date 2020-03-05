@@ -6,6 +6,7 @@
 set -e
 set -x
 set -u
+set -o pipefail
 
 # Exit because PRs do not have access to secrets.
 # The MonorepoManager executes a PR build though but does prevent a push for PRs.
