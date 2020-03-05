@@ -41,8 +41,10 @@ function apt-install-auto () {
       new+=("$pkg")
     fi
   done
-  sys-embed "${new[@]}"
-  apt-mark auto "${new[@]}"
+  if [ ${#new[@]} -ne 0 ]; then
+    sys-embed "${new[@]}"
+    apt-mark auto "${new[@]}"
+  fi
 }
 
 function get-latest-github-release () {
