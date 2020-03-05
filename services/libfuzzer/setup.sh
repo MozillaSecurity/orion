@@ -6,8 +6,8 @@
 set -e
 set -x
 
-# shellcheck disable=SC1090
-source ~/.common.sh
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.local/bin/common.sh
 
 function onExit {
     echo "Script is terminating - executing trap commands."

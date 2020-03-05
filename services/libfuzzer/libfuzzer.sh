@@ -11,8 +11,8 @@ set -x
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
 
-# shellcheck disable=SC1090
-source ~/.common.sh
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.local/bin/common.sh
 
 # In some environments, we require credentials for talking to credstash
 setup-aws-credentials "$SHIP"

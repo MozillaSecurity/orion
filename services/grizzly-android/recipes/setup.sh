@@ -7,7 +7,7 @@ set -e
 set -x
 
 # shellcheck source=base/linux/fuzzos/recipes/common.sh
-source ~/.common.sh
+source ~/.local/bin/common.sh
 
 sys-update
 sys-embed qemu-kvm

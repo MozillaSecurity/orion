@@ -12,8 +12,8 @@ set -x
 WORKDIR=${WORKDIR:-$HOME}
 cd "$WORKDIR" || exit
 
-# shellcheck disable=SC1090
-source ~/.common.sh
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.local/bin/common.sh
 
 REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
 export REVISION

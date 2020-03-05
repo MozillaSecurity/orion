@@ -3,8 +3,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-# shellcheck disable=SC1090
-source ~/.common.sh
+# shellcheck source=base/linux/fuzzos/recipes/common.sh
+source ~/.local/bin/common.sh
 
 pushd "$HOME"
 
