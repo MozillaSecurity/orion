@@ -49,12 +49,17 @@ function apt-install-auto () {
 
 function get-latest-github-release () {
   # Bypass GitHub API RateLimit. Note that we do not follow the redirect.
-  # shellcheck disable=SC2016
-  retry curl -s "https://github.com/$1/releases/latest" | rg -Nor '$1' 'tag/(.+)"'
+  curl --retry 5 -s "https://github.com/$1/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/'
 }
 
 function git-clone () {
-   retry git clone --depth 1 --no-tags "$1" "${2:-$(basename "$1")}"
+  function clone-inner () {
+    if ! git clone --depth 1 --no-tags "$1" "$2"; then
+      rm -rf "$2"
+      return 1
+    fi
+  }
+  retry clone-inner "$1" "${2:-$(basename "$1" .git)}"
 }
 
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
@@ -87,7 +92,7 @@ function is-amd64 () {
 
 # Curl with headers set for accessing GCE metadata service
 function curl-gce {
-  retry curl -H "Metadata-Flavor: Google" -s --connect-timeout 25 "$@"
+  curl --retry 5 -H "Metadata-Flavor: Google" -s --connect-timeout 25 "$@"
 }
 
 # Determine the relative hostname based on the outside environment.
@@ -95,7 +100,7 @@ function relative-hostname {
   choice=${1,,}
   case $choice in
     ec2 | ec2spot)
-      retry curl -s --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
+      curl -s --retry 5 --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
       ;;
     gce)
       local IFS='.'

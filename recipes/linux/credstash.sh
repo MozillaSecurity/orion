@@ -5,13 +5,23 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install credstash
 
-apt-install-auto gcc libssl-dev
-sys-embed libssl1.1
+sys-embed \
+    ca-certificates \
+    libssl1.1 \
+    python3
+apt-install-auto \
+    gcc \
+    libssl-dev \
+    python3-dev \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel
 
-pip3 install credstash
+retry pip3 install credstash

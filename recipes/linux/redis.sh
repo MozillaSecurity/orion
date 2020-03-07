@@ -5,8 +5,11 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
-source ~/.local/bin/common.sh
+source "${0%/*}/common.sh"
 
-retry python3 -m pip install git+https://github.com/MozillaSecurity/fuzzing-tc
+sys-embed redis-server python3-hiredis
+
+sed -i 's/^bind .*/bind 127.0.0.1/' /etc/redis/redis.conf

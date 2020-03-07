@@ -28,4 +28,7 @@ if [ -z "$PAPERTRAIL_HOST" ] && [ -n "$EC2SPOTMANAGER_PROVIDER" ]; then
 fi
 
 # need to keep the container running
-exec rwait wait "$wait_token"
+#exec rwait wait "$wait_token"
+while true; do
+    sleep 10
+done

@@ -10,21 +10,16 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install pernosco-submit
-
 sys-embed \
     ca-certificates \
-    openssl \
+    git \
+    openssh-client \
     python3 \
-    zstd
+    python3-setuptools
 apt-install-auto \
-    curl \
     gcc \
     python3-dev \
     python3-pip \
-    python3-setuptools \
     python3-wheel
-retry pip3 install awscli
 
-curl --retry 5 -sL "https://raw.githubusercontent.com/Pernosco/pernosco-submit/master/pernosco-submit" -o /usr/local/bin/pernosco-submit
-chmod +x /usr/local/bin/pernosco-submit
+retry pip3 install git+https://github.com/MozillaSecurity/fuzzing-tc

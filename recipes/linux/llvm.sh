@@ -12,6 +12,16 @@ source "${0%/*}/common.sh"
 
 #### Install LLVM
 
+if [ "$1" = "auto" ]; then
+  function install-auto-arg () {
+    apt-install-auto "$@"
+  }
+else
+  function install-auto-arg () {
+    sys-embed "$@"
+  }
+fi
+
 apt-install-auto \
   ca-certificates \
   curl \
@@ -19,11 +29,14 @@ apt-install-auto \
   gpg \
   gpg-agent
 
-curl -sL --retry 5 https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-8 main"
+if ! grep -q "llvm-toolchain-$(lsb_release -cs)-8" /etc/apt/sources.list; then
+  curl -sL --retry 5 https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+  apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-8 main"
+  rm -f /etc/apt/sources.list.save
+  sys-update
+fi
 
-sys-update
-sys-embed \
+install-auto-arg \
   clang-8 \
   lld-8 \
   lldb-8 \

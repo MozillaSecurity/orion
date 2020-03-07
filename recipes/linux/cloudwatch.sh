@@ -10,13 +10,13 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install NodeJS
-
 apt-install-auto \
-    binutils \
     ca-certificates \
     curl
 
-curl --retry 5 -sL https://deb.nodesource.com/setup_10.x | bash -
-sys-embed nodejs
-strip --strip-unneeded /usr/bin/node
+TMPD="$(mktemp -d -p. cloudwatch.XXXXXXXXXX)"
+( cd "$TMPD"
+  curl --connect-timeout 10 --retry 5 -LO https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+  dpkg -i amazon-cloudwatch-agent.deb
+)
+rm -rf "$TMPD"

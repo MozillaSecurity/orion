@@ -5,17 +5,23 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install halfempty
 
+sys-embed \
+    libglib2.0-0
 apt-install-auto \
     bsdmainutils \
-    pkg-config \
+    ca-certificates \
+    curl \
     gcc \
-    libglib2.0-dev
+    libglib2.0-dev \
+    make \
+    pkg-config
 
 NAME="halfempty"
 VERSION="0.30"
@@ -23,7 +29,7 @@ DOWNLOAD_URL="https://github.com/googleprojectzero/halfempty/archive/v$VERSION.t
 
 TMPD="$(mktemp -d -p. halfempty.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  retry curl -L "$DOWNLOAD_URL" | tar -xzv
+  curl --retry 5 -sL "$DOWNLOAD_URL" | tar -xzv
   cd "$NAME-$VERSION"
   make
   mv "$NAME" /usr/local/bin/

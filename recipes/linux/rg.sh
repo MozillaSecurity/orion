@@ -5,11 +5,16 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install ripgrep
+
+apt-install-auto \
+    ca-certificates \
+    curl
 
 VERSION="0.10.0-2"
 

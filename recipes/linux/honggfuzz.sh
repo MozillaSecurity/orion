@@ -5,21 +5,24 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install Honggfuzz
 
+"${0%/*}/llvm.sh"
 sys-embed \
-  libunwind8 \
   libbinutils \
-  libblocksruntime0
-
+  libblocksruntime0 \
+  libunwind8
 apt-install-auto \
-  libunwind-dev \
   binutils-dev \
-  libblocksruntime-dev
+  git \
+  make \
+  libblocksruntime-dev \
+  libunwind-dev
 
 TMPD="$(mktemp -d -p. honggfuzz.build.XXXXXXXXXX)"
 ( cd "$TMPD"

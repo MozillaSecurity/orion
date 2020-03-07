@@ -5,11 +5,17 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### AFL
+
+"${0%/*}/llvm.sh"
+apt-install-auto \
+    git \
+    make
 
 export CC=clang
 export CXX=clang++

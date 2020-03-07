@@ -5,11 +5,20 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install Breakpad Tools
+
+"${0%/*}/llvm.sh" auto
+apt-install-auto \
+    git \
+    make
+
+export CC=clang
+export CXX=clang++
 
 TMPD="$(mktemp -d -p. breakpad.tools.XXXXXXXXXX)"
 ( cd "$TMPD"

@@ -5,6 +5,7 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
@@ -12,6 +13,6 @@ source "${0%/*}/common.sh"
 #### Install: htop
 
 sys-embed htop
-echo "alias top=\"htop\"" >> ~/.bashrc
+echo "alias top=\"htop\"" >> "$HOME/.bashrc"
 
 rm /usr/bin/top

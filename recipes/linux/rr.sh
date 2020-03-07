@@ -17,6 +17,7 @@ if is-arm64; then
   exit
 fi
 
+"${0%/*}/llvm.sh" auto
 apt-install-auto \
   capnproto \
   cmake \

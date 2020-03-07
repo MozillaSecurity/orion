@@ -13,8 +13,8 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         libffi-dev \
         python3 \
         python3-dev \
-    && retry python3 -m pip install --upgrade pip wheel \
-    && retry python3 -m pip wheel --wheel-dir=/root/wheels credstash
+    && retry pip3 install --upgrade pip wheel \
+    && retry pip3 wheel --wheel-dir=/root/wheels credstash
 
 FROM alpine:latest
 
@@ -22,7 +22,7 @@ COPY --from=builder /root/wheels /root/wheels
 
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apk add --no-cache python3 libressl \
-    && python3 -m pip install --no-index --find-links=/root/wheels credstash \
+    && pip3 install --no-index --find-links=/root/wheels credstash \
     && rm -rf /root/wheels \
     && python3 -m compileall -b -q /usr/lib \
     && find /usr/lib -name \*.py -delete \

@@ -5,10 +5,21 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install gsutil
+
+sys-embed \
+    python3 \
+    zstd 
+apt-install-auto \
+    gcc \
+    python3-dev \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel
 
 retry pip3 install gsutil

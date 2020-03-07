@@ -5,15 +5,20 @@
 
 set -e
 set -x
+set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
 #### Install remote_syslog
 
+apt-install-auto \
+    ca-certificates \
+    curl
+
 VERSION="0.20"
 DOWNLOAD_URL="https://github.com/papertrail/remote_syslog2/releases/download/v${VERSION}/remote-syslog2_${VERSION}_amd64.deb"
 
-curl -LO "$DOWNLOAD_URL"
+curl --retry 5 -sLO "$DOWNLOAD_URL"
 dpkg -i "./remote-syslog2_${VERSION}_amd64.deb"
 rm "remote-syslog2_${VERSION}_amd64.deb"
