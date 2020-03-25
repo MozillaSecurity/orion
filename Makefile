@@ -18,14 +18,14 @@ login: ## Login to Docker Hub
 	docker login --username="$(DOCKER_USER)"
 
 lint_scripts: ## Lint shellscripts
-	retry docker pull mozillasecurity/linter:latest
+	retry docker pull koalaman/shellcheck:latest
 	find . -not -path '*/\.*' \
 		-exec /bin/bash -c '[ $$(file -b --mime-type {}) == "text/x-shellscript" ]' /bin/bash '{}' ';' \
-		-print | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter shellcheck -x -a -Calways
+		-print | xargs docker run --rm -v "$(PWD)":/mnt koalaman/shellcheck:latest -x -a -Calways
 
 lint_dockers: ## Lint Dockerfiles
-	retry docker pull mozillasecurity/linter:latest
-	find . -type f -name "Dockerfile" ! -path '*/windows/*' | xargs docker run --rm -v "$(PWD)":/mnt mozillasecurity/linter hadolint \
+	retry docker pull hadolint/hadolint:latest
+	find . -type f -name "Dockerfile" ! -path '*/windows/*' | xargs docker run --rm -v "$(PWD)":/mnt -w /mnt hadolint/hadolint:latest hadolint \
 		--ignore DL3002 \
 		--ignore DL3003 \
 		--ignore DL3007 \

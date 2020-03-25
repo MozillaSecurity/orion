@@ -10,6 +10,5 @@ TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo
 TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/grizzly
 TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/grizzly-android
 TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/fuzzmanager
-TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/linter
 TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/libfuzzer
 TRAVIS_PULL_REQUEST=false TRAVIS_BRANCH=master TRAVIS_EVENT_TYPE=cron ./monorepo.py -ci travis -build -test -deliver -path services/u2f-hid-rs

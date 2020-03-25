@@ -44,7 +44,6 @@ before_script:
 
 # Defines the order build stages within jobs.include below.
 stages:
-  - Requirements
   - Core
   - FuzzOS
   - Grizzly
@@ -58,9 +57,6 @@ jobs:
     - env: IMAGE=services/u2f-hid-rs
     - env: IMAGE=services/fuzzmanager
   include:
-    - stage: Requirements
-      env: IMAGE=services/linter
-      name: Linter
     - stage: Core
       env: IMAGE=core/linux
     - stage: FuzzOS
