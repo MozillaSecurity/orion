@@ -132,22 +132,25 @@ EOF
 
 #### Base Environment Configuration
 
-cat<< 'EOF' >> ~/.bashrc
+cat << 'EOF' >> /home/worker/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
 EOF
 
-mkdir -p ~/.local/bin
+mkdir -p /home/worker/.local/bin
 
 # Add `cleanup.sh` to let images perform standard cleanup operations.
-cp "${0%/*}/cleanup.sh" ~/.local/bin/cleanup.sh
+cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
-cp "${0%/*}/common.sh" ~/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> ~/.bashrc
+cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
+printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
+/home/worker/.local/bin/cleanup.sh
 
-~/.local/bin/cleanup.sh
+mkdir -p /home/worker/.ssh /root/.ssh
+chmod 0700 /home/worker/.ssh /root/.ssh
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >> /home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker

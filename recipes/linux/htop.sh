@@ -13,6 +13,6 @@ source "${0%/*}/common.sh"
 #### Install: htop
 
 sys-embed htop
-echo "alias top=\"htop\"" >> "$HOME/.bashrc"
+echo "alias top=\"htop\"" >> "/home/worker/.bashrc"
 
 rm /usr/bin/top

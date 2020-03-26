@@ -25,9 +25,8 @@ TMPD="$(mktemp -d -p. grcov.XXXXXXXXXX)"
     cd rust-${ARM64_RUST_VERSION}-aarch64-unknown-linux-gnu
 
     ./install.sh
-    retry cargo install --force grcov
-    mv "$HOME/.cargo/bin/grcov" /usr/local/bin/
-    rm -rf "$HOME/.cargo/registry"
+    retry cargo install --force grcov --root /usr/local
+    rm -rf ~/.cargo
     /usr/local/lib/rustlib/uninstall.sh
   fi
 

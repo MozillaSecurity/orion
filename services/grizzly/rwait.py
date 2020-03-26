@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -73,11 +74,16 @@ class RemoteWait:
     def wait(self):
         """Hang until target exits, then return its exit code.
         """
+        is_pid1 = (os.getpid() == 1)
         while True:
             with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
                 data = json.loads(self._token_file.read_text())
             if data["state"] == "done":
                 break
+            if is_pid1:
+                # wait for any child processes
+                while os.waitpid(-1, os.WNOHANG) != (0, 0):
+                    pass
             time.sleep(1)
         return data["result"]
 

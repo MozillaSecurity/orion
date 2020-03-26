@@ -6,13 +6,11 @@ FROM ubuntu:18.04
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ENV USER            worker
-ENV HOME            /home/worker
 ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
 ENV DEBIAN_FRONTEND noninteractive
 
-RUN useradd -d $HOME -s /bin/bash -m $USER
+RUN useradd -d /home/worker -s /bin/bash -m worker
 
 COPY recipes/linux/ /tmp/recipes/
 COPY services/grizzly/setup.sh /tmp/recipes/
@@ -27,6 +25,6 @@ COPY services/grizzly/launch-grizzly-worker.sh /home/worker/
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-WORKDIR $HOME
+WORKDIR /home/worker
 ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
 CMD ["/home/worker/launch-grizzly.sh"]
