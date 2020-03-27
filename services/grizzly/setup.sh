@@ -151,6 +151,10 @@ printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
 mkdir -p /home/worker/.ssh /root/.ssh
 chmod 0700 /home/worker/.ssh /root/.ssh
+cat << EOF | tee -a /root/.ssh/config >> /home/worker/.ssh/config
+Host *
+UseRoaming no
+EOF
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >> /home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker
