@@ -35,8 +35,11 @@ export CXX=clang++
 
 TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
 ( cd "$TMPD"
-  retry git clone --depth 1 --no-tags https://github.com/mozilla/rr.git
+  git init rr
   ( cd rr
+    git remote add -t master origin https://github.com/mozilla/rr.git
+    retry git fetch --depth 10 --no-tags origin master
+    git reset --hard 7788cc1378cd784964396be0546b0d67e8808f1f
     PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
     sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt
     git apply << EOF
