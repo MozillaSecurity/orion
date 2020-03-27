@@ -33,9 +33,6 @@ elif [ -n "$TASK_ID" ] && [ -n "$TASKCLUSTER_PROXY_URL" ]; then
   chmod 0600 .aws/credentials
 fi
 
-# install authorized keys
-retry credstash get grizzly-ssh-authorized-keys >> .ssh/authorized_keys
-
 # Get fuzzmanager configuration from credstash
 retry credstash get fuzzmanagerconf > .fuzzmanagerconf
 
