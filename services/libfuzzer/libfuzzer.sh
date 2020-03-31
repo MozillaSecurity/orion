@@ -21,7 +21,7 @@ if [[ -n "$OSSFUZZ_PROJECT" ]]
 then
   if  [[ ! -d "$HOME/oss-fuzz" ]]
   then
-    retry git clone --depth 1 https://github.com/google/oss-fuzz
+    retry git clone --depth 1 --no-tags https://github.com/google/oss-fuzz
   fi
   if [[ ! -f "$HOME/.boto" ]]
   then
@@ -69,7 +69,7 @@ fi
 # %<---[Constants]------------------------------------------------------------
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
-AFL_LIBFUZZER_DAEMON="./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py"
+AFL_LIBFUZZER_DAEMON="python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py"
 
 # IPC
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
@@ -117,7 +117,7 @@ elif [ -n "$OSSFUZZ_PROJECT" ]
 then
   # Use synced corpora from OSSFuzz.
   mkdir -p ./corpora
-  ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
+  python3 ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
   CORPORA_PATH="./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER"
   if [ -d "$CORPORA_PATH" ]
   then
@@ -176,7 +176,7 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 tee run-ec2report.sh << EOF
 #!/bin/bash
-./fuzzmanager/EC2Reporter/EC2Reporter.py --report-from-file ./stats --keep-reporting 60 --random-offset 30
+python3 -m EC2Reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
 EOF
 chmod u+x run-ec2report.sh
 screen -t ec2report -dmS ec2report ./run-ec2report.sh

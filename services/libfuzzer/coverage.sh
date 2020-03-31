@@ -59,7 +59,7 @@ RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.
-python -m CovReporter.CovReporter \
+python3 -m CovReporter \
     --repository mozilla-central \
     --description "libFuzzer ($FUZZER,rt=$COVRUNTIME)" \
     --tool "libFuzzer-$FUZZER" \

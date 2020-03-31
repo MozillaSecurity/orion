@@ -32,6 +32,17 @@ function sys-embed () {
   retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@"
 }
 
+# `apt-get install` dependencies without installing the package itself
+function apt-install-depends () {
+  new=()
+  for pkg in "$@"; do
+    for dep in $(apt-get install -s "$pkg" | sed -n -e "/^Inst $pkg /d" -e 's/^Inst \([^ ]\+\) .*$/\1/p'); do
+      new+=("$dep")
+    done
+  done
+  sys-embed "${new[@]}"
+}
+
 # Calls `apt-get install` on it's arguments but marks them as automatically installed.
 # Previously installed packages are not affected.
 function apt-install-auto () {

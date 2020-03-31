@@ -2,26 +2,29 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-ARG IMAGE=mozillasecurity/fuzzos:latest
-# hadolint ignore=DL3006
-FROM $IMAGE
+FROM ubuntu:18.04
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-USER root
-RUN \
-  apt-get update -qq \
-  && apt-get install -y -qq --no-install-recommends --no-install-suggests \
-    firefox \
-    libpulse0 \
-    subversion \
-    screen \
-  && "$HOME/.local/bin/cleanup.sh"
+ENV LOGNAME         worker
+ENV HOSTNAME        taskcluster-worker
+ENV DEBIAN_FRONTEND noninteractive
 
-COPY services/libfuzzer/*.sh ./
-RUN chown -R worker:worker $HOME
-USER $USER
+RUN useradd -d /home/worker -s /bin/bash -m worker
 
-RUN pip install ./fuzzmanager boto
+COPY recipes/linux/ /tmp/recipes/
+COPY services/libfuzzer/setup.sh /tmp/recipes/
+COPY base/linux/etc/pip.conf /etc/pip.conf
+RUN /tmp/recipes/setup.sh \
+    && rm -rf /tmp/recipes
 
-CMD ["./setup.sh"]
+COPY services/libfuzzer/launch.sh /home/worker/
+COPY services/libfuzzer/libfuzzer.sh /home/worker/
+COPY services/libfuzzer/coverage.sh /home/worker/
+
+ENV LANG   en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+
+USER worker
+WORKDIR /home/worker
+CMD ["./launch.sh"]
