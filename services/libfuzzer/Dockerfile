@@ -22,4 +22,6 @@ COPY services/libfuzzer/*.sh ./
 RUN chown -R worker:worker $HOME
 USER $USER
 
+RUN pip install ./fuzzmanager boto
+
 CMD ["./setup.sh"]
