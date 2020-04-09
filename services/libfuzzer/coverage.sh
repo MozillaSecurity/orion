@@ -18,11 +18,6 @@ source ~/.local/bin/common.sh
 REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
 export REVISION
 
-# Setup required coverage environment variables.
-export COVERAGE=1
-export GCOV_PREFIX_STRIP=6
-export GCOV_PREFIX="$WORKDIR/firefox"
-
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 # For coverage, we also are pinned to a given revision and we need to fetch coverage builds.
@@ -41,7 +36,12 @@ elif [[ ! -d "$HOME/firefox" ]]
 then
   retry fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n firefox -o "$WORKDIR"
   chmod -R 755 firefox
+  export GCOV_PREFIX="$WORKDIR/firefox"
 fi
+
+# Setup required coverage environment variables.
+export COVERAGE=1
+export GCOV_PREFIX_STRIP=$(cat $WORKDIR/${TARGET_BIN}.fuzzmanagerconf | grep pathprefix | egrep -o "/.+$" | tr -cd '/' | wc -c)
 
 # %<---[LibFuzzer]------------------------------------------------------------
 
