@@ -41,7 +41,9 @@ fi
 
 # Setup required coverage environment variables.
 export COVERAGE=1
-export GCOV_PREFIX_STRIP=$(cat $WORKDIR/${TARGET_BIN}.fuzzmanagerconf | grep pathprefix | egrep -o "/.+$" | tr -cd '/' | wc -c)
+
+GCOV_PREFIX_STRIP=$(grep pathprefix $WORKDIR/${TARGET_BIN}.fuzzmanagerconf | grep -E -o "/.+$" | tr -cd '/' | wc -c)
+export GCOV_PREFIX_STRIP
 
 # %<---[LibFuzzer]------------------------------------------------------------
 
