@@ -17,21 +17,20 @@ sys-update
 #### Install recipes
 
 cd "${0%/*}"
-./htop.sh
-./rg.sh
-./fuzzfetch.sh
-./credstash.sh
-./fuzzmanager.sh
-./breakpad.sh
-./nodejs.sh
-./rr.sh
-./grcov.sh
 ./berglas.sh
-./radamsa.sh
-./remote_syslog.sh
-./redis.sh
+./breakpad.sh
+./credstash.sh
+./fluentbit.sh
+./fuzzfetch.sh
 ./fuzzing_tc.sh
-./cloudwatch.sh
+./fuzzmanager.sh
+./grcov.sh
+./htop.sh
+./nodejs.sh
+./radamsa.sh
+./redis.sh
+./rg.sh
+./rr.sh
 
 # shellcheck source=recipes/linux/dbgsyms.sh
 source ./dbgsyms.sh
