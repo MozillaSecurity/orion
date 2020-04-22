@@ -10,6 +10,20 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /home/worker/.local/bin/common.sh
 
+case "$EC2SPOTMANAGER_PROVIDER" in
+  EC2Spot)
+    SHIP=EC2
+    ;;
+  GCE)
+    SHIP=GCE
+    ;;
+  *)
+    if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
+      SHIP=Taskcluster
+    fi
+    ;;
+esac
+
 mkdir -p /etc/google/auth /etc/td-agent-bit
 su worker -c '. ~/.local/bin/common.sh && retry credstash get google-logging-creds.json' > /etc/google/auth/application_default_credentials.json
 chmod 0600 /etc/google/auth/application_default_credentials.json
@@ -45,7 +59,8 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [FILTER]
     Name record_modifier
     Match *
-    Record host $(relative-hostname)
+    Record host "$(relative-hostname "$SHIP")"
+    Record pool "$EC2SPOTMANAGER_POOLID"
     Remove_key file
 
 [OUTPUT]
