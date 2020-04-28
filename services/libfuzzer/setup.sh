@@ -24,6 +24,7 @@ cd "${0%/*}"
 ./berglas.sh
 ./fuzzmanager.sh
 ./grcov.sh
+./gsutil.sh
 
 packages=(
   apt-utils
