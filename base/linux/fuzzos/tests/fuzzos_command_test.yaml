@@ -12,11 +12,11 @@ commandTests:
     args: ["fuzzfetch"]
     expectedOutput: ["/usr/local/bin/fuzzfetch\n"]
 
-  - name: "rr installation"
-    command: "rr"
-    args: ["cpufeatures"]
-    expectedOutput: ["--disable-cpuid-features"]
-    exitCode: 0
+#  - name: "rr installation"
+#    command: "rr"
+#    args: ["cpufeatures"]
+#    expectedOutput: ["--disable-cpuid-features"]
+#    exitCode: 0
 
   - name: "node installation"
     command: "node"
