@@ -14,12 +14,12 @@ source "${0%/*}/common.sh"
 
 sys-embed \
     python3 \
+    python3-setuptools \
     zstd 
 apt-install-auto \
     gcc \
     python3-dev \
     python3-pip \
-    python3-setuptools \
     python3-wheel
 
 retry pip3 install gsutil
