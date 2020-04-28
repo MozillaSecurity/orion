@@ -32,7 +32,6 @@ packages=(
   curl
   git
   gpg-agent
-  gsutil
   jshon
   less
   libglu1-mesa
