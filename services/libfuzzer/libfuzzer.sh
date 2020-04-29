@@ -117,7 +117,7 @@ elif [ -n "$OSSFUZZ_PROJECT" ]
 then
   # Use synced corpora from OSSFuzz.
   mkdir -p ./corpora
-  python3 ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT"
+  python3 ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
   CORPORA_PATH="./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER"
   if [ -d "$CORPORA_PATH" ]
   then
