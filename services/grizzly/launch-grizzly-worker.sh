@@ -88,6 +88,8 @@ pip3 install --user -U -e ./bearspray
 
 update_ec2_status "Setup: launching bearspray"
 
+export GCOV=/usr/local/bin/gcov-8
+
 screen -dmLS grizzly /bin/bash
 sleep 5
 screen -S grizzly -X screen rwait run "$wait_token" python3 -m bearspray --screen --xvfb
