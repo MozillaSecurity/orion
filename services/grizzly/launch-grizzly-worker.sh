@@ -13,25 +13,18 @@ shift
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+SHIP="$(get-provider)"
+
 function update_ec2_status {
   if [[ -n "$EC2SPOTMANAGER_POOLID" ]]; then
     python3 -m EC2Reporter --report "$@" || true
+  elif [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
+    python3 -m TaskStatusReporter --report "$@" || true
   fi
 }
 
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
-
-# Get AWS credentials for GCE to be able to read from Credstash
-if [ "$EC2SPOTMANAGER_PROVIDER" = "GCE" ]; then
-  mkdir -p .aws
-  retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > .aws/credentials
-  chmod 0600 .aws/credentials
-elif [ -n "$TASK_ID" ] && [ -n "$TASKCLUSTER_PROXY_URL" ]; then
-  mkdir -p .aws
-  curl -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/credstash-aws-auth" | jshon -e secret -e key -u > .aws/credentials
-  chmod 0600 .aws/credentials
-fi
 
 # Get fuzzmanager configuration from credstash
 retry credstash get fuzzmanagerconf > .fuzzmanagerconf
@@ -42,19 +35,6 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 tool = bearspray
 EOF
-case "$EC2SPOTMANAGER_PROVIDER" in
-  EC2Spot)
-    SHIP=EC2
-    ;;
-  GCE)
-    SHIP=GCE
-    ;;
-  *)
-    if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
-      SHIP=Taskcluster
-    fi
-    ;;
-esac
 setup-fuzzmanager-hostname "$SHIP"
 chmod 0600 .fuzzmanagerconf
 

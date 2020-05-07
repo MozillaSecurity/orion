@@ -146,8 +146,31 @@ function setup-aws-credentials {
         retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth > "$HOME/.aws/credentials"
         chmod 0600 "$HOME/.aws/credentials"
         ;;
+      taskcluster)
+        # Get AWS credentials for TC to be able to read from Credstash
+        mkdir -p "$HOME/.aws"
+        curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/credstash-aws-auth" | jshon -e secret -e key -u > "$HOME/.aws/credentials"
+        chmod 0600 "$HOME/.aws/credentials"
+        ;;
     esac
   fi
+}
+
+# Determine the provider environment we're running in
+function get-provider {
+  case "$EC2SPOTMANAGER_PROVIDER" in
+    EC2Spot)
+      echo "EC2"
+      ;;
+    GCE)
+      echo "GCE"
+      ;;
+    *)
+      if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
+        echo "Taskcluster"
+      fi
+      ;;
+  esac
 }
 
 # Add relative hostname to the FuzzManager configuration.
