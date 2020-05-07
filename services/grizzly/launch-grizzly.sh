@@ -10,19 +10,8 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /home/worker/.local/bin/common.sh
 
-case "$EC2SPOTMANAGER_PROVIDER" in
-  EC2Spot)
-    SHIP=EC2
-    ;;
-  GCE)
-    SHIP=GCE
-    ;;
-  *)
-    if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
-      SHIP=Taskcluster
-    fi
-    ;;
-esac
+SHIP="$(get-provider)"
+su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP'"
 
 mkdir -p /etc/google/auth /etc/td-agent-bit
 su worker -c '. ~/.local/bin/common.sh && retry credstash get google-logging-creds.json' > /etc/google/auth/application_default_credentials.json
@@ -54,13 +43,14 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [FILTER]
     Name rewrite_tag
     Match *
+    # TODO: the last argument should be "false" to avoid duplicating lines, but this gives no output at all in GCP .. why?
     Rule \$file ([^/]+)$ \$1 true
 
 [FILTER]
     Name record_modifier
     Match *
-    Record host "$(relative-hostname "$SHIP")"
-    Record pool "$EC2SPOTMANAGER_POOLID"
+    Record host $(relative-hostname "$SHIP")
+    Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
     Remove_key file
 
 [OUTPUT]
