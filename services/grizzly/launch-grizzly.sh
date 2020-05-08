@@ -42,9 +42,8 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 
 [FILTER]
     Name rewrite_tag
-    Match *
-    # TODO: the last argument should be "false" to avoid duplicating lines, but this gives no output at all in GCP .. why?
-    Rule \$file ([^/]+)$ \$1 true
+    Match tail.*
+    Rule \$file ([^/]+)$ \$1 false
 
 [FILTER]
     Name record_modifier
