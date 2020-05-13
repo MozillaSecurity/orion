@@ -45,14 +45,14 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 
 [FILTER]
     Name rewrite_tag
-    Match *
-    Rule \$file ([^/]+)$ \$1 true
+    Match tail.*
+    Rule \$file ([^/]+)$ \$1 false
 
 [FILTER]
     Name record_modifier
     Match *
     Record host task-${TASK_ID}-run-${RUN_ID}
-    Record pool ${TASKCLUSTER_FUZZING_POOL}
+    Record pool ${TASKCLUSTER_FUZZING_POOL-unknown}
     Remove_key file
 
 [OUTPUT]
