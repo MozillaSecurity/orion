@@ -7,8 +7,11 @@ set -e
 set -x
 set -o pipefail
 
-function retry {
-  for i in {1..9}; do "$@" && return || sleep 10; done
+function retry () {
+  # shellcheck disable=SC2015
+  for _ in {1..9}; do
+    "$@" && return || sleep 30
+  done
   "$@"
 }
 
