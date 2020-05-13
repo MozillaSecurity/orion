@@ -32,6 +32,7 @@ cd "${0%/*}"
 ./rg.sh
 ./rr.sh
 ./gcov-7.sh
+./gcov-8.sh
 
 # shellcheck source=recipes/linux/dbgsyms.sh
 source ./dbgsyms.sh
