@@ -10,11 +10,11 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install gcov-8
+#### Install gcov-7
 
 apt-install-auto \
     ca-certificates \
     curl
 
-curl --retry 5 -sL "https://build.fuzzing.mozilla.org/builds/gcov-8" -o /usr/local/bin/gcov-8
-chmod +x /usr/local/bin/gcov-8
+curl --retry 5 -sL "https://build.fuzzing.mozilla.org/builds/gcov-7" -o /usr/local/bin/gcov-7
+chmod +x /usr/local/bin/gcov-7
