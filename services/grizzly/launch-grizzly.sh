@@ -31,6 +31,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     Path /logs/live.log
     Path_Key file
     Key message
+    Buffer_Max_Size 1M
     DB /var/lib/td-agent-bit/pos/grizzly-logs.pos
 
 [INPUT]
@@ -38,6 +39,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     Path /home/worker/grizzly-auto-run/screenlog.*
     Path_Key file
     Key message
+    Buffer_Max_Size 1M
     DB /var/lib/td-agent-bit/pos/grizzly-logs.pos
 
 [FILTER]
