@@ -65,6 +65,9 @@ jobs:
       env: IMAGE=services/grizzly
       name: Grizzly
     - stage: Services
+      env: IMAGE=services/langfuzz
+      name: LangFuzz
+    - stage: Services
       env: IMAGE=services/libfuzzer
       name: LibFuzzer
     - env: IMAGE=services/funfuzz
