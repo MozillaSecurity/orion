@@ -174,12 +174,21 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 # %<---[StatusFile]-----------------------------------------------------------
 
+if [ "$SHIP" = "Taskcluster" ]; then
+tee run-tcreport.sh << EOF
+#!/bin/bash
+python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
+EOF
+chmod u+x run-tcreport.sh
+screen -t tcreport -dmS tcreport ./run-tcreport.sh
+else
 tee run-ec2report.sh << EOF
 #!/bin/bash
 python3 -m EC2Reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
 EOF
 chmod u+x run-ec2report.sh
 screen -t ec2report -dmS ec2report ./run-ec2report.sh
+fi
 
 # %<---[LibFuzzer]------------------------------------------------------------
 
