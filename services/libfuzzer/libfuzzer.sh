@@ -174,7 +174,7 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 # %<---[StatusFile]-----------------------------------------------------------
 
-if [ "$SHIP" = "Taskcluster" ]; then
+if [ "${SHIP,,}" = "taskcluster" ]; then
 tee run-tcreport.sh << EOF
 #!/bin/bash
 python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
