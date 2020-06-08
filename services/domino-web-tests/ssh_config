@@ -1,0 +1,15 @@
+Host domino-web-tests
+HostName github.com
+IdentityFile ~/.ssh/id_ecdsa.domino_web_tests
+
+Host domino
+HostName github.com
+IdentityFile ~/.ssh/id_rsa.domino
+
+Host gridl
+HostName github.com
+IdentityFile ~/.ssh/id_rsa.gridl
+
+Host octo-private
+HostName github.com
+IdentityFile ~/.ssh/id_rsa.octo
