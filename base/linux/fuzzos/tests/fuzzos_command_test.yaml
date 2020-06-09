@@ -21,7 +21,7 @@ commandTests:
   - name: "node installation"
     command: "node"
     args: ["--version"]
-    expectedOutput: ["v10"]
+    expectedOutput: ["v12"]
     exitCode: 0
 
   - name: "credstash installation"
