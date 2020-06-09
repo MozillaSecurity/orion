@@ -4,6 +4,8 @@ set -e
 set -x
 set -o pipefail
 
+export PUPPETEER_PRODUCT=firefox
+
 function retry () {
   for _ in {1..9}; do
     "$@" && return
@@ -25,7 +27,7 @@ cd domino-web-tests
 git remote add origin git@domino-web-tests:MozillaSecurity/domino-web-tests
 retry git fetch -q --depth=5 origin master
 git -c advice.detachedHead=false checkout origin/master
-retry npm install
+retry npm i --no-progress
 retry npm update domino gridl
 git commit -a -m "Update package-lock.json"
 retry git push origin master
