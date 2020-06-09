@@ -22,8 +22,10 @@ cd "${0%/*}"
 #### Install packages
 
 packages=(
-  libgtk-3-0
   libdbus-glib-1-2
+  libgtk-3-0
+  libx11-xcb1
+  libxt6
 )
 sys-embed "${packages[@]}"
 
