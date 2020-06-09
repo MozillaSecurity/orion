@@ -32,3 +32,8 @@ sys-embed "${packages[@]}"
 #### Clean up
 
 ./cleanup.sh
+
+#### Fix ownership
+
+chmod 0600 /home/worker/.ssh/config
+chown -R worker:worker /home/worker
