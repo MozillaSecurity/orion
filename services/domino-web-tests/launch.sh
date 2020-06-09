@@ -11,11 +11,17 @@ function retry () {
   "$@"
 }
 
-retry taskcluster api secrets get project/fuzzing/deploy-domino-web-tests | jshon -e secret -e key -u >.ssh/id_ecdsa.domino_web_tests
-ln -s .ssh/id_ecdsa.domino_web_tests .ssh/id_ecdsa
-retry taskcluster api secrets get project/fuzzing/deploy-domino | jshon -e secret -e key -u >.ssh/id_rsa.domino
-retry taskcluster api secrets get project/fuzzing/deploy-gridl | jshon -e secret -e key -u >.ssh/id_rsa.gridl
-retry taskcluster api secrets get project/fuzzing/deploy-octo-private | jshon -e secret -e key -u >.ssh/id_rsa.octo
+function get-secret () {
+  # taskcluster cli doesn't work .. why?
+  # retry taskcluster api secrets get "$1"
+  curl -sSL --retry 5 "http://taskcluster/secrets/v1/secret/$1"
+}
+
+get-secret project/fuzzing/deploy-domino-web-tests | jshon -e secret -e key -u >.ssh/id_ecdsa.domino_web_tests
+ln -s id_ecdsa.domino_web_tests .ssh/id_ecdsa
+get-secret project/fuzzing/deploy-domino | jshon -e secret -e key -u >.ssh/id_rsa.domino
+get-secret project/fuzzing/deploy-gridl | jshon -e secret -e key -u >.ssh/id_rsa.gridl
+get-secret project/fuzzing/deploy-octo-private | jshon -e secret -e key -u >.ssh/id_rsa.octo
 set -x
 chmod 0400 .ssh/id_*
 
