@@ -149,7 +149,12 @@ function setup-aws-credentials {
       taskcluster)
         # Get AWS credentials for TC to be able to read from Credstash
         mkdir -p "$HOME/.aws"
-        curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/${CREDSTASH_SECRET}" | jshon -e secret -e key -u > "$HOME/.aws/credentials"
+        if [ -x "/usr/local/bin/taskcluster" ]
+        then
+          TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/${CREDSTASH_SECRET}"
+        else
+          curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/${CREDSTASH_SECRET}"
+        fi | jshon -e secret -e key -u > "$HOME/.aws/credentials"
         chmod 0600 "$HOME/.aws/credentials"
         ;;
     esac
