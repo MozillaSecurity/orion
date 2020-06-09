@@ -17,6 +17,6 @@ apt-install-auto \
     ca-certificates \
     curl
 
-curl --retry 5 -sL https://deb.nodesource.com/setup_10.x | bash -
+curl --retry 5 -sL https://deb.nodesource.com/setup_12.x | bash -
 sys-embed nodejs
 strip --strip-unneeded /usr/bin/node
