@@ -12,9 +12,7 @@ function retry () {
 }
 
 function get-secret () {
-  # taskcluster cli doesn't work .. why?
-  # retry taskcluster api secrets get "$1"
-  curl -sSL --retry 5 "http://taskcluster/secrets/v1/secret/$1"
+  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "$1"
 }
 
 get-secret project/fuzzing/deploy-domino-web-tests | jshon -e secret -e key -u >.ssh/id_ecdsa.domino_web_tests
