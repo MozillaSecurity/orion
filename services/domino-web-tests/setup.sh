@@ -23,6 +23,7 @@ cd "${0%/*}"
 
 packages=(
   libgtk-3-0
+  libdbus-glib-1-2
 )
 sys-embed "${packages[@]}"
 
