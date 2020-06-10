@@ -24,6 +24,8 @@ set -x
 chmod 0400 .ssh/id_*
 
 export PUPPETEER_PRODUCT=firefox
+export GIT_AUTHOR_EMAIL=nobody@community-tc.services.mozilla.com
+export GIT_AUTHOR_NAME="Taskcluster Automation"
 
 git init domino-web-tests
 cd domino-web-tests
