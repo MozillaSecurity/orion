@@ -25,6 +25,9 @@ cd "${0%/*}"
 ./fuzzmanager.sh
 ./grcov.sh
 ./gsutil.sh
+./fluentbit.sh
+./fuzzing_tc.sh
+./taskcluster.sh
 
 packages=(
   apt-utils

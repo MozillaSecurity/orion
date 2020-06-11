@@ -14,9 +14,6 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-# In some environments, we require credentials for talking to credstash
-setup-aws-credentials "$SHIP"
-
 if [[ -n "$OSSFUZZ_PROJECT" ]]
 then
   if  [[ ! -d "$HOME/oss-fuzz" ]]

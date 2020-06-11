@@ -25,6 +25,6 @@ COPY services/libfuzzer/coverage.sh /home/worker/
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-USER worker
 WORKDIR /home/worker
+ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
 CMD ["./launch.sh"]
