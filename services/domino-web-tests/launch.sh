@@ -42,6 +42,10 @@ case "$ACTION" in
     ;;
   test)
     npm test
+    if [ -f "test.results.html" ]; then
+      mkdir results
+      cp test.results.html results/
+    fi
     ;;
   *)
     echo "unknown action: $ACTION" >&2
