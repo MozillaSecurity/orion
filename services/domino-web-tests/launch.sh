@@ -37,7 +37,7 @@ retry npm i --no-progress
 case "$ACTION" in
   trigger)
     retry npm i domino gridl
-    git commit -a -m "Update package-lock.json"
+    git commit -a -m "Update domino and gridl revisions"
     retry git push origin HEAD:master
     ;;
   test)
