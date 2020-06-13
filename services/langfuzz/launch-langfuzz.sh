@@ -16,15 +16,15 @@ function retry () {
 }
 
 function tc-get-secret () {
-  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1" | jshon -e secret -e key -u
+  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1"
 }
 
 # Get the deploy key for langfuzz-config from Taskcluster
-tc-get-secret deploy-langfuzz-config > /root/.ssh/id_rsa.langfuzz-config
+tc-get-secret deploy-langfuzz-config | jshon -e secret -e key -u > /root/.ssh/id_rsa.langfuzz-config
 chmod 0600 /root/.ssh/id_rsa.*
 
 mkdir -p /etc/google/auth /etc/td-agent-bit
-tc-get-secret google-logging-creds > /etc/google/auth/application_default_credentials.json
+tc-get-secret google-logging-creds | jshon -e secret -e key > /etc/google/auth/application_default_credentials.json
 chmod 0600 /etc/google/auth/application_default_credentials.json
 cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
