@@ -64,7 +64,7 @@ if [ ! -d ~/bearspray ]; then
 fi
 
 update_ec2_status "Setup: installing bearspray"
-pip3 install --user -U -e ./bearspray
+retry python3 -m pip install --user -U -e ./bearspray
 
 update_ec2_status "Setup: launching bearspray"
 
