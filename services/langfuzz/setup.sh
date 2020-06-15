@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -8,9 +8,9 @@ set -x
 set -o pipefail
 
 function retry () {
-  # shellcheck disable=SC2015
   for _ in {1..9}; do
-    "$@" && return || sleep 30
+    "$@" && return
+    sleep 30
   done
   "$@"
 }
@@ -82,11 +82,10 @@ retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 # Install fuzzing-tc
 # this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
 # when run under Taskcluster
-retry pip3 install git+https://github.com/MozillaSecurity/fuzzing-tc
+retry python3 -m pip install git+https://github.com/MozillaSecurity/fuzzing-tc
 
 # Install taskcluster CLI
-#TC_VERSION="$(curl --retry 5 -s "https://github.com/$1/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/')"
-TC_VERSION="v29.2.0"
+TC_VERSION="$(curl --retry 5 -s "https://github.com/taskcluster/taskcluster/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/')"
 curl --retry 5 -sSL "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/taskcluster-linux-amd64" -o /usr/local/bin/taskcluster
 chmod +x /usr/local/bin/taskcluster
 
@@ -94,15 +93,6 @@ chmod +x /usr/local/bin/taskcluster
 
 # Generate locales
 locale-gen en_US.utf8
-
-# Ensure the machine uses core dumps with PID in the filename
-# https://github.com/moby/moby/issues/11740
-cat << EOF | tee /etc/sysctl.d/60-langfuzz.conf > /dev/null
-# Ensure that we use PIDs with core dumps
-kernel.core_uses_pid = 1
-# Allow ptrace of any process
-kernel.yama.ptrace_scope = 0
-EOF
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
