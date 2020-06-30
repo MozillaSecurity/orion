@@ -21,6 +21,7 @@ RUN /tmp/recipes/setup.sh \
 COPY services/libfuzzer/launch.sh /home/worker/
 COPY services/libfuzzer/libfuzzer.sh /home/worker/
 COPY services/libfuzzer/coverage.sh /home/worker/
+COPY services/libfuzzer/setup-target.sh /home/worker/
 
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8

@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-# shellcheck disable=SC2016,SC2046
+# shellcheck disable=SC2016
 set -e
 set -x
 
@@ -15,34 +15,25 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
+# Setup required coverage environment variables.
+export COVERAGE=1
+
+REVISION="$(curl --retry 5 -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)"
 export REVISION
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 # For coverage, we also are pinned to a given revision and we need to fetch coverage builds.
-TARGET_BIN="firefox/firefox"
-export JS=${JS:-0}
-if [ "$JS" = 1 ]
+TARGET_BIN="$(./setup-target.sh)"
+JS="${JS:-0}"
+if [[ "$JS" = "1" ]] || [[ -n "$JSRT" ]]
 then
-  if [[ ! -d "$HOME/js" ]]
-  then
-    retry fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n js -o "$WORKDIR" --target js
-  fi
-  chmod -R 755 js
-  TARGET_BIN="js/fuzz-tests"
-  export GCOV_PREFIX="$WORKDIR/js"
-elif [[ ! -d "$HOME/firefox" ]]
-then
-  retry fuzzfetch --build "$REVISION" --asan --coverage --fuzzing --tests gtest -n firefox -o "$WORKDIR"
-  chmod -R 755 firefox
-  export GCOV_PREFIX="$WORKDIR/firefox"
+  export GCOV_PREFIX="$HOME/js"
+else
+  export GCOV_PREFIX="$HOME/firefox"
 fi
 
-# Setup required coverage environment variables.
-export COVERAGE=1
-
-GCOV_PREFIX_STRIP=$(grep pathprefix "$WORKDIR/${TARGET_BIN}.fuzzmanagerconf" | grep -E -o "/.+$" | tr -cd '/' | wc -c)
+GCOV_PREFIX_STRIP="$(grep pathprefix "$HOME/${TARGET_BIN}.fuzzmanagerconf" | grep -E -o "/.+$" | tr -cd '/' | wc -c)"
 export GCOV_PREFIX_STRIP
 
 # %<---[LibFuzzer]------------------------------------------------------------
@@ -57,7 +48,7 @@ RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     --commit-sha "$REVISION" \
     --token NONE \
     --guess-directory-when-missing \
-    -p $(rg -Nor '$1' "pathprefix = (.*)" "$WORKDIR/${TARGET_BIN}.fuzzmanagerconf") \
+    -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.

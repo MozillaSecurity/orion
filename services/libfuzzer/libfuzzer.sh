@@ -14,6 +14,15 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+mkdir -p ~/.ssh
+retry credstash get deploy-fuzzing-shells-private.pem > ~/.ssh/id_rsa.fuzzing-shells-private
+chmod 0600 ~/.ssh/id_*
+cat >> ~/.ssh/config << EOF
+Host fuzzing-shells-private github.com
+Hostname github.com
+IdentityFile ~/.ssh/id_rsa.fuzzing-shells-private
+EOF
+
 if [[ -n "$OSSFUZZ_PROJECT" ]]
 then
   if  [[ ! -d "$HOME/oss-fuzz" ]]
@@ -24,6 +33,14 @@ then
   then
     retry credstash get ossfuzz.gutils >> ~/.boto
   fi
+fi
+
+if [[ -n "$JSRT" ]]
+then
+  retry git clone -v --depth 1 git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git fuzzing-shells-private
+  TOOLNAME="${TOOLNAME-libFuzzer-$FUZZER}"
+  FUZZER="$WORKDIR/fuzzing-shells-private/$JSRT/$FUZZER"
+  JS=1
 fi
 
 # Get FuzzManager configuration from credstash.
@@ -45,23 +62,7 @@ then
   setup-fuzzmanager-hostname "$SHIP"
 fi
 
-# %<---[Target]---------------------------------------------------------------
-
-# Our default target is Firefox, but we support targetting the JS engine instead.
-# In either case, we check if the target is already mounted into the container.
-TARGET_BIN="firefox/firefox"
-JS=${JS:-0}
-if [ "$JS" = 1 ]
-then
-  if [[ ! -d "$HOME/js" ]]
-  then
-    retry fuzzfetch -o "$HOME" -n js -a --fuzzing --target js
-  fi
-  TARGET_BIN="js/fuzz-tests"
-elif [[ ! -d "$HOME/firefox" ]]
-then
-  retry fuzzfetch -o "$HOME" -n firefox -a --fuzzing --tests gtest
-fi
+TARGET_BIN="$(./setup-target.sh)"
 
 # %<---[Constants]------------------------------------------------------------
 
@@ -192,6 +193,11 @@ fi
 export FUZZER="${FUZZER:-SdpParser}"
 export LIBFUZZER=1
 export MOZ_RUN_GTEST=1
+export RUST_BACKTRACE="${RUST_BACKTRACE-1}"
+if [[ "$JS" = 1 ]]
+then
+  export LD_LIBRARY_PATH=~/js/dist/bin
+fi
 # shellcheck disable=SC2206
 LIBFUZZER_ARGS=($LIBFUZZER_ARGS $TOKEN $CORPORA)
 if [ -z "$LIBFUZZER_INSTANCES" ]
@@ -215,5 +221,5 @@ $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
   --stats "./stats" \
   --sigdir "$HOME/signatures" \
-  --tool "libFuzzer-$FUZZER" \
+  --tool "${TOOLNAME-libFuzzer-$FUZZER}" \
   --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
