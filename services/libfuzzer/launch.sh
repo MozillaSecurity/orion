@@ -59,7 +59,9 @@ then
 EOF
     mkdir -p /var/lib/td-agent-bit/pos
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
-    sysctl --load /etc/sysctl.d/60-fuzzos.conf
+    if [[ -z "$EC2SPOTMANAGER_POOLID" ]]; then
+      sysctl --load /etc/sysctl.d/60-fuzzos.conf
+    fi
     su worker -c "$0"
 elif [[ $COVERAGE ]]
 then
