@@ -38,7 +38,7 @@ fi
 if [[ -n "$JSRT" ]]
 then
   retry git clone -v --depth 1 git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git fuzzing-shells-private
-  TOOLNAME="${TOOLNAME-libFuzzer-$FUZZER}"
+  TOOLNAME="${TOOLNAME:-libFuzzer-$FUZZER}"
   FUZZER="$WORKDIR/fuzzing-shells-private/$JSRT/$FUZZER"
   JS=1
 fi
@@ -193,7 +193,7 @@ fi
 export FUZZER="${FUZZER:-SdpParser}"
 export LIBFUZZER=1
 export MOZ_RUN_GTEST=1
-export RUST_BACKTRACE="${RUST_BACKTRACE-1}"
+export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
 if [[ "$JS" = 1 ]]
 then
   export LD_LIBRARY_PATH=~/js/dist/bin
@@ -221,5 +221,5 @@ $AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
   --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
   --stats "./stats" \
   --sigdir "$HOME/signatures" \
-  --tool "${TOOLNAME-libFuzzer-$FUZZER}" \
+  --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
   --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
