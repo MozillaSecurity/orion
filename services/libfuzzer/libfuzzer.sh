@@ -67,7 +67,9 @@ TARGET_BIN="$(./setup-target.sh)"
 # %<---[Constants]------------------------------------------------------------
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
-AFL_LIBFUZZER_DAEMON="python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py"
+function run-afl-libfuzzer-daemon () {
+  python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+}
 
 # IPC
 if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
@@ -77,8 +79,8 @@ then
   export MOZ_IPC_MESSAGE_FUZZ_BLACKLIST="$HOME/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
 fi
 
-S3_PROJECT_ARGS=""
-S3_QUEUE_UPLOAD_ARGS=""
+S3_PROJECT_ARGS=()
+S3_QUEUE_UPLOAD_ARGS=()
 
 # %<---[Corpora]--------------------------------------------------------------
 
@@ -92,25 +94,27 @@ then
   # into a new corpus.
 
   # Generic parameters for S3
-  S3_PROJECT_ARGS="--s3-bucket mozilla-aflfuzz --project $S3_PROJECT"
+  S3_PROJECT_ARGS+=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
   # This option ensures that we synchronize local finds from/to S3 queues.
   # When generating coverage, it does not make sense to use this.
   if [ -z "$COVERAGE" ]
   then
-    S3_QUEUE_UPLOAD_ARGS="--s3-queue-upload"
+    S3_QUEUE_UPLOAD_ARGS+=(--s3-queue-upload)
   fi
 
   # This can be used to download only a subset of corpus files for fuzzing
-  CORPUS_DOWNLOAD_ARGS=""
+  CORPUS_DOWNLOAD_ARGS=()
   if [ -n "$S3_CORPUS_SUBSET_SIZE" ]
   then
-    CORPUS_DOWNLOAD_ARGS="--s3-corpus-download-size $S3_CORPUS_SUBSET_SIZE"
+    CORPUS_DOWNLOAD_ARGS+=(--s3-corpus-download-size "$S3_CORPUS_SUBSET_SIZE")
   fi
 
-  # Download the corpus from S3
-  # shellcheck disable=SC2086
-  $AFL_LIBFUZZER_DAEMON $CORPUS_DOWNLOAD_ARGS $S3_PROJECT_ARGS --s3-corpus-download corpora/
+  if [ -z "$S3_CORPUS_REFRESH" ]
+  then
+    # Download the corpus from S3
+    run-afl-libfuzzer-daemon "${CORPUS_DOWNLOAD_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --s3-corpus-download corpora/
+  fi
 elif [ -n "$OSSFUZZ_PROJECT" ]
 then
   # Use synced corpora from OSSFuzz.
@@ -206,20 +210,27 @@ then
 fi
 
 # Support auto reduction, format is "MIN;PERCENT".
-LIBFUZZER_AUTOREDUCE_ARGS=""
+LIBFUZZER_AUTOREDUCE_ARGS=()
 if [ -n "$LIBFUZZER_AUTOREDUCE" ]
 then
   IFS=';' read -r -a LIBFUZZER_AUTOREDUCE_PARAMS <<< "$LIBFUZZER_AUTOREDUCE"
-  LIBFUZZER_AUTOREDUCE_ARGS="--libfuzzer-auto-reduce-min ${LIBFUZZER_AUTOREDUCE_PARAMS[0]} --libfuzzer-auto-reduce ${LIBFUZZER_AUTOREDUCE_PARAMS[1]}"
+  LIBFUZZER_AUTOREDUCE_ARGS+=(--libfuzzer-auto-reduce-min "${LIBFUZZER_AUTOREDUCE_PARAMS[0]}" --libfuzzer-auto-reduce "${LIBFUZZER_AUTOREDUCE_PARAMS[1]}")
 fi
 
-# Run LibFuzzer
-# shellcheck disable=SC2086
-$AFL_LIBFUZZER_DAEMON $S3_PROJECT_ARGS $S3_QUEUE_UPLOAD_ARGS \
-  --fuzzmanager \
-  --libfuzzer $LIBFUZZER_AUTOREDUCE_ARGS \
-  --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
-  --stats "./stats" \
-  --sigdir "$HOME/signatures" \
-  --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-  --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
+if [ -z "$S3_CORPUS_REFRESH" ]
+then
+  # Run LibFuzzer
+  run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" "${S3_QUEUE_UPLOAD_ARGS[@]}" \
+    --fuzzmanager \
+    --libfuzzer "${LIBFUZZER_AUTOREDUCE_ARGS[@]}" \
+    --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
+    --stats "./stats" \
+    --sigdir "$HOME/signatures" \
+    --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
+    --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
+else
+  run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
+    --s3-corpus-refresh "$HOME/workspace" \
+    --libfuzzer \
+    --build "$HOME/$TARGET_BIN"
+fi
