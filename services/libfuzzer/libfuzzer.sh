@@ -14,9 +14,18 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+if [[ -z "$FUZZER" ]]
+then
+  echo "Required environment variable FUZZER was not found!" >&2
+  exit 1
+fi
+
 mkdir -p ~/.ssh
-retry credstash get deploy-fuzzing-shells-private.pem > ~/.ssh/id_rsa.fuzzing-shells-private
-chmod 0600 ~/.ssh/id_*
+if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_CREDSTASH" ]]
+then
+  retry credstash get deploy-fuzzing-shells-private.pem > ~/.ssh/id_rsa.fuzzing-shells-private
+  chmod 0600 ~/.ssh/id_*
+fi
 cat >> ~/.ssh/config << EOF
 Host fuzzing-shells-private github.com
 Hostname github.com
@@ -29,7 +38,7 @@ then
   then
     retry git clone --depth 1 --no-tags https://github.com/google/oss-fuzz
   fi
-  if [[ ! -f "$HOME/.boto" ]]
+  if [[ ! -f "$HOME/.boto" ]] && [[ -z "$NO_CREDSTASH" ]]
   then
     retry credstash get ossfuzz.gutils >> ~/.boto
   fi
@@ -45,21 +54,17 @@ fi
 
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
-if [[ ! -f "$HOME/.fuzzmanagerconf" ]]
+if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
 then
   retry credstash get fuzzmanagerconf > .fuzzmanagerconf
-fi
-
-# Update FuzzManager config for this instance.
-mkdir -p signatures
-cat >> .fuzzmanagerconf << EOF
+  # Update FuzzManager config for this instance.
+  mkdir -p signatures
+  cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 EOF
-
-if [ -z "$VIRGO" ]
-then
   # Update Fuzzmanager config with suitable hostname based on the execution environment.
   setup-fuzzmanager-hostname "$SHIP"
+  chmod 0600 ~/.fuzzmanagerconf
 fi
 
 TARGET_BIN="$(./setup-target.sh)"
@@ -194,7 +199,6 @@ fi
 
 # %<---[LibFuzzer]------------------------------------------------------------
 
-export FUZZER="${FUZZER:-SdpParser}"
 export LIBFUZZER=1
 export MOZ_RUN_GTEST=1
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
@@ -225,7 +229,6 @@ then
     --libfuzzer "${LIBFUZZER_AUTOREDUCE_ARGS[@]}" \
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
-    --sigdir "$HOME/signatures" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
     --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
 else

@@ -10,9 +10,12 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-retry credstash get fuzzmanagerconf > ~/.fuzzmanagerconf
-chmod 0600 ~/.fuzzmanagerconf
-setup-fuzzmanager-hostname "$SHIP"
+if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
+then
+  retry credstash get fuzzmanagerconf > ~/.fuzzmanagerconf
+  setup-fuzzmanager-hostname "$SHIP"
+  chmod 0600 ~/.fuzzmanagerconf
+fi
 
 JS_SHELL_DEFAULT_TIMEOUT=24
 

@@ -17,11 +17,14 @@ function onExit {
 
 if [[ "$(id -u)" = "0" ]]
 then
-  # In some environments, we require credentials for talking to credstash
-  mkdir -p /etc/google/auth /etc/td-agent-bit
-  su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP' && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
-  chmod 0600 /etc/google/auth/application_default_credentials.json
-  cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+  if [[ -z "$NO_CREDSTASH" ]]
+  then
+    # In some environments, we require credentials for talking to credstash
+    su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP'"
+    mkdir -p /etc/google/auth /etc/td-agent-bit
+    su worker -c ". ~/.local/bin/common.sh && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
+    chmod 0600 /etc/google/auth/application_default_credentials.json
+    cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
     Flush        5
     Daemon       On
@@ -57,14 +60,16 @@ then
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
 EOF
-  mkdir -p /var/lib/td-agent-bit/pos
-  /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
-  if [[ -z "$EC2SPOTMANAGER_POOLID" ]]; then
-    sysctl --load /etc/sysctl.d/60-fuzzos.conf
+    mkdir -p /var/lib/td-agent-bit/pos
+    /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
   fi
+  sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -c "$0"
-  echo "Waiting for logs to flush..." >&2
-  sleep 10
+  if [[ -z "$NO_LOGS" ]]
+  then
+    echo "Waiting for logs to flush..." >&2
+    sleep 10
+  fi
 elif [[ $COVERAGE ]]
 then
   trap onExit EXIT
