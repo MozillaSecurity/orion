@@ -192,9 +192,17 @@ function setup-fuzzmanager-hostname {
 
 # Disable AWS EC2 pool; suitable as trap function.
 function disable-ec2-pool {
-  if [[ -n $1 ]]
+  if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
   then
-    python3 -m EC2Reporter --disable "$1"
+    python3 -m EC2Reporter --disable "$EC2SPOTMANAGER_POOLID"
+  fi
+}
+
+function update-ec2-status {
+  if [[ -n "$EC2SPOTMANAGER_POOLID" ]]; then
+    python3 -m EC2Reporter --report "$@" || true
+  elif [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
+    python3 -m TaskStatusReporter --report "$@" || true
   fi
 }
 

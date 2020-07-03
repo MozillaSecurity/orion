@@ -15,14 +15,6 @@ source ~/.local/bin/common.sh
 
 SHIP="$(get-provider)"
 
-function update_ec2_status {
-  if [[ -n "$EC2SPOTMANAGER_POOLID" ]]; then
-    python3 -m EC2Reporter --report "$@" || true
-  elif [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
-    python3 -m TaskStatusReporter --report "$@" || true
-  fi
-}
-
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
@@ -40,7 +32,7 @@ chmod 0600 .fuzzmanagerconf
 
 # only clone if it wasn't already mounted via docker run -v
 if [ ! -d ~/bearspray ]; then
-  update_ec2_status "Setup: cloning bearspray"
+  update-ec2-status "Setup: cloning bearspray"
 
   # Get deployment key from credstash
   retry credstash get deploy-bearspray.pem > .ssh/id_ecdsa.bearspray
@@ -63,10 +55,10 @@ if [ ! -d ~/bearspray ]; then
   )
 fi
 
-update_ec2_status "Setup: installing bearspray"
+update-ec2-status "Setup: installing bearspray"
 retry python3 -m pip install --user -U -e ./bearspray
 
-update_ec2_status "Setup: launching bearspray"
+update-ec2-status "Setup: launching bearspray"
 
 export GCOV=/usr/local/bin/gcov-7
 

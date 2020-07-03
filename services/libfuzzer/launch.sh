@@ -12,7 +12,7 @@ source ~worker/.local/bin/common.sh
 
 function onExit {
   echo "Script is terminating - executing trap commands."
-  disable-ec2-pool "$EC2SPOTMANAGER_POOLID"
+  disable-ec2-pool
 }
 
 if [[ "$(id -u)" = "0" ]]
