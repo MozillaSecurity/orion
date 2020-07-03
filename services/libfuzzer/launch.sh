@@ -11,17 +11,17 @@ set -o pipefail
 source ~worker/.local/bin/common.sh
 
 function onExit {
-    echo "Script is terminating - executing trap commands."
-    disable-ec2-pool "$EC2SPOTMANAGER_POOLID"
+  echo "Script is terminating - executing trap commands."
+  disable-ec2-pool "$EC2SPOTMANAGER_POOLID"
 }
 
 if [[ "$(id -u)" = "0" ]]
 then
-    # In some environments, we require credentials for talking to credstash
-    mkdir -p /etc/google/auth /etc/td-agent-bit
-    su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP' && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
-    chmod 0600 /etc/google/auth/application_default_credentials.json
-    cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+  # In some environments, we require credentials for talking to credstash
+  mkdir -p /etc/google/auth /etc/td-agent-bit
+  su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP' && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
+  chmod 0600 /etc/google/auth/application_default_credentials.json
+  cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
     Flush        5
     Daemon       On
@@ -57,18 +57,20 @@ then
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
 EOF
-    mkdir -p /var/lib/td-agent-bit/pos
-    /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
-    if [[ -z "$EC2SPOTMANAGER_POOLID" ]]; then
-      sysctl --load /etc/sysctl.d/60-fuzzos.conf
-    fi
-    su worker -c "$0"
+  mkdir -p /var/lib/td-agent-bit/pos
+  /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
+  if [[ -z "$EC2SPOTMANAGER_POOLID" ]]; then
+    sysctl --load /etc/sysctl.d/60-fuzzos.conf
+  fi
+  su worker -c "$0"
+  echo "Waiting for logs to flush..." >&2
+  sleep 10
 elif [[ $COVERAGE ]]
 then
-    trap onExit EXIT
-    echo "Launching coverage LibFuzzer run."
-    ./coverage.sh
+  trap onExit EXIT
+  echo "Launching coverage LibFuzzer run."
+  ./coverage.sh
 else
-    echo "Launching LibFuzzer run."
-    ./libfuzzer.sh
+  echo "Launching LibFuzzer run."
+  ./libfuzzer.sh
 fi

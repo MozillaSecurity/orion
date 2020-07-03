@@ -63,9 +63,11 @@ EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
-
 wait_token="$(su worker -c "rwait create")"
 su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"
 
 # need to keep the container running
-exec rwait wait "$wait_token"
+rwait wait "$wait_token"
+
+echo "Waiting for logs to flush..." >&2
+sleep 10

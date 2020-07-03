@@ -66,7 +66,9 @@ EOF
     sysctl --load /etc/sysctl.d/60-fuzzos.conf
   fi
   su worker -c "$0"
+  echo "Waiting for logs to flush..." >&2
+  sleep 10
 else
-  echo "Launching funfuzz."
+  echo "Launching funfuzz." >&2
   ./funfuzz.sh
 fi
