@@ -232,5 +232,5 @@ else
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
     --s3-corpus-refresh "$HOME/workspace" \
     --libfuzzer \
-    --build "$HOME/$TARGET_BIN"
+    --build "$(dirname "$HOME/$TARGET_BIN")"
 fi
