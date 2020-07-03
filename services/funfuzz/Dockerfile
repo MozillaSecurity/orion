@@ -13,13 +13,13 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN useradd -d /home/worker -s /bin/bash -m worker
 
 COPY recipes/linux/ /tmp/recipes/
-COPY services/funfuzz-bare/setup.sh /tmp/recipes/
+COPY services/funfuzz/setup.sh /tmp/recipes/
 COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes
 
-COPY services/funfuzz-bare/launch.sh /home/worker/
-COPY services/funfuzz-bare/funfuzz.sh /home/worker/
+COPY services/funfuzz/launch.sh /home/worker/
+COPY services/funfuzz/funfuzz.sh /home/worker/
 
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
