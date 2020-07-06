@@ -223,6 +223,7 @@ fi
 
 if [ -z "$S3_CORPUS_REFRESH" ]
 then
+  update-ec2-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES"
   # Run LibFuzzer
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" "${S3_QUEUE_UPLOAD_ARGS[@]}" \
     --fuzzmanager \
@@ -232,6 +233,7 @@ then
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
     --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
 else
+  update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh"
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
     --s3-corpus-refresh "$HOME/workspace" \
     --libfuzzer \
