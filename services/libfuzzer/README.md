@@ -6,7 +6,7 @@ The production Dockerfile uses credstash to fetch credentials for our private Fu
 
 ```bash
 REVISION=$(curl -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)
-fuzzfetch --build "$REVISION" --fuzzing --coverage -a --tests gtest -n firefox
+fuzzfetch --build "$REVISION" --fuzzing --coverage -a --gtest -n firefox
 
 docker run \
     -h `hostname` \
@@ -26,7 +26,7 @@ It is recommended to reserve at least 4GB of memory for containers running cover
 ### Example: LibFuzzer Run
 
 ```bash
-fuzzfetch --fuzzing --coverage -a --tests gtest -n firefox
+fuzzfetch --fuzzing --coverage -a --gtest -n firefox
 
 docker run \
     -h `hostname` \

@@ -41,7 +41,7 @@ else
   TARGET_BIN="firefox/firefox"
   if [[ ! -d "$HOME/firefox" ]]
   then
-    retry fuzzfetch -n firefox --tests gtest "${FETCH_ARGS[@]}"
+    retry fuzzfetch -n firefox --gtest "${FETCH_ARGS[@]}"
   fi
   chmod -R 0755 "$HOME/firefox"
 fi
