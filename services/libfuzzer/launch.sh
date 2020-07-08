@@ -10,9 +10,17 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
-function onExit {
+function on-exit {
   echo "Script is terminating - executing trap commands."
-  disable-ec2-pool
+  if [[ $COVERAGE ]]
+  then
+    disable-ec2-pool || true
+  fi
+  if [[ -z "$NO_LOGS" ]]
+  then
+    echo "Waiting for logs to flush..." >&2
+    sleep 10
+  fi
 }
 
 if [[ "$(id -u)" = "0" ]]
@@ -65,17 +73,14 @@ EOF
   fi
   sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -c "$0"
-  if [[ -z "$NO_LOGS" ]]
-  then
-    echo "Waiting for logs to flush..." >&2
-    sleep 10
-  fi
-elif [[ $COVERAGE ]]
-then
-  trap onExit EXIT
-  echo "Launching coverage LibFuzzer run."
-  ./coverage.sh
 else
-  echo "Launching LibFuzzer run."
-  ./libfuzzer.sh
+  trap on-exit EXIT ERR
+  if [[ $COVERAGE ]]
+  then
+    echo "Launching coverage LibFuzzer run."
+    ./coverage.sh
+  else
+    echo "Launching LibFuzzer run."
+    ./libfuzzer.sh
+  fi
 fi
