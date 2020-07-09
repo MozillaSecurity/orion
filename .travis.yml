@@ -51,8 +51,6 @@ stages:
 
 jobs:
   allow_failures:
-    - env: IMAGE=services/libfuzzer
-    - env: IMAGE=services/funfuzz
     - env: IMAGE=services/grizzly-android
     - env: IMAGE=services/u2f-hid-rs
     - env: IMAGE=services/fuzzmanager
