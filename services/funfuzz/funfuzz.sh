@@ -25,7 +25,7 @@ then
 elif [[ -n "$TASK_ID" ]]
 then
   deadline="$(taskcluster api queue status "$TASK_ID" | jshon -e status -e deadline -u)"
-  TARGET_TIME="$(python3 -c "import datetime,dateutil;print(int((dateutil.parser.isoparse('$deadline')-datetime.datetime.now()).total_seconds()))")"
+  TARGET_TIME="$(python3 -c "import datetime,dateutil.parser;print(int((dateutil.parser.isoparse('$deadline')-datetime.datetime.now()).total_seconds()))")"
 else
   TARGET_TIME=28800
 fi
