@@ -71,7 +71,8 @@ EOF
     mkdir -p /var/lib/td-agent-bit/pos
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
   fi
-  sysctl --load /etc/sysctl.d/60-fuzzos.conf
+  # These sysctls shouldn't be necessary for libFuzzer
+  # sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -c "$0"
 else
   trap on-exit EXIT ERR
