@@ -18,6 +18,7 @@ COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes
 
+COPY services/funfuzz/status.sh /home/worker/
 COPY services/funfuzz/launch.sh /home/worker/
 COPY services/funfuzz/funfuzz.sh /home/worker/
 

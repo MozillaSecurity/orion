@@ -25,7 +25,7 @@ then
 elif [[ -n "$TASK_ID" ]]
 then
   deadline="$(taskcluster api queue status "$TASK_ID" | jshon -e status -e deadline -u)"
-  TARGET_TIME="$(python3 -c "import datetime,dateutil.parser;print(int((dateutil.parser.isoparse('$deadline')-datetime.datetime.now(datetime.timezone.utc)).total_seconds()))")"
+  TARGET_TIME="$(python3 -c "import datetime,dateutil.parser;print(int((dateutil.parser.isoparse('$deadline')-datetime.datetime.now(datetime.timezone.utc)).total_seconds())-5*60)")"
 else
   TARGET_TIME=28800
 fi
@@ -62,13 +62,14 @@ function select-build () {
 
 screen -d -m -L -S funfuzz
 nprocs="$(python3 -c "import multiprocessing;print(multiprocessing.cpu_count())")"
-update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")"
+update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
 echo "[$(date)] launching $nprocs processes..."
 for (( i=1; i<=nprocs; i++ ))
 do
   build="$(select-build)"
   screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
 done
+screen -S funfuzz -X screen ~/status.sh
 echo "[$(date)] waiting $TARGET_TIME"
 sleep $TARGET_TIME
 echo "[$(date)] $TARGET_TIME elapsed, exiting..."
