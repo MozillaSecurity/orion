@@ -184,7 +184,7 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 if [ "${SHIP,,}" = "taskcluster" ]; then
 tee run-tcreport.sh << EOF
 #!/bin/bash
-python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
+while true; do python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30; sleep 30; done
 EOF
 chmod u+x run-tcreport.sh
 screen -t tcreport -dmS tcreport ./run-tcreport.sh
@@ -223,7 +223,7 @@ fi
 
 if [ -z "$S3_CORPUS_REFRESH" ]
 then
-  update-ec2-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES"
+  update-ec2-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES instances" || true
   # Run LibFuzzer
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" "${S3_QUEUE_UPLOAD_ARGS[@]}" \
     --fuzzmanager \
@@ -233,7 +233,7 @@ then
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
     --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
 else
-  update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh"
+  update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
     --s3-corpus-refresh "$HOME/workspace" \
     --libfuzzer \
