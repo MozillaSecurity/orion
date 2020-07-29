@@ -46,11 +46,11 @@ packages=(
   libglu1-mesa
   libosmesa6
   libpulse0
-  mercurial
   p7zip-full
   python3-wheel
   screen
   subversion
+  ubuntu-desktop-minimal
   ubuntu-restricted-addons
   wget
   zip
@@ -68,6 +68,7 @@ packages_with_recommends=(
   gpg-agent
   jshon
   less
+  libavcodec-extra
   libgtk-3-0
   locales
   nano
