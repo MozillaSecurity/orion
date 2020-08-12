@@ -207,7 +207,7 @@ then
   export LD_LIBRARY_PATH=~/js/dist/bin
 fi
 # shellcheck disable=SC2206
-LIBFUZZER_ARGS=($LIBFUZZER_ARGS $TOKEN $CORPORA)
+LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $TOKEN $CORPORA)
 if [ -z "$LIBFUZZER_INSTANCES" ]
 then
   LIBFUZZER_INSTANCES=$(nproc)
