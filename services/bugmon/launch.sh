@@ -17,12 +17,12 @@ function tc-get-secret () {
 
 export ARTIFACT_ROOT="/bugmon-artifacts"
 
-case "$BUGMON_ACTION" in
+case "$BUG_ACTION" in
   monitor | report)
     BZ_API_KEY="$(tc-get-secret bz-api-key | jshon -e secret -e key -u)"
     export BZ_API_KEY
     export BZ_API_ROOT="https://bugzilla.mozilla.org/rest"
-    if [ "$BUGMON_ACTION" == "monitor" ]; then
+    if [ "$BUG_ACTION" == "monitor" ]; then
       bugmon-monitor "$ARTIFACT_ROOT"
     else
       bugmon-report "$PROCESSOR_ARTIFACT"
@@ -32,7 +32,7 @@ case "$BUGMON_ACTION" in
     bugmon-process "$ARTIFACT_ROOT/$MONITOR_ARTIFACT" "$ARTIFACT_ROOT/$PROCESSOR_ARTIFACT"
     ;;
   *)
-    echo "unknown action: $BUGMON_ACTION" >&2
+    echo "unknown action: $BUG_ACTION" >&2
     exit 1
     ;;
 esac >"$ARTIFACT_ROOT/live.log" 2>&1
