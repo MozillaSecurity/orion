@@ -35,4 +35,4 @@ case "$BUGMON_ACTION" in
     echo "unknown action: $BUGMON_ACTION" >&2
     exit 1
     ;;
-esac
+esac >"$ARTIFACT_ROOT/live.log" 2>&1
