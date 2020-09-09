@@ -94,6 +94,8 @@ jobs:
       name: CI Node 12
     - env: IMAGE=services/domino-web-tests
       name: Domino Web Tests
+    - env: IMAGE=services/bugmon
+      name: Bugmon
 
 script:
   - ./monorepo.py -ci travis -build -test -deliver -path $IMAGE
