@@ -15,7 +15,8 @@ function tc-get-secret () {
   TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1"
 }
 
-export ARTIFACT_ROOT="/bugmon-artifacts"
+export ARTIFACT_DEST="/bugmon-artifacts"
+export TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 case "$BUG_ACTION" in
   monitor | report)
@@ -23,16 +24,16 @@ case "$BUG_ACTION" in
     export BZ_API_KEY
     export BZ_API_ROOT="https://bugzilla.mozilla.org/rest"
     if [ "$BUG_ACTION" == "monitor" ]; then
-      bugmon-monitor "$ARTIFACT_ROOT"
+      bugmon-monitor "$ARTIFACT_DEST"
     else
-      bugmon-report "$PROCESSOR_ARTIFACT"
+      bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT"
     fi
     ;;
   process)
-    bugmon-process "$ARTIFACT_ROOT/$MONITOR_ARTIFACT" "$ARTIFACT_ROOT/$PROCESSOR_ARTIFACT"
+    bugmon-process "$TC_ARTIFACT_ROOT/$MONITOR_ARTIFACT" "$ARTIFACT_DEST/$PROCESSOR_ARTIFACT" --dry-run
     ;;
   *)
     echo "unknown action: $BUG_ACTION" >&2
     exit 1
     ;;
-esac >"$ARTIFACT_ROOT/live.log" 2>&1
+esac >"$ARTIFACT_DEST/live.log" 2>&1
