@@ -45,8 +45,7 @@ packages=(
   libdbus-glib-1-2
   libglu1-mesa
   libosmesa6
-  libpulse0
-  p7zip-full
+  pulseaudio
   python3-wheel
   screen
   subversion

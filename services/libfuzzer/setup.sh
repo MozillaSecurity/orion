@@ -44,6 +44,7 @@ packages=(
   locales
   nano
   openssh-client
+  pulseaudio
   screen
   software-properties-common
   unzip
