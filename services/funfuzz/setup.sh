@@ -12,6 +12,7 @@ source "${0%/*}/common.sh"
 
 #### Bootstrap Packages
 
+dpkg --add-architecture i386
 sys-update
 
 #### Install recipes
@@ -39,6 +40,9 @@ packages=(
   gpg-agent
   jshon
   less
+  libatomic1:i386
+  libc6:i386
+  libstdc++6:i386
   locales
   nano
   openssh-client
