@@ -38,36 +38,67 @@ fi
 BUILDS="$HOME/builds"
 mkdir -p "$BUILDS"
 
-builds=(asan debug)
+builds=(
+  mc-32-debug
+  mc-32-debug
+  mc-32-opt
+  mc-64-debug
+  mc-64-debug
+  mc-64-debug
+  mc-64-debug
+  mc-64-opt
+  mc-64-opt
+  mc-64-opt-asan
+  mc-64-opt-asan
+)
 function select-build () {
-  n="$(python3 -c "import random;print(random.randrange(${#builds[@]}))")"
-  build="${builds[n]}"
-  if [[ ! -d "$BUILDS/$build" ]]
-  then
-    case "$build" in
-      asan)
-        fuzzfetch --target js -o "$BUILDS" --asan --fuzzing -n "$build"
-        ;;
-      debug)
-        fuzzfetch --target js -o "$BUILDS" --debug --fuzzing -n "$build"
-        ;;
-      *)
-        echo "unknown build: $build" >&2
-        exit 1
-        ;;
-    esac
-  fi
+  while true; do
+    n="$(python3 -c "import random;print(random.randrange(${#builds[@]}))")"
+    build="${builds[n]}"
+    if [[ ! -d "$BUILDS/$build" ]]
+    then
+      flags=(--central --target js -o "$BUILDS" -n "$build")
+      case "$build" in
+        mc-32-debug)
+          flags+=(--debug --cpu x86)
+          ;;
+        mc-32-opt)
+          flags+=(--cpu x86)
+          ;;
+        mc-64-debug)
+          flags+=(--debug)
+          ;;
+        mc-64-opt)
+          ;;
+        mc-64-opt-asan)
+          flags+=(--asan)
+          ;;
+        *)
+          echo "unknown build: $build" >&2
+          exit 1
+          ;;
+      esac
+      if fuzzfetch "${flags[@]}"; then
+        break
+      else
+        echo "failed to download $build! ... picking again in 10s" >&2
+        sleep 10
+      fi
+    fi
+  done
   echo "$build"
 }
 
 screen -d -m -L -S funfuzz
-nprocs="$(python3 -c "import multiprocessing;print(multiprocessing.cpu_count())")"
+nprocs="${NPROCS-$(python3 -c "import multiprocessing;print(multiprocessing.cpu_count())")}"
 update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
 echo "[$(date)] launching $nprocs processes..."
 for (( i=1; i<=nprocs; i++ ))
 do
   build="$(select-build)"
+  screen -S funfuzz -X setenv LD_LIBRARY_PATH "$BUILDS/$build/dist/bin/"
   screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
+  sleep 1
 done
 screen -S funfuzz -X screen ~/status.sh
 echo "[$(date)] waiting $TARGET_TIME"
