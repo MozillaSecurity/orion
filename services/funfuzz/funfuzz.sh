@@ -84,6 +84,8 @@ function select-build () {
         echo "failed to download $build! ... picking again in 10s" >&2
         sleep 10
       fi
+    else
+      break
     fi
   done
   echo "$build"
