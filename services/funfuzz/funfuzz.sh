@@ -16,6 +16,8 @@ then
   setup-fuzzmanager-hostname "$SHIP"
   chmod 0600 ~/.fuzzmanagerconf
 fi
+# don't use `Collector --refresh` because make_collector sets tool and sigdir
+python3 -c "from funfuzz.util import create_collector; create_collector.make_collector().refresh()"
 
 JS_SHELL_DEFAULT_TIMEOUT=24
 
