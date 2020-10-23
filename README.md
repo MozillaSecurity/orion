@@ -6,7 +6,7 @@
   Monorepo for building and publishing multiple Docker containers as microservices within a single repository.
 </p>
 <p align="center">
-<a href="https://travis-ci.org/MozillaSecurity/orion"><img src="https://travis-ci.org/MozillaSecurity/orion.svg?branch=master"></a>
+<a href="https://travis-ci.com/MozillaSecurity/orion"><img src="https://travis-ci.com/MozillaSecurity/orion.svg?branch=master"></a>
 <a href="https://www.irccloud.com/invite?channel=%23fuzzing&amp;hostname=irc.mozilla.org&amp;port=6697&amp;ssl=1"><img src="https://img.shields.io/badge/IRC-%23fuzzing-1e72ff.svg?style=flat" alt="IRC"></a>
 <br/><br/>
 FuzzOS<br>
