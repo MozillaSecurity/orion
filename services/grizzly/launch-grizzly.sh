@@ -59,6 +59,13 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     Match *
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
+
+[OUTPUT]
+    Name file
+    Match screenlog.*
+    Path /logs/
+    Format template
+    Template {time} {message}
 EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
