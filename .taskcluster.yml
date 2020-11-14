@@ -73,6 +73,7 @@ tasks:
         payload:
           features:
             dind: true
+            taskclusterProxy: true
           maxRunTime: 3600
           image: "${taskboot_image}"
           env:
