@@ -1,0 +1,116 @@
+version: 1
+policy:
+  pullRequests: collaborators
+tasks:
+  $let:
+
+    fetch_rev:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.head.sha}
+      else:
+        $if: 'tasks_for == "github-push"'
+        then: ${event.after}
+        else: ${event.release.tag_name}
+
+    fetch_ref:
+      $if: 'tasks_for == "github-pull-request"'
+      then: "pull/${event.number}/head"
+      else:
+        $if: 'tasks_for == "github-push"'
+        then: ${event.ref}
+        else: "tags/${event.release.tag_name}"
+
+    head_branch:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.head.ref}
+      else:
+        $if: 'tasks_for == "github-push"'
+        then:
+          # Strip ref branch prefix
+          $if: 'event.ref[0:11] == "refs/heads/"'
+          then: ${event.ref[11:]}
+          else: ${event.ref}
+        else: ${event.release.target_commitish}
+
+    http_repo:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.base.repo.clone_url}
+      else: ${event.repository.clone_url}
+
+    taskboot_image: "mozilla/taskboot:0.2.7"
+
+    docker_secret: "project/fuzzing/docker-hub"
+  in:
+    $if: 'tasks_for in ["github-pull-request", "github-push"]'
+    then:
+      $map:
+        - {path: core/linux/amd64, title: Core, name: core, deps: []}
+        - {path: base/linux/fuzzos, title: FuzzOS, name: fuzzos, deps: [{$eval: as_slugid("core")}]}
+        - {path: services/grizzly, title: Grizzly, name: grizzly, deps: []}
+        - {path: services/langfuzz, title: LangFuzz, name: langfuzz, deps: []}
+        - {path: services/libfuzzer, title: LibFuzzer, name: libfuzzer, deps: []}
+        - {path: services/funfuzz, title: FunFuzz, name: funfuzz, deps: []}
+        - {path: services/credstash, title: Credstash, name: credstash, deps: []}
+        - {path: services/ci-py-27, title: CI Python 2.7, name: ci-py-27, deps: []}
+        - {path: services/ci-py-35, title: CI Python 3.5, name: ci-py-35, deps: []}
+        - {path: services/ci-py-36, title: CI Python 3.6, name: ci-py-36, deps: []}
+        - {path: services/ci-py-37, title: CI Python 3.7, name: ci-py-37, deps: []}
+        - {path: services/ci-py-38, title: CI Python 3.8, name: ci-py-38, deps: []}
+        - {path: services/ci-py-39, title: CI Python 3.9, name: ci-py-39, deps: []}
+        - {path: services/ci-node-10, title: CI Node 10, name: ci-node-10, deps: []}
+        - {path: services/ci-node-12, title: CI Node 12, name: ci-node-12, deps: []}
+        - {path: services/domino-web-tests, title: Domino Web Tests, name: domino-web-tests, deps: [{$eval: as_slugid("ci-node-12")}]}
+        - {path: services/bugmon, title: Bugmon, name: bugmon, deps: [{$eval: as_slugid("grizzly")}]}
+      each(build):
+        taskId:
+          $eval: as_slugid(build.name)
+        created: {$fromNow: ''}
+        deadline: {$fromNow: '2 hours'}
+        provisionerId: proj-fuzzing
+        workerType: ci
+        dependencies:
+          $eval: build.deps
+        payload:
+          features:
+            dind: true
+          maxRunTime: 3600
+          image: "${taskboot_image}"
+          env:
+            GIT_REPOSITORY: ${http_repo}
+            GIT_REVISION: ${fetch_rev}
+          command:
+            - taskboot
+            - build
+            - --build-tool
+            - dind
+            - --image
+            - mozillasecurity/${build.name}
+            - --tag
+            - "${fetch_rev}"
+            - --tag
+            - "${fetch_rev}"
+            - --write
+            - /image.tar
+            - --secret
+            - "${docker_secret}"
+            - --push
+            - ${build.path}/Dockerfile
+          artifacts:
+            public/${build.name}.tar:
+              expires: {$fromNow: '6 months'}
+              path: /image.tar
+              type: file
+        routes:
+          - "index.project.fuzzing.orion.${build.name}.rev.${fetch_rev}"
+          - $if: 'tasks_for == "github-pull-request"'
+            then: "index.project.fuzzing.orion.${build.name}.pull_request.${event.number}"
+            else: "index.project.fuzzing.orion.${build.name}.${head_branch}"
+        scopes:
+          - docker-worker:capability:privileged
+          - queue:route:index.project.fuzzing.orion.*
+          - secrets:get:project/fuzzing/docker-hub
+        metadata:
+          name: Orion ${build.title} docker build
+          description: Build the docker image for ${build.name} tasks
+          owner: truber@mozilla.com
+          source: https://github.com/MozillaSecurity/orion
