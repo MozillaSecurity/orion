@@ -80,6 +80,8 @@ tasks:
             GIT_REVISION: ${fetch_rev}
           command:
             - taskboot
+            - --secret
+            - "${docker_secret}"
             - build
             - --build-tool
             - dind
@@ -91,8 +93,6 @@ tasks:
             - "${fetch_rev}"
             - --write
             - /image.tar
-            - --secret
-            - "${docker_secret}"
             - --push
             - ${build.path}/Dockerfile
           artifacts:
