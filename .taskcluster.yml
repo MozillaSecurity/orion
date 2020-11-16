@@ -88,11 +88,10 @@ tasks:
                 DEPS: {$eval: 'build.deps && true'}
               command:
                 - sh
-                - lxce
+                - -lxce
                 - >-
                   if [ "$DEPS" == "true" ]; then
                     apk add --no-cache --quiet ca-certificates openssl;
-                    # start up a local registry with a self-signed cert
                     wget -O /bin/registry https://github.com/docker/distribution-library-image/raw/master/amd64/registry;
                     wget -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/master/amd64/config-example.yml;
                     chmod +x /bin/registry;
@@ -105,7 +104,6 @@ tasks:
                     cp /root/ca.pem /usr/share/ca-certificates/localhost.crt;
                     echo "localhost.crt" >> /etc/ca-certificates.conf;
                     update-ca-certificates;
-                    # load all dep image tars from taskcluster to local registry to img
                     mkdir /images;
                     taskboot retrieve-artifact --output-path /images --artifacts public/**.tar;
                     find /images -name *.tar | while read img; do
