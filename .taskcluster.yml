@@ -73,38 +73,50 @@ tasks:
             provisionerId: proj-fuzzing
             workerType: ci
             dependencies:
-              # this should be done from artifacts, and not require "-push"
-              # see https://github.com/mozilla/task-boot/issues/2
               $map:
                 $eval: build.deps
               each(dep):
-                {$eval: as_slugid(dep + "-push")}
+                {$eval: as_slugid(dep)}
             payload:
               features:
-                dind: true
+                privileged: true
               maxRunTime: 3600
               image: "${taskboot_image}"
               env:
                 GIT_REPOSITORY: ${http_repo}
                 GIT_REVISION: ${fetch_rev}
+                DEPS: {$eval: 'build.deps && true'}
               command:
-                $flatten:
-                  - - taskboot
-                    - build
-                    - --build-tool
-                    - dind
-                    - --image
-                    - "mozillasecurity/${build.name}"
-                    - --tag
-                    - "${fetch_rev}"
-                    - --write
-                    - /image.tar
-                    - "${build.path}/Dockerfile"
-                  - $if: 'tasks_for == "github-push" && head_branch == push_branch'
-                    then:
-                      - --tag
-                      - latest
-                    else: []
+                - sh
+                - lxce
+                - >-
+                  if [ "$DEPS" == "true" ]; then
+                    apk add --no-cache --quiet ca-certificates openssl;
+                    # start up a local registry with a self-signed cert
+                    wget -O /bin/registry https://github.com/docker/distribution-library-image/raw/master/amd64/registry;
+                    wget -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/master/amd64/config-example.yml;
+                    chmod +x /bin/registry;
+                    openssl req -x509 -newkey rsa:4096 -sha256 -keyout /root/cakey.pem -out /root/ca.pem -days 1 -nodes -subj '/CN=localhost';
+                    openssl req -newkey rsa:4096 -sha256 -keyout /root/srvkey.pem -out /root/srvreq.csr -nodes -subj '/CN=localhost';
+                    openssl x509 -req -in /root/srvreq.csr -sha256 -CA /root/ca.pem -CAkey /root/cakey.pem -CAcreateserial -out /root/srv.pem -days 1;
+                    REGISTRY_LOG_ACCESSLOG_DISABLED=true REGISTRY_LOG_LEVEL=warn
+                    REGISTRY_HTTP_ADDR=0.0.0.0:443  REGISTRY_HTTP_TLS_CERTIFICATE=/root/srv.pem REGISTRY_HTTP_TLS_KEY=/root/srvkey.pem
+                      registry serve /root/registry.yml&
+                    cp /root/ca.pem /usr/share/ca-certificates/localhost.crt;
+                    echo "localhost.crt" >> /etc/ca-certificates.conf;
+                    update-ca-certificates;
+                    # load all dep image tars from taskcluster to local registry to img
+                    mkdir /images;
+                    taskboot retrieve-artifact --output-path /images --artifacts public/**.tar;
+                    find /images -name *.tar | while read img; do
+                      dep="$(basename "$img" .tar)";
+                      skopeo copy "docker-archive:$img" "docker://localhost/mozillasecurity/$dep:latest";
+                      img pull "localhost/mozillasecurity/$dep:latest";
+                      img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:latest";
+                      img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:${fetch_rev}";
+                    done;
+                  fi &&
+                  taskboot build --build-tool img --image "mozillasecurity/${build.name}" --tag "${fetch_rev}" --tag latest --write /image.tar "${build.path}/Dockerfile";
               artifacts:
                 public/${build.name}.tar:
                   expires: {$fromNow: '6 months'}
@@ -123,31 +135,35 @@ tasks:
               description: Build the docker image for ${build.name} tasks
               owner: truber@mozilla.com
               source: https://github.com/MozillaSecurity/orion
-          - taskId:
-              $eval: as_slugid(build.name + "-push")
-            created: {$fromNow: ''}
-            deadline: {$fromNow: '2 hours'}
-            provisionerId: proj-fuzzing
-            workerType: ci
-            dependencies:
-              - $eval: as_slugid(build.name)
-            payload:
-              features:
-                taskclusterProxy: true
-              maxRunTime: 3600
-              image: "${taskboot_image}"
-              env:
-                GIT_REPOSITORY: ${http_repo}
-                GIT_REVISION: ${fetch_rev}
-              command:
-                - taskboot
-                - --secret
-                - "${docker_secret}"
-                - push-artifact
-            scopes:
-              - secrets:get:project/fuzzing/docker-hub
-            metadata:
-              name: Orion ${build.title} docker push
-              description: Push the docker image for ${build.name} tasks
-              owner: truber@mozilla.com
-              source: https://github.com/MozillaSecurity/orion
+          - $if: 'tasks_for == "github-push" && head_branch == push_branch'
+            then:
+              taskId:
+                $eval: as_slugid(build.name + "-push")
+              created: {$fromNow: ''}
+              deadline: {$fromNow: '2 hours'}
+              provisionerId: proj-fuzzing
+              workerType: ci
+              dependencies:
+                - $eval: as_slugid(build.name)
+              payload:
+                features:
+                  taskclusterProxy: true
+                maxRunTime: 3600
+                image: "${taskboot_image}"
+                env:
+                  GIT_REPOSITORY: ${http_repo}
+                  GIT_REVISION: ${fetch_rev}
+                command:
+                  - taskboot
+                  - --secret
+                  - "${docker_secret}"
+                  - push-artifact
+                  - --task-id
+                  - {$eval: as_slugid(build.name)}
+              scopes:
+                - secrets:get:project/fuzzing/docker-hub
+              metadata:
+                name: Orion ${build.title} docker push
+                description: Push the docker image for ${build.name} tasks
+                owner: truber@mozilla.com
+                source: https://github.com/MozillaSecurity/orion
