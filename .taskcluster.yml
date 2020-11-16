@@ -49,7 +49,7 @@ tasks:
       $flatten:
         $map:
           - {path: core/linux/amd64, title: Core, name: core, deps: []}
-          - {path: base/linux/fuzzos, title: FuzzOS, name: fuzzos, deps: [{$eval: as_slugid("core")}]}
+          - {path: base/linux/fuzzos, title: FuzzOS, name: fuzzos, deps: ["core"]}
           - {path: services/grizzly, title: Grizzly, name: grizzly, deps: []}
           - {path: services/langfuzz, title: LangFuzz, name: langfuzz, deps: []}
           - {path: services/libfuzzer, title: LibFuzzer, name: libfuzzer, deps: []}
@@ -63,8 +63,8 @@ tasks:
           - {path: services/ci-py-39, title: CI Python 3.9, name: ci-py-39, deps: []}
           - {path: services/ci-node-10, title: CI Node 10, name: ci-node-10, deps: []}
           - {path: services/ci-node-12, title: CI Node 12, name: ci-node-12, deps: []}
-          - {path: services/domino-web-tests, title: Domino Web Tests, name: domino-web-tests, deps: [{$eval: as_slugid("ci-node-12")}]}
-          - {path: services/bugmon, title: Bugmon, name: bugmon, deps: [{$eval: as_slugid("grizzly")}]}
+          - {path: services/domino-web-tests, title: Domino Web Tests, name: domino-web-tests, deps: ["ci-node-12"]}
+          - {path: services/bugmon, title: Bugmon, name: bugmon, deps: ["grizzly"]}
         each(build):
           - taskId:
               $eval: as_slugid(build.name)
@@ -73,7 +73,17 @@ tasks:
             provisionerId: proj-fuzzing
             workerType: ci
             dependencies:
-              $eval: build.deps
+              # the dockerfiles use base images from docker hub
+              # we should be using artifacts from the previous tasks instead, but how?
+              # as a workaround, when pushing, ensure the dep has been pushed already
+              $map:
+                $eval: build.deps
+              each(dep):
+                $if: 'tasks_for == "github-push" && head_branch == push_branch'
+                then:
+                  {$eval: as_slugid(dep + "-push")}
+                else:
+                  {$eval: as_slugid(dep)}
             payload:
               features:
                 dind: true
@@ -84,8 +94,6 @@ tasks:
                 GIT_REVISION: ${fetch_rev}
               command:
                 - taskboot
-                - --secret
-                - "${docker_secret}"
                 - build
                 - --build-tool
                 - dind
@@ -118,6 +126,8 @@ tasks:
               source: https://github.com/MozillaSecurity/orion
           - $if: 'tasks_for == "github-push" && head_branch == push_branch'
             then:
+              taskId:
+                $eval: as_slugid(build.name + "-push")
               created: {$fromNow: ''}
               deadline: {$fromNow: '2 hours'}
               provisionerId: proj-fuzzing
