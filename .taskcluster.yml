@@ -85,7 +85,7 @@ tasks:
               env:
                 GIT_REPOSITORY: ${http_repo}
                 GIT_REVISION: ${fetch_rev}
-                DEPS: {$eval: 'build.deps && true'}
+                DEPS: {$eval: 'str(build.deps && true)'}
               command:
                 - sh
                 - -lxce
