@@ -73,17 +73,12 @@ tasks:
             provisionerId: proj-fuzzing
             workerType: ci
             dependencies:
-              # the dockerfiles use base images from docker hub
-              # we should be using artifacts from the previous tasks instead, but how?
-              # as a workaround, when pushing, ensure the dep has been pushed already
+              # this should be done from artifacts, and not require "-push"
+              # see https://github.com/mozilla/task-boot/issues/2
               $map:
                 $eval: build.deps
               each(dep):
-                $if: 'tasks_for == "github-push" && head_branch == push_branch'
-                then:
-                  {$eval: as_slugid(dep + "-push")}
-                else:
-                  {$eval: as_slugid(dep)}
+                {$eval: as_slugid(dep + "-push")}
             payload:
               features:
                 dind: true
@@ -93,19 +88,23 @@ tasks:
                 GIT_REPOSITORY: ${http_repo}
                 GIT_REVISION: ${fetch_rev}
               command:
-                - taskboot
-                - build
-                - --build-tool
-                - dind
-                - --image
-                - "mozillasecurity/${build.name}"
-                - --tag
-                - "${fetch_rev}"
-                - --tag
-                - "${fetch_rev}"
-                - --write
-                - /image.tar
-                - "${build.path}/Dockerfile"
+                $flatten:
+                  - - taskboot
+                    - build
+                    - --build-tool
+                    - dind
+                    - --image
+                    - "mozillasecurity/${build.name}"
+                    - --tag
+                    - "${fetch_rev}"
+                    - --write
+                    - /image.tar
+                    - "${build.path}/Dockerfile"
+                  - $if: 'tasks_for == "github-push" && head_branch == push_branch'
+                    then:
+                      - --tag
+                      - latest
+                    else: []
               artifacts:
                 public/${build.name}.tar:
                   expires: {$fromNow: '6 months'}
@@ -124,35 +123,31 @@ tasks:
               description: Build the docker image for ${build.name} tasks
               owner: truber@mozilla.com
               source: https://github.com/MozillaSecurity/orion
-          - $if: 'tasks_for == "github-push" && head_branch == push_branch'
-            then:
-              taskId:
-                $eval: as_slugid(build.name + "-push")
-              created: {$fromNow: ''}
-              deadline: {$fromNow: '2 hours'}
-              provisionerId: proj-fuzzing
-              workerType: ci
-              dependencies:
-                - $eval: as_slugid(build.name)
-              payload:
-                features:
-                  taskclusterProxy: true
-                maxRunTime: 3600
-                image: "${taskboot_image}"
-                env:
-                  GIT_REPOSITORY: ${http_repo}
-                  GIT_REVISION: ${fetch_rev}
-                command:
-                  - taskboot
-                  - --secret
-                  - "${docker_secret}"
-                  - push-artifact
-                  - --task-id
-                  - {$eval: as_slugid(build.name)}
-              scopes:
-                - secrets:get:project/fuzzing/docker-hub
-              metadata:
-                name: Orion ${build.title} docker push
-                description: Push the docker image for ${build.name} tasks
-                owner: truber@mozilla.com
-                source: https://github.com/MozillaSecurity/orion
+          - taskId:
+              $eval: as_slugid(build.name + "-push")
+            created: {$fromNow: ''}
+            deadline: {$fromNow: '2 hours'}
+            provisionerId: proj-fuzzing
+            workerType: ci
+            dependencies:
+              - $eval: as_slugid(build.name)
+            payload:
+              features:
+                taskclusterProxy: true
+              maxRunTime: 3600
+              image: "${taskboot_image}"
+              env:
+                GIT_REPOSITORY: ${http_repo}
+                GIT_REVISION: ${fetch_rev}
+              command:
+                - taskboot
+                - --secret
+                - "${docker_secret}"
+                - push-artifact
+            scopes:
+              - secrets:get:project/fuzzing/docker-hub
+            metadata:
+              name: Orion ${build.title} docker push
+              description: Push the docker image for ${build.name} tasks
+              owner: truber@mozilla.com
+              source: https://github.com/MozillaSecurity/orion
