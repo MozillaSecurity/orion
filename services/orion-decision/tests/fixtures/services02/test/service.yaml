@@ -1,0 +1,4 @@
+name: test-image2
+arch:
+  monkey:
+    dockerfile: monkey/Dockerfile

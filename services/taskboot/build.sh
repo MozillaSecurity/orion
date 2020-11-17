@@ -13,28 +13,51 @@ create-cert () {
   update-ca-certificates
 }
 
-if [ $# -ne 4 ]; then
-  echo "$0 build_name build_path fetch_rev output_image" >&2
+if {
+  [ $# -ne 0 ] ||
+  [ -z "$ARCHIVE_PATH" ] ||
+  [ -z "$DOCKERFILE" ] ||
+  [ -z "$GIT_REPOSITORY" ] ||
+  [ -z "$GIT_REVISION" ] ||
+  [ -z "$IMAGE_NAME" ] ||
+  {
+    [ "$LOAD_DEPS" != "1" ] && [ "$LOAD_DEPS" != "0" ]
+  }
+}; then
+  set +x
+  echo "usage: $0"
+  echo
+  echo "Required environment variables:"
+  echo
+  echo "  ARCHIVE_PATH: Path to the image tar (output)."
+  echo "  DOCKERFILE: Path to the Dockerfile."
+  echo "  GIT_REPOSITORY: Repository holding the build context."
+  echo "  GIT_REVISION: Commit to clone the repository at."
+  echo "  IMAGE_NAME: Docker image name (eg. for mozillasecurity/taskboot, IMAGE_NAME=taskboot)."
+  echo "  LOAD_DEPS: Must be 0/1. If 1, pull all images built in dependency tasks into the image store."
+  echo
   exit 2
-fi
-build_name="$1"
-build_path="$2"
-fetch_rev="$3"
-output_image="$4"
+fi >&2
 
-if [ "$DEPS" == "true" ]; then
+if [ "$LOAD_DEPS" == "1" ]; then
   create-cert
+  # start a Docker registry at localhost
   REGISTRY_LOG_ACCESSLOG_DISABLED=true REGISTRY_LOG_LEVEL=warn \
     REGISTRY_HTTP_ADDR=0.0.0.0:443 REGISTRY_HTTP_TLS_CERTIFICATE=/root/srv.pem REGISTRY_HTTP_TLS_KEY=/root/srvkey.pem \
     registry serve /root/registry.yml&
+  # retrieve image archives from dependency tasks to /images
   mkdir /images
   taskboot retrieve-artifact --output-path /images --artifacts public/**.tar
+  # load images into the img image store via Docker registry
   find /images -name *.tar | while read img; do
     dep="$(basename "$img" .tar)"
     skopeo copy "docker-archive:$img" "docker://localhost/mozillasecurity/$dep:latest"
+    rm "$img"
     img pull "localhost/mozillasecurity/$dep:latest"
     img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:latest"
-    img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:$fetch_rev"
+    img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:$GIT_REVISION"
   done
 fi
-taskboot build --image "mozillasecurity/$build_name" --tag "$fetch_rev" --tag latest --write $output_image "$build_path/Dockerfile"
+
+# use taskboot to build the image
+taskboot build --image "mozillasecurity/$IMAGE_NAME" --tag "$GIT_REVISION" --tag latest --write "$ARCHIVE_PATH" "$DOCKERFILE"
