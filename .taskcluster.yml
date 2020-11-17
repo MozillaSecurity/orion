@@ -37,7 +37,7 @@ tasks:
       then: ${event.pull_request.base.repo.clone_url}
       else: ${event.repository.clone_url}
 
-    taskboot_image: "mozilla/taskboot:0.2.7"
+    taskboot_image: "mozillasecurity/taskboot:latest"
 
     docker_secret: "project/fuzzing/docker-hub"
 
@@ -87,34 +87,11 @@ tasks:
                 GIT_REVISION: ${fetch_rev}
                 DEPS: {$eval: 'str(build.deps && true)'}
               command:
-                - sh
-                - -lxce
-                - >-
-                  if [ "$DEPS" == "true" ]; then
-                  apk add --no-cache --quiet ca-certificates openssl;
-                  wget -O /bin/registry https://github.com/docker/distribution-library-image/raw/master/amd64/registry;
-                  wget -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/master/amd64/config-example.yml;
-                  chmod +x /bin/registry;
-                  openssl req -x509 -newkey rsa:4096 -sha256 -keyout /root/cakey.pem -out /root/ca.pem -days 1 -nodes -subj '/CN=localhost';
-                  openssl req -newkey rsa:4096 -sha256 -keyout /root/srvkey.pem -out /root/srvreq.csr -nodes -subj '/CN=localhost';
-                  openssl x509 -req -in /root/srvreq.csr -sha256 -CA /root/ca.pem -CAkey /root/cakey.pem -CAcreateserial -out /root/srv.pem -days 1;
-                  REGISTRY_LOG_ACCESSLOG_DISABLED=true REGISTRY_LOG_LEVEL=warn
-                  REGISTRY_HTTP_ADDR=0.0.0.0:443  REGISTRY_HTTP_TLS_CERTIFICATE=/root/srv.pem REGISTRY_HTTP_TLS_KEY=/root/srvkey.pem
-                  registry serve /root/registry.yml&
-                  cp /root/ca.pem /usr/share/ca-certificates/localhost.crt;
-                  echo "localhost.crt" >> /etc/ca-certificates.conf;
-                  update-ca-certificates;
-                  mkdir /images;
-                  taskboot retrieve-artifact --output-path /images --artifacts public/**.tar;
-                  find /images -name *.tar | while read img; do
-                  dep="$(basename "$img" .tar)";
-                  skopeo copy "docker-archive:$img" "docker://localhost/mozillasecurity/$dep:latest";
-                  img pull "localhost/mozillasecurity/$dep:latest";
-                  img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:latest";
-                  img tag "localhost/mozillasecurity/$dep:latest" "docker.io/mozillasecurity/$dep:${fetch_rev}";
-                  done;
-                  fi &&
-                  taskboot build --build-tool img --image "mozillasecurity/${build.name}" --tag "${fetch_rev}" --tag latest --write /image.tar "${build.path}/Dockerfile";
+                - build.sh
+                - ${build.name}
+                - ${build.path}
+                - ${fetch_rev}
+                - /image.tar
               artifacts:
                 public/${build.name}.tar:
                   expires: {$fromNow: '6 months'}
@@ -149,16 +126,11 @@ tasks:
                 maxRunTime: 3600
                 image: "${taskboot_image}"
                 env:
-                  GIT_REPOSITORY: ${http_repo}
-                  GIT_REVISION: ${fetch_rev}
+                  TASKCLUSTER_SECRET: ${docker_secret}
                 command:
                   - taskboot
-                  - --secret
-                  - "${docker_secret}"
                   - push-artifact
-                  - --task-id
-                  - {$eval: as_slugid(build.name)}
-              scopes:
+                scopes:
                 - secrets:get:project/fuzzing/docker-hub
               metadata:
                 name: Orion ${build.title} docker push
