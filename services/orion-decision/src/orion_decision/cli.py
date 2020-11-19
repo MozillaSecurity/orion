@@ -90,6 +90,12 @@ def parse_args(argv=None):
         help="Time reference to calculate task timestamps from ('now' according "
         "to Taskcluster).",
     )
+    parser.add_argument(
+        "--dry-run",
+        "-n",
+        action="store_true",
+        help="Do not queue tasks in Taskcluster, only calculate what would be done.",
+    )
     parser.set_defaults(
         log_level=INFO,
     )

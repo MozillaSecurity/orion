@@ -151,8 +151,9 @@ def test_create_03(mocker):
     evt.repo.path = root
     evt.commit = "commit"
     evt.branch = "push"
+    evt.event_type = "push"
     evt.clone_url = "https://example.com"
-    evt.pull_request = 1
+    evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
@@ -188,7 +189,7 @@ def test_create_03(mocker):
         },
         "routes": [
             "index.project.fuzzing.orion.test1.rev.commit",
-            "index.project.fuzzing.orion.test1.pull_request.1",
+            "index.project.fuzzing.orion.test1.push",
         ],
         "scopes": [
             "docker-worker:capability:privileged",
@@ -327,6 +328,102 @@ def test_create_04(mocker):
         "metadata": {
             "description": "Build the docker image for test2 tasks",
             "name": "Orion test2 docker build",
+            "owner": OWNER_EMAIL,
+            "source": SOURCE_URL,
+        },
+    }
+
+
+def test_create_05(mocker):
+    """test no tasks are created for release event"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.event_type = "release"
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 0
+
+
+def test_create_06(mocker):
+    """test no tasks are created for --dry-run"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.event_type = "push"
+    evt.commit = "commit"
+    evt.branch = "push"
+    evt.pull_request = None
+    evt.clone_url = "https://example.com"
+    sched = Scheduler(evt, now, "group", "secret", "push", dry_run=True)
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 0
+
+
+def test_create_07(mocker):
+    """test PR doesn't create push task"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.commit = "commit"
+    evt.branch = "push"
+    evt.clone_url = "https://example.com"
+    evt.pull_request = 1
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 1
+    _, task = queue.createTask.call_args.args
+    assert task == {
+        "taskGroupId": "group",
+        "dependencies": [],
+        "created": stringDate(now),
+        "deadline": stringDate(now + DEADLINE),
+        "provisionerId": PROVISIONER_ID,
+        "workerType": WORKER_TYPE,
+        "payload": {
+            "artifacts": {
+                "public/test1.tar": {
+                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
+                    "path": "/image.tar",
+                    "type": "file",
+                },
+            },
+            "command": ["build.sh"],
+            "env": {
+                "ARCHIVE_PATH": "/image.tar",
+                "DOCKERFILE": "test1/Dockerfile",
+                "GIT_REPOSITORY": "https://example.com",
+                "GIT_REVISION": "commit",
+                "IMAGE_NAME": "test1",
+                "LOAD_DEPS": "0",
+            },
+            "features": {"privileged": True},
+            "image": "mozillasecurity/taskboot:latest",
+            "maxRunTime": MAX_RUN_TIME.total_seconds(),
+        },
+        "routes": [
+            "index.project.fuzzing.orion.test1.rev.commit",
+            "index.project.fuzzing.orion.test1.pull_request.1",
+        ],
+        "scopes": [
+            "docker-worker:capability:privileged",
+            "queue:route:index.project.fuzzing.orion.*",
+        ],
+        "metadata": {
+            "description": "Build the docker image for test1 tasks",
+            "name": "Orion test1 docker build",
             "owner": OWNER_EMAIL,
             "source": SOURCE_URL,
         },

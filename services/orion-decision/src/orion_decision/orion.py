@@ -150,6 +150,15 @@ class Services(dict):
 
             # scan service for references to files
             for entry in file_glob(service.dockerfile.parent):
+                # add a direct dependency on any file in the service folder
+                if entry not in service.path_deps:
+                    service.path_deps.add(entry)
+                    LOG.info(
+                        "Image %s depends on path %s",
+                        service.name,
+                        entry.relative_to(self.root),
+                    )
+                # search file for references to other files
                 try:
                     entry_text = entry.read_text()
                 except UnicodeError:

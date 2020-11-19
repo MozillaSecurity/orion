@@ -24,12 +24,37 @@ LOG = getLogger(__name__)
 
 
 class Scheduler:
-    def __init__(self, github_event, now, task_group, docker_secret, push_branch):
+    """Decision logic for scheduling Orion build/push tasks in Taskcluster.
+
+    Attributes:
+        github_event (GithubEvent): The event that triggered this decision.
+        now (datetime): The time to calculate task times from.
+        task_group (str): The taskGroupID to add created tasks to.
+        docker_secret (str): The Taskcluster secret name holding Docker Hub credentials.
+        push_branch (str): The branch name that should trigger a push to Docker Hub.
+        services (Services): The services
+        dry_run (bool): Perform everything *except* actually queuing tasks in TC.
+    """
+
+    def __init__(
+        self, github_event, now, task_group, docker_secret, push_branch, dry_run=False
+    ):
+        """Initialize a Scheduler instance.
+
+        Arguments:
+            github_event (GithubEvent): The event that triggered this decision.
+            now (datetime): The time to calculate task times from.
+            task_group (str): The taskGroupID to add created tasks to.
+            docker_secret (str): The Taskcluster secret name holding Docker Hub creds.
+            push_branch (str): The branch name that should trigger a push to Docker Hub.
+            dry_run (bool): Don't actually queue tasks in Taskcluster.
+        """
         self.github_event = github_event
         self.now = now
         self.task_group = task_group
         self.docker_secret = docker_secret
         self.push_branch = push_branch
+        self.dry_run = dry_run
         self.services = Services(self.github_event.repo.path)
 
     def mark_services_for_rebuild(self):
@@ -47,17 +72,34 @@ class Scheduler:
             self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
     def create_tasks(self):
-        should_push = self.github_event.branch == self.push_branch
+        """Create build/push tasks in Taskcluster.
+
+        Returns:
+            None
+        """
+        if self.github_event.event_type == "release":
+            LOG.warning("Detected release event. Nothing to do!")
+            return
+        should_push = (
+            self.github_event.event_type == "push"
+            and self.github_event.branch == self.push_branch
+        )
         queue = Taskcluster.get_service("queue")
         service_build_tasks = {service: slugId() for service in self.services}
         build_tasks_created = 0
         push_tasks_created = 0
         if not should_push:
             LOG.info(
-                "Not pushing to Docker Hub (branch is %s, only push %s)",
+                "Not pushing to Docker Hub (event is %s, branch is %s, only push %s)",
+                self.github_event.event_type,
                 self.github_event.branch,
                 self.push_branch,
             )
+        if self.dry_run:
+            created_msg = create_msg = "Would create"
+        else:
+            create_msg = "Creating"
+            created_msg = "Created"
         for service in self.services.values():
             if self.github_event.pull_request is not None:
                 build_index = (
@@ -128,12 +170,15 @@ class Scheduler:
                 },
             }
             task_id = service_build_tasks[service.name]
-            LOG.info("Creating task %s: %s", task_id, build_task["metadata"]["name"])
-            try:
-                queue.createTask(task_id, build_task)
-            except TaskclusterFailure as exc:  # pragma: no cover
-                LOG.error("Error creating build task: %s", exc)
-                raise
+            LOG.info(
+                "%s task %s: %s", create_msg, task_id, build_task["metadata"]["name"]
+            )
+            if not self.dry_run:
+                try:
+                    queue.createTask(task_id, build_task)
+                except TaskclusterFailure as exc:  # pragma: no cover
+                    LOG.error("Error creating build task: %s", exc)
+                    raise
             build_tasks_created += 1
             if not should_push:
                 continue
@@ -169,15 +214,19 @@ class Scheduler:
                 },
             }
             task_id = slugId()
-            LOG.info("Creating task %s: %s", task_id, push_task["metadata"]["name"])
-            try:
-                queue.createTask(task_id, push_task)
-            except TaskclusterFailure as exc:  # pragma: no cover
-                LOG.error("Error creating build task: %s", exc)
-                raise
+            LOG.info(
+                "%s task %s: %s", create_msg, task_id, push_task["metadata"]["name"]
+            )
+            if not self.dry_run:
+                try:
+                    queue.createTask(task_id, push_task)
+                except TaskclusterFailure as exc:  # pragma: no cover
+                    LOG.error("Error creating build task: %s", exc)
+                    raise
             push_tasks_created += 1
         LOG.info(
-            "Created %d build tasks and %d push tasks",
+            "%s %d build tasks and %d push tasks",
+            created_msg,
             build_tasks_created,
             push_tasks_created,
         )
@@ -203,6 +252,7 @@ class Scheduler:
                 args.task_group,
                 args.docker_hub_secret,
                 args.push_branch,
+                args.dry_run,
             )
 
             sched.mark_services_for_rebuild()

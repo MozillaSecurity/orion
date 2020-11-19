@@ -57,6 +57,7 @@ def test_service_deps():
     assert svcs["test1"].path_deps == {
         root / "recipes" / "linux" / "install.sh",
         root / "test1" / "Dockerfile",
+        root / "test1" / "data" / "file",
         root / "test1" / "service.yaml",
     }
     assert svcs["test2"].path_deps == {

@@ -6,7 +6,7 @@
 from logging import getLogger
 from pathlib import Path
 from shutil import rmtree
-from subprocess import run
+from subprocess import CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
 
@@ -16,12 +16,40 @@ RETRY_SLEEP = 30
 
 
 class GitRepo:
+    """A git repository.
+
+    Attributes:
+        path (Path): The location where the repository is cloned.
+    """
+
     def __init__(self, clone_url, clone_ref, commit):
+        """Initalize a GitRepo instance.
+
+        Arguments:
+            clone_url (str): The location to clone the repository from.
+            clone_ref (str): The reference to fetch. (eg. branch).
+            commit (str): Commit to checkout (must be `FETCH_HEAD` or an ancestor).
+        """
         self.path = Path(mkdtemp(prefix="decision-repo-"))
         LOG.debug("created git repo tmp folder: %s", self.path)
         self._clone(clone_url, clone_ref, commit)
 
     def git(self, *args, tries=1):
+        """Call a git command in the cloned repository.
+
+        If tries is specified, the command will be retried on failure,
+        with a 30s sleep between tries.
+
+        Arguments:
+            *args (str): The git command line to run (eg. `git("commit", "-a")`
+            tries (int): Number of times to retry the git call.
+
+        Raises:
+            CalledProcessError: The git command failed.
+
+        Returns:
+            str: stdout returned by the process.
+        """
         LOG.debug("calling: git %s", " ".join(str(arg) for arg in args))
         for _ in range(tries - 1):
             result = run(("git",) + args, capture_output=True, cwd=self.path, text=True)
@@ -34,9 +62,17 @@ class GitRepo:
                 RETRY_SLEEP,
             )
             sleep(RETRY_SLEEP)
-        return run(
-            ("git",) + args, check=True, capture_output=True, cwd=self.path, text=True
-        ).stdout
+        try:
+            return run(
+                ("git",) + args,
+                check=True,
+                capture_output=True,
+                cwd=self.path,
+                text=True,
+            ).stdout
+        except CalledProcessError as exc:
+            LOG.error("git command returned error:\n%s", exc.stderr)
+            raise
 
     def _clone(self, clone_url, clone_ref, commit):
         self.git("init")
@@ -45,11 +81,24 @@ class GitRepo:
         self.git("-c", "advice.detachedHead=false", "checkout", commit)
 
     def cleanup(self):
+        """Clean up any resources held by this instance.
+
+        Returns:
+            None
+        """
         if self.path is not None:
             rmtree(self.path)
             self.path = None
 
     def message(self, commit):
+        """Get the commit message for a given commit.
+
+        Arguments:
+            commit (str): The commit to look up.
+
+        Returns:
+            str: The commit message (including headers).
+        """
         return self.git("show", "--shortstat", commit)
 
 
@@ -85,11 +134,21 @@ class GithubEvent:
         self.repo = None
 
     def cleanup(self):
+        """Cleanup resources held by this instance.
+
+        Returns:
+            None
+        """
         if self.repo is not None:
             self.repo.cleanup()
 
     @property
     def clone_url(self):
+        """Calculate the URL for cloning this repository.
+
+        Returns:
+            str: The clone URL for this repository.
+        """
         return f"https://github.com/{self.repo_slug}.git"
 
     @classmethod
@@ -142,7 +201,7 @@ class GithubEvent:
         return self
 
     def list_changed_paths(self):
-        """
+        """Calculate paths that were changed in the commit range.
 
         Arguments:
             commit_range (str): Commit range in the form: "before_sha..after_sha"
