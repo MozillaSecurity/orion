@@ -8,7 +8,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY services/orion-decision /tmp/orion-decision
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
-    && retry apk add --no-cache gcc musl-dev \
+    && retry apk add --no-cache gcc git musl-dev \
     && retry pip install /tmp/orion-decision \
     && apk del gcc musl-dev \
     && rm -rf /tmp/orion-decision
