@@ -113,7 +113,7 @@ def test_create_02(mocker):
                     "type": "file",
                 },
             },
-            "command": ["build.sh"],
+            "command": ["build"],
             "env": {
                 "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "dind",
@@ -178,7 +178,7 @@ def test_create_03(mocker):
                     "type": "file",
                 },
             },
-            "command": ["build.sh"],
+            "command": ["build"],
             "env": {
                 "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "dind",
@@ -217,11 +217,16 @@ def test_create_03(mocker):
         "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
-            "command": ["taskboot", "push-artifact"],
-            "features": {"taskclusterProxy": True},
+            "command": ["push"],
+            "features": {"dind": True, "taskclusterProxy": True},
             "image": "mozillasecurity/taskboot:latest",
             "maxRunTime": MAX_RUN_TIME.total_seconds(),
-            "env": {"TASKCLUSTER_SECRET": "secret"},
+            "env": {
+                "GIT_REVISION": "commit",
+                "BUILD_TOOL": "dind",
+                "IMAGE_NAME": "test1",
+                "TASKCLUSTER_SECRET": "secret",
+            },
         },
         "scopes": [
             f"queue:scheduler-id:{SCHEDULER_ID}",
@@ -270,7 +275,7 @@ def test_create_04(mocker):
                     "type": "file",
                 },
             },
-            "command": ["build.sh"],
+            "command": ["build"],
             "env": {
                 "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "dind",
@@ -316,7 +321,7 @@ def test_create_04(mocker):
                     "type": "file",
                 },
             },
-            "command": ["build.sh"],
+            "command": ["build"],
             "env": {
                 "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "dind",
@@ -414,7 +419,7 @@ def test_create_07(mocker):
                     "type": "file",
                 },
             },
-            "command": ["build.sh"],
+            "command": ["build"],
             "env": {
                 "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "dind",

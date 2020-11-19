@@ -136,9 +136,7 @@ class Scheduler:
                             "type": "file",
                         },
                     },
-                    "command": [
-                        "build.sh",
-                    ],
+                    "command": ["build"],
                     "env": {
                         "ARCHIVE_PATH": "/image.tar",
                         "BUILD_TOOL": "dind",
@@ -194,14 +192,14 @@ class Scheduler:
                 "schedulerId": SCHEDULER_ID,
                 "workerType": WORKER_TYPE,
                 "payload": {
-                    "command": [
-                        "taskboot",
-                        "push-artifact",
-                    ],
+                    "command": ["push"],
                     "env": {
+                        "BUILD_TOOL": "dind",
+                        "GIT_REVISION": self.github_event.commit,
+                        "IMAGE_NAME": service.name,
                         "TASKCLUSTER_SECRET": self.docker_secret,
                     },
-                    "features": {"taskclusterProxy": True},
+                    "features": {"dind": True, "taskclusterProxy": True},
                     "image": "mozillasecurity/taskboot:latest",
                     "maxRunTime": MAX_RUN_TIME.total_seconds(),
                 },
