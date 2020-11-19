@@ -21,8 +21,10 @@ tasks:
         - -v
     scopes:
       - docker-worker:capability:privileged
-      - secrets:get:project/fuzzing/docker-hub
+      - queue:create-task:highest:proj-fuzzing/ci
       - queue:route:index.project.fuzzing.orion.*
+      - queue:scheduler-id:taskcluster-github
+      - secrets:get:project/fuzzing/docker-hub
     metadata:
       name: Orion decision task
       description: Schedule Orion build tasks

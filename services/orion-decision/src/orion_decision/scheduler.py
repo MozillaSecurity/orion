@@ -10,12 +10,13 @@ from taskcluster.utils import slugId, stringDate
 
 from . import ARTIFACTS_EXPIRE
 from . import DEADLINE
-from . import WORKER_TYPE
-from . import PROVISIONER_ID
 from . import MAX_RUN_TIME
 from . import OWNER_EMAIL
+from . import PROVISIONER_ID
+from . import SCHEDULER_ID
 from . import SOURCE_URL
 from . import Taskcluster
+from . import WORKER_TYPE
 from .git import GithubEvent
 from .orion import Services
 
@@ -125,6 +126,7 @@ class Scheduler:
                 "created": stringDate(self.now),
                 "deadline": stringDate(self.now + DEADLINE),
                 "provisionerId": PROVISIONER_ID,
+                "schedulerId": SCHEDULER_ID,
                 "workerType": WORKER_TYPE,
                 "payload": {
                     "artifacts": {
@@ -161,6 +163,7 @@ class Scheduler:
                 "scopes": [
                     "docker-worker:capability:privileged",
                     "queue:route:index.project.fuzzing.orion.*",
+                    f"queue:scheduler-id:{SCHEDULER_ID}",
                 ],
                 "metadata": {
                     "description": f"Build the docker image for {service.name} tasks",
@@ -188,6 +191,7 @@ class Scheduler:
                 "created": stringDate(self.now),
                 "deadline": stringDate(self.now + DEADLINE),
                 "provisionerId": PROVISIONER_ID,
+                "schedulerId": SCHEDULER_ID,
                 "workerType": WORKER_TYPE,
                 "payload": {
                     "command": [
@@ -202,6 +206,7 @@ class Scheduler:
                     "maxRunTime": MAX_RUN_TIME.total_seconds(),
                 },
                 "scopes": [
+                    f"queue:scheduler-id:{SCHEDULER_ID}",
                     f"secrets:get:{self.docker_secret}",
                 ],
                 "metadata": {

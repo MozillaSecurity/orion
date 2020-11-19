@@ -14,11 +14,12 @@ from taskcluster.helper import TaskclusterConfig
 Taskcluster = TaskclusterConfig(
     os.getenv("TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com")
 )
-OWNER_EMAIL = "truber@mozilla.com"
-SOURCE_URL = "https://github.com/MozillaSecurity/orion"
-PROVISIONER_ID = "proj-fuzzing"
-WORKER_TYPE = "ci"
+ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
 DEADLINE = timedelta(hours=2)
 MAX_RUN_TIME = timedelta(hours=1)
-ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
+OWNER_EMAIL = "truber@mozilla.com"
+PROVISIONER_ID = "proj-fuzzing"
+SCHEDULER_ID = "taskcluster-github"
+SOURCE_URL = "https://github.com/MozillaSecurity/orion"
+WORKER_TYPE = "ci"
 del os, relativedelta, timedelta, TaskclusterConfig

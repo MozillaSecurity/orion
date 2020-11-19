@@ -9,13 +9,14 @@ from pathlib import Path
 
 from taskcluster.utils import stringDate
 
-from orion_decision import MAX_RUN_TIME
-from orion_decision import WORKER_TYPE
-from orion_decision import DEADLINE
-from orion_decision import OWNER_EMAIL
-from orion_decision import SOURCE_URL
 from orion_decision import ARTIFACTS_EXPIRE
+from orion_decision import DEADLINE
+from orion_decision import MAX_RUN_TIME
+from orion_decision import OWNER_EMAIL
 from orion_decision import PROVISIONER_ID
+from orion_decision import SCHEDULER_ID
+from orion_decision import SOURCE_URL
+from orion_decision import WORKER_TYPE
 from orion_decision.git import GithubEvent
 from orion_decision.scheduler import Scheduler
 
@@ -102,6 +103,7 @@ def test_create_02(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
@@ -131,6 +133,7 @@ def test_create_02(mocker):
         "scopes": [
             "docker-worker:capability:privileged",
             "queue:route:index.project.fuzzing.orion.*",
+            f"queue:scheduler-id:{SCHEDULER_ID}",
         ],
         "metadata": {
             "description": "Build the docker image for test1 tasks",
@@ -165,6 +168,7 @@ def test_create_03(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
@@ -194,6 +198,7 @@ def test_create_03(mocker):
         "scopes": [
             "docker-worker:capability:privileged",
             "queue:route:index.project.fuzzing.orion.*",
+            f"queue:scheduler-id:{SCHEDULER_ID}",
         ],
         "metadata": {
             "description": "Build the docker image for test1 tasks",
@@ -209,6 +214,7 @@ def test_create_03(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "command": ["taskboot", "push-artifact"],
@@ -217,7 +223,10 @@ def test_create_03(mocker):
             "maxRunTime": MAX_RUN_TIME.total_seconds(),
             "env": {"TASKCLUSTER_SECRET": "secret"},
         },
-        "scopes": ["secrets:get:secret"],
+        "scopes": [
+            f"queue:scheduler-id:{SCHEDULER_ID}",
+            "secrets:get:secret",
+        ],
         "metadata": {
             "description": "Publish the docker image for test1 tasks",
             "name": "Orion test1 docker push",
@@ -251,6 +260,7 @@ def test_create_04(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
@@ -280,6 +290,7 @@ def test_create_04(mocker):
         "scopes": [
             "docker-worker:capability:privileged",
             "queue:route:index.project.fuzzing.orion.*",
+            f"queue:scheduler-id:{SCHEDULER_ID}",
         ],
         "metadata": {
             "description": "Build the docker image for test1 tasks",
@@ -295,6 +306,7 @@ def test_create_04(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
@@ -324,6 +336,7 @@ def test_create_04(mocker):
         "scopes": [
             "docker-worker:capability:privileged",
             "queue:route:index.project.fuzzing.orion.*",
+            f"queue:scheduler-id:{SCHEDULER_ID}",
         ],
         "metadata": {
             "description": "Build the docker image for test2 tasks",
@@ -391,6 +404,7 @@ def test_create_07(mocker):
         "created": stringDate(now),
         "deadline": stringDate(now + DEADLINE),
         "provisionerId": PROVISIONER_ID,
+        "schedulerId": SCHEDULER_ID,
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
@@ -420,6 +434,7 @@ def test_create_07(mocker):
         "scopes": [
             "docker-worker:capability:privileged",
             "queue:route:index.project.fuzzing.orion.*",
+            f"queue:scheduler-id:{SCHEDULER_ID}",
         ],
         "metadata": {
             "description": "Build the docker image for test1 tasks",
