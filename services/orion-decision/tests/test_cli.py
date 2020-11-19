@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion decision CLI"""
 
+from logging import DEBUG
 from unittest.mock import call
 
 from orion_decision.cli import configure_logging, main, parse_args
@@ -25,11 +26,10 @@ def test_logging_init(mocker):
     """test logging initializer"""
     locale = mocker.patch("orion_decision.cli.setlocale", autospec=True)
     log_init = mocker.patch("orion_decision.cli.basicConfig", autospec=True)
-    level = mocker.Mock()
-    configure_logging(level)
+    configure_logging(level=DEBUG)
     assert locale.call_count == 1
     assert log_init.call_count == 1
-    assert log_init.call_args == call(level=level)
+    assert log_init.call_args == call(level=DEBUG)
 
 
 def test_main(mocker):

@@ -140,16 +140,17 @@ class Scheduler:
                         "build.sh",
                     ],
                     "env": {
-                        "IMAGE_NAME": service.name,
+                        "ARCHIVE_PATH": "/image.tar",
+                        "BUILD_TOOL": "dind",
                         "DOCKERFILE": str(
                             service.dockerfile.relative_to(service.context)
                         ),
-                        "ARCHIVE_PATH": "/image.tar",
                         "GIT_REPOSITORY": self.github_event.clone_url,
                         "GIT_REVISION": self.github_event.commit,
+                        "IMAGE_NAME": service.name,
                         "LOAD_DEPS": "1" if dirty_dep_tasks else "0",
                     },
-                    "features": {"privileged": True},
+                    "features": {"dind": True},
                     "image": "mozillasecurity/taskboot:latest",
                     "maxRunTime": MAX_RUN_TIME.total_seconds(),
                 },
@@ -161,7 +162,6 @@ class Scheduler:
                     build_index,
                 ],
                 "scopes": [
-                    "docker-worker:capability:privileged",
                     "queue:route:index.project.fuzzing.orion.*",
                     f"queue:scheduler-id:{SCHEDULER_ID}",
                 ],

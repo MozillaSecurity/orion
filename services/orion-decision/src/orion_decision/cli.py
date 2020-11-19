@@ -6,7 +6,7 @@
 from argparse import ArgumentParser
 from datetime import datetime
 from locale import LC_ALL, setlocale
-from logging import DEBUG, INFO, WARN, basicConfig
+from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import getenv
 import sys
 
@@ -27,6 +27,10 @@ def configure_logging(level=INFO):
     """
     setlocale(LC_ALL, "")
     basicConfig(level=level)
+    if level == DEBUG:
+        # no need to ever see lower than INFO for third-parties
+        getLogger("taskcluster").setLevel(INFO)
+        getLogger("urllib3").setLevel(INFO)
 
 
 def parse_args(argv=None):
