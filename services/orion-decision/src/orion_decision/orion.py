@@ -14,6 +14,30 @@ from yaml import safe_load as yaml_load
 LOG = getLogger(__name__)
 
 
+def file_glob(path, pattern="**/*", relative=False):
+    """Run Path.glob for a given pattern, with filters applied.
+    Only files are yielded, not directories. Any file that looks like
+    it is in a test folder hierarchy (`tests`) will be skipped.
+
+    Arguments:
+        path (Path): Root for the glob expression.
+        pattern (str): Glob expression.
+        relative (bool): Result will be relative to `path`.
+
+    Yields:
+        Path: Result paths.
+    """
+    for result in path.glob(pattern):
+        if not result.is_file():
+            continue
+        relative_result = result.relative_to(path)
+        if "tests" not in relative_result.parts:
+            if relative:
+                yield relative_result
+            else:
+                yield result
+
+
 class Service:
     """Orion service (Docker image)
 
@@ -87,7 +111,7 @@ class Services(dict):
         super().__init__()
         self.root = root
         # scan the context recursively to find services
-        for service_yaml in self.root.glob("**/service.yaml"):
+        for service_yaml in file_glob(self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
             assert service.name not in self
             service.path_deps |= {service_yaml, service.dockerfile}
@@ -106,12 +130,8 @@ class Services(dict):
         """
         # make a list of all file paths
         file_strs = []
-        for file in self.root.glob("**/*"):
-            if "tests" in file.relative_to(self.root).parts:
-                continue
-            if not file.is_file():
-                continue
-            file_strs.append(str(file.relative_to(self.root)))
+        for file in file_glob(self.root, relative=True):
+            file_strs.append(str(file))
             LOG.debug("found path: %s", file_strs[-1])
         file_re = re.compile("|".join(re.escape(file) for file in file_strs))
 
@@ -129,9 +149,7 @@ class Services(dict):
                 LOG.info("Image %s depends on image %s", service.name, baseimage)
 
             # scan service for references to files
-            for entry in service.dockerfile.parent.glob("**/*"):
-                if not entry.is_file():
-                    continue
+            for entry in file_glob(service.dockerfile.parent):
                 try:
                     entry_text = entry.read_text()
                 except UnicodeError:

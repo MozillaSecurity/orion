@@ -16,6 +16,9 @@ tasks:
         GITHUB_EVENT: {$json: {$eval: event}}
         GITHUB_ACTION: ${tasks_for}
         TASKCLUSTER_NOW: ${now}
+      command:
+        - decision
+        - -v
     scopes:
       - docker-worker:capability:privileged
       - secrets:get:project/fuzzing/docker-hub
