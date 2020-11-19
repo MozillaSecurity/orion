@@ -13,6 +13,7 @@ from time import sleep
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
+RETRIES = 10
 
 
 class GitRepo:
@@ -77,7 +78,7 @@ class GitRepo:
     def _clone(self, clone_url, clone_ref, commit):
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
-        self.git("fetch", "-q", "origin", clone_ref, tries=10)
+        self.git("fetch", "-q", "origin", clone_ref, tries=RETRIES)
         self.git("-c", "advice.detachedHead=false", "checkout", commit)
 
     def cleanup(self):
@@ -196,6 +197,10 @@ class GithubEvent:
             self.commit_range = f"{event['before']}..{event['after']}"
             fetch_ref = event["ref"]
         self.repo = GitRepo(self.clone_url, fetch_ref, self.commit)
+        if self.event_type == "push":
+            # fetch both sides of the commit range
+            # for the case of force-push, `before` will not be under the same fetch ref
+            self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
         if self.commit_message is None:
             self.commit_message = self.repo.message(self.commit)
         return self
