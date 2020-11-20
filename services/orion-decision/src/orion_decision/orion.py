@@ -132,6 +132,9 @@ class Services(dict):
         file_strs = []
         for file in file_glob(self.root, relative=True):
             file_strs.append(str(file))
+            # recipes are usually called using only their basename
+            if file.parts[0] == "recipes":
+                file_strs.append(file.name)
             LOG.debug("found path: %s", file_strs[-1])
         file_re = re.compile("|".join(re.escape(file) for file in file_strs))
 

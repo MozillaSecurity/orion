@@ -122,7 +122,7 @@ class Scheduler:
                 for dep in service.service_deps
                 if self.services[dep].dirty
             ]
-            if set(dirty_dep_tasks) > build_tasks_created:
+            if set(dirty_dep_tasks) - build_tasks_created:
                 LOG.debug(
                     "Can't create %s before dependencies: %s",
                     service.name,
