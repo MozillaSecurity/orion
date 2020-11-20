@@ -6,7 +6,7 @@ FROM mozilla/taskboot:0.2.7
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
     && retry apk add --no-cache --quiet jq openssl \
     && retry wget -q -O /bin/registry https://github.com/docker/distribution-library-image/raw/b804bcd6a44de56fcf8ff3f0ababae7479ad608e/amd64/registry \
     && retry wget -q -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/b804bcd6a44de56fcf8ff3f0ababae7479ad608e/amd64/config-example.yml \
@@ -16,7 +16,9 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
     && mkdir /lib64 \
     && ln -s /lib/ld-musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
 
+ENV DOCKER_API_VERSION 1.18
+
 COPY services/taskboot/build.sh /usr/local/bin/build
 COPY services/taskboot/push.sh /usr/local/bin/push
 COPY services/taskboot/stage_deps.sh /usr/local/bin/stage_deps
-
+COPY services/taskboot/common.sh /usr/local/share/taskboot_common.sh

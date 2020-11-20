@@ -1,15 +1,15 @@
 #!/bin/sh -xe
 
-retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; }
+. /usr/local/share/taskboot_common.sh
 
 login () {
   set +x
   TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "$TASKCLUSTER_SECRET" -o /tmp/secret.json
   chmod 0400 /tmp/secret.json
-  pair="$(jq -r .username /tmp/secret.json):$(jq -r .password /tmp/secret.json)"
-  registry="$(jq -r .registry /tmp/secret.json)"
+  pair="$(jq -r .secret.docker.username /tmp/secret.json):$(jq -r .secret.docker.password /tmp/secret.json)"
+  registry="$(jq -r .secret.docker.registry /tmp/secret.json)"
   rm /tmp/secret.json
-  echo "{\"auths\":{\"https://$registry/v1\":{\"auth\":\"$(echo -n "$pair" | base64)\"}}}" > /tmp/skopeo.json
+  echo "{\"auths\":{\"https://$registry/v1\":{\"auth\":\"$(echo -n "$pair" | base64)\"}}}" > /tmp/skopeo-auth.json
   echo -n "$registry" > /tmp/registry.txt
   chmod 0400 /tmp/skopeo-auth.json
   set -x
@@ -41,7 +41,16 @@ if [ "$BUILD_TOOL" = "img" ]; then
   taskboot push-artifact
 else
   stage_deps
+  # push to local registry
+  # registry has to be restarted *without* TLS for ancient docker client
+  start_registry
+  docker push "localhost/mozillasecurity/$IMAGE_NAME:latest"
+  docker push "localhost/mozillasecurity/$IMAGE_NAME:$GIT_REVISION"
+  # copy from local registry to docker hub
+  # registry has to be restarted *with* TLS for skopeo
+  start_registry_tls
   login
-  retry skopeo copy --authfile=/tmp/skopeo-auth.json "docker-daemon:mozillasecurity/$IMAGE_NAME:latest" "docker:$(cat /tmp/registry.txt)/mozillasecurity/$IMAGE_NAME:latest"
-  retry skopeo copy --authfile=/tmp/skopeo-auth.json "docker-daemon:mozillasecurity/$IMAGE_NAME:latest" "docker:$(cat /tmp/registry.txt)/mozillasecurity/$IMAGE_NAME:$GIT_REVISION"
+  registry="$(cat /tmp/registry.txt)"
+  retry skopeo copy --authfile=/tmp/skopeo-auth.json "docker://localhost/mozillasecurity/$IMAGE_NAME:latest" "docker://$registry/mozillasecurity/$IMAGE_NAME:latest"
+  retry skopeo copy --authfile=/tmp/skopeo-auth.json "docker://localhost/mozillasecurity/$IMAGE_NAME:latest" "docker://$registry/mozillasecurity/$IMAGE_NAME:$GIT_REVISION"
 fi

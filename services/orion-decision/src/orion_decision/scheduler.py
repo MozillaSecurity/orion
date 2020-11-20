@@ -139,7 +139,7 @@ class Scheduler:
                     "command": ["build"],
                     "env": {
                         "ARCHIVE_PATH": "/image.tar",
-                        "BUILD_TOOL": "dind",
+                        "BUILD_TOOL": "img",
                         "DOCKERFILE": str(
                             service.dockerfile.relative_to(service.context)
                         ),
@@ -148,7 +148,7 @@ class Scheduler:
                         "IMAGE_NAME": service.name,
                         "LOAD_DEPS": "1" if dirty_dep_tasks else "0",
                     },
-                    "features": {"dind": True},
+                    "capabilities": {"privileged": True},
                     "image": "mozillasecurity/taskboot:latest",
                     "maxRunTime": MAX_RUN_TIME.total_seconds(),
                 },
@@ -160,6 +160,7 @@ class Scheduler:
                     build_index,
                 ],
                 "scopes": [
+                    "docker-worker:capability:privileged",
                     "queue:route:index.project.fuzzing.orion.*",
                     f"queue:scheduler-id:{SCHEDULER_ID}",
                 ],
@@ -194,12 +195,12 @@ class Scheduler:
                 "payload": {
                     "command": ["push"],
                     "env": {
-                        "BUILD_TOOL": "dind",
+                        "BUILD_TOOL": "img",
                         "GIT_REVISION": self.github_event.commit,
                         "IMAGE_NAME": service.name,
                         "TASKCLUSTER_SECRET": self.docker_secret,
                     },
-                    "features": {"dind": True, "taskclusterProxy": True},
+                    "features": {"taskclusterProxy": True},
                     "image": "mozillasecurity/taskboot:latest",
                     "maxRunTime": MAX_RUN_TIME.total_seconds(),
                 },
