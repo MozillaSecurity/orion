@@ -87,8 +87,8 @@ class Scheduler:
         )
         queue = Taskcluster.get_service("queue")
         service_build_tasks = {service: slugId() for service in self.services}
-        build_tasks_created = 0
-        push_tasks_created = 0
+        build_tasks_created = set()
+        push_tasks_created = set()
         if not should_push:
             LOG.info(
                 "Not pushing to Docker Hub (event is %s, branch is %s, only push %s)",
@@ -101,7 +101,9 @@ class Scheduler:
         else:
             create_msg = "Creating"
             created_msg = "Created"
-        for service in self.services.values():
+        services_to_create = list(self.services.values())
+        while services_to_create:
+            service = services_to_create.pop(0)
             if self.github_event.pull_request is not None:
                 build_index = (
                     f"index.project.fuzzing.orion.{service.name}"
@@ -120,6 +122,14 @@ class Scheduler:
                 for dep in service.service_deps
                 if self.services[dep].dirty
             ]
+            if set(dirty_dep_tasks) > build_tasks_created:
+                LOG.debug(
+                    "Can't create %s before dependencies: %s",
+                    service.name,
+                    list(set(dirty_dep_tasks) - build_tasks_created),
+                )
+                services_to_create.append(service)
+                continue
             build_task = {
                 "taskGroupId": self.task_group,
                 "dependencies": dirty_dep_tasks,
@@ -181,7 +191,7 @@ class Scheduler:
                 except TaskclusterFailure as exc:  # pragma: no cover
                     LOG.error("Error creating build task: %s", exc)
                     raise
-            build_tasks_created += 1
+            build_tasks_created.add(task_id)
             if not should_push:
                 continue
             push_task = {
@@ -228,12 +238,12 @@ class Scheduler:
                 except TaskclusterFailure as exc:  # pragma: no cover
                     LOG.error("Error creating build task: %s", exc)
                     raise
-            push_tasks_created += 1
+            push_tasks_created.add(task_id)
         LOG.info(
             "%s %d build tasks and %d push tasks",
             created_msg,
-            build_tasks_created,
-            push_tasks_created,
+            len(build_tasks_created),
+            len(push_tasks_created),
         )
 
     @classmethod
