@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.coverage.run]
+omit = [
+    "*/setup.py",
+    "*/tests/*",
+    "*/build/*",
+    "*/dist/*",
+    "*/.tox/*",
+    "*/.egg/*",
+]
+
+[tool.isort]
+known_first_party = "orion_builder"
+profile = "black"
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.messages_control]
+disable = [
+    "C0330",
+    "C0326",
+    "bad-continuation",
+    "fixme",
+    "import-error",
+    "subprocess-run-check",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-nested-blocks",
+    "too-many-statements",
+]
+
+[tool.pytest.ini_options]
+log_level = "DEBUG"
+filterwarnings = [
+    "ignore:The 'warn' method is deprecated:DeprecationWarning:taskcluster",
+]
