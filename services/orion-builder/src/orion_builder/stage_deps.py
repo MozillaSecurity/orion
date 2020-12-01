@@ -9,7 +9,9 @@ from shutil import copyfile, rmtree
 from subprocess import Popen, check_call
 from tempfile import mkdtemp
 
-from taskboot.artifacts import retrieve_artifacts
+import taskcluster
+from taskboot.config import Configuration
+from taskboot.utils import load_artifacts, download_artifact
 
 
 CA_KEY = Path.home() / "cakey.pem"
@@ -122,42 +124,46 @@ def stage_deps(args):
     # retrieve image archives from dependency tasks to /images
     image_path = Path(mkdtemp(prefix="image-deps-"))
     try:
-
-        retr_args = Namespace()
-        retr_args.task_id = args.task_id
-        retr_args.output_path = image_path
-        retr_args.artifacts = "public/**.tar"
-        retrieve_artifacts(None, retr_args)
+        config = Configuration(Namespace(secret=None, config=None))
+        queue = taskcluster.Queue(config.get_taskcluster_options())
 
         # load images into the img image store via Docker registry
         registry = start_registry()
+
         try:
-            for img in image_path.glob("*.tar"):
+            for task_id, artifact_name in load_artifacts(
+                args.task_id, queue, "public/**.tar"
+            ):
+                img = download_artifact(queue, task_id, artifact_name, image_path)
+                image_name = Path(artifact_name).stem
                 check_call(
                     [
                         "skopeo",
                         "copy",
                         f"docker-archive:{img}",
-                        f"docker://localhost/mozillasecurity/{img.stem}:latest",
+                        f"docker://localhost/mozillasecurity/{image_name}:latest",
                     ]
                 )
                 check_call(
-                    ["img", "pull", f"localhost/mozillasecurity/{img.stem}:latest"]
+                    ["img", "pull", f"localhost/mozillasecurity/{image_name}:latest"]
                 )
                 check_call(
                     [
                         "img",
                         "tag",
-                        f"localhost/mozillasecurity/{img.stem}:latest",
-                        f"{args.registry}/mozillasecurity/{img.stem}:latest",
+                        f"localhost/mozillasecurity/{image_name}:latest",
+                        f"{args.registry}/mozillasecurity/{image_name}:latest",
                     ]
                 )
                 check_call(
                     [
                         "img",
                         "tag",
-                        f"localhost/mozillasecurity/{img.stem}:latest",
-                        f"{args.registry}/mozillasecurity/{img.stem}:{args.git_revision}",
+                        f"localhost/mozillasecurity/{image_name}:latest",
+                        (
+                            f"{args.registry}/mozillasecurity/"
+                            f"{image_name}:{args.git_revision}"
+                        ),
                     ]
                 )
                 img.unlink()
