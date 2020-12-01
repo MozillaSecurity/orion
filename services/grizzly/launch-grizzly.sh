@@ -45,6 +45,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [FILTER]
     Name rewrite_tag
     Match tail.*
+    Rule \$file screenlog.([0-9]+)$ screen\$1.log false
     Rule \$file ([^/]+)$ \$1 false
 
 [FILTER]
@@ -62,7 +63,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 
 [OUTPUT]
     Name file
-    Match screenlog.*
+    Match screen*.log
     Path /logs/
     Format template
     Template {time} {message}
@@ -76,5 +77,6 @@ su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"
 # need to keep the container running
 rwait wait "$wait_token"
 
+killall -INT td-agent-bit
 echo "Waiting for logs to flush..." >&2
 sleep 10
