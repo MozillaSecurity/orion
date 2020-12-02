@@ -11,6 +11,7 @@ from tempfile import mkdtemp
 
 import taskcluster
 from taskboot.config import Configuration
+from taskboot.docker import Img, patch_dockerfile
 from taskboot.utils import load_artifacts, download_artifact
 
 
@@ -92,22 +93,28 @@ def create_cert():
     check_call(["update-ca-certificates"])
 
 
-def start_registry():
-    """Start a docker registry at localhost.
+class Registry:
+    """Docker registry at localhost."""
 
-    Returns:
-        Popen: Process handle of the registry.
-    """
-    return Popen(
-        ["registry", "serve", "/root/registry.yml"],
-        env={
-            "REGISTRY_LOG_ACCESSLOG_DISABLED": "true",
-            "REGISTRY_LOG_LEVEL": "warn",
-            "REGISTRY_HTTP_ADDR": "0.0.0.0:443",
-            "REGISTRY_HTTP_TLS_CERTIFICATE": str(SRV_CRT),
-            "REGISTRY_HTTP_TLS_KEY": str(SRV_KEY),
-        },
-    )
+    def __init__(self):
+        self.proc = Popen(
+            ["registry", "serve", "/root/registry.yml"],
+            env={
+                "REGISTRY_LOG_ACCESSLOG_DISABLED": "true",
+                "REGISTRY_LOG_LEVEL": "warn",
+                "REGISTRY_HTTP_ADDR": "0.0.0.0:443",
+                "REGISTRY_HTTP_TLS_CERTIFICATE": str(SRV_CRT),
+                "REGISTRY_HTTP_TLS_KEY": str(SRV_KEY),
+            },
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_value, _exc_traceback):
+        self.proc.kill()
+        self.proc.wait()
+        rmtree("/var/lib/registry")
 
 
 def stage_deps(args):
@@ -120,6 +127,7 @@ def stage_deps(args):
         None
     """
     create_cert()
+    img_tool = Img(cache=args.cache)
 
     # retrieve image archives from dependency tasks to /images
     image_path = Path(mkdtemp(prefix="image-deps-"))
@@ -128,14 +136,12 @@ def stage_deps(args):
         queue = taskcluster.Queue(config.get_taskcluster_options())
 
         # load images into the img image store via Docker registry
-        registry = start_registry()
-
-        try:
-            for task_id, artifact_name in load_artifacts(
-                args.task_id, queue, "public/**.tar"
-            ):
-                img = download_artifact(queue, task_id, artifact_name, image_path)
-                image_name = Path(artifact_name).stem
+        for task_id, artifact_name in load_artifacts(
+            args.task_id, queue, "public/**.tar"
+        ):
+            img = download_artifact(queue, task_id, artifact_name, image_path)
+            image_name = Path(artifact_name).stem
+            with Registry():
                 check_call(
                     [
                         "skopeo",
@@ -144,30 +150,27 @@ def stage_deps(args):
                         f"docker://localhost/mozillasecurity/{image_name}:latest",
                     ]
                 )
-                check_call(
-                    ["img", "pull", f"localhost/mozillasecurity/{image_name}:latest"]
-                )
-                check_call(
-                    [
-                        "img",
-                        "tag",
-                        f"localhost/mozillasecurity/{image_name}:latest",
-                        f"{args.registry}/mozillasecurity/{image_name}:latest",
-                    ]
-                )
-                check_call(
-                    [
-                        "img",
-                        "tag",
-                        f"localhost/mozillasecurity/{image_name}:latest",
-                        (
-                            f"{args.registry}/mozillasecurity/"
-                            f"{image_name}:{args.git_revision}"
-                        ),
-                    ]
-                )
                 img.unlink()
-        finally:
-            registry.kill()
+                img_tool.run(["pull", f"localhost/mozillasecurity/{image_name}:latest"])
+            img_tool.run(
+                [
+                    "tag",
+                    f"localhost/mozillasecurity/{image_name}:latest",
+                    f"{args.registry}/mozillasecurity/{image_name}:latest",
+                ]
+            )
+            img_tool.run(
+                [
+                    "tag",
+                    f"localhost/mozillasecurity/{image_name}:latest",
+                    (
+                        f"{args.registry}/mozillasecurity/"
+                        f"{image_name}:{args.git_revision}"
+                    ),
+                ]
+            )
     finally:
         rmtree(image_path)
+
+    # workaround https://github.com/genuinetools/img/issues/206
+    patch_dockerfile(args.dockerfile, img_tool.list_images())

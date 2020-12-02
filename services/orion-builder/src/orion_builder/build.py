@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/build script"""
 from os import getenv
+from pathlib import Path
 from shutil import rmtree
 import sys
 
@@ -54,6 +55,7 @@ class BuildArgs(CommonArgs):
         )
         self.parser.set_defaults(
             build_arg=[],
+            cache=str(Path.home() / ".local" / "share"),
             push=False,
         )
 
