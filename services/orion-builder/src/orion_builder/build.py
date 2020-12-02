@@ -92,9 +92,9 @@ def main(argv=None):
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
     configure_logging(level=args.log_level)
-    if args.load_deps:
-        stage_deps(args)
     target = Target(args)
+    if args.load_deps:
+        stage_deps(target, args)
     try:
         build_image(target, args)
     finally:

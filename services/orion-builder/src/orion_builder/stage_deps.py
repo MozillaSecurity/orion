@@ -4,10 +4,11 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Stage build deps Orion builder"""
 from argparse import Namespace
+import os
 from pathlib import Path
-from shutil import copyfile, rmtree
+from shutil import copyfile, copyfileobj, rmtree
 from subprocess import Popen, check_call
-from tempfile import mkdtemp
+from tempfile import mkdtemp, mkstemp
 
 import taskcluster
 from taskboot.config import Configuration
@@ -17,80 +18,95 @@ from taskboot.utils import load_artifacts, download_artifact
 
 CA_KEY = Path.home() / "cakey.pem"
 CA_CRT = Path.home() / "ca.pem"
-SRV_REQ = Path.home() / "srvreq.csr"
 SRV_KEY = Path.home() / "srvkey.pem"
 SRV_CRT = Path.home() / "srv.pem"
 
 
-def create_cert():
-    """Create a self-signed server certificate at `SRV_CRT` (key `SRV_KEY`)
-    and install the CA certificate (`CA_CRT`) in the machines ca-certificate store.
+def create_cert(key_path, cert_path, ca=False, ca_key=None, ca_cert=None):
+    """Create a self-signed localhost certificate. If a CA certificate is created,
+    install in the system ca-certificate store.
+
+    Arguments:
+        key_path (Path): output path for key
+        cert_path (Path): output path for certificate
+        ca (bool): whether or not the certificate is a CA root
+        ca_key (Path or None): CA root key to sign the created cert
+        ca_cert (Path or None): CA root certificate to sign the created cert
 
     Returns:
         None
     """
-    # create a self-signed server cert
-    # in /root/srv.pem & key in /root/srvkey.pem
-    # & install the CA cert
-    # expires in 1 day
-    check_call(
-        [
-            "openssl",
-            "req",
-            "-x509",
-            "-newkey",
-            "rsa:4096",
-            "-sha256",
-            "-keyout",
-            str(CA_KEY),
-            "-out",
-            str(CA_CRT),
-            "-days",
-            "1",
-            "-nodes",
-            "-subj",
-            "/CN=localhost",
-        ]
-    )
-    check_call(
-        [
-            "openssl",
-            "req",
-            "-newkey",
-            "rsa:4096",
-            "-sha256",
-            "-keyout",
-            str(SRV_KEY),
-            "-out",
-            str(SRV_REQ),
-            "-nodes",
-            "-subj",
-            "/CN=localhost",
-        ]
-    )
-    check_call(
-        [
+    if ca:
+        assert ca_key is None and ca_cert is None, "Can't give ca_key/cert when ca=True"
+    tmpd = Path(mkdtemp(prefix="create-cert-"))
+    try:
+        csr = tmpd / "cert.req"
+        ext = tmpd / "cert.ext"
+        check_call(
+            [
+                "openssl",
+                "req",
+                "-newkey",
+                "rsa:2048",
+                "-sha256",
+                "-nodes",
+                "-keyout",
+                str(key_path),
+                "-out",
+                str(csr),
+                "-subj",
+                "/CN=localhost",
+            ]
+        )
+        ext.write_text(
+            "authorityKeyIdentifier = keyid,issuer\n"
+            f"basicConstraints = CA:{str(ca).upper()}\n"
+            "subjectKeyIdentifier = hash\n"
+            "subjectAltName = @alt_names\n"
+            "\n"
+            "[alt_names]\n"
+            "DNS.1 = localhost\n"
+            "IP.1 = 127.0.0.1\n"
+        )
+        cmd = [
             "openssl",
             "x509",
             "-req",
-            "-in",
-            str(SRV_REQ),
             "-sha256",
-            "-CA",
-            str(CA_CRT),
-            "-CAkey",
-            str(CA_KEY),
-            "-CAcreateserial",
-            "-out",
-            str(SRV_CRT),
             "-days",
             "1",
+            "-in",
+            str(csr),
+            "-signkey",
+            str(key_path),
+            "-out",
+            str(cert_path),
+            "-extfile",
+            str(ext),
         ]
-    )
-    copyfile(CA_CRT, "/usr/share/ca-certificates/localhost.crt")
-    with Path("/etc/ca-certificates.conf").open("a") as ca_cnf:
-        print("localhost.crt", file=ca_cnf)
-    check_call(["update-ca-certificates"])
+        if ca_key and ca_cert:
+            cmd.extend(
+                [
+                    "-CA",
+                    str(ca_cert),
+                    "-CAkey",
+                    str(ca_key),
+                    "-CAcreateserial",
+                ]
+            )
+        check_call(cmd)
+    finally:
+        rmtree(tmpd)
+    if ca:
+        store_fd, store_path = mkstemp(
+            dir="/usr/share/ca-certificates", prefix="localhost-", suffix=".crt"
+        )
+        store_path = Path(store_path)
+        with cert_path.open() as cert_fd, open(store_fd, "w") as store_fd:
+            copyfileobj(cert_fd, store_fd)
+        with Path("/etc/ca-certificates.conf").open("a") as ca_cnf:
+            print(store_path.name, file=ca_cnf)
+        check_call(["update-ca-certificates"])
 
 
 class Registry:
@@ -114,19 +130,21 @@ class Registry:
     def __exit__(self, _exc_type, _exc_value, _exc_traceback):
         self.proc.kill()
         self.proc.wait()
-        rmtree("/var/lib/registry")
+        rmtree("/var/lib/registry", ignore_errors=True)
 
 
-def stage_deps(args):
+def stage_deps(target, args):
     """Pull image dependencies into the `img` store.
 
     Arguments:
+        target (taskboot.target.Target): Target
         args (argparse.Namespace): CLI arguments
 
     Returns:
         None
     """
-    create_cert()
+    create_cert(CA_KEY, CA_CRT, ca=True)
+    create_cert(SRV_KEY, SRV_CRT, ca_key=CA_KEY, ca_cert=CA_CRT)
     img_tool = Img(cache=args.cache)
 
     # retrieve image archives from dependency tasks to /images
@@ -136,12 +154,12 @@ def stage_deps(args):
         queue = taskcluster.Queue(config.get_taskcluster_options())
 
         # load images into the img image store via Docker registry
-        for task_id, artifact_name in load_artifacts(
-            args.task_id, queue, "public/**.tar"
-        ):
-            img = download_artifact(queue, task_id, artifact_name, image_path)
-            image_name = Path(artifact_name).stem
-            with Registry():
+        with Registry():
+            for task_id, artifact_name in load_artifacts(
+                args.task_id, queue, "public/**.tar"
+            ):
+                img = download_artifact(queue, task_id, artifact_name, image_path)
+                image_name = Path(artifact_name).stem
                 check_call(
                     [
                         "skopeo",
@@ -152,25 +170,25 @@ def stage_deps(args):
                 )
                 img.unlink()
                 img_tool.run(["pull", f"localhost/mozillasecurity/{image_name}:latest"])
-            img_tool.run(
-                [
-                    "tag",
-                    f"localhost/mozillasecurity/{image_name}:latest",
-                    f"{args.registry}/mozillasecurity/{image_name}:latest",
-                ]
-            )
-            img_tool.run(
-                [
-                    "tag",
-                    f"localhost/mozillasecurity/{image_name}:latest",
-                    (
-                        f"{args.registry}/mozillasecurity/"
-                        f"{image_name}:{args.git_revision}"
-                    ),
-                ]
-            )
+                img_tool.run(
+                    [
+                        "tag",
+                        f"localhost/mozillasecurity/{image_name}:latest",
+                        f"{args.registry}/mozillasecurity/{image_name}:latest",
+                    ]
+                )
+                img_tool.run(
+                    [
+                        "tag",
+                        f"localhost/mozillasecurity/{image_name}:latest",
+                        (
+                            f"{args.registry}/mozillasecurity/"
+                            f"{image_name}:{args.git_revision}"
+                        ),
+                    ]
+                )
     finally:
         rmtree(image_path)
 
     # workaround https://github.com/genuinetools/img/issues/206
-    patch_dockerfile(args.dockerfile, img_tool.list_images())
+    patch_dockerfile(target.check_path(args.dockerfile), img_tool.list_images())
