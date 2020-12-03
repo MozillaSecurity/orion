@@ -73,9 +73,15 @@ mkdir -p /var/lib/td-agent-bit/pos
 
 function flush_logs () {
   echo "Waiting for logs to flush..." >&2
+  killall -INT td-agent-bit
+  sleep 5
+  # relaunch to force re-scan of files to process
+  # eg. the fuzzer may crash immediately in a new screen session, and
+  #     fluentbit takes up to 60s to pick up new files.
+  /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
   sleep 10
   killall -INT td-agent-bit
-  sleep 10
+  sleep 5
 }
 trap flush_logs EXIT
 
