@@ -18,29 +18,23 @@ su worker -c '. ~/.local/bin/common.sh && retry credstash get google-logging-cre
 chmod 0600 /etc/google/auth/application_default_credentials.json
 cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
-    Flush        5
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
     Log_Level    info
     Parsers_File parsers.conf
     Plugins_File plugins.conf
-    HTTP_Server  Off
 
 [INPUT]
     Name tail
-    Path /logs/live.log
+    Path /logs/live.log,/home/worker/grizzly-auto-run/screenlog.*
     Path_Key file
     Key message
+    Refresh_Interval 5
+    Read_from_Head On
+    Skip_Long_Lines On
     Buffer_Max_Size 1M
     DB /var/lib/td-agent-bit/pos/grizzly-logs.pos
-
-[INPUT]
-    Name tail
-    Path /home/worker/grizzly-auto-run/screenlog.*
-    Path_Key file
-    Key message
-    Buffer_Max_Size 1M
-    DB /var/lib/td-agent-bit/pos/grizzly-logs.pos
+    DB.locking true
 
 [FILTER]
     Name rewrite_tag
@@ -74,14 +68,7 @@ mkdir -p /var/lib/td-agent-bit/pos
 function flush_logs () {
   echo "Waiting for logs to flush..." >&2
   killall -INT td-agent-bit
-  sleep 5
-  # relaunch to force re-scan of files to process
-  # eg. the fuzzer may crash immediately in a new screen session, and
-  #     fluentbit takes up to 60s to pick up new files.
-  /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
-  sleep 10
-  killall -INT td-agent-bit
-  sleep 5
+  sleep 15
 }
 trap flush_logs EXIT
 
@@ -89,7 +76,4 @@ wait_token="$(su worker -c "rwait create")"
 su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"
 
 # need to keep the container running
-if ! rwait wait "$wait_token"
-then
-  echo "worker script returned $?" >&2
-fi
+rwait wait "$wait_token"
