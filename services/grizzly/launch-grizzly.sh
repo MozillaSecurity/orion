@@ -65,12 +65,17 @@ EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
-function flush_logs () {
+function onexit () {
   echo "Waiting for logs to flush..." >&2
   killall -INT td-agent-bit
   sleep 15
+  if [[ -d /tmp/grizzly ]]
+  then
+    echo "Saving grizzly logs..." >&2
+    cp -r /tmp/grizzly /logs/tmp-grizzly
+  fi
 }
-trap flush_logs EXIT
+trap onexit EXIT
 
 wait_token="$(su worker -c "rwait create")"
 su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"

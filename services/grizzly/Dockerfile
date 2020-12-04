@@ -17,10 +17,8 @@ COPY services/grizzly/setup.sh /tmp/recipes/
 COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes /tmp/setup.sh
-COPY services/grizzly/screenlog-to-cloudwatch.py /usr/local/bin/
 COPY services/grizzly/rwait.py /usr/local/bin/rwait
-COPY services/grizzly/launch-grizzly.sh /home/worker/
-COPY services/grizzly/launch-grizzly-worker.sh /home/worker/
+COPY services/grizzly/launch-grizzly.sh services/grizzly/launch-grizzly-worker.sh /home/worker/
 
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
