@@ -82,4 +82,15 @@ wait_token="$(su worker -c "rwait create")"
 su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"
 
 # need to keep the container running
+set +e
 rwait wait "$wait_token"
+exit_code=$?
+echo "returned $exit_code" >&2
+case $exit_code in
+  5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
+    exit 0
+    ;;
+  *)
+    exit $exit_code
+    ;;
+esac
