@@ -87,6 +87,7 @@ dbgsym_packages=(
   libegl1
 #  libegl-mesa0
   libgl1
+  libglib2.0-0
 #  libgl1-mesa-dri
 #  libglapi-mesa
 #  libglu1-mesa
@@ -102,6 +103,7 @@ dbgsym_packages=(
 
 sys-embed "${packages_with_recommends[@]}"
 retry apt-get install -y -qq "${packages[@]}"
+apt-get remove -y gvfs  # see https://bugzilla.mozilla.org/show_bug.cgi?id=1682934
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
 sys-embed-dbgsym "${dbgsym_packages[@]}"
