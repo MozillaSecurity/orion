@@ -32,10 +32,29 @@ else
   TARGET_TIME=28800
 fi
 
-(cd ~/trees/funfuzz
- retry git fetch --depth 1 origin master
- git reset --hard FETCH_HEAD
-)
+mode_args=()
+case "${MODE-default}" in
+  "wasm")
+    ;;
+  "compare-jit")
+    mode_args+=("--no-fuzz-wasm" "--compare-jit")
+    ;;
+  "default")
+    mode_args+=("--no-fuzz-wasm")
+    ;;
+  *)
+    echo "warning: unknown value for \$MODE: $MODE, assuming 'default'" >&2
+    mode_args+=("--no-fuzz-wasm")
+    ;;
+esac
+
+if [[ -z "$NO_PULL" ]]
+then
+  (cd ~/trees/funfuzz
+   retry git fetch --depth 1 origin master
+   git reset --hard FETCH_HEAD
+  )
+fi
 
 BUILDS="$HOME/builds"
 mkdir -p "$BUILDS"
@@ -94,14 +113,14 @@ function select-build () {
 }
 
 screen -d -m -L -S funfuzz
-nprocs="${NPROCS-$(python3 -c "import multiprocessing;print(multiprocessing.cpu_count())")}"
+nprocs="${NPROCS-$(python3 -c "import os;print(len(os.sched_getaffinity(0)))")}"
 update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
 echo "[$(date)] launching $nprocs processes..."
 for (( i=1; i<=nprocs; i++ ))
 do
   build="$(select-build)"
   screen -S funfuzz -X setenv LD_LIBRARY_PATH "$BUILDS/$build/dist/bin/"
-  screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
+  screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "${mode_args[@]}" "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
   sleep 1
 done
 screen -S funfuzz -X screen ~/status.sh
