@@ -10,19 +10,6 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
-function on-exit {
-  echo "Script is terminating - executing trap commands."
-  if [[ $COVERAGE ]]
-  then
-    disable-ec2-pool || true
-  fi
-  if [[ -z "$NO_LOGS" ]]
-  then
-    echo "Waiting for logs to flush..." >&2
-    sleep 10
-  fi
-}
-
 if [[ "$(id -u)" = "0" ]]
 then
   if [[ -z "$NO_CREDSTASH" ]]
@@ -34,25 +21,28 @@ then
     chmod 0600 /etc/google/auth/application_default_credentials.json
     cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
-    Flush        5
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
     Log_Level    info
     Parsers_File parsers.conf
     Plugins_File plugins.conf
-    HTTP_Server  Off
 
 [INPUT]
     Name tail
-    Path /logs/live.log
+    Path /logs/live.log,/home/worker/screenlog.*
     Path_Key file
     Key message
+    Refresh_Interval 5
+    Read_from_Head On
+    Skip_Long_Lines On
     Buffer_Max_Size 1M
     DB /var/lib/td-agent-bit/pos/libfuzzer-logs.pos
+    DB.locking true
 
 [FILTER]
     Name rewrite_tag
     Match tail.*
+    Rule \$file screenlog.([0-9]+)$ screen\$1.log false
     Rule \$file ([^/]+)$ \$1 false
 
 [FILTER]
@@ -67,17 +57,42 @@ then
     Match *
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
+
+[OUTPUT]
+    Name file
+    Match screen*.log
+    Path /logs/
+    Format template
+    Template {time} {message}
 EOF
     mkdir -p /var/lib/td-agent-bit/pos
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
+
+    function onexit () {
+      echo "Waiting for logs to flush..." >&2
+      sleep 15
+      killall -INT td-agent-bit
+      sleep 15
+    }
+
+    trap onexit EXIT
   fi
   # These sysctls shouldn't be necessary for libFuzzer
   # sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -c "$0"
 else
-  trap on-exit EXIT ERR
   if [[ $COVERAGE ]]
   then
+
+    if [[ -z "$TASK_ID" ]]
+    then
+      function onexit {
+        disable-ec2-pool || true
+      }
+
+      trap onexit EXIT
+    fi
+
     echo "Launching coverage LibFuzzer run."
     ./coverage.sh
   else

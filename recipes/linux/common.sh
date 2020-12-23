@@ -14,11 +14,18 @@ GCE_METADATA_URL="http://169.254.169.254/computeMetadata/v1"
 
 # Re-tries a certain command 9 times with a 30 seconds pause between each try.
 function retry () {
-  # shellcheck disable=SC2015
+  op="$(mktemp)"
   for _ in {1..9}
   do
-    "$@" && return || sleep 30
+    if "$@" >"$op"
+    then
+      cat "$op"
+      rm "$op"
+      return
+    fi
+    sleep 30
   done
+  rm "$op"
   "$@"
 }
 
@@ -183,10 +190,10 @@ function setup-fuzzmanager-hostname {
   name=$(relative-hostname "$1")
   if [ -z "$name" ]
   then
-    echo "WARNING: hostname was not determined correctly."
+    echo "WARNING: hostname was not determined correctly." >&2
     name=$(hostname -f)
   fi
-  echo "Using '$name' as hostname."
+  echo "Using '$name' as hostname." >&2
   echo "clientid = $name" >> "$HOME/.fuzzmanagerconf"
 }
 
@@ -194,6 +201,7 @@ function setup-fuzzmanager-hostname {
 function disable-ec2-pool {
   if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
   then
+    echo "Disabling EC2 pool $EC2SPOTMANAGER_POOLID" >&2
     python3 -m EC2Reporter --disable "$EC2SPOTMANAGER_POOLID"
   fi
 }

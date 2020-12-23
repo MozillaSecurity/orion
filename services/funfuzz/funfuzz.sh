@@ -26,8 +26,22 @@ then
   TARGET_TIME="$EC2SPOTMANAGER_CYCLETIME"
 elif [[ -n "$TASK_ID" ]]
 then
-  deadline="$(taskcluster api queue status "$TASK_ID" | jshon -e status -e deadline -u)"
-  TARGET_TIME="$(python3 -c "import datetime,dateutil.parser;print(int((dateutil.parser.isoparse('$deadline')-datetime.datetime.now(datetime.timezone.utc)).total_seconds())-5*60)")"
+  function get-deadline () {
+    tmp="$(mktemp -d)"
+    task="$(retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json")"
+    status="$(retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json")"
+    deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
+    started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
+    max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
+    rm -rf "$tmp"
+    run_end="$((started + max_run_time))"
+    if [[ $run_end -lt $deadline ]]; then
+      echo "$run_end"
+    else
+      echo "$deadline"
+    fi
+  }
+  TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
 else
   TARGET_TIME=28800
 fi
@@ -124,6 +138,6 @@ do
   sleep 1
 done
 screen -S funfuzz -X screen ~/status.sh
-echo "[$(date)] waiting $TARGET_TIME"
+echo "[$(date -u -Iseconds)] waiting $TARGET_TIME"
 sleep $TARGET_TIME
-echo "[$(date)] $TARGET_TIME elapsed, exiting..."
+echo "[$(date -u -Iseconds)] $TARGET_TIME elapsed, exiting..."
