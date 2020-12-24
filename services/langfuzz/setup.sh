@@ -62,9 +62,7 @@ packages=(
   nano
   openjdk-8-jdk
   openssh-client
-  python-dev
-  python-pip
-  python-setuptools
+  psmisc
   python3-dev
   python3-pip
   python3-setuptools

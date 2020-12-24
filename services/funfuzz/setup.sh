@@ -46,6 +46,7 @@ packages=(
   locales
   nano
   openssh-client
+  psmisc
   screen
   software-properties-common
   unzip
