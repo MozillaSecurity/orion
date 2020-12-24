@@ -7,15 +7,27 @@ set -e
 set -x
 
 # shellcheck source=recipes/linux/common.sh
-source ~/.local/bin/common.sh
+source ~worker/.local/bin/common.sh
 
 sys-update
 sys-embed qemu-kvm
+apt-install-auto zstd
+
+(
+  cd /tmp
+  curl --retry 5 -L https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-11-android-cross.latest/artifacts/public/build/clang.tar.zst -o /tmp/clang.tar.zst
+  zstdcat /tmp/clang.tar.zst | tar x clang/lib64/clang/11.0.0/lib/linux/
+  rm /tmp/clang.tar.zst
+  mkdir -p ~worker/${CLANG_DEST}/lib/linux
+  cp ${CLANG_SRC}/lib/linux/libclang_rt.asan-x86_64-android.so ~worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-x86_64-android.so
+  cp ${CLANG_SRC}/lib/linux/libclang_rt.asan-i686-android.so ~worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-i686-android.so
+  rm -rf clang
+)
 
 pip3 install -r /tmp/recipes/requirements.txt
 python3 /tmp/recipes/emulator.py install avd
 
-~/.local/bin/cleanup.sh
+~worker/.local/bin/cleanup.sh
 
 chown -R worker:worker /home/worker
 usermod -a -G kvm worker
