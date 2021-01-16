@@ -148,7 +148,7 @@ class Scheduler:
                     },
                     "command": ["build"],
                     "env": {
-                        "ARCHIVE_PATH": "/image.tar.zst",
+                        "ARCHIVE_PATH": "/image.tar",
                         "BUILD_TOOL": "img",
                         "DOCKERFILE": str(
                             service.dockerfile.relative_to(service.context)

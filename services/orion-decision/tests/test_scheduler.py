@@ -115,7 +115,7 @@ def test_create_02(mocker):
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar.zst",
+                "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -181,7 +181,7 @@ def test_create_03(mocker):
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar.zst",
+                "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -280,7 +280,7 @@ def test_create_04(mocker):
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar.zst",
+                "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -327,7 +327,7 @@ def test_create_04(mocker):
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar.zst",
+                "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test2/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -426,7 +426,7 @@ def test_create_07(mocker):
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar.zst",
+                "ARCHIVE_PATH": "/image.tar",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
