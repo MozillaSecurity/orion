@@ -140,15 +140,15 @@ class Scheduler:
                 "workerType": WORKER_TYPE,
                 "payload": {
                     "artifacts": {
-                        f"public/{service.name}.tar": {
+                        f"public/{service.name}.tar.zst": {
                             "expires": stringDate(self.now + ARTIFACTS_EXPIRE),
-                            "path": "/image.tar",
+                            "path": "/image.tar.zst",
                             "type": "file",
                         },
                     },
                     "command": ["build"],
                     "env": {
-                        "ARCHIVE_PATH": "/image.tar",
+                        "ARCHIVE_PATH": "/image.tar.zst",
                         "BUILD_TOOL": "img",
                         "DOCKERFILE": str(
                             service.dockerfile.relative_to(service.context)

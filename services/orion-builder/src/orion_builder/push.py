@@ -17,7 +17,7 @@ class PushArgs(CommonArgs):
     def __init__(self):
         super().__init__()
         self.parser.set_defaults(
-            artifact_filter="public/**.tar",
+            artifact_filter="public/**.tar.zst",
             exclude_filter=None,
             push_tool="skopeo",
         )

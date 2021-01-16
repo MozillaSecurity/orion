@@ -156,7 +156,7 @@ def stage_deps(target, args):
         # load images into the img image store via Docker registry
         with Registry():
             for task_id, artifact_name in load_artifacts(
-                args.task_id, queue, "public/**.tar"
+                args.task_id, queue, "public/**.tar.zst"
             ):
                 img = download_artifact(queue, task_id, artifact_name, image_path)
                 image_name = Path(artifact_name).stem

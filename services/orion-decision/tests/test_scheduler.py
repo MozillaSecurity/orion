@@ -107,15 +107,15 @@ def test_create_02(mocker):
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
-                "public/test1.tar": {
+                "public/test1.tar.zst": {
                     "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar",
+                    "path": "/image.tar.zst",
                     "type": "file",
                 },
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar",
+                "ARCHIVE_PATH": "/image.tar.zst",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -173,15 +173,15 @@ def test_create_03(mocker):
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
-                "public/test1.tar": {
+                "public/test1.tar.zst": {
                     "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar",
+                    "path": "/image.tar.zst",
                     "type": "file",
                 },
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar",
+                "ARCHIVE_PATH": "/image.tar.zst",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -272,15 +272,15 @@ def test_create_04(mocker):
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
-                "public/test1.tar": {
+                "public/test1.tar.zst": {
                     "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar",
+                    "path": "/image.tar.zst",
                     "type": "file",
                 },
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar",
+                "ARCHIVE_PATH": "/image.tar.zst",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -319,15 +319,15 @@ def test_create_04(mocker):
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
-                "public/test2.tar": {
+                "public/test2.tar.zst": {
                     "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar",
+                    "path": "/image.tar.zst",
                     "type": "file",
                 },
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar",
+                "ARCHIVE_PATH": "/image.tar.zst",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test2/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
@@ -418,15 +418,15 @@ def test_create_07(mocker):
         "workerType": WORKER_TYPE,
         "payload": {
             "artifacts": {
-                "public/test1.tar": {
+                "public/test1.tar.zst": {
                     "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar",
+                    "path": "/image.tar.zst",
                     "type": "file",
                 },
             },
             "command": ["build"],
             "env": {
-                "ARCHIVE_PATH": "/image.tar",
+                "ARCHIVE_PATH": "/image.tar.zst",
                 "BUILD_TOOL": "img",
                 "DOCKERFILE": "test1/Dockerfile",
                 "GIT_REPOSITORY": "https://example.com",
