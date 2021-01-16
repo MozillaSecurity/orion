@@ -18,7 +18,7 @@ source ~/.local/bin/common.sh
 # Setup required coverage environment variables.
 export COVERAGE=1
 
-REVISION="$(curl --retry 5 -sL https://build.fuzzing.mozilla.org/builds/coverage-revision.txt)"
+REVISION="$(curl --retry 5 -sL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 
 # Our default target is Firefox, but we support targetting the JS engine instead.
