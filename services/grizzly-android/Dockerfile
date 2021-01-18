@@ -8,11 +8,6 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 USER root
 
-ARG BUILD_CLANG_VERSION=11.0.0
-ENV CLANG_VERSION ${BUILD_CLANG_VERSION}
-ENV CLANG_SRC clang/lib64/clang/${CLANG_VERSION}
-ENV CLANG_DEST android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}
-
 COPY services/grizzly-android/recipes/ /tmp/recipes/
 RUN /tmp/recipes/setup.sh \
     && rm -rf /tmp/recipes

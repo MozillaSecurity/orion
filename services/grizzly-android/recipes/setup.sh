@@ -9,6 +9,8 @@ set -x
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
+CLANG_SRC="clang/lib64/clang/*"
+
 sys-update
 sys-embed qemu-kvm
 apt-install-auto zstd
@@ -16,11 +18,16 @@ apt-install-auto zstd
 (
   cd /tmp
   curl --retry 5 -L https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-11-android-cross.latest/artifacts/public/build/clang.tar.zst -o /tmp/clang.tar.zst
-  zstdcat /tmp/clang.tar.zst | tar x clang/lib64/clang/11.0.0/lib/linux/
+  zstdcat /tmp/clang.tar.zst | tar --wildcards -x "${CLANG_SRC}/lib/linux/"
   rm /tmp/clang.tar.zst
-  mkdir -p ~worker/${CLANG_DEST}/lib/linux
-  cp ${CLANG_SRC}/lib/linux/libclang_rt.asan-x86_64-android.so ~worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-x86_64-android.so
-  cp ${CLANG_SRC}/lib/linux/libclang_rt.asan-i686-android.so ~worker/${CLANG_DEST}/lib/linux/libclang_rt.asan-i686-android.so
+
+  CLANG_SRC="$(ls -d ${CLANG_SRC})"  # don't quote CLANG_SRC! need to expand wildcard
+  CLANG_VERSION="$(basename "${CLANG_SRC}")"
+  CLANG_DEST="android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}"
+
+  mkdir -p ~worker/"${CLANG_DEST}/lib/linux"
+  cp "${CLANG_SRC}/lib/linux/libclang_rt.asan-x86_64-android.so" ~worker/"${CLANG_DEST}/lib/linux/libclang_rt.asan-x86_64-android.so"
+  cp "${CLANG_SRC}/lib/linux/libclang_rt.asan-i686-android.so" ~worker/"${CLANG_DEST}/lib/linux/libclang_rt.asan-i686-android.so"
   rm -rf clang
 )
 
