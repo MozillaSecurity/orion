@@ -1,0 +1,53 @@
+tests:
+  - expect:
+      raises:
+        msg: "Missing test fields"
+        _type: RuntimeError
+  - name: test
+    expect:
+      raises:
+        msg: "Missing test fields"
+        _type: RuntimeError
+  - type: tox
+    expect:
+      raises:
+        msg: "Missing test fields"
+        _type: RuntimeError
+  - name: test
+    type: tox
+    expect:
+      raises:
+        msg: "Missing test fields"
+        _type: RuntimeError
+  - name: test
+    type: tox
+    toxenv: testenv
+    expect:
+      raises:
+        msg: "Missing test fields"
+        _type: RuntimeError
+  - name: test-test
+    type: tox
+    toxenv: testenv
+    image: testimg
+    expect:
+      _type: ToxServiceTest
+      object:
+        name: test-test
+        toxenv: testenv
+        image: testimg
+  - name: test-test
+    type: tox
+    toxenv: testenv
+    image: testimg
+    extra: garbage
+    expect:
+      raises:
+        msg: "Unknown test fields"
+        _type: RuntimeError
+  - name: test-test
+    type: blah
+    expect:
+      raises:
+        msg: "Unrecognized test 'type'"
+        _type: RuntimeError

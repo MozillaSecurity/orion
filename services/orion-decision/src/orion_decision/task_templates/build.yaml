@@ -1,0 +1,38 @@
+taskGroupId: "${task_group}"
+dependencies: []
+created: "${now}"
+deadline: "${deadline}"
+provisionerId: "${provisioner}"
+schedulerId: "${scheduler}"
+workerType: "${worker}"
+payload:
+  artifacts:
+    "public/${service_name}.tar.zst":
+      expires: "${expires}"
+      path: /image.tar.zst
+      type: file
+  command: [build]
+  env:
+    ARCHIVE_PATH: /image.tar
+    BUILD_TOOL: img
+    DOCKERFILE: "${dockerfile}"
+    GIT_REPOSITORY: "${clone_url}"
+    GIT_REVISION: "${commit}"
+    IMAGE_NAME: "mozillasecurity/${service_name}"
+    LOAD_DEPS: "${load_deps}"
+  capabilities:
+    privileged: true
+  image: "mozillasecurity/orion-builder:latest"
+  maxRunTime: !!int "${max_run_time}"
+routes:
+  - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
+  - "${route}"
+scopes:
+  - "docker-worker:capability:privileged"
+  - "queue:route:index.project.fuzzing.orion.*"
+  - "queue:scheduler-id:${scheduler}"
+metadata:
+  description: "Build the docker image for ${service_name} tasks"
+  name: "Orion ${service_name} docker build"
+  owner: "${owner_email}"
+  source: "${source_url}"

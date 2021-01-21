@@ -4,12 +4,11 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Decision module for Orion builds"""
 
-from datetime import timedelta
 import os
+from datetime import timedelta
 
 from dateutil.relativedelta import relativedelta
 from taskcluster.helper import TaskclusterConfig
-
 
 Taskcluster = TaskclusterConfig(
     os.getenv("TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com")

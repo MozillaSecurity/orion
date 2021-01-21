@@ -1,1 +1,6 @@
 name: orion-builder
+tests:
+  - name: lint
+    type: tox
+    image: ci-py-38
+    toxenv: lint

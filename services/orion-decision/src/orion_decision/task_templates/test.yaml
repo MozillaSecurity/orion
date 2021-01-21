@@ -1,0 +1,16 @@
+taskGroupId: "${task_group}"
+dependencies: []
+created: "${now}"
+deadline: "${deadline}"
+provisionerId: "${provisioner}"
+schedulerId: "${scheduler}"
+workerType: "${worker}"
+payload:
+  maxRunTime: !!int "${max_run_time}"
+scopes:
+  - "queue:scheduler-id:${scheduler}"
+metadata:
+  description: "Test ${test_name} for ${service_name} tasks"
+  name: "Orion ${service_name} test ${test_name}"
+  owner: "${owner_email}"
+  source: "${source_url}"

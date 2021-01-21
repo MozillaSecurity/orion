@@ -3,16 +3,18 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion scheduler"""
+import sys
 from argparse import ArgumentParser
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import getenv
-import sys
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
 
+from .git import GitRepo
+from .orion import Services
 from .scheduler import Scheduler
 
 
@@ -33,16 +35,7 @@ def configure_logging(level=INFO):
         getLogger("urllib3").setLevel(INFO)
 
 
-def parse_args(argv=None):
-    """Parse command-line arguments.
-
-    Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
-
-    Returns:
-        argparse.Namespace: parsed result
-    """
-    parser = ArgumentParser()
+def _define_logging_args(parser):
     log_levels = parser.add_mutually_exclusive_group()
     log_levels.add_argument(
         "--quiet",
@@ -60,6 +53,19 @@ def parse_args(argv=None):
         const=DEBUG,
         help="Show more logging output.",
     )
+
+
+def parse_args(argv=None):
+    """Parse command-line arguments.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser()
+    _define_logging_args(parser)
     parser.add_argument(
         "--task-group",
         default=getenv("TASK_ID"),
@@ -113,6 +119,33 @@ def parse_args(argv=None):
         parser.error("--github-event (or GITHUB_EVENT) is required!")
 
     return result
+
+
+def parse_check_args(argv=None):
+    """Parse command-line arguments for check.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser()
+    _define_logging_args(parser)
+    parser.add_argument(
+        "repo",
+        type=GitRepo.from_existing,
+        help="Orion repo root to scan for service files",
+    )
+    return parser.parse_args(argv)
+
+
+def check():
+    """Service definition check entrypoint."""
+    args = parse_check_args()
+    configure_logging(level=args.log_level)
+    Services(args.repo)
+    sys.exit(0)
 
 
 def main():

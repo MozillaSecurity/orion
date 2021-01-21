@@ -3,12 +3,11 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/push script"""
-from os import getenv
 import sys
 
 from taskboot.push import push_artifacts
 
-from .cli import configure_logging, CommonArgs
+from .cli import CommonArgs, configure_logging
 
 
 class PushArgs(CommonArgs):

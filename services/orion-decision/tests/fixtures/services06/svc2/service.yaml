@@ -1,0 +1,6 @@
+name: svc2
+tests:
+  - name: svc2test
+    type: tox
+    toxenv: testenv
+    image: python:latest

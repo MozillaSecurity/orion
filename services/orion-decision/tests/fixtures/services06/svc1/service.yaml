@@ -1,0 +1,6 @@
+name: svc1
+tests:
+  - name: svc1test
+    type: tox
+    toxenv: testenv
+    image: testci1

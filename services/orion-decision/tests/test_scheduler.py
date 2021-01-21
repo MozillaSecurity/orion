@@ -7,19 +7,22 @@
 from datetime import datetime
 from pathlib import Path
 
+import pytest
 from taskcluster.utils import stringDate
+from yaml import safe_load as yaml_load
 
-from orion_decision import ARTIFACTS_EXPIRE
-from orion_decision import DEADLINE
-from orion_decision import MAX_RUN_TIME
-from orion_decision import OWNER_EMAIL
-from orion_decision import PROVISIONER_ID
-from orion_decision import SCHEDULER_ID
-from orion_decision import SOURCE_URL
-from orion_decision import WORKER_TYPE
+from orion_decision import (
+    ARTIFACTS_EXPIRE,
+    DEADLINE,
+    MAX_RUN_TIME,
+    OWNER_EMAIL,
+    PROVISIONER_ID,
+    SCHEDULER_ID,
+    SOURCE_URL,
+    WORKER_TYPE,
+)
 from orion_decision.git import GithubEvent
-from orion_decision.scheduler import Scheduler
-
+from orion_decision.scheduler import BUILD_TASK, PUSH_TASK, TEST_TASK, Scheduler
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
@@ -44,6 +47,9 @@ def test_mark_rebuild_01(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit_message = "/force-rebuild"
     sched = Scheduler(evt, None, "group", "secret", "branch")
     sched.mark_services_for_rebuild()
@@ -57,6 +63,9 @@ def test_mark_rebuild_02(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit_message = ""
     evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
     sched = Scheduler(evt, None, "group", "secret", "branch")
@@ -75,6 +84,9 @@ def test_create_01(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.create_tasks()
     assert queue.createTask.call_count == 0
@@ -88,6 +100,9 @@ def test_create_02(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit = "commit"
     evt.branch = "main"
     evt.clone_url = "https://example.com"
@@ -97,52 +112,26 @@ def test_create_02(mocker):
     sched.create_tasks()
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args.args
-    assert task == {
-        "taskGroupId": "group",
-        "dependencies": [],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "artifacts": {
-                "public/test1.tar.zst": {
-                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar.zst",
-                    "type": "file",
-                },
-            },
-            "command": ["build"],
-            "env": {
-                "ARCHIVE_PATH": "/image.tar",
-                "BUILD_TOOL": "img",
-                "DOCKERFILE": "test1/Dockerfile",
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "IMAGE_NAME": "mozillasecurity/test1",
-                "LOAD_DEPS": "0",
-            },
-            "capabilities": {"privileged": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-        },
-        "routes": [
-            "index.project.fuzzing.orion.test1.rev.commit",
-            "index.project.fuzzing.orion.test1.main",
-        ],
-        "scopes": [
-            "docker-worker:capability:privileged",
-            "queue:route:index.project.fuzzing.orion.*",
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-        ],
-        "metadata": {
-            "description": "Build the docker image for test1 tasks",
-            "name": "Orion test1 docker build",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+    assert task == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test1/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test1.main",
+            scheduler=SCHEDULER_ID,
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
 
 
 def test_create_03(mocker):
@@ -153,6 +142,9 @@ def test_create_03(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit = "commit"
     evt.branch = "push"
     evt.event_type = "push"
@@ -163,85 +155,46 @@ def test_create_03(mocker):
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     build_task_id, build_task = queue.createTask.call_args_list[0].args
-    assert build_task == {
-        "taskGroupId": "group",
-        "dependencies": [],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "artifacts": {
-                "public/test1.tar.zst": {
-                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar.zst",
-                    "type": "file",
-                },
-            },
-            "command": ["build"],
-            "env": {
-                "ARCHIVE_PATH": "/image.tar",
-                "BUILD_TOOL": "img",
-                "DOCKERFILE": "test1/Dockerfile",
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "IMAGE_NAME": "mozillasecurity/test1",
-                "LOAD_DEPS": "0",
-            },
-            "capabilities": {"privileged": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-        },
-        "routes": [
-            "index.project.fuzzing.orion.test1.rev.commit",
-            "index.project.fuzzing.orion.test1.push",
-        ],
-        "scopes": [
-            "docker-worker:capability:privileged",
-            "queue:route:index.project.fuzzing.orion.*",
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-        ],
-        "metadata": {
-            "description": "Build the docker image for test1 tasks",
-            "name": "Orion test1 docker build",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+    assert build_task == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test1/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test1.push",
+            scheduler=SCHEDULER_ID,
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
     _, push_task = queue.createTask.call_args_list[1].args
-    assert push_task == {
-        "taskGroupId": "group",
-        "dependencies": [build_task_id],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "command": ["push"],
-            "features": {"taskclusterProxy": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-            "env": {
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "BUILD_TOOL": "img",
-                "IMAGE_NAME": "mozillasecurity/test1",
-                "TASKCLUSTER_SECRET": "secret",
-            },
-        },
-        "scopes": [
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-            "secrets:get:secret",
-        ],
-        "metadata": {
-            "description": "Publish the docker image for test1 tasks",
-            "name": "Orion test1 docker push",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+    push_expected = yaml_load(
+        PUSH_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            docker_secret="secret",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler=SCHEDULER_ID,
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    push_expected["dependencies"].append(build_task_id)
+    assert push_task == push_expected
 
 
 def test_create_04(mocker):
@@ -252,6 +205,9 @@ def test_create_04(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit = "commit"
     evt.branch = "main"
     evt.clone_url = "https://example.com"
@@ -262,99 +218,49 @@ def test_create_04(mocker):
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     task1_id, task1 = queue.createTask.call_args_list[0].args
-    assert task1 == {
-        "taskGroupId": "group",
-        "dependencies": [],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "artifacts": {
-                "public/test1.tar.zst": {
-                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar.zst",
-                    "type": "file",
-                },
-            },
-            "command": ["build"],
-            "env": {
-                "ARCHIVE_PATH": "/image.tar",
-                "BUILD_TOOL": "img",
-                "DOCKERFILE": "test1/Dockerfile",
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "IMAGE_NAME": "mozillasecurity/test1",
-                "LOAD_DEPS": "0",
-            },
-            "capabilities": {"privileged": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-        },
-        "routes": [
-            "index.project.fuzzing.orion.test1.rev.commit",
-            "index.project.fuzzing.orion.test1.main",
-        ],
-        "scopes": [
-            "docker-worker:capability:privileged",
-            "queue:route:index.project.fuzzing.orion.*",
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-        ],
-        "metadata": {
-            "description": "Build the docker image for test1 tasks",
-            "name": "Orion test1 docker build",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+    assert task1 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test1/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test1.main",
+            scheduler=SCHEDULER_ID,
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
     _, task2 = queue.createTask.call_args_list[1].args
-    assert task2 == {
-        "taskGroupId": "group",
-        "dependencies": [task1_id],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "artifacts": {
-                "public/test2.tar.zst": {
-                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar.zst",
-                    "type": "file",
-                },
-            },
-            "command": ["build"],
-            "env": {
-                "ARCHIVE_PATH": "/image.tar",
-                "BUILD_TOOL": "img",
-                "DOCKERFILE": "test2/Dockerfile",
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "IMAGE_NAME": "mozillasecurity/test2",
-                "LOAD_DEPS": "1",
-            },
-            "capabilities": {"privileged": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-        },
-        "routes": [
-            "index.project.fuzzing.orion.test2.rev.commit",
-            "index.project.fuzzing.orion.test2.main",
-        ],
-        "scopes": [
-            "docker-worker:capability:privileged",
-            "queue:route:index.project.fuzzing.orion.*",
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-        ],
-        "metadata": {
-            "description": "Build the docker image for test2 tasks",
-            "name": "Orion test2 docker build",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+    expected2 = yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test2/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="1",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test2.main",
+            scheduler=SCHEDULER_ID,
+            service_name="test2",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected2["dependencies"].append(task1_id)
+    assert task2 == expected2
 
 
 def test_create_05(mocker):
@@ -365,6 +271,9 @@ def test_create_05(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.event_type = "release"
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
@@ -380,6 +289,9 @@ def test_create_06(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.event_type = "push"
     evt.commit = "commit"
     evt.branch = "push"
@@ -399,6 +311,9 @@ def test_create_07(mocker):
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
     evt.commit = "commit"
     evt.branch = "push"
     evt.clone_url = "https://example.com"
@@ -408,49 +323,142 @@ def test_create_07(mocker):
     sched.create_tasks()
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args.args
-    assert task == {
-        "taskGroupId": "group",
-        "dependencies": [],
-        "created": stringDate(now),
-        "deadline": stringDate(now + DEADLINE),
-        "provisionerId": PROVISIONER_ID,
-        "schedulerId": SCHEDULER_ID,
-        "workerType": WORKER_TYPE,
-        "payload": {
-            "artifacts": {
-                "public/test1.tar.zst": {
-                    "expires": stringDate(now + ARTIFACTS_EXPIRE),
-                    "path": "/image.tar.zst",
-                    "type": "file",
-                },
+    assert task == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test1/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test1.pull_request.1",
+            scheduler=SCHEDULER_ID,
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    "ci1_dirty,svc1_dirty,svc2_dirty,expected_image",
+    [
+        (True, True, False, {"type": "task-image", "path": "public/testci1.tar.zst"}),
+        (
+            False,
+            True,
+            False,
+            {
+                "type": "indexed-image",
+                "namespace": "project.fuzzing.orion.testci1.push",
+                "path": "public/testci1.tar.zst",
             },
-            "command": ["build"],
-            "env": {
-                "ARCHIVE_PATH": "/image.tar",
-                "BUILD_TOOL": "img",
-                "DOCKERFILE": "test1/Dockerfile",
-                "GIT_REPOSITORY": "https://example.com",
-                "GIT_REVISION": "commit",
-                "IMAGE_NAME": "mozillasecurity/test1",
-                "LOAD_DEPS": "0",
-            },
-            "capabilities": {"privileged": True},
-            "image": "mozillasecurity/orion-builder:latest",
-            "maxRunTime": MAX_RUN_TIME.total_seconds(),
-        },
-        "routes": [
-            "index.project.fuzzing.orion.test1.rev.commit",
-            "index.project.fuzzing.orion.test1.pull_request.1",
-        ],
-        "scopes": [
-            "docker-worker:capability:privileged",
-            "queue:route:index.project.fuzzing.orion.*",
-            f"queue:scheduler-id:{SCHEDULER_ID}",
-        ],
-        "metadata": {
-            "description": "Build the docker image for test1 tasks",
-            "name": "Orion test1 docker build",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-    }
+        ),
+        (False, False, True, "python:latest"),
+    ],
+)
+def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
+    """test "test" tasks creation with dirty ci image"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services06"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.clone_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["testci1"].dirty = ci1_dirty
+    sched.services["svc1"].dirty = svc1_dirty
+    sched.services["svc2"].dirty = svc2_dirty
+    sched.create_tasks()
+    assert queue.createTask.call_count == 3 if ci1_dirty else 2
+    call_idx = 0
+    if ci1_dirty:
+        task1_id, task1 = queue.createTask.call_args_list[call_idx].args
+        call_idx += 1
+        assert task1 == yaml_load(
+            BUILD_TASK.substitute(
+                clone_url="https://example.com",
+                commit="commit",
+                deadline=stringDate(now + DEADLINE),
+                dockerfile="testci1/Dockerfile",
+                expires=stringDate(now + ARTIFACTS_EXPIRE),
+                load_deps="0",
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                route="index.project.fuzzing.orion.testci1.main",
+                scheduler=SCHEDULER_ID,
+                service_name="testci1",
+                source_url=SOURCE_URL,
+                task_group="group",
+                worker=WORKER_TYPE,
+            )
+        )
+    svc = "svc1" if svc1_dirty else "svc2"
+    expected2 = yaml_load(
+        TEST_TASK.substitute(
+            commit="commit",
+            commit_url="https://example.com",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile=f"{svc}/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route=f"index.project.fuzzing.orion.{svc}.main",
+            scheduler=SCHEDULER_ID,
+            service_name=svc,
+            source_url=SOURCE_URL,
+            task_group="group",
+            test_name=f"{svc}test",
+            worker=WORKER_TYPE,
+        )
+    )
+    if ci1_dirty:
+        expected_image["taskId"] = task1_id
+        expected2["dependencies"].append(task1_id)
+    expected2["payload"]["image"] = expected_image
+    sched.services[svc].tests[0].update_task(
+        expected2, "https://example.com", "main", "commit", svc
+    )
+    task2_id, task2 = queue.createTask.call_args_list[call_idx].args
+    call_idx += 1
+    assert task2 == expected2
+    task3_id, task3 = queue.createTask.call_args_list[call_idx].args
+    call_idx += 1
+    expected3 = yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile=f"{svc}/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route=f"index.project.fuzzing.orion.{svc}.main",
+            scheduler=SCHEDULER_ID,
+            service_name=svc,
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected3["dependencies"].append(task2_id)
+    assert task3 == expected3

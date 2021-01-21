@@ -4,17 +4,15 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Stage build deps Orion builder"""
 from argparse import Namespace
-import os
 from pathlib import Path
-from shutil import copyfile, copyfileobj, rmtree
+from shutil import copyfileobj, rmtree
 from subprocess import Popen, check_call
 from tempfile import mkdtemp, mkstemp
 
 import taskcluster
 from taskboot.config import Configuration
 from taskboot.docker import Img, patch_dockerfile
-from taskboot.utils import load_artifacts, download_artifact
-
+from taskboot.utils import download_artifact, load_artifacts
 
 CA_KEY = Path.home() / "cakey.pem"
 CA_CRT = Path.home() / "ca.pem"

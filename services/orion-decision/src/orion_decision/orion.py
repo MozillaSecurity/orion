@@ -3,23 +3,24 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Orion service definitions"""
+import re
+from abc import ABC, abstractmethod
 from logging import getLogger
 from platform import machine
-import re
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
 
-
 LOG = getLogger(__name__)
 
 
-def file_glob(path, pattern="**/*", relative=False):
+def file_glob(repo, path, pattern="**/*", relative=False):
     """Run Path.glob for a given pattern, with filters applied.
     Only files are yielded, not directories. Any file that looks like
     it is in a test folder hierarchy (`tests`) will be skipped.
 
     Arguments:
+        repo (GitRepo): Git repository in which to search.
         path (Path): Root for the glob expression.
         pattern (str): Glob expression.
         relative (bool): Result will be relative to `path`.
@@ -27,8 +28,14 @@ def file_glob(path, pattern="**/*", relative=False):
     Yields:
         Path: Result paths.
     """
+    git_files = [
+        repo.path / p
+        for p in repo.git(
+            "ls-files", "--", str(path.relative_to(repo.path))
+        ).splitlines()
+    ]
     for result in path.glob(pattern):
-        if not result.is_file():
+        if not result.is_file() or result not in git_files:
             continue
         relative_result = result.relative_to(path)
         if "tests" not in relative_result.parts:
@@ -36,6 +43,124 @@ def file_glob(path, pattern="**/*", relative=False):
                 yield relative_result
             else:
                 yield result
+
+
+class ServiceTest(ABC):
+    """Orion service test
+
+    Tests that operate either on the service definition, or the resulting image.
+
+    Attributes:
+        name (str): Test name
+    """
+
+    FIELDS = frozenset(("name", "type"))
+
+    def __init__(self, name):
+        """Initialize a ServiceTest instance.
+
+        Arguments:
+            name (str): Test name
+        """
+        self.name = name
+
+    @abstractmethod
+    def update_task(self, task, clone_url, branch, commit, service_rel_path):
+        """Update a task definition to run the tests.
+
+        Arguments:
+            task (dict): Task definition to update.
+            clone_url (str): Git clone URL
+            branch (str): Git branch
+            commit (str): Git revision
+            service_rel_path (str): Relative path to service definition from repo root
+        """
+
+    @classmethod
+    def check_fields(cls, defn, check_unknown=True):
+        """Check a service test definition fields.
+
+        Arguments:
+            defn (dict): Test definition from service.yaml
+            check_unknown (bool): Check for unknown fields as well as missing.
+        """
+
+        LOG.debug("got fields %r", cls.FIELDS)
+        given_fields = frozenset(defn)
+        missing = list(cls.FIELDS - given_fields)
+        if missing:
+            raise RuntimeError(f"Missing test fields: '{missing!r}'")
+        if check_unknown:
+            extra = list(given_fields - cls.FIELDS)
+            if extra:
+                raise RuntimeError(f"Unknown test fields: '{extra!r}'")
+
+    @staticmethod
+    def from_defn(defn):
+        """Load a service test from the service.yaml metadata test subsection.
+
+        Arguments:
+            defn (dict): Test definition from service.yaml
+        """
+        ServiceTest.check_fields(defn, check_unknown=False)
+        if defn["type"] == "tox":
+            ToxServiceTest.check_fields(defn)
+            return ToxServiceTest(defn["name"], defn["image"], defn["toxenv"])
+        raise RuntimeError(f"Unrecognized test 'type': {defn['type']!r}")
+
+
+class ToxServiceTest(ServiceTest):
+    """Orion service test -- tox
+
+    Run Tox for python unit-tests in a service definition.
+
+    Attributes:
+        name (str): Test name
+        image (str): Docker image to use for test execution. This can be either a
+                     registry name (eg. `python:3.8`) or a service name defined in Orion
+                     (eg. `ci-py-38`). For services, either the task built in this
+                     decision tree, or the latest indexed-image will be used.
+        toxenv (str): tox env to run
+    """
+
+    FIELDS = frozenset({"image", "toxenv"} | ServiceTest.FIELDS)
+
+    def __init__(self, name, image, toxenv):
+        """
+        Arguments:
+            name (str): Test name
+            image (str): Docker image to use for test execution (see class doc)
+            toxenv (str): tox env to run
+        """
+        super().__init__(name)
+        self.image = image
+        self.toxenv = toxenv
+
+    def update_task(self, task, clone_url, branch, commit, service_rel_path):
+        """Update a task definition to run the tests.
+
+        Arguments:
+            task (dict): Task definition to update.
+            clone_url (str): Git clone URL
+            branch (str): Git branch
+            commit (str): Git revision
+            service_rel_path (str): Relative path to service definition from repo root
+        """
+        task["payload"]["command"] = [
+            "/bin/bash",
+            "--login",
+            "-x",
+            "-c",
+            'retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } '
+            "&& "
+            "git init repo && "
+            "cd repo && "
+            f"git remote add origin '{clone_url}' && "
+            f"retry git fetch -q --depth=10 origin '{branch}' && "
+            f"git -c advice.detachedHead=false checkout '{commit}' && "
+            f"cd '{service_rel_path}' && "
+            f"tox -e '{self.toxenv}'",
+        ]
 
 
 class Service:
@@ -48,15 +173,19 @@ class Service:
         service_deps (set(str)): Names of images that this one depends on.
         path_deps (set(Path)): Paths that this image depends on.
         dirty (bool): Whether or not this image needs to be rebuilt
+        tests (list[ServiceTest]): Tests to run against this service
+        root (Path): Path where service is defined
     """
 
-    def __init__(self, dockerfile, context, name):
+    def __init__(self, dockerfile, context, name, tests, root):
         """Initialize a Service instance.
 
         Arguments:
             dockerfile (Path): Path to the Dockerfile
             context (Path): build context
             name (str): Image name (Docker tag)
+            tests (list[ServiceTest]): Tests to run against this service
+            root (Path): Path where service is defined
         """
         self.dockerfile = dockerfile
         self.context = context
@@ -64,6 +193,8 @@ class Service:
         self.service_deps = set()
         self.path_deps = set()
         self.dirty = False
+        self.tests = tests
+        self.root = root
 
     @classmethod
     def from_metadata_yaml(cls, metadata, context):
@@ -90,7 +221,11 @@ class Service:
         else:
             dockerfile = metadata_path.parent / "Dockerfile"
         assert dockerfile.is_file()
-        return cls(dockerfile, context, name)
+        if "tests" in metadata:
+            tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
+        else:
+            tests = []
+        return cls(dockerfile, context, name, tests, metadata_path.parent)
 
 
 class Services(dict):
@@ -102,35 +237,38 @@ class Services(dict):
         root (Path): The root for loading services and watching recipe scripts.
     """
 
-    def __init__(self, root):
+    def __init__(self, repo):
         """Initialize a `Services` instances.
 
         Arguments:
-            root (Path): The root for loading services and watching recipe scripts.
+            repo (GitRepo): The git repo to load services and recipe scripts from.
         """
         super().__init__()
-        self.root = root
+        self.root = repo.path
         # scan the context recursively to find services
-        for service_yaml in file_glob(self.root, "**/service.yaml"):
+        for service_yaml in file_glob(repo, self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
             assert service.name not in self
             service.path_deps |= {service_yaml, service.dockerfile}
             self[service.name] = service
-        self._calculate_depends()
+        self._calculate_depends(repo)
 
-    def _calculate_depends(self):
+    def _calculate_depends(self, repo):
         """Go through each service and try to determine what dependencies it has.
 
         There are two types of dependencies:
         - service: The base image used for the dockerfile (only for `mozillasecurity/`)
-        - paths: Files in the same root thatare used by the image.
+        - paths: Files in the same root that are used by the image.
+
+        Arguments:
+            repo (GitRepo): The git repo to load services and recipe scripts from.
 
         Returns:
             None
         """
         # make a list of all file paths
         file_strs = []
-        for file in file_glob(self.root, relative=True):
+        for file in file_glob(repo, self.root, relative=True):
             file_strs.append(str(file))
             # recipes are usually called using only their basename
             if file.parts[0] == "recipes":
@@ -152,7 +290,7 @@ class Services(dict):
                 LOG.info("Image %s depends on image %s", service.name, baseimage)
 
             # scan service for references to files
-            for entry in file_glob(service.dockerfile.parent):
+            for entry in file_glob(repo, service.dockerfile.parent):
                 # add a direct dependency on any file in the service folder
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)

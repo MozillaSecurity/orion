@@ -9,7 +9,6 @@ repos:
       - id: check-symlinks
       - id: debug-statements
       - id: trailing-whitespace
-      - id: check-yaml
       - id: mixed-line-ending
       - id: name-tests-test
         args: ['--django']
@@ -27,6 +26,28 @@ repos:
   - repo: meta
     hooks:
       - id: check-useless-excludes
+  - repo: local
+    hooks:
+      - id: orion-service-load
+        name: Check that Orion services can be loaded
+        entry: bash -c 'cd services/orion-decision && exec tox -e check -- ../..'
+        language: system
+        always_run: true
+        pass_filenames: false
+      - id: orion-decision-lint
+        name: Run linters for orion_decision
+        entry: bash -c 'cd services/orion-decision && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
+      - id: orion-builder-lint
+        name: Run linters for orion_builder
+        entry: bash -c 'cd services/orion-builder && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
 
 default_language_version:
   python: python3

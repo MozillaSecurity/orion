@@ -7,9 +7,15 @@
 from logging import DEBUG
 from unittest.mock import call
 
-from orion_decision.cli import configure_logging, main, parse_args
-
 import pytest
+
+from orion_decision.cli import (
+    check,
+    configure_logging,
+    main,
+    parse_args,
+    parse_check_args,
+)
 
 
 def test_args(mocker):
@@ -20,6 +26,17 @@ def test_args(mocker):
     with pytest.raises(SystemExit):
         parse_args(["--github-action", "github-push", "--github-event", "{}"])
     parse_args(["--github-action", "github-push", "--github-event", "{blah}"])
+
+
+def test_check_args(mocker):
+    """test service check argument parsing"""
+    repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
+    with pytest.raises(SystemExit):
+        parse_check_args([])
+    result = parse_check_args(["path"])
+    assert repo.from_existing.call_count == 1
+    assert repo.from_existing.call_args == call("path")
+    assert result.repo == repo.from_existing.return_value
 
 
 def test_logging_init(mocker):
@@ -45,3 +62,18 @@ def test_main(mocker):
     assert sched.main.call_count == 1
     assert sched.main.call_args == call(parser.return_value)
     assert exc.value.code == sched.main.return_value
+
+
+def test_check(mocker):
+    """test CLI check entrypoint"""
+    log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
+    parser = mocker.patch("orion_decision.cli.parse_check_args", autospec=True)
+    svcs = mocker.patch("orion_decision.cli.Services", autospec=True)
+    with pytest.raises(SystemExit) as exc:
+        check()
+    assert log_init.call_count == 1
+    assert parser.call_count == 1
+    assert log_init.call_args == call(level=parser.return_value.log_level)
+    assert svcs.call_count == 1
+    assert svcs.call_args == call(parser.return_value.repo)
+    assert exc.value.code == 0

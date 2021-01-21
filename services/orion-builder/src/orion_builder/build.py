@@ -3,15 +3,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/build script"""
+import sys
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
-import sys
 
-from taskboot.target import Target
 from taskboot.build import build_image
+from taskboot.target import Target
 
-from .cli import configure_logging, CommonArgs
+from .cli import CommonArgs, configure_logging
 from .stage_deps import stage_deps
 
 
@@ -46,7 +46,8 @@ class BuildArgs(CommonArgs):
         self.parser.add_argument(
             "--load-deps",
             action="store_true",
-            help="Pull all images build in dependency tasks into the image store. (default: LOAD_DEPS)",
+            help="Pull all images build in dependency tasks into the image store."
+            " (default: LOAD_DEPS)",
         )
         self.parser.add_argument(
             "--registry",

@@ -5,14 +5,13 @@
 """Tests for GitRepo"""
 
 from pathlib import Path
-from tempfile import gettempdir
 from subprocess import CalledProcessError
+from tempfile import gettempdir
 from unittest.mock import call
 
 import pytest
 
-from orion_decision.git import GitRepo, GithubEvent
-
+from orion_decision.git import GithubEvent, GitRepo
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
@@ -31,13 +30,39 @@ def test_cleanup():
     assert repo.path is None
 
 
-def test_message():
+def test_message_1():
     """test that commit message is read"""
     repo = GitRepo(FIXTURES / "git01", "main", "FETCH_HEAD")
     try:
         assert "Test commit message" in repo.message("FETCH_HEAD")
     finally:
         repo.cleanup()
+
+
+def test_message_2():
+    """test that commit messages from a range are read"""
+    repo = GitRepo(FIXTURES / "git03", "main", "FETCH_HEAD")
+    try:
+        message = repo.message(
+            "9ee55a5b8723e2dd762421ebdc4faf5a349052d7.."
+            "f52af064b7d715ea87595e9b21f1ae6323064f88"
+        )
+    finally:
+        repo.cleanup()
+    assert "Another commit" in message
+    assert "/force-rebuild" in message
+    assert "Initial commit" not in message
+
+
+def test_existing():
+    """test that existing repo can be accessed and is not cleaned up"""
+    root = FIXTURES / "git01"
+    repo = GitRepo.from_existing(root)
+    try:
+        assert "Test commit message" in repo.message("HEAD")
+    finally:
+        repo.cleanup()
+    assert root.is_dir()  # test fixture wasn't cleaned up :sweat_smile:
 
 
 def test_retry(mocker):

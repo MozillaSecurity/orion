@@ -10,7 +10,6 @@ from subprocess import CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
 
-
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
 RETRIES = 10
@@ -23,17 +22,35 @@ class GitRepo:
         path (Path): The location where the repository is cloned.
     """
 
-    def __init__(self, clone_url, clone_ref, commit):
-        """Initalize a GitRepo instance.
+    def __init__(self, clone_url, clone_ref, commit, _clone=True):
+        """Initialize a GitRepo instance.
 
         Arguments:
             clone_url (str): The location to clone the repository from.
             clone_ref (str): The reference to fetch. (eg. branch).
             commit (str): Commit to checkout (must be `FETCH_HEAD` or an ancestor).
         """
-        self.path = Path(mkdtemp(prefix="decision-repo-"))
-        LOG.debug("created git repo tmp folder: %s", self.path)
-        self._clone(clone_url, clone_ref, commit)
+        self._cloned = _clone
+        if _clone:
+            self.path = Path(mkdtemp(prefix="decision-repo-"))
+            LOG.debug("created git repo tmp folder: %s", self.path)
+            self._clone(clone_url, clone_ref, commit)
+        else:
+            self.path = Path(clone_url)
+            LOG.debug("using existing git repo: %s", self.path)
+            self.git("show")  # assert that path is valid
+
+    @classmethod
+    def from_existing(cls, path):
+        """Initialize a GitRepo instance to access a local repository directly.
+
+        Arguments:
+            path (Path): The location of the git repository.
+
+        Returns:
+            GitRepo: Object for direct access to a local git repo (not a copy!)
+        """
+        return cls(path, None, None, _clone=False)
 
     def git(self, *args, tries=1):
         """Call a git command in the cloned repository.
@@ -87,9 +104,9 @@ class GitRepo:
         Returns:
             None
         """
-        if self.path is not None:
+        if self._cloned and self.path is not None:
             rmtree(self.path)
-            self.path = None
+        self.path = None
 
     def message(self, commit):
         """Get the commit message for a given commit.
@@ -201,8 +218,7 @@ class GithubEvent:
             # fetch both sides of the commit range
             # for the case of force-push, `before` will not be under the same fetch ref
             self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
-        if self.commit_message is None:
-            self.commit_message = self.repo.message(self.commit)
+        self.commit_message = self.repo.message(self.commit_range)
         return self
 
     def list_changed_paths(self):

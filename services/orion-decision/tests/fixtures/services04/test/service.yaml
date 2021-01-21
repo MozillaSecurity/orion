@@ -1,0 +1,6 @@
+name: test-image1
+tests:
+  - name: test-test
+    type: tox
+    toxenv: toxenvpy3
+    image: test-test-image
