@@ -92,6 +92,18 @@ class GitRepo:
             LOG.error("git command returned error:\n%s", exc.stderr)
             raise
 
+    def git_call(self, *args):
+        """Call a git command in the cloned repository, without capture.
+
+        Arguments:
+            *args (str): The git command line to run (eg. `git("commit", "-a")`
+
+        Returns:
+            int: exit code of the git command
+        """
+        LOG.debug("calling: git %s", " ".join(str(arg) for arg in args))
+        return run(("git",) + args, cwd=self.path).returncode
+
     def _clone(self, clone_url, clone_ref, commit):
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
@@ -190,6 +202,7 @@ class GithubEvent:
             "github-release": "release",
         }[action]
         self.repo_slug = event["repository"]["full_name"]
+        maybe_fetch_before = False
         if self.event_type == "pull_request":
             self.pull_request = event["number"]
             self.pr_branch = event["pull_request"]["head"]["ref"]
@@ -212,15 +225,30 @@ class GithubEvent:
             self.branch = branch
             self.commit = event["after"]
             if set(event["before"]) == {"0"}:
-                self.commit_range = event["after"]
+                # for a new branch, we aren't directly told where the branch came from
+                # use the commit prior to the first commit in the push instead
+                self.commit_range = f"{event['commits'][0]['id']}^..{event['after']}"
             else:
                 self.commit_range = f"{event['before']}..{event['after']}"
+                maybe_fetch_before = True
             fetch_ref = event["ref"]
         self.repo = GitRepo(self.clone_url, fetch_ref, self.commit)
-        if self.event_type == "push" and set(event["before"]) != {"0"}:
-            # fetch both sides of the commit range
+        if maybe_fetch_before:
+            # check if we need to fetch both sides of the commit range
             # for the case of force-push, `before` will not be under the same fetch ref
-            self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
+            result = self.repo.git_call(
+                "merge-base",
+                "--is-ancestor",
+                event["before"],
+                event["after"],
+            )
+            if result == 1:
+                self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
+            elif result != 0:
+                raise RuntimeError(
+                    f"`git merge-base --is-ancestor {event['before']} {event['after']}`"
+                    f" returned {result}"
+                )
         self.commit_message = self.repo.message(self.commit_range)
         return self
 

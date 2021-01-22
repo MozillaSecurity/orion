@@ -75,6 +75,7 @@ def test_retry(mocker):
 @pytest.mark.parametrize(
     "action, event, result, repo_args",
     [
+        # github push to existing branch
         (
             "github-push",
             {
@@ -97,6 +98,34 @@ def test_retry(mocker):
             },
             call("https://github.com/allizom/test.git", "refs/heads/main", "post"),
         ),
+        # github push to new branch
+        (
+            "github-push",
+            {
+                "repository": {"full_name": "allizom/test"},
+                "ref": "refs/heads/main",
+                "after": "post",
+                "before": "0000000000",
+                "commits": [
+                    {"id": "fork"},
+                    {"id": "post"},
+                ],
+            },
+            {
+                "branch": "main",
+                "commit": "post",
+                "commit_message": "Test commit message",
+                "commit_range": "fork^..post",
+                "event_type": "push",
+                "pull_request": None,
+                "pr_branch": None,
+                "pr_slug": None,
+                "repo_slug": "allizom/test",
+                "tag": None,
+            },
+            call("https://github.com/allizom/test.git", "refs/heads/main", "post"),
+        ),
+        # github new/update PR
         (
             "github-pull-request",
             {
@@ -160,6 +189,7 @@ def test_github_tc(mocker, action, event, result, repo_args):
     """test github event parsing from taskcluster"""
     repo = mocker.patch("orion_decision.git.GitRepo")
     repo.return_value.message.return_value = "Test commit message"
+    repo.return_value.git_call.return_value = 0
     evt = GithubEvent.from_taskcluster(action, event)
     assert evt.repo is repo.return_value
     assert repo.call_args == repo_args
