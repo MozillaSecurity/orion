@@ -211,10 +211,13 @@ class GithubEvent:
                 branch = branch.split("/", 2)[2]
             self.branch = branch
             self.commit = event["after"]
-            self.commit_range = f"{event['before']}..{event['after']}"
+            if set(event["before"]) == {"0"}:
+                self.commit_range = event["after"]
+            else:
+                self.commit_range = f"{event['before']}..{event['after']}"
             fetch_ref = event["ref"]
         self.repo = GitRepo(self.clone_url, fetch_ref, self.commit)
-        if self.event_type == "push":
+        if self.event_type == "push" and set(event["before"]) != {"0"}:
             # fetch both sides of the commit range
             # for the case of force-push, `before` will not be under the same fetch ref
             self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
