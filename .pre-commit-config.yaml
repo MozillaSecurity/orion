@@ -23,6 +23,11 @@ repos:
     rev: v0.0.7
     hooks:
       - id: taskcluster_yml
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.7.1.1
+    hooks:
+      - id: shellcheck
+        args: ['--exclude=SC1091,SC2148']
   - repo: meta
     hooks:
       - id: check-useless-excludes
@@ -34,6 +39,13 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+      - id: hadolint
+        name: Lint dockerfiles
+        language: system
+        files: Dockerfile
+        require_serial: true
+        entry: ./scripts/pre-commit-hadolint.sh
+        exclude: "^.*/windows/.*$"
       - id: orion-decision-lint
         name: Run linters for orion_decision
         entry: bash -c 'cd services/orion-decision && exec tox -e lint'

@@ -19,7 +19,7 @@ then
   FETCH_ARGS+=(--coverage --build "$REVISION")
 fi
 
-# Our default target is Firefox, but we support targetting the JS engine instead.
+# Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 JS="${JS:-0}"
 if [[ "$JS" = 1 ]] || [[ -n "$JSRT" ]]

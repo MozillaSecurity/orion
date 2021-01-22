@@ -14,7 +14,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && ln -s /usr/bin/python3 /usr/bin/python \
     && retry pip --no-cache-dir --disable-pip-version-check install https://github.com/mozilla/task-boot/archive/0.3.2.tar.gz \
     && pip --no-cache-dir --disable-pip-version-check install -e /src/orion-builder \
-    && find /usr/lib/python*/site-packages -name *.so -exec strip {} \; \
+    && find /usr/lib/python*/site-packages -name "*.so" -exec strip {} \; \
     && apk del build-base py3-pip py3-wheel python3-dev \
     && python -m compileall -b -q /usr/lib \
     && find /usr/lib -name \*.py -delete \

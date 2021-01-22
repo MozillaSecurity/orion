@@ -21,6 +21,7 @@ apt-install-auto zstd
   zstdcat /tmp/clang.tar.zst | tar --wildcards -x "${CLANG_SRC}/lib/linux/"
   rm /tmp/clang.tar.zst
 
+  # shellcheck disable=SC2086
   CLANG_SRC="$(ls -d ${CLANG_SRC})"  # don't quote CLANG_SRC! need to expand wildcard
   CLANG_VERSION="$(basename "${CLANG_SRC}")"
   CLANG_DEST="android-ndk/toolchains/llvm/prebuilt/linux-x86_64/lib64/clang/${CLANG_VERSION}"

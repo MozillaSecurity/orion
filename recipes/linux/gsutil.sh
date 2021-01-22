@@ -15,7 +15,7 @@ source "${0%/*}/common.sh"
 sys-embed \
     python3 \
     python3-setuptools \
-    zstd 
+    zstd
 apt-install-auto \
     gcc \
     python3-dev \

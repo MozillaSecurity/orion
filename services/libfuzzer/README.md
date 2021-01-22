@@ -38,7 +38,7 @@ docker run \
     --rm -it mozillasecurity/libfuzzer
 ```
 
-Alternatively use a command from above and attach `bash -li` to overwrite the default set `CMD` which spawns `setup.sh` and to enter a shell instead. The enviroment variables are kept and you can run the `setup.sh` script manually.
+Alternatively use a command from above and attach `bash -li` to overwrite the default set `CMD` which spawns `setup.sh` and to enter a shell instead. The environment variables are kept and you can run the `setup.sh` script manually.
 
 You can obain the paths for `TOKENS` and `CORPORA` from the https://github.com/mozillasecurity/fuzzdata repository and these will automatically get fetched into the container.
 

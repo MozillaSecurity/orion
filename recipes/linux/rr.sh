@@ -47,9 +47,9 @@ TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
 +++ b/CMakeLists.txt
 @@ -1548,3 +1548,4 @@
 + set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
- 
+
  include (CPack)
- 
+
 EOF
   )
   mkdir obj

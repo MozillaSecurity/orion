@@ -1,5 +1,5 @@
-#!/bin/sh
-set -e -x
+#!/bin/bash
+set -e -x -o pipefail
 
 DST="${DST-/coverage-revision.txt}"
 
@@ -11,4 +11,4 @@ fuzzfetch --coverage --dry-run 2>&1 | tee /dev/stderr | sed -n 's/.*> Changeset:
 [ -s "$DST" ]
 
 ## Check that the revision exists on mozilla-central
-curl -sSIf "https://hg.mozilla.org/mozilla-central/rev/$(cat $DST)" > /dev/null
+curl -sSIf "https://hg.mozilla.org/mozilla-central/rev/$(cat "$DST")" > /dev/null

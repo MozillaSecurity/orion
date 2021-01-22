@@ -53,7 +53,7 @@ docker exec -it <CONTAINER_ID> /bin/bash
 ```
 
 #### Enter the container (2)
-###### **Note**: Needs ^P^Q to exit without destryoing the container.
+###### **Note**: Needs ^P^Q to exit without destroying the container.
 ```bash
 docker attach <CONTAINER_ID>
 ```
