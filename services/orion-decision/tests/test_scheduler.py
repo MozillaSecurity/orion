@@ -375,6 +375,7 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
     )
     evt.commit = "commit"
     evt.branch = "main"
+    evt.fetch_ref = "fetch"
     evt.clone_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
@@ -433,7 +434,7 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
         expected2["dependencies"].append(task1_id)
     expected2["payload"]["image"] = expected_image
     sched.services[svc].tests[0].update_task(
-        expected2, "https://example.com", "main", "commit", svc
+        expected2, "https://example.com", "fetch", "commit", svc
     )
     task2_id, task2 = queue.createTask.call_args_list[call_idx].args
     call_idx += 1

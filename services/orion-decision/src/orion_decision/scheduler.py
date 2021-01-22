@@ -189,7 +189,7 @@ class Scheduler:
                 test.update_task(
                     test_task,
                     self.github_event.clone_url,
-                    self.github_event.branch,
+                    self.github_event.fetch_ref,
                     self.github_event.commit,
                     service_path,
                 )

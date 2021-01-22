@@ -147,6 +147,7 @@ class GithubEvent:
         repo (GitRepo): Cloned git repository.
         repo_slug (str): Slug for the current repo (`owner_name/repo_name`).
         tag (str or None): Git tag for release event (or None).
+        fetch_ref (str): Git reference to fetch
     """
 
     def __init__(self):
@@ -162,6 +163,7 @@ class GithubEvent:
         self.repo_slug = None
         self.tag = None
         self.repo = None
+        self.fetch_ref = None
 
     def cleanup(self):
         """Cleanup resources held by this instance.
@@ -210,13 +212,13 @@ class GithubEvent:
             self.branch = event["pull_request"]["base"]["ref"]
             self.commit = event["pull_request"]["head"]["sha"]
             self.commit_range = f"{event['pull_request']['base']['sha']}..{self.commit}"
-            fetch_ref = f"pull/{self.pull_request}/head"
+            self.fetch_ref = f"pull/{self.pull_request}/head"
         elif self.event_type == "release":
             self.tag = event["release"]["tag_name"]
             self.branch = self.tag
             self.commit = self.tag
             self.commit_range = f"{self.tag}^..{self.tag}"
-            fetch_ref = f"refs/tags/{self.tag}:refs/tags/{self.tag}"
+            self.fetch_ref = f"refs/tags/{self.tag}:refs/tags/{self.tag}"
         else:
             # Strip ref branch prefix
             branch = event["ref"]
@@ -231,8 +233,8 @@ class GithubEvent:
             else:
                 self.commit_range = f"{event['before']}..{event['after']}"
                 maybe_fetch_before = True
-            fetch_ref = event["ref"]
-        self.repo = GitRepo(self.clone_url, fetch_ref, self.commit)
+            self.fetch_ref = event["ref"]
+        self.repo = GitRepo(self.clone_url, self.fetch_ref, self.commit)
         if maybe_fetch_before:
             # check if we need to fetch both sides of the commit range
             # for the case of force-push, `before` will not be under the same fetch ref

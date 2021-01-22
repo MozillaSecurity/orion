@@ -65,13 +65,13 @@ class ServiceTest(ABC):
         self.name = name
 
     @abstractmethod
-    def update_task(self, task, clone_url, branch, commit, service_rel_path):
+    def update_task(self, task, clone_url, fetch_ref, commit, service_rel_path):
         """Update a task definition to run the tests.
 
         Arguments:
             task (dict): Task definition to update.
             clone_url (str): Git clone URL
-            branch (str): Git branch
+            fetch_ref (str): Git fetch reference
             commit (str): Git revision
             service_rel_path (str): Relative path to service definition from repo root
         """
@@ -136,13 +136,13 @@ class ToxServiceTest(ServiceTest):
         self.image = image
         self.toxenv = toxenv
 
-    def update_task(self, task, clone_url, branch, commit, service_rel_path):
+    def update_task(self, task, clone_url, fetch_ref, commit, service_rel_path):
         """Update a task definition to run the tests.
 
         Arguments:
             task (dict): Task definition to update.
             clone_url (str): Git clone URL
-            branch (str): Git branch
+            fetch_ref (str): Git reference to fetch
             commit (str): Git revision
             service_rel_path (str): Relative path to service definition from repo root
         """
@@ -156,7 +156,7 @@ class ToxServiceTest(ServiceTest):
             "git init repo && "
             "cd repo && "
             f"git remote add origin '{clone_url}' && "
-            f"retry git fetch -q --depth=10 origin '{branch}' && "
+            f"retry git fetch -q --depth=10 origin '{fetch_ref}' && "
             f"git -c advice.detachedHead=false checkout '{commit}' && "
             f"cd '{service_rel_path}' && "
             f"tox -e '{self.toxenv}'",
