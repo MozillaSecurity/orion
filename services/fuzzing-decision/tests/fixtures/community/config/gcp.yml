@@ -1,0 +1,6 @@
+---
+# Fake community GCP config
+
+regions:
+  us-west1:
+    zones: ["a", "b"]

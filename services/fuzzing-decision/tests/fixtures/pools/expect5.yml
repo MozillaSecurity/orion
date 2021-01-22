@@ -1,0 +1,31 @@
+cloud: gcp
+scopes:
+  - scope1
+  - scope2
+  - scope4
+disk_size: 140g
+cycle_time: 4h
+max_run_time: 4h
+schedule_start: null
+cores_per_task: 40
+metal: true
+name: pool5
+tasks: 4
+command:
+  - cmd4
+  - arg4
+container: MozillaSecurity/fuzzer:default
+minimum_memory_per_core: 4g
+imageset: generic-worker-4
+parents:
+  - pool3
+  - pool4
+cpu: x64
+platform: windows
+preprocess: ""
+macros:
+  ENVVAR1: "abc"
+  ENVVAR2: 789abc
+  ENVVAR3: defghi
+  ENVVAR4: "456"
+  ENVVAR5: "xyz"

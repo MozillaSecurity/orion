@@ -46,6 +46,13 @@ repos:
         require_serial: true
         entry: ./scripts/pre-commit-hadolint.sh
         exclude: "^.*/windows/.*$"
+      - id: fuzzing-decision-lint
+        name: Run linters for fuzzing_decision
+        entry: bash -c 'cd services/fuzzing-decision && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
       - id: orion-decision-lint
         name: Run linters for orion_decision
         entry: bash -c 'cd services/orion-decision && exec tox -e lint'

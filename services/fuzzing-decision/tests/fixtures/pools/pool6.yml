@@ -1,0 +1,21 @@
+cloud: null
+scopes: []
+disk_size: null
+cycle_time: null
+max_run_time: null
+schedule_start: null
+cores_per_task: null
+metal: null
+name: pool6
+tasks: null
+command: null
+container: null
+minimum_memory_per_core: null
+imageset: null
+parents:
+  - pool4
+  - pool3
+cpu: null
+platform: null
+preprocess: null
+macros: {}

@@ -1,0 +1,30 @@
+gcp:
+  x64:
+    base:
+      cpu: 1
+      ram: 1
+    2-cpus:
+      cpu: 2
+      ram: 4
+    more-ram:
+      cpu: 2
+      ram: 16
+      zone_blacklist:
+        - us-west1-b
+    metal:
+      cpu: 1
+      ram: 1
+      metal: True
+aws:
+  arm64:
+    a1:
+      cpu: 1
+      ram: 2
+    a2:
+      cpu: 2
+      ram: 4
+
+    # Of course we can comment on how insane this machine is
+    a3:
+      cpu: 25
+      ram: 1000

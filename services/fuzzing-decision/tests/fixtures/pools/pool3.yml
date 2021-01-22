@@ -1,0 +1,22 @@
+cloud: null
+scopes: []
+disk_size: null
+cycle_time: null
+max_run_time: null
+schedule_start: null
+cores_per_task: null
+metal: null
+name: grandchild
+tasks: null
+command: null
+container: null
+minimum_memory_per_core: null
+imageset: null
+parents:
+  - pool2
+cpu: null
+platform: null
+preprocess: null
+macros:
+  ENVVAR1: "123"
+  ENVVAR4: "456"

@@ -1,0 +1,24 @@
+cloud: null
+scopes:
+  - scope2
+disk_size: null
+cycle_time: 2h
+max_run_time: 2h
+schedule_start: null
+cores_per_task: null
+metal: null
+name: child
+tasks: null
+command:
+  - cmd2
+  - arg2
+container: null
+minimum_memory_per_core: null
+imageset: null
+parents:
+  - pool1
+cpu: null
+platform: null
+preprocess: null
+macros:
+  ENVVAR3: defghi

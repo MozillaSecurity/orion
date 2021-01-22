@@ -1,0 +1,7 @@
+parents:
+  - pool9
+name: pool11
+container:
+  type: task-image
+  path: grizzly.tar
+  taskId: Ifw6J07iSqGsRnuHQOnw2g

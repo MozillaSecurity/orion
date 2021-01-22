@@ -22,4 +22,4 @@ apt-install-auto \
     python3-pip \
     python3-wheel
 
-retry pip3 install git+https://github.com/MozillaSecurity/fuzzing-tc
+retry pip3 install 'git+https://github.com/MozillaSecurity/orion#subdirectory=services/fuzzing-decision'

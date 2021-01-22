@@ -1,0 +1,3 @@
+name: test
+apply_to:
+  - load-cfg

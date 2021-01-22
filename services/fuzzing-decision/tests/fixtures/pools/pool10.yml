@@ -1,0 +1,7 @@
+parents:
+  - pool9
+name: pool10
+container:
+  type: indexed-image
+  path: grizzly.tar
+  namespace: grizzly.master.latest

@@ -1,0 +1,14 @@
+name: test
+parents: []
+metal: False
+cores_per_task: 1
+imageset: test
+tasks: 1
+max_run_time: 1s
+disk_size: 1b
+minimum_memory_per_core: 1b
+cycle_time: 1s
+cloud: gcp
+cpu: x64
+container: test
+platform: test

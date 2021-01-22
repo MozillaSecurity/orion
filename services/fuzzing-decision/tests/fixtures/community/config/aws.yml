@@ -1,0 +1,11 @@
+---
+
+# Fake Community config
+subnets:
+  us-west-1:
+    us-west-1a: subnet-XXX
+
+security_groups:
+  us-west-1:
+    no-inbound: sg-A
+    docker-worker: sg-B

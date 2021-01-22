@@ -1,0 +1,31 @@
+cloud: aws
+scopes:
+  - scope1
+  - scope2
+  - scope4
+disk_size: 120g
+cycle_time: 2h
+max_run_time: 2h
+schedule_start: null
+cores_per_task: 10
+metal: false
+name: pool6
+tasks: 3
+command:
+  - cmd2
+  - arg2
+container: MozillaSecurity/fuzzer:latest
+minimum_memory_per_core: 1g
+imageset: generic-worker-A
+parents:
+  - pool4
+  - pool3
+cpu: arm64
+platform: linux
+preprocess: ""
+macros:
+  ENVVAR1: "123"
+  ENVVAR2: 789abc
+  ENVVAR3: defghi
+  ENVVAR4: "456"
+  ENVVAR5: "xyz"

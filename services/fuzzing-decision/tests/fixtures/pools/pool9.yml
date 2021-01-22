@@ -1,0 +1,26 @@
+cloud: aws
+scopes:
+  - scope1
+disk_size: 120g
+cycle_time: 1h
+max_run_time: 1h
+schedule_start: null
+cores_per_task: 10
+metal: false
+name: pool9
+tasks: 3
+command:
+  - cmd1
+  - arg1
+container:
+  name: MozillaSecurity/fuzzer:latest
+  type: docker-image
+minimum_memory_per_core: 1g
+imageset: generic-worker-A
+parents: []
+cpu: arm64
+platform: linux
+preprocess: null
+macros:
+  ENVVAR1: 123456
+  ENVVAR2: 789abc

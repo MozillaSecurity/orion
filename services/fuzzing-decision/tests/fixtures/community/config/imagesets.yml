@@ -1,0 +1,18 @@
+---
+# Fake community imagesets
+
+docker-worker:
+  workerImplementation: docker-worker
+  gcp:
+    image: path/to/image
+
+generic-worker-A:
+  workerImplementation: generic-worker
+  aws:
+    amis:
+      us-west-1: ami-1234
+  workerConfig:
+    genericWorker:
+      config:
+        anyKey: anyValue
+        os: linux

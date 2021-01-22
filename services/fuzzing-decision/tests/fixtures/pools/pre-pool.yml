@@ -1,0 +1,20 @@
+cloud: gcp
+scopes: []
+disk_size: 10g
+cycle_time: 1h
+max_run_time: 1h
+schedule_start: null
+cores_per_task: 1
+metal: False
+name: Amazing fuzzing pool
+tasks: 1
+command:
+  - run-fuzzing.sh
+container: MozillaSecurity/fuzzer:latest
+minimum_memory_per_core: 1g
+imageset: anything
+parents: []
+cpu: x64
+platform: linux
+preprocess: pre
+macros: {}
