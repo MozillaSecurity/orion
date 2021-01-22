@@ -38,7 +38,7 @@ class GitRepo:
         else:
             self.path = Path(clone_url)
             LOG.debug("using existing git repo: %s", self.path)
-            self.git("show")  # assert that path is valid
+            self.git("show", "--quiet")  # assert that path is valid
 
     @classmethod
     def from_existing(cls, path):

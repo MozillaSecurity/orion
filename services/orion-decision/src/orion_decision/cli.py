@@ -9,6 +9,7 @@ from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import getenv
+from pathlib import Path
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
@@ -134,7 +135,7 @@ def parse_check_args(argv=None):
     _define_logging_args(parser)
     parser.add_argument(
         "repo",
-        type=GitRepo.from_existing,
+        type=Path,
         help="Orion repo root to scan for service files",
     )
     return parser.parse_args(argv)
@@ -144,7 +145,7 @@ def check():
     """Service definition check entrypoint."""
     args = parse_check_args()
     configure_logging(level=args.log_level)
-    Services(args.repo)
+    Services(GitRepo.from_existing(args.repo))
     sys.exit(0)
 
 
