@@ -244,9 +244,9 @@ class GithubEvent:
                 event["before"],
                 event["after"],
             )
-            if result == 1:
+            if result == 128:
                 self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
-            elif result != 0:
+            elif result not in {0, 1}:
                 raise RuntimeError(
                     f"`git merge-base --is-ancestor {event['before']} {event['after']}`"
                     f" returned {result}"
