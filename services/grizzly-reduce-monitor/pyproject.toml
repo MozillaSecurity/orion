@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 43", "wheel", "setuptools_scm[toml] >= 3.4"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.coverage.run]
@@ -42,5 +42,3 @@ log_level = "DEBUG"
 filterwarnings = [
     "ignore:The 'warn' method is deprecated:DeprecationWarning:taskcluster",
 ]
-
-[tool.setuptools_scm]
