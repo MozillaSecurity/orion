@@ -4,11 +4,11 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
-import itertools
 import logging
 import math
 import os
 from datetime import datetime, timedelta
+from itertools import chain
 
 import yaml
 from taskcluster.exceptions import TaskclusterFailure, TaskclusterRestFailure
@@ -202,7 +202,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "retries": 5,
             "routes": [],
             "schedulerId": SCHEDULER_ID,
-            "scopes": tuple(self.scopes) + decision_task_scopes,
+            "scopes": sorted(chain(self.scopes, decision_task_scopes)),
             "tags": {},
         }
         add_capabilities_for_scopes(decision_task)
@@ -304,7 +304,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                 "retries": 5,
                 "routes": [],
                 "schedulerId": SCHEDULER_ID,
-                "scopes": preprocess.scopes + [f"secrets:get:{DECISION_TASK_SECRET}"],
+                "scopes": sorted(
+                    chain(preprocess.scopes, [f"secrets:get:{DECISION_TASK_SECRET}"])
+                ),
                 "tags": {},
             }
             add_capabilities_for_scopes(task)
@@ -348,7 +350,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                 "retries": 5,
                 "routes": [],
                 "schedulerId": SCHEDULER_ID,
-                "scopes": self.scopes + [f"secrets:get:{DECISION_TASK_SECRET}"],
+                "scopes": sorted(
+                    chain(self.scopes, [f"secrets:get:{DECISION_TASK_SECRET}"])
+                ),
                 "tags": {},
             }
             add_capabilities_for_scopes(task)
@@ -374,9 +378,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         provider = providers[self.cloud]
 
         pools = list(self.iterpools())
-        all_scopes = tuple(
-            set(itertools.chain.from_iterable(pool.scopes for pool in pools))
-        )
+        all_scopes = tuple(set(chain.from_iterable(pool.scopes for pool in pools)))
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
@@ -435,7 +437,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             "retries": 5,
             "routes": [],
             "schedulerId": SCHEDULER_ID,
-            "scopes": all_scopes + decision_task_scopes,
+            "scopes": sorted(chain(all_scopes, decision_task_scopes)),
             "tags": {},
         }
         add_capabilities_for_scopes(decision_task)
@@ -523,7 +525,9 @@ class PoolConfigMap(CommonPoolConfigMap):
                     "retries": 5,
                     "routes": [],
                     "schedulerId": SCHEDULER_ID,
-                    "scopes": pool.scopes + [f"secrets:get:{DECISION_TASK_SECRET}"],
+                    "scopes": sorted(
+                        chain(pool.scopes, [f"secrets:get:{DECISION_TASK_SECRET}"])
+                    ),
                     "tags": {},
                 }
                 add_capabilities_for_scopes(task)
