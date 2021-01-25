@@ -267,12 +267,15 @@ class Services(dict):
             None
         """
         # make a list of all file paths
+        recipes_map = {}
         file_strs = []
         for file in file_glob(repo, self.root, relative=True):
             file_strs.append(str(file))
             # recipes are usually called using only their basename
             if file.parts[0] == "recipes":
                 file_strs.append(file.name)
+                assert file.name not in recipes_map
+                recipes_map[file.name] = file
             LOG.debug("found path: %s", file_strs[-1])
         file_re = re.compile("|".join(re.escape(file) for file in file_strs))
 
@@ -306,6 +309,8 @@ class Services(dict):
                     continue
                 for match in file_re.finditer(entry_text):
                     path = self.root / match.group(0)
+                    if not path.is_file() and match.group(0) in recipes_map:
+                        path = self.root / recipes_map[match.group(0)]
                     if path not in service.path_deps:
                         service.path_deps.add(path)
                         LOG.info(

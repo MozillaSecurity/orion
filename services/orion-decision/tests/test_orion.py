@@ -97,17 +97,19 @@ def test_service_deps(mocker):
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     svcs = Services(repo)
-    assert len(svcs) == 3
-    assert set(svcs) == {"test1", "test2", "test3"}
+    assert len(svcs) == 4
+    assert set(svcs) == {"test1", "test2", "test3", "test4"}
     # these are calculated by changed paths, so should be clear
     assert not svcs["test1"].dirty
     assert not svcs["test2"].dirty
     assert not svcs["test3"].dirty
+    assert not svcs["test4"].dirty
 
     # check that deps are calculated
     assert svcs["test1"].service_deps == set()
     assert svcs["test2"].service_deps == {"test1"}
     assert svcs["test3"].service_deps == set()
+    assert svcs["test4"].service_deps == set()
     assert svcs["test1"].path_deps == {
         root / "recipes" / "linux" / "install.sh",
         root / "test1" / "Dockerfile",
@@ -122,6 +124,11 @@ def test_service_deps(mocker):
         root / "test3" / "Dockerfile",
         root / "test3" / "service.yaml",
     }
+    assert svcs["test4"].path_deps == {
+        root / "recipes" / "linux" / "install.sh",
+        root / "test4" / "Dockerfile",
+        root / "test4" / "service.yaml",
+    }
 
     # test that if install.sh changes, both images are marked dirty, script.sh is
     # skipped as a test
@@ -134,6 +141,7 @@ def test_service_deps(mocker):
     assert svcs["test1"].dirty
     assert svcs["test2"].dirty
     assert not svcs["test3"].dirty
+    assert svcs["test4"].dirty
 
     # test that change to files in test3 mark test3 dirty
     svcs.mark_changed_dirty([root / "test3" / "Dockerfile"])
@@ -153,5 +161,5 @@ def test_services_repo(mocker):
         )
     )
     svcs = Services(repo)
-    assert len(svcs) == 2
-    assert set(svcs) == {"test1", "test2"}
+    assert len(svcs) == 3
+    assert set(svcs) == {"test1", "test2", "test4"}
