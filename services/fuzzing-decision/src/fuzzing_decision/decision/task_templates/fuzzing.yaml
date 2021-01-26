@@ -1,16 +1,17 @@
-taskGroupId: "${task_group}"
-dependencies:
-  - "${task_group}"
 created: "${created}"
 deadline: "${deadline}"
+dependencies:
+  - "${task_group}"
 expires: "${expires}"
-priority: high
-provisionerId: "${provisioner}"
-schedulerId: "${scheduler}"
-workerType: "${task_id}"
-retries: 5
+extra: {}
+metadata:
+  description: "${description}"
+  name: "${name}"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/orion"
 payload:
   artifacts: {}
+  cache: {}
   capabilities: {}
   env:
     TASKCLUSTER_FUZZING_POOL: "${pool_id}"
@@ -18,11 +19,13 @@ payload:
   features:
     taskclusterProxy: true
   maxRunTime: !!int "${max_run_time}"
+priority: high
+provisionerId: "${provisioner}"
+retries: 5
 routes: []
+schedulerId: "${scheduler}"
 scopes:
   - "secrets:get:${secret}"
-metadata:
-  description: "${description}"
-  name: "${name}"
-  owner: "${owner_email}"
-  source: "https://github.com/MozillaSecurity/orion"
+tags: {}
+taskGroupId: "${task_group}"
+workerType: "${task_id}"

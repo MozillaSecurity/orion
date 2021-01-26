@@ -4,13 +4,15 @@ deadline:
   $$fromNow: "1 hour"
 expires:
   $$fromNow: "1 week"
-priority: high
-provisionerId: "${provisioner}"
-schedulerId: "${scheduler}"
-workerType: "${task_id}"
-retries: 5
+extra: {}
+metadata:
+  description: "${description}"
+  name: "Fuzzing decision ${task_id}"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/orion"
 payload:
   artifacts: {}
+  cache: {}
   command:
     - fuzzing-decision
     - "${pool_id}"
@@ -19,19 +21,20 @@ payload:
   features:
     taskclusterProxy: true
   image:
-    type: indexed-image
-    path: public/fuzzing-decision.tar.zst
     namespace: project.fuzzing.orion.fuzzing-decision.master
+    path: public/fuzzing-decision.tar.zst
+    type: indexed-image
   maxRunTime: !!int "${max_run_time}"
+priority: high
+provisionerId: "${provisioner}"
+retries: 5
 routes: []
+schedulerId: "${scheduler}"
 # Mandatory scopes to execute the hook or create new tasks
 scopes:
-  - "queue:scheduler-id:${scheduler}"
   - "queue:cancel-task:${scheduler}/*"
   - "queue:create-task:highest:${provisioner}/${task_id}"
+  - "queue:scheduler-id:${scheduler}"
   - "secrets:get:${secret}"
-metadata:
-  description: "${description}"
-  name: "Fuzzing decision ${task_id}"
-  owner: "${owner_email}"
-  source: "https://github.com/MozillaSecurity/orion"
+tags: {}
+workerType: "${task_id}"

@@ -146,15 +146,6 @@ class PoolConfiguration(CommonPoolConfiguration):
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
         config = {
-            "minCapacity": 0,
-            "maxCapacity": (
-                # add +1 to expected size, so if we manually trigger the hook, the new
-                # decision can run without also manually cancelling a task
-                # * 2 since Taskcluster seems to not reuse workers very quickly in some
-                # cases, so we end up with a lot of pending tasks.
-                max(1, math.ceil(self.max_run_time / self.cycle_time)) * self.tasks * 2
-                + 1
-            ),
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size
             ),
@@ -163,19 +154,28 @@ class PoolConfiguration(CommonPoolConfiguration):
                 "registrationTimeout": parse_time("15m"),
                 "reregistrationTimeout": parse_time("4d"),
             },
+            "maxCapacity": (
+                # add +1 to expected size, so if we manually trigger the hook, the new
+                # decision can run without also manually cancelling a task
+                # * 2 since Taskcluster seems to not reuse workers very quickly in some
+                # cases, so we end up with a lot of pending tasks.
+                max(1, math.ceil(self.max_run_time / self.cycle_time)) * self.tasks * 2
+                + 1
+            ),
+            "minCapacity": 0,
         }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
             DECISION_TASK.substitute(
                 description=DESCRIPTION.replace("\n", "\\n"),
-                pool_id=self.pool_id,
+                max_run_time=parse_time("1h"),
                 owner_email=OWNER_EMAIL,
-                task_id=self.task_id,
+                pool_id=self.pool_id,
                 provisioner=PROVISIONER_ID,
                 scheduler=SCHEDULER_ID,
-                max_run_time=parse_time("1h"),
                 secret=DECISION_TASK_SECRET,
+                task_id=self.task_id,
             )
         )
         decision_task["scopes"] = sorted(chain(decision_task["scopes"], self.scopes))
@@ -185,30 +185,30 @@ class PoolConfiguration(CommonPoolConfiguration):
             decision_task["payload"]["env"].update(env)
 
         pool = WorkerPool(
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-            providerId=PROVIDER_IDS[self.cloud],
-            description=DESCRIPTION,
-            owner=OWNER_EMAIL,
-            emailOnError=True,
             config=config,
+            description=DESCRIPTION,
+            emailOnError=True,
+            owner=OWNER_EMAIL,
+            providerId=PROVIDER_IDS[self.cloud],
+            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
         )
 
         hook = Hook(
+            bindings=(),
+            description=DESCRIPTION,
+            emailOnError=True,
             hookGroupId=HOOK_PREFIX,
             hookId=self.task_id,
             name=self.task_id,
-            description=DESCRIPTION,
             owner=OWNER_EMAIL,
-            emailOnError=True,
             schedule=list(self.cycle_crons()),
             task=decision_task,
-            bindings=(),
             triggerSchema={},
         )
 
         role = Role(
-            roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             description=DESCRIPTION,
+            roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             scopes=decision_task["scopes"],
         )
 
@@ -241,29 +241,29 @@ class PoolConfiguration(CommonPoolConfiguration):
         if preprocess is not None:
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
-                    task_group=parent_task_id,
                     created=stringDate(now),
                     deadline=stringDate(
                         now + timedelta(seconds=preprocess.max_run_time)
                     ),
-                    expires=stringDate(fromNow("1 week", now)),
-                    task_id=self.task_id,
-                    pool_id=self.pool_id,
-                    provisioner=PROVISIONER_ID,
                     description=DESCRIPTION.replace("\n", "\\n"),
-                    owner_email=OWNER_EMAIL,
-                    scheduler=SCHEDULER_ID,
-                    secret=DECISION_TASK_SECRET,
+                    expires=stringDate(fromNow("1 week", now)),
                     max_run_time=preprocess.max_run_time,
                     name=f"Fuzzing task {self.task_id} - preprocess",
+                    owner_email=OWNER_EMAIL,
+                    pool_id=self.pool_id,
+                    provisioner=PROVISIONER_ID,
+                    scheduler=SCHEDULER_ID,
+                    secret=DECISION_TASK_SECRET,
+                    task_group=parent_task_id,
+                    task_id=self.task_id,
                 )
             )
             task["payload"]["artifacts"].update(
                 preprocess.artifact_map(stringDate(fromNow("1 week", now)))
             )
+            task["payload"]["env"]["TASKCLUSTER_FUZZING_PREPROCESS"] = "1"
             # `container` can be either a string or a dict, so can't template it
             task["payload"]["image"] = preprocess.container
-            task["payload"]["env"]["TASKCLUSTER_FUZZING_PREPROCESS"] = "1"
             task["scopes"] = sorted(chain(preprocess.scopes, task["scopes"]))
             add_capabilities_for_scopes(task)
             if env is not None:
@@ -276,19 +276,19 @@ class PoolConfiguration(CommonPoolConfiguration):
         for i in range(1, self.tasks + 1):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
-                    task_group=parent_task_id,
-                    description=DESCRIPTION.replace("\n", "\\n"),
                     created=stringDate(now),
                     deadline=stringDate(now + timedelta(seconds=self.max_run_time)),
+                    description=DESCRIPTION.replace("\n", "\\n"),
                     expires=stringDate(fromNow("1 week", now)),
-                    task_id=self.task_id,
-                    owner_email=OWNER_EMAIL,
-                    provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
-                    pool_id=self.pool_id,
-                    secret=DECISION_TASK_SECRET,
                     max_run_time=self.max_run_time,
                     name=f"Fuzzing task {self.task_id} - {i}/{self.tasks}",
+                    owner_email=OWNER_EMAIL,
+                    pool_id=self.pool_id,
+                    provisioner=PROVISIONER_ID,
+                    scheduler=SCHEDULER_ID,
+                    secret=DECISION_TASK_SECRET,
+                    task_group=parent_task_id,
+                    task_id=self.task_id,
                 )
             )
             task["payload"]["artifacts"].update(
@@ -327,8 +327,6 @@ class PoolConfigMap(CommonPoolConfigMap):
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
         config = {
-            "minCapacity": 0,
-            "maxCapacity": max(sum(pool.tasks for pool in pools) * 2, 3),
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size
             ),
@@ -337,18 +335,21 @@ class PoolConfigMap(CommonPoolConfigMap):
                 "registrationTimeout": parse_time("15m"),
                 "reregistrationTimeout": parse_time("4d"),
             },
+            "maxCapacity": max(sum(pool.tasks for pool in pools) * 2, 3),
+            "minCapacity": 0,
         }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
             DECISION_TASK.substitute(
                 description=DESCRIPTION.replace("\n", "\\n"),
+                max_run_time=parse_time("1h"),
                 owner_email=OWNER_EMAIL,
-                task_id=self.task_id,
+                pool_id=self.pool_id,
                 provisioner=PROVISIONER_ID,
                 scheduler=SCHEDULER_ID,
-                max_run_time=parse_time("1h"),
                 secret=DECISION_TASK_SECRET,
+                task_id=self.task_id,
             )
         )
         decision_task["scopes"] = sorted(chain(decision_task["scopes"], all_scopes))
@@ -358,24 +359,24 @@ class PoolConfigMap(CommonPoolConfigMap):
             decision_task["payload"]["env"].update(env)
 
         pool = WorkerPool(
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-            providerId=PROVIDER_IDS[self.cloud],
-            description=DESCRIPTION.replace("\n", "\\n"),
-            owner=OWNER_EMAIL,
-            emailOnError=True,
             config=config,
+            description=DESCRIPTION.replace("\n", "\\n"),
+            emailOnError=True,
+            owner=OWNER_EMAIL,
+            providerId=PROVIDER_IDS[self.cloud],
+            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
         )
 
         hook = Hook(
+            bindings=(),
+            description=DESCRIPTION,
+            emailOnError=True,
             hookGroupId=HOOK_PREFIX,
             hookId=self.task_id,
             name=self.task_id,
-            description=DESCRIPTION,
             owner=OWNER_EMAIL,
-            emailOnError=True,
             schedule=list(self.cycle_crons()),
             task=decision_task,
-            bindings=(),
             triggerSchema={},
         )
 
@@ -395,22 +396,22 @@ class PoolConfigMap(CommonPoolConfigMap):
             for i in range(1, pool.tasks + 1):
                 task = yaml.safe_load(
                     FUZZING_TASK.substitute(
-                        task_group=parent_task_id,
-                        description=DESCRIPTION.replace("\n", "\\n"),
                         created=stringDate(now),
-                        provisioner=PROVISIONER_ID,
-                        scheduler=SCHEDULER_ID,
                         deadline=stringDate(now + timedelta(seconds=pool.max_run_time)),
+                        description=DESCRIPTION.replace("\n", "\\n"),
                         expires=stringDate(fromNow("1 week", now)),
-                        task_id=self.task_id,
+                        max_run_time=pool.max_run_time,
                         name=(
                             f"Fuzzing task {pool.platform}-{pool.pool_id} - "
                             f"{i}/{pool.tasks}"
                         ),
                         owner_email=OWNER_EMAIL,
                         pool_id=pool.pool_id,
+                        provisioner=PROVISIONER_ID,
+                        scheduler=SCHEDULER_ID,
                         secret=DECISION_TASK_SECRET,
-                        max_run_time=pool.max_run_time,
+                        task_group=parent_task_id,
+                        task_id=self.task_id,
                     )
                 )
                 task["payload"]["artifacts"].update(
