@@ -9,7 +9,7 @@ RUN mkdir ~/.ssh && chmod 0700 ~/.ssh && ssh-keyscan github.com > ~/.ssh/known_h
 
 COPY services/fuzzing-decision /src
 
-RUN pip install --disable-pip-version-check --no-cache-dir --quiet "/src[decision]"
+RUN pip install --disable-pip-version-check --no-cache-dir --progress-bar off --quiet -e "/src[decision]"
 
 # Setup env variable for tc-admin.py discovery
 ENV TC_ADMIN_PY=/src/tc-admin.py
