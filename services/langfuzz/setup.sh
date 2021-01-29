@@ -63,6 +63,7 @@ packages=(
   openjdk-8-jdk
   openssh-client
   psmisc
+  python-is-python3
   python3-dev
   python3-pip
   python3-setuptools
