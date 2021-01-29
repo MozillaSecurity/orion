@@ -36,5 +36,5 @@ git init gr.css.reports
   node node_modules/gr.css/dist/gr.css.js ~/nightly/firefox src/grammar.json --token "$GH_TOKEN" &&
   npm test &&
   git commit -m "chore(grammar): update grammar" src/grammar.json
-  # retry git push origin HEAD:main
+  retry git push origin HEAD:main
 )> /live.log 2>&1
