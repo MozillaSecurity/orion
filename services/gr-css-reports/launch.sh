@@ -18,6 +18,7 @@ export GH_TOKEN=$(get-secret project/fuzzing/git-token-gr-css | jshon -e secret 
 set -x
 chmod 0400 .ssh/*_deploy
 
+export CI=1
 export EMAIL=nobody@community-tc.services.mozilla.com
 export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 
