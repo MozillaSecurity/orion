@@ -27,7 +27,7 @@ if platform.system() == "Linux":
 
 
 REPO_URL = "https://dl.google.com/android/repository/repository2-1.xml"
-IMAGES_URL = "https://dl.google.com/android/repository/sys-img/google_apis/sys-img2-1.xml"
+IMAGES_URL = "https://dl.google.com/android/repository/sys-img/android/sys-img2-1.xml"
 
 HOME = os.path.expanduser("~")
 
@@ -183,7 +183,7 @@ class AndroidHelper(object):
         sdk_repo.get_file("emulator", sdk)
 
         # get latest Google APIs system image
-        img_repo.get_file("system-images;android-28;google_apis;x86_64", sdk, host=None)
+        img_repo.get_file("system-images;android-29;default;x86_64", sdk, host=None)
 
         # get latest platform-tools for linux
         sdk_repo.get_file("platform-tools", sdk)
@@ -200,7 +200,7 @@ class AndroidHelper(object):
         android = makedirs(HOME, ".android")
         avd_path = makedirs(android, "avd")
         sdk = os.path.join(android, "sdk")
-        api_gapi = os.path.join(sdk, "system-images", "android-28", "google_apis")
+        api_gapi = os.path.join(sdk, "system-images", "android-29", "google_apis")
 
         # create an avd
         avd_ini = os.path.join(avd_path, self.avd_name + ".ini")
