@@ -75,6 +75,7 @@ packages=(
   valgrind
   vim
   zip
+  zstd
 )
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 

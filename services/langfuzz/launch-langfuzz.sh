@@ -57,6 +57,8 @@ chmod 0600 /etc/google/auth/application_default_credentials.json
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
 function onexit () {
+  echo "Saving ~/work to /logs/work.tar.zst" >&2
+  tar -C /home/ubuntu -c work | zstd -f -o /logs/work.tar.zst
   echo "Waiting for logs to flush..." >&2
   sleep 15
   killall -INT td-agent-bit
