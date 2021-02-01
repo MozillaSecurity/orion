@@ -33,6 +33,7 @@ cat > /etc/apt/sources.list.d/fluentbit.list << EOF
 deb https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
 EOF
 
+dpkg --add-architecture i386
 retry apt-get update -qq
 
 #### Bootstrap Packages
@@ -53,6 +54,7 @@ packages=(
   libalgorithm-combinatorics-perl
   libbsd-resource-perl
   libc6-dbg
+  libc6-dbg:i386
   libio-prompt-perl
   libwww-mechanize-perl
   locales
