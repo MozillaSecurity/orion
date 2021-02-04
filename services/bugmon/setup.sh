@@ -14,15 +14,6 @@ cd "${0%/*}"
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-git init bugmon-tc
-(
-  cd bugmon-tc
-  git remote add -t master origin https://github.com/MozillaSecurity/bugmon-tc.git
-  retry git fetch -v --depth 1 --no-tags origin master
-  git reset --hard FETCH_HEAD
-  pip3 install .
-)
-
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
 
