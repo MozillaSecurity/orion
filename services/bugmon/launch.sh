@@ -18,6 +18,15 @@ function tc-get-secret () {
 export ARTIFACT_DEST="/bugmon-artifacts"
 export TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
+git init bugmon-tc
+(
+  cd bugmon-tc
+  git remote add -t master origin https://github.com/MozillaSecurity/bugmon-tc.git
+  retry git fetch -v --depth 1 --no-tags origin master
+  git reset --hard FETCH_HEAD
+  pip3 install .
+)
+
 case "$BUG_ACTION" in
   monitor | report)
     BZ_API_KEY="$(tc-get-secret bz-api-key | jshon -e secret -e key -u)"
