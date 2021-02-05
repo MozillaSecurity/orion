@@ -15,6 +15,22 @@ from fuzzing_decision.decision.workflow import Workflow
 FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(scope="module")
+def appconfig():
+    # this is copied from:
+    # https://github.com/taskcluster/tc-admin/blob/main/tcadmin/tests/conftest.py
+    # @c21e32efb50034739fef990409dbb16c62438725
+
+    # don't import this at the top level, as it results in `blessings.Terminal` being
+    # initialized in a situation where output is to a console, and it includes
+    # underlines and bold and colors in the output, causing test failures
+    from tcadmin.appconfig import AppConfig
+
+    appconfig = AppConfig()
+    with AppConfig._as_current(appconfig):
+        yield appconfig
+
+
 @pytest.fixture
 def mock_taskcluster_workflow():
     """Mock Taskcluster HTTP services"""

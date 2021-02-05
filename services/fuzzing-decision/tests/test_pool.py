@@ -143,6 +143,7 @@ VALID_ROLE = {
 }
 
 
+@pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_aws_resources(env, mock_clouds, mock_machines):
 
@@ -230,9 +231,9 @@ def test_aws_resources(env, mock_clouds, mock_machines):
     assert role.to_json() == VALID_ROLE
 
 
+@pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(env, mock_clouds, mock_machines):
-
     conf = PoolConfiguration(
         "test",
         {
