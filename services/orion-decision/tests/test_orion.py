@@ -97,19 +97,25 @@ def test_service_deps(mocker):
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     svcs = Services(repo)
-    assert len(svcs) == 4
-    assert set(svcs) == {"test1", "test2", "test3", "test4"}
+    assert set(svcs) == {"test1", "test2", "test3", "test4", "test5", "test6", "test7"}
+    assert len(svcs) == 7
     # these are calculated by changed paths, so should be clear
     assert not svcs["test1"].dirty
     assert not svcs["test2"].dirty
     assert not svcs["test3"].dirty
     assert not svcs["test4"].dirty
+    assert not svcs["test5"].dirty
+    assert not svcs["test6"].dirty
+    assert not svcs["test7"].dirty
 
     # check that deps are calculated
     assert svcs["test1"].service_deps == set()
     assert svcs["test2"].service_deps == {"test1"}
     assert svcs["test3"].service_deps == set()
     assert svcs["test4"].service_deps == set()
+    assert svcs["test5"].service_deps == set()
+    assert svcs["test6"].service_deps == {"test5"}  # via withdep.sh
+    assert svcs["test7"].service_deps == {"test5"}  # via direct dep
     assert svcs["test1"].path_deps == {
         root / "recipes" / "linux" / "install.sh",
         root / "test1" / "Dockerfile",
@@ -129,9 +135,24 @@ def test_service_deps(mocker):
         root / "test4" / "Dockerfile",
         root / "test4" / "service.yaml",
     }
+    assert svcs["test5"].path_deps == {
+        root / "test5" / "Dockerfile",
+        root / "test5" / "service.yaml",
+    }
+    assert svcs["test6"].path_deps == {
+        root / "test6" / "Dockerfile",
+        root / "test6" / "service.yaml",
+        root / "recipes" / "linux" / "withdep.sh",
+    }
+    assert svcs["test7"].path_deps == {
+        root / "test7" / "Dockerfile",
+        root / "test7" / "service.yaml",
+    }
 
     # test that if install.sh changes, both images are marked dirty, script.sh is
     # skipped as a test
+    for svc in svcs.values():
+        svc.dirty = False
     svcs.mark_changed_dirty(
         [
             root / "recipes" / "linux" / "tests" / "script.sh",
@@ -142,12 +163,21 @@ def test_service_deps(mocker):
     assert svcs["test2"].dirty
     assert not svcs["test3"].dirty
     assert svcs["test4"].dirty
+    assert not svcs["test5"].dirty
+    assert not svcs["test6"].dirty
+    assert not svcs["test7"].dirty
 
     # test that change to files in test3 mark test3 dirty
+    for svc in svcs.values():
+        svc.dirty = False
     svcs.mark_changed_dirty([root / "test3" / "Dockerfile"])
-    assert svcs["test1"].dirty
-    assert svcs["test2"].dirty
+    assert not svcs["test1"].dirty
+    assert not svcs["test2"].dirty
     assert svcs["test3"].dirty
+    assert not svcs["test4"].dirty
+    assert not svcs["test5"].dirty
+    assert not svcs["test6"].dirty
+    assert not svcs["test7"].dirty
 
 
 def test_services_repo(mocker):
@@ -161,5 +191,5 @@ def test_services_repo(mocker):
         )
     )
     svcs = Services(repo)
-    assert len(svcs) == 3
-    assert set(svcs) == {"test1", "test2", "test4"}
+    assert set(svcs) == {"test1", "test2", "test4", "test5", "test6", "test7"}
+    assert len(svcs) == 6

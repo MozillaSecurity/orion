@@ -74,6 +74,32 @@ def test_mark_rebuild_02(mocker):
     assert sched.services["test1"].dirty
     assert sched.services["test2"].dirty
     assert not sched.services["test3"].dirty
+    assert sched.services["test4"].dirty
+    assert not sched.services["test5"].dirty
+    assert not sched.services["test6"].dirty
+    assert not sched.services["test7"].dirty
+
+
+def test_mark_rebuild_03(mocker):
+    """test that "/force-rebuild=svc" marks some services dirty"""
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit_message = "/force-rebuild=test3,test6"
+    evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
+    sched = Scheduler(evt, None, "group", "secret", "branch")
+    sched.mark_services_for_rebuild()
+    assert evt.list_changed_paths.call_count == 1
+    assert sched.services["test1"].dirty
+    assert sched.services["test2"].dirty
+    assert sched.services["test3"].dirty
+    assert sched.services["test4"].dirty
+    assert not sched.services["test5"].dirty
+    assert sched.services["test6"].dirty
+    assert not sched.services["test7"].dirty
 
 
 def test_create_01(mocker):

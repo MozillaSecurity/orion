@@ -225,7 +225,9 @@ class Service:
             tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
         else:
             tests = []
-        return cls(dockerfile, context, name, tests, metadata_path.parent)
+        result = cls(dockerfile, context, name, tests, metadata_path.parent)
+        result.service_deps |= set(metadata.get("force_deps", []))
+        return result
 
 
 class Services(dict):
@@ -256,9 +258,11 @@ class Services(dict):
     def _calculate_depends(self, repo):
         """Go through each service and try to determine what dependencies it has.
 
-        There are two types of dependencies:
+        There are three types of dependencies:
         - service: The base image used for the dockerfile (only for `mozillasecurity/`)
         - paths: Files in the same root that are used by the image.
+        - forced: Use `/force-deps=service` in a recipe or "force_deps:[]" in
+                  service.yaml to force a dependency on another service.
 
         Arguments:
             repo (GitRepo): The git repo to load services and recipe scripts from.
@@ -268,6 +272,7 @@ class Services(dict):
         """
         # make a list of all file paths
         recipes_map = {}
+        recipe_deps = {}
         file_strs = []
         for file in file_glob(repo, self.root, relative=True):
             file_strs.append(str(file))
@@ -276,10 +281,39 @@ class Services(dict):
                 file_strs.append(file.name)
                 assert file.name not in recipes_map
                 recipes_map[file.name] = file
-            LOG.debug("found path: %s", file_strs[-1])
+                try:
+                    recipe_text = (self.root / file).read_text()
+                except UnicodeError:
+                    pass
+                else:
+                    # find force-deps in recipe
+                    for match in re.finditer(
+                        r"/force-deps=([A-Za-z0-9_.,-]+)", recipe_text
+                    ):
+                        for svc in match.group(1).split(","):
+                            assert (
+                                svc in self
+                            ), f"recipe {file} forces unknown dep: {svc}"
+                            recipe_deps.setdefault(file.name, set())
+                            if svc not in recipe_deps[file.name]:
+                                recipe_deps[file.name].add(svc)
+            if file.name in recipe_deps:
+                LOG.debug(
+                    "found path: %s (deps: [%s])",
+                    file_strs[-1],
+                    ", ".join(sorted(recipe_deps[file.name])),
+                )
+            else:
+                LOG.debug("found path: %s", file_strs[-1])
         file_re = re.compile("|".join(re.escape(file) for file in file_strs))
 
         for service in self.values():
+            # check force_deps
+            # if a dep already exists, it had to come from force_deps in service.yaml
+            for dep in service.service_deps:
+                assert dep in self, f"Service {service.name} forces unknown dep: {dep}"
+                LOG.info("Service %s depends on service %s (forced)", service.name, svc)
+
             # calculate image dependencies
             parser = DockerfileParser(path=str(service.dockerfile))
             if parser.baseimage is not None and parser.baseimage.startswith(
@@ -290,7 +324,7 @@ class Services(dict):
                     baseimage = baseimage.split(":", 1)[0]
                 assert baseimage in self
                 service.service_deps.add(baseimage)
-                LOG.info("Image %s depends on image %s", service.name, baseimage)
+                LOG.info("Service %s depends on service %s", service.name, baseimage)
 
             # scan service for references to files
             for entry in file_glob(repo, service.dockerfile.parent):
@@ -298,23 +332,35 @@ class Services(dict):
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
                     LOG.info(
-                        "Image %s depends on path %s",
+                        "Service %s depends on path %s",
                         service.name,
                         entry.relative_to(self.root),
                     )
-                # search file for references to other files
                 try:
                     entry_text = entry.read_text()
                 except UnicodeError:
                     continue
+                # search file for references to other files
                 for match in file_re.finditer(entry_text):
                     path = self.root / match.group(0)
                     if not path.is_file() and match.group(0) in recipes_map:
                         path = self.root / recipes_map[match.group(0)]
+                    # check for recipe force-dep
+                    for svc in recipe_deps.get(path.name, []):
+                        if svc not in service.service_deps:
+                            service.service_deps.add(svc)
+                        LOG.info(
+                            "Service %s depends on service %s (forced via recipe %s)",
+                            service.name,
+                            svc,
+                            match.group(0),
+                        )
                     if path not in service.path_deps:
                         service.path_deps.add(path)
                         LOG.info(
-                            "Image %s depends on path %s", service.name, match.group(0)
+                            "Service %s depends on path %s",
+                            service.name,
+                            match.group(0),
                         )
 
     def mark_changed_dirty(self, changed_paths):

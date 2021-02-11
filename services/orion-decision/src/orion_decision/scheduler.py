@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for Orion tasks"""
+import re
 from logging import getLogger
 from pathlib import Path
 from string import Template
@@ -73,12 +74,27 @@ class Scheduler:
         Returns:
             None
         """
-        if "/force-rebuild" in self.github_event.commit_message:
-            LOG.info("/force-rebuild detected, all services will be marked dirty")
-            for service in self.services.values():
-                service.dirty = True
-        else:
-            self.services.mark_changed_dirty(self.github_event.list_changed_paths())
+        forced = set()
+        for match in re.finditer(
+            r"/force-rebuild(=[A-Za-z0-9_.,-]+)?", self.github_event.commit_message
+        ):
+            if "=" in match.group(0):
+                for svc in match.group(1)[1:].split(","):
+                    assert (
+                        svc in self.services
+                    ), f"/force-rebuild of unknown service {svc}"
+                    self.services[svc].dirty = True
+                    forced.add(svc)
+            else:
+                LOG.info("/force-rebuild detected, all services will be marked dirty")
+                for service in self.services.values():
+                    service.dirty = True
+                return  # short-cut, no point in continuing
+        if forced:
+            LOG.info(
+                "/force-rebuild detected for service: %s", ", ".join(sorted(forced))
+            )
+        self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
     def create_tasks(self):
         """Create test/build/push tasks in Taskcluster.
