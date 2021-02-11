@@ -377,8 +377,10 @@ class Services(dict):
                     continue
                 # check for path dependencies
                 if path in service.path_deps:
-                    LOG.info(
-                        "%s is dirty because path %s is changed", service.name, path
+                    LOG.warning(
+                        "%s is dirty because path %s is changed",
+                        service.name,
+                        path.relative_to(self.root),
                     )
                     service.dirty = True
                     continue
@@ -391,7 +393,7 @@ class Services(dict):
                     (dep for dep in service.service_deps if self[dep].dirty), None
                 )
                 if not service.dirty and dirty_dep is not None:
-                    LOG.info(
+                    LOG.warning(
                         "%s is dirty because image %s is dirty", service.name, dirty_dep
                     )
                     service.dirty = True

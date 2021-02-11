@@ -35,10 +35,11 @@ repos:
     hooks:
       - id: orion-service-load
         name: Check that Orion services can be loaded
-        entry: bash -c 'cd services/orion-decision && exec tox -e check -- ../..'
+        entry: bash -c 'cd services/orion-decision && exec tox -qq -e check -- -q ../.. "$@"' orion-check
         language: system
         always_run: true
-        pass_filenames: false
+        require_serial: true
+        verbose: true
       - id: grizzly-reduce-monitor-lint
         name: Run linters for grizzly_reduce_monitor
         entry: bash -c 'cd services/grizzly-reduce-monitor && exec tox -e lint'

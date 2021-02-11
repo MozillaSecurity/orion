@@ -29,7 +29,7 @@ def configure_logging(level=INFO):
         None
     """
     setlocale(LC_ALL, "")
-    basicConfig(level=level)
+    basicConfig(format="[%(levelname).1s] %(message)s", level=level)
     if level == DEBUG:
         # no need to ever see lower than INFO for third-parties
         getLogger("taskcluster").setLevel(INFO)
@@ -53,6 +53,9 @@ def _define_logging_args(parser):
         action="store_const",
         const=DEBUG,
         help="Show more logging output.",
+    )
+    parser.set_defaults(
+        log_level=INFO,
     )
 
 
@@ -107,9 +110,6 @@ def parse_args(argv=None):
         action="store_true",
         help="Do not queue tasks in Taskcluster, only calculate what would be done.",
     )
-    parser.set_defaults(
-        log_level=INFO,
-    )
 
     result = parser.parse_args(argv)
 
@@ -138,6 +138,12 @@ def parse_check_args(argv=None):
         type=Path,
         help="Orion repo root to scan for service files",
     )
+    parser.add_argument(
+        "changed",
+        type=Path,
+        nargs="*",
+        help="Changed path(s)",
+    )
     return parser.parse_args(argv)
 
 
@@ -145,7 +151,8 @@ def check():
     """Service definition check entrypoint."""
     args = parse_check_args()
     configure_logging(level=args.log_level)
-    Services(GitRepo.from_existing(args.repo))
+    svcs = Services(GitRepo.from_existing(args.repo))
+    svcs.mark_changed_dirty([args.repo / file for file in args.changed])
     sys.exit(0)
 
 

@@ -44,7 +44,9 @@ def test_logging_init(mocker):
     configure_logging(level=DEBUG)
     assert locale.call_count == 1
     assert log_init.call_count == 1
-    assert log_init.call_args == call(level=DEBUG)
+    assert log_init.call_args == call(
+        format="[%(levelname).1s] %(message)s", level=DEBUG
+    )
 
 
 def test_main(mocker):
