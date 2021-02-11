@@ -22,7 +22,7 @@ cd "${0%/*}"
 ./fuzzfetch.sh
 ./credstash.sh
 ./berglas.sh
-./fuzzmanager.sh
+EDIT=1 ./fuzzmanager.sh
 ./grcov.sh
 ./gsutil.sh
 ./fluentbit.sh

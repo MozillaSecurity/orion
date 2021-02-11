@@ -24,7 +24,12 @@ apt-install-auto \
     python3-setuptools \
     python3-wheel
 
-cd /home/worker
-
-git-clone https://github.com/MozillaSecurity/FuzzManager fuzzmanager
-retry pip3 install ./fuzzmanager boto
+retry pip3 install boto
+if [ "$EDIT" = "1" ]
+then
+    cd "${DESTDIR-/home/worker}"
+    git-clone https://github.com/MozillaSecurity/FuzzManager fuzzmanager
+    retry pip3 install -e ./fuzzmanager
+else
+    retry pip3 install "git+https://github.com/MozillaSecurity/FuzzManager"
+fi
