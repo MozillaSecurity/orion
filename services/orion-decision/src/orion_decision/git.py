@@ -204,7 +204,6 @@ class GithubEvent:
             "github-release": "release",
         }[action]
         self.repo_slug = event["repository"]["full_name"]
-        maybe_fetch_before = False
         if self.event_type == "pull_request":
             self.pull_request = event["number"]
             self.pr_branch = event["pull_request"]["head"]["ref"]
@@ -232,25 +231,28 @@ class GithubEvent:
                 self.commit_range = f"{event['commits'][0]['id']}^..{event['after']}"
             else:
                 self.commit_range = f"{event['before']}..{event['after']}"
-                maybe_fetch_before = True
             self.fetch_ref = event["ref"]
         self.repo = GitRepo(self.clone_url, self.fetch_ref, self.commit)
-        if maybe_fetch_before:
-            # check if we need to fetch both sides of the commit range
-            # for the case of force-push, `before` will not be under the same fetch ref
-            result = self.repo.git_call(
-                "merge-base",
-                "--is-ancestor",
-                event["before"],
-                event["after"],
+
+        # check if we need to fetch both sides of the commit range
+        # for the case of force-push, `before` will not be under the same fetch ref
+        before, after = self.commit_range.split("..")
+        result = self.repo.git_call(
+            "merge-base",
+            "--is-ancestor",
+            before,
+            after,
+        )
+        if result == 128:
+            # 128 means "is that even a commit?"
+            # so yes, we need to fetch it
+            self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
+        elif result not in {0, 1}:
+            # 0 or 1 are fine. either way we can diff it
+            raise RuntimeError(
+                f"`git merge-base --is-ancestor {before} {after}`" f" returned {result}"
             )
-            if result == 128:
-                self.repo.git("fetch", "-q", "origin", event["before"], tries=RETRIES)
-            elif result not in {0, 1}:
-                raise RuntimeError(
-                    f"`git merge-base --is-ancestor {event['before']} {event['after']}`"
-                    f" returned {result}"
-                )
+
         self.commit_message = self.repo.message(self.commit_range)
         return self
 
