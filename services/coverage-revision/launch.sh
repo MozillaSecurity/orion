@@ -1,9 +1,12 @@
-#!/bin/bash
-set -e -x -o pipefail
+#!/bin/sh
+set -e -x
+# store and kill self in pipeline
+# this emulates bash -o pipefail
+self=$$
 
 DST="${DST-/coverage-revision.txt}"
 
-fuzzfetch --coverage --dry-run 2>&1 | tee /dev/stderr | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
+{ fuzzfetch --coverage --dry-run 2>&1 || kill $self; } | { tee /dev/stderr || kill $self; } | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
 
 # Validate that we got a proper revision
 
