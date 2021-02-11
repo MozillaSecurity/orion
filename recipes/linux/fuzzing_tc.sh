@@ -2,6 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# /force-deps=fuzzing-decision
 
 set -e
 set -x
@@ -22,4 +23,12 @@ apt-install-auto \
     python3-pip \
     python3-wheel
 
-retry pip3 install 'git+https://github.com/MozillaSecurity/orion#subdirectory=services/fuzzing-decision'
+# assert that SRCDIR is set
+[ -n "$SRCDIR" ]
+
+if [ "$EDIT" = "1" ]
+then
+    retry pip3 install -e "$SRCDIR"
+else
+    retry pip3 install "$SRCDIR"
+fi

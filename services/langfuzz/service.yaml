@@ -1,1 +1,3 @@
 name: langfuzz
+force_deps:
+  - fuzzing-decision

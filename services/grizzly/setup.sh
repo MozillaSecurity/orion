@@ -22,7 +22,7 @@ cd "${0%/*}"
 ./credstash.sh
 ./fluentbit.sh
 ./fuzzfetch.sh
-./fuzzing_tc.sh
+EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
 ./htop.sh

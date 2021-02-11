@@ -26,7 +26,7 @@ EDIT=1 ./fuzzmanager.sh
 ./grcov.sh
 ./gsutil.sh
 ./fluentbit.sh
-./fuzzing_tc.sh
+SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./taskcluster.sh
 
 packages=(

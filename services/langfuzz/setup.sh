@@ -84,7 +84,7 @@ retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 # Install fuzzing-tc
 # this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
 # when run under Taskcluster
-retry python3 -m pip install 'git+https://github.com/MozillaSecurity/orion#subdirectory=services/fuzzing-decision'
+retry python3 -m pip install /tmp/fuzzing-tc
 
 # Install taskcluster CLI
 TC_VERSION="$(curl --retry 5 -s "https://github.com/taskcluster/taskcluster/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/')"

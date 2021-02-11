@@ -14,9 +14,10 @@ RUN useradd -d /home/worker -s /bin/bash -m worker
 
 COPY recipes/linux/ /tmp/recipes/
 COPY services/funfuzz/setup.sh /tmp/recipes/
+COPY services/fuzzing-decision /tmp/fuzzing-tc
 COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /tmp/recipes/setup.sh \
-    && rm -rf /tmp/recipes
+    && rm -rf /tmp/recipes /tmp/fuzzing-tc
 
 COPY services/funfuzz/status.sh /home/worker/
 COPY services/funfuzz/launch.sh /home/worker/
