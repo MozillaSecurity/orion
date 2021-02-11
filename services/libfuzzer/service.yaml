@@ -1,6 +1,1 @@
 name: libfuzzer
-arch:
-  amd64:
-    build_args:
-      - IMAGE=mozillasecurity/fuzzos:amd64-latest
-manifest: ["./scripts/docker-manifest.sh", "mozillasecurity", "libfuzzer"]
