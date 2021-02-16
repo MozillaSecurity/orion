@@ -169,9 +169,7 @@ def stage_deps(target, args):
                     ]
                 )
                 img.unlink()
-                img_tool.run(
-                    ["pull", "-v", f"localhost/mozillasecurity/{image_name}:latest"]
-                )
+                img_tool.run(["pull", f"localhost/mozillasecurity/{image_name}:latest"])
                 img_tool.run(
                     [
                         "tag",
