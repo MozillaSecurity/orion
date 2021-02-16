@@ -2,31 +2,33 @@ version: 1
 policy:
   pullRequests: collaborators
 tasks:
-  - created: {$fromNow: ''}
-    deadline: {$fromNow: '1 hour'}
-    provisionerId: proj-fuzzing
-    workerType: ci
-    payload:
-      features:
-        taskclusterProxy: true
-      maxRunTime: 3600
-      image: mozillasecurity/orion-decision:latest
-      env:
-        DOCKER_HUB_SECRET: project/fuzzing/docker-hub
-        GITHUB_EVENT: {$json: {$eval: event}}
-        GITHUB_ACTION: ${tasks_for}
-        TASKCLUSTER_NOW: ${now}
-      command:
-        - decision
-        - -v
-    scopes:
-      - docker-worker:capability:privileged
-      - queue:create-task:highest:proj-fuzzing/ci
-      - queue:route:index.project.fuzzing.orion.*
-      - queue:scheduler-id:taskcluster-github
-      - secrets:get:project/fuzzing/docker-hub
-    metadata:
-      name: Orion decision task
-      description: Schedule Orion build tasks
-      owner: truber@mozilla.com
-      source: https://github.com/MozillaSecurity/orion
+  - $if: 'tasks_for != "github-pull-request" || event["action"] in ["opened", "reopened", "synchronize"]'
+    then:
+      created: {$fromNow: ''}
+      deadline: {$fromNow: '1 hour'}
+      provisionerId: proj-fuzzing
+      workerType: ci
+      payload:
+        features:
+          taskclusterProxy: true
+        maxRunTime: 3600
+        image: mozillasecurity/orion-decision:latest
+        env:
+          DOCKER_HUB_SECRET: project/fuzzing/docker-hub
+          GITHUB_EVENT: {$json: {$eval: event}}
+          GITHUB_ACTION: ${tasks_for}
+          TASKCLUSTER_NOW: ${now}
+        command:
+          - decision
+          - -v
+      scopes:
+        - docker-worker:capability:privileged
+        - queue:create-task:highest:proj-fuzzing/ci
+        - queue:route:index.project.fuzzing.orion.*
+        - queue:scheduler-id:taskcluster-github
+        - secrets:get:project/fuzzing/docker-hub
+      metadata:
+        name: Orion decision task
+        description: Schedule Orion build tasks
+        owner: truber@mozilla.com
+        source: https://github.com/MozillaSecurity/orion
