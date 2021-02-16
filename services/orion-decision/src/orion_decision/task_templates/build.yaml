@@ -11,7 +11,10 @@ payload:
       expires: "${expires}"
       path: /image.tar.zst
       type: file
-  command: [build]
+  command:
+    - "sh"
+    - "-c"
+    - "uname -a && exec build"
   env:
     ARCHIVE_PATH: /image.tar
     BUILD_TOOL: img
