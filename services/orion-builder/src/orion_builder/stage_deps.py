@@ -14,6 +14,8 @@ from taskboot.config import Configuration
 from taskboot.docker import Img, patch_dockerfile
 from taskboot.utils import download_artifact, load_artifacts
 
+from .cli import BaseArgs, configure_logging
+
 CA_KEY = Path.home() / "cakey.pem"
 CA_CRT = Path.home() / "ca.pem"
 SRV_KEY = Path.home() / "srvkey.pem"
@@ -167,7 +169,9 @@ def stage_deps(target, args):
                     ]
                 )
                 img.unlink()
-                img_tool.run(["pull", f"localhost/mozillasecurity/{image_name}:latest"])
+                img_tool.run(
+                    ["pull", "-v", f"localhost/mozillasecurity/{image_name}:latest"]
+                )
                 img_tool.run(
                     [
                         "tag",
@@ -190,3 +194,15 @@ def stage_deps(target, args):
 
     # workaround https://github.com/genuinetools/img/issues/206
     patch_dockerfile(target.check_path(args.dockerfile), img_tool.list_images())
+
+
+def registry_main(argv=None):
+    """Registry entrypoint. Does not return."""
+    args = BaseArgs.parse_args(argv)
+    configure_logging(level=args.log_level)
+    if not CA_KEY.is_file():
+        create_cert(CA_KEY, CA_CRT, ca=True)
+    if not SRV_KEY.is_file():
+        create_cert(SRV_KEY, SRV_CRT, ca_key=CA_KEY, ca_cert=CA_CRT)
+    with Registry() as reg:
+        reg.proc.wait()

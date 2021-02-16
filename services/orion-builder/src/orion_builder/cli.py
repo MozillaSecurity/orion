@@ -26,9 +26,7 @@ def configure_logging(level=INFO):
         getLogger("urllib3").setLevel(INFO)
 
 
-class CommonArgs:
-    """Parser for common command-line arguments."""
-
+class BaseArgs:
     def __init__(self):
         self.parser = ArgumentParser()
         log_levels = self.parser.add_mutually_exclusive_group()
@@ -48,6 +46,35 @@ class CommonArgs:
             const=DEBUG,
             help="Show more logging output.",
         )
+
+        self.parser.set_defaults(
+            log_level=INFO,
+        )
+
+    @classmethod
+    def parse_args(cls, argv=None):
+        """Parse command-line arguments.
+
+        Arguments:
+            argv (list(str) or None): Argument list, or sys.argv if None.
+
+        Returns:
+            argparse.Namespace: parsed result
+        """
+        self = cls()
+        result = self.parser.parse_args(argv)
+        self.sanity_check(result)
+        return result
+
+    def sanity_check(self, args):
+        pass
+
+
+class CommonArgs(BaseArgs):
+    """Parser for common command-line arguments."""
+
+    def __init__(self):
+        super().__init__()
         self.parser.add_argument(
             "--git-repository",
             default=getenv("GIT_REPOSITORY"),
@@ -73,24 +100,8 @@ class CommonArgs:
         self.parser.set_defaults(
             cache=None,
             config=None,
-            log_level=INFO,
             target=None,
         )
-
-    @classmethod
-    def parse_args(cls, argv=None):
-        """Parse command-line arguments.
-
-        Arguments:
-            argv (list(str) or None): Argument list, or sys.argv if None.
-
-        Returns:
-            argparse.Namespace: parsed result
-        """
-        self = cls()
-        result = self.parser.parse_args(argv)
-        self.sanity_check(result)
-        return result
 
     def sanity_check(self, args):
         if args.git_repository is None:
