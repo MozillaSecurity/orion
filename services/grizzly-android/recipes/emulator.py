@@ -173,9 +173,10 @@ class AndroidHelper(object):
 
     def install(self):
         # create folder structure
-        android = makedirs(HOME, ".android")
-        makedirs(android, "avd")
-        sdk = makedirs(android, "sdk")
+        android = makedirs(HOME, "Android")
+        avd_home = makedirs(HOME, ".android")
+        makedirs(avd_home, "avd")
+        sdk = makedirs(android, "Sdk")
         sdk_repo = AndroidSDKRepo(REPO_URL)
         img_repo = AndroidSDKRepo(IMAGES_URL)
 
@@ -197,10 +198,11 @@ class AndroidHelper(object):
 
     def avd(self):
         # create folder structure
-        android = makedirs(HOME, ".android")
-        avd_path = makedirs(android, "avd")
-        sdk = os.path.join(android, "sdk")
-        api_gapi = os.path.join(sdk, "system-images", "android-29", "google_apis")
+        android = makedirs(HOME, "Android")
+        avd_home = makedirs(HOME, ".android")
+        avd_path = makedirs(avd_home, "avd")
+        sdk = os.path.join(android, "Sdk")
+        api_gapi = os.path.join(sdk, "system-images", "android-29", "default")
 
         # create an avd
         avd_ini = os.path.join(avd_path, self.avd_name + ".ini")
@@ -273,9 +275,10 @@ class AndroidHelper(object):
 
     def emulator_run(self, use_snapshot, quiet=True):
         # create folder structure
-        android = makedirs(HOME, ".android")
-        sdk = makedirs(android, "sdk")
-        avd_path = makedirs(android, "avd")
+        android = makedirs(HOME, "Android")
+        avd_home = makedirs(HOME, ".android")
+        sdk = makedirs(android, "Sdk")
+        avd_path = makedirs(avd_home, "avd")
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
 
@@ -323,9 +326,10 @@ class AndroidHelper(object):
 
     def firstboot(self):
         # create folder structure
-        android = makedirs(HOME, ".android")
-        sdk = makedirs(android, "sdk")
-        avd_path = makedirs(android, "avd")
+        android = makedirs(HOME, "Android")
+        sdk = makedirs(android, "Sdk")
+        avd_home = makedirs(HOME, ".android")
+        avd_path = makedirs(avd_home, "avd")
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         sdcard = os.path.join(avd_dir, "sdcard.img")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
@@ -370,8 +374,8 @@ class AndroidHelper(object):
 
     def wait_for_boot_completed(self):
         # create folder structure
-        android = makedirs(HOME, ".android")
-        sdk = makedirs(android, "sdk")
+        android = makedirs(HOME, "Android")
+        sdk = makedirs(android, "Sdk")
         platform_tools = makedirs(sdk, "platform-tools")
 
         subprocess.check_output([os.path.join(platform_tools, "adb"),
