@@ -141,6 +141,34 @@ function relative-hostname {
   esac
 }
 
+# Get a secret from Taskcluster 'secret' service
+function get-tc-secret {
+  if [ $# -lt 2 ] || [ $# -gt 3 ]
+  then
+    echo "usage: get-tc-secret name output [raw]" >&2
+    return 1
+  fi
+  secret="$1"
+  output="$2"
+  mkdir -p "$(dirname "$output")"
+  if [ -x "/usr/local/bin/taskcluster" ]
+  then
+    TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$secret"
+  elif [ -n "$TASKCLUSTER_PROXY_URL" ]
+  then
+    curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/$secret"
+  else
+    echo "error: either taskcluster client binary must be installed or TASKCLUSTER_PROXY_URL must be set" >&2
+    return 1
+  fi | if [ "$3" = "raw" ]
+  then
+    jshon -e secret -e key
+  else
+    jshon -e secret -e key -u
+  fi > "$output"
+  chmod 0600 "$output"
+}
+
 # Add AWS credentials based on the given provider
 function setup-aws-credentials {
   if [[ ! -f "$HOME/.aws/credentials" ]]

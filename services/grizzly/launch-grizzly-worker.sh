@@ -19,7 +19,7 @@ eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
 # Get fuzzmanager configuration from credstash
-retry credstash get fuzzmanagerconf > .fuzzmanagerconf
+get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
@@ -31,12 +31,11 @@ setup-fuzzmanager-hostname "$SHIP"
 chmod 0600 .fuzzmanagerconf
 
 # only clone if it wasn't already mounted via docker run -v
-if [ ! -d ~/bearspray ]; then
+if [ ! -d /src/bearspray ]; then
   update-ec2-status "Setup: cloning bearspray"
 
   # Get deployment key from credstash
-  retry credstash get deploy-bearspray.pem > .ssh/id_ecdsa.bearspray
-  chmod 0600 .ssh/id_ecdsa.bearspray
+  get-tc-secret deploy-bearspray .ssh/id_ecdsa.bearspray
 
   cat <<- EOF >> .ssh/config
 
@@ -47,8 +46,8 @@ if [ ! -d ~/bearspray ]; then
 	EOF
 
   # Checkout bearspray
-  git init bearspray
-  ( cd bearspray
+  git init /src/bearspray
+  ( cd /src/bearspray
     git remote add -t master origin git@bearspray:MozillaSecurity/bearspray.git
     retry git fetch -v --depth 1 --no-tags origin master
     git reset --hard FETCH_HEAD
@@ -56,7 +55,7 @@ if [ ! -d ~/bearspray ]; then
 fi
 
 update-ec2-status "Setup: installing bearspray"
-retry python3 -m pip install --user -U -e ./bearspray
+retry python3 -m pip install --user -U -e /src/bearspray
 
 update-ec2-status "Setup: launching bearspray"
 

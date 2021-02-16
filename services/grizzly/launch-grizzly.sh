@@ -13,9 +13,8 @@ source /home/worker/.local/bin/common.sh
 SHIP="$(get-provider)"
 su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP'"
 
-mkdir -p /etc/google/auth /etc/td-agent-bit
-su worker -c '. ~/.local/bin/common.sh && retry credstash get google-logging-creds.json' > /etc/google/auth/application_default_credentials.json
-chmod 0600 /etc/google/auth/application_default_credentials.json
+get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
+mkdir -p /etc/td-agent-bit
 cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       On

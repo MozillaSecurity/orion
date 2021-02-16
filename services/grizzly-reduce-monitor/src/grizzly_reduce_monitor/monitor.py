@@ -217,6 +217,10 @@ class ReductionMonitor(ReductionWorkflow):
                 "docker-worker:capability:device:hostSharedMemory",
                 "docker-worker:capability:device:loopbackAudio",
                 "secrets:get:project/fuzzing/credstash-aws-auth",
+                "secrets:get:project/fuzzing/deploy-bearspray",
+                "secrets:get:project/fuzzing/deploy-grizzly-private",
+                "secrets:get:project/fuzzing/fuzzmanagerconf",
+                "secrets:get:project/fuzzing/google-logging-creds",
             ],
             "tags": {},
         }

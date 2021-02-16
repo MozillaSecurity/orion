@@ -17,22 +17,19 @@ sys-update
 #### Install recipes
 
 cd "${0%/*}"
-./berglas.sh
-./breakpad.sh
 ./credstash.sh
 ./fluentbit.sh
 ./fuzzfetch.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
-./htop.sh
 ./nodejs.sh
 ./radamsa.sh
 ./redis.sh
-./rg.sh
 ./rr.sh
 ./gcov-7.sh
 ./gcov-8.sh
+./taskcluster.sh
 
 # shellcheck source=recipes/linux/dbgsyms.sh
 source ./dbgsyms.sh
@@ -58,19 +55,21 @@ packages=(
 
 # packages with *unwanted* recommends
 packages_with_recommends=(
-  apt-utils
-  build-essential
   bzip2
   curl
   dbus
+  g++
+  gcc
   gdb
   git
   gpg-agent
   jshon
   less
   libavcodec-extra
+  libc6-dev
   libgtk-3-0
   locales
+  make
   nano
   openssh-client
   python3-pip
@@ -118,18 +117,9 @@ retry pip3 install \
 # Generate locales
 locale-gen en_US.utf8
 
-# Ensure the machine uses core dumps with PID in the filename
-# https://github.com/moby/moby/issues/11740
-cat << EOF | tee /etc/sysctl.d/60-fuzzos.conf > /dev/null
-# Ensure that we use PIDs with core dumps
-kernel.core_uses_pid = 1
-# Allow ptrace of any process
-kernel.yama.ptrace_scope = 0
-EOF
-
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
-cat << EOF | tee /etc/boto.cfg > /dev/null
+cat << EOF > /etc/boto.cfg
 [Boto]
 metadata_service_num_attempts = 10
 EOF
@@ -155,10 +145,10 @@ printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
 mkdir -p /home/worker/.ssh /root/.ssh
 chmod 0700 /home/worker/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config >> /home/worker/.ssh/config
+cat << EOF | tee -a /root/.ssh/config /home/worker/.ssh/config > /dev/null
 Host *
 UseRoaming no
 EOF
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >> /home/worker/.ssh/known_hosts
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
 
 chown -R worker:worker /home/worker
