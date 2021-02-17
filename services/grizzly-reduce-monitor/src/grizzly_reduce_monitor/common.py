@@ -78,12 +78,12 @@ class CrashManager(Reporter):
     """Class to manage access to CrashManager server."""
 
     @remote_checks
-    def _list_objs(self, endpoint, query=None):
-        params = None
+    def _list_objs(self, endpoint, query=None, ordering=None):
+        params = {}
         if query is not None:
-            params = {
-                "query": json.dumps(query),
-            }
+            params["query"] = json.dumps(query)
+        if ordering is not None:
+            params["ordering"] = ",".join(ordering)
 
         next_url = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"
@@ -104,17 +104,18 @@ class CrashManager(Reporter):
 
             yield from resp_json["results"]
 
-    def list_crashes(self, query=None):
+    def list_crashes(self, query=None, ordering=None):
         """List all CrashEntry objects.
 
         Arguments:
             query (dict or None): The query definition to use.
                                   (see crashmanager.views.json_to_query)
+            ordering (list or None): Field(s) to order by (eg. `id` or `-id`)
 
         Yields:
             dict: Dict representation of CrashEntry
         """
-        yield from self._list_objs("crashes", query=query)
+        yield from self._list_objs("crashes", query=query, ordering=ordering)
 
     def list_buckets(self, query=None):
         """List all Bucket objects.
