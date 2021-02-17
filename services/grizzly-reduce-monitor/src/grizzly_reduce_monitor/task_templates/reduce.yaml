@@ -1,0 +1,47 @@
+taskGroupId: "${task_group}"
+dependencies: []
+created: "${now}"
+deadline: "${deadline}"
+expires: "${expires}"
+provisionerId: "${provisioner}"
+schedulerId: "${scheduler}"
+workerType: "${worker}"
+priority: high
+retries: 5
+routes: []
+payload:
+  artifacts:
+    project/fuzzing/private/logs:
+      expires: "${expires}"
+      path: /logs/
+      type: directory
+  env:
+    CORPMAN: reducer
+    FUZZING_CPU_COUNT: "0"  # force single instance/task
+    IGNORE: "log-limit memory timeout"
+    MEM_LIMIT: "7000"
+    INPUT: "${crash_id}"
+    TIMEOUT: "60"
+  capabilities:
+    devices:
+      hostSharedMemory: true
+      loopbackAudio: true
+  features:
+    taskclusterProxy: true
+  image:
+    type: indexed-image
+    namespace: project.fuzzing.orion.grizzly.master
+    path: public/grizzly.tar.zst
+  maxRunTime: !!int "${max_run_time}"
+scopes:
+  - "docker-worker:capability:device:hostSharedMemory"
+  - "docker-worker:capability:device:loopbackAudio"
+  - "secrets:get:project/fuzzing/deploy-bearspray"
+  - "secrets:get:project/fuzzing/deploy-grizzly-private"
+  - "secrets:get:project/fuzzing/fuzzmanagerconf"
+  - "secrets:get:project/fuzzing/google-logging-creds"
+metadata:
+  description: "${description}"
+  name: "Reduce fuzzing crash ${crash_id} for ${os_name}"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/grizzly"
