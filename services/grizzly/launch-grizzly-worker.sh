@@ -18,7 +18,7 @@ SHIP="$(get-provider)"
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
-# Get fuzzmanager configuration from credstash
+# Get fuzzmanager configuration from TC
 get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 
 # Update fuzzmanager config for this instance
@@ -34,7 +34,7 @@ chmod 0600 .fuzzmanagerconf
 if [ ! -d /src/bearspray ]; then
   update-ec2-status "Setup: cloning bearspray"
 
-  # Get deployment key from credstash
+  # Get deployment key from TC
   get-tc-secret deploy-bearspray .ssh/id_ecdsa.bearspray
 
   cat <<- EOF >> .ssh/config

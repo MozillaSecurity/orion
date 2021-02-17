@@ -17,7 +17,6 @@ sys-update
 #### Install recipes
 
 cd "${0%/*}"
-./credstash.sh
 ./fluentbit.sh
 ./fuzzfetch.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh

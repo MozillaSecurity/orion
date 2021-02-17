@@ -10,9 +10,6 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /home/worker/.local/bin/common.sh
 
-SHIP="$(get-provider)"
-su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP'"
-
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
 mkdir -p /etc/td-agent-bit
 cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
@@ -44,7 +41,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [FILTER]
     Name record_modifier
     Match *
-    Record host $(relative-hostname "$SHIP")
+    Record host $(relative-hostname "$(get-provider)")
     Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
     Remove_key file
 
