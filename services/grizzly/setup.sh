@@ -152,3 +152,4 @@ EOF
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
 
 chown -R worker:worker /home/worker
+chmod 0777 /src
