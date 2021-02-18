@@ -7,12 +7,14 @@ set -e
 set -x
 set -o pipefail
 
-# Install taskcluster CLI
-cd "${0%/*}"
-./taskcluster.sh
-
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
+
+# Install 32-bit binaries
+dpkg --add-architecture i386
+sys-update
+sys-embed libc6-dbg:i386 libatomic1:i386 libstdc++6:i386 libnspr4:i386
+./cleanup.sh
 
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
