@@ -7,10 +7,6 @@ set -e
 set -x
 set -o pipefail
 
-# Install taskcluster CLI
-cd "${0%/*}"
-./taskcluster.sh
-
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
