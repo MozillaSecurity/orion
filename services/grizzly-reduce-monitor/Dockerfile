@@ -20,7 +20,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         py3-wheel \
         py3-yaml \
         py3-yarl \
-    && retry python3 -m pip install --disable-pip-version-check --no-cache-dir /src \
+    && retry python3 -m pip install --disable-pip-version-check --no-cache-dir -e /src \
     && apk del git py3-pip py3-wheel \
     && python3 -m compileall -b -q /usr/lib \
     && find /usr/lib -name "*.py" -delete \
