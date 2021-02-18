@@ -7,6 +7,8 @@ set -e
 set -x
 set -o pipefail
 
+export PATH=$PATH:/home/worker/.local/bin
+
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
@@ -14,7 +16,7 @@ source "${0%/*}/common.sh"
 dpkg --add-architecture i386
 sys-update
 sys-embed libc6-dbg:i386 libatomic1:i386 libstdc++6:i386 libnspr4:i386
-./cleanup.sh
+cleanup.sh
 
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
