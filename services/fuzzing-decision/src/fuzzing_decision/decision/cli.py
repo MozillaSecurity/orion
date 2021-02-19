@@ -12,7 +12,7 @@ from .workflow import Workflow
 
 
 def main():
-    parser = build_cli_parser(prog="fuzzing-pool-launch")
+    parser = build_cli_parser(prog="fuzzing-decision")
     parser.add_argument(
         "pool_name", type=str, help="The target fuzzing pool to create tasks for"
     )

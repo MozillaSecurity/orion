@@ -1,17 +1,26 @@
-FROM python:3.8-slim
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-ENV DEBIAN_FRONTEND=noninteractive
+FROM alpine:latest
 
-# Setup git for ssh clones
-# Setup gcc to build patiencediff
-RUN apt-get update -qq && apt-get install --no-install-recommends -qq gcc libc6-dev git openssh-client && rm -rf /var/lib/apt/lists/*
-RUN mkdir ~/.ssh && chmod 0700 ~/.ssh && ssh-keyscan github.com > ~/.ssh/known_hosts
+LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-COPY services/fuzzing-decision /src
-
-RUN pip install --disable-pip-version-check --no-cache-dir --progress-bar off --quiet -e "/src[decision]"
+COPY services/fuzzing-decision /src/fuzzing-decision
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
+    && retry apk add --no-cache build-base git openssh-client python3 py3-pip py3-requests py3-wheel python3-dev \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && retry pip install --no-cache-dir --disable-pip-version-check --progress-bar off -e "/src/fuzzing-decision[decision]" \
+    && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
+    && apk del build-base py3-pip py3-wheel python3-dev \
+    && python -m compileall -b -q /usr/lib \
+    && find /usr/lib -name \*.py -delete \
+    && find /usr/lib -name __pycache__ -exec rm -rf "{}" + \
+    && mkdir -p ~/.ssh \
+    && chmod 0700 ~/.ssh \
+    && ssh-keyscan github.com > ~/.ssh/known_hosts
 
 # Setup env variable for tc-admin.py discovery
-ENV TC_ADMIN_PY=/src/tc-admin.py
+ENV TC_ADMIN_PY=/src/fuzzing-decision/tc-admin.py
 
 CMD ["fuzzing-decision"]
