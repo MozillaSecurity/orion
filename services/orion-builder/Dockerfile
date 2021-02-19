@@ -46,7 +46,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && retry git fetch -q origin "$FUSE_OVERLAYFS_VER:$FUSE_OVERLAYFS_VER" \
     && git -c advice.detachedHead=false checkout "$FUSE_OVERLAYFS_VER" \
     && ./autogen.sh \
-    && ./configure --prefix /usr || cat config.log \
+    && ./configure --prefix /usr \
     && make clean \
     && make \
     && make install \
@@ -68,12 +68,12 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && ln -s /usr/bin/python3 /usr/bin/python \
     && retry pip --no-cache-dir --disable-pip-version-check install https://github.com/mozilla/task-boot/archive/0.3.2.tar.gz \
     && retry pip --no-cache-dir --disable-pip-version-check install -e /src/orion-builder \
-    && find /usr/lib/python*/site-packages -name "*.so" -exec strip {} \; \
+    && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && rm -rf /root/.cache /usr/bin/__pycache__ \
     # precompile .py files
     && python -m compileall -b -q /usr/lib \
     && find /usr/lib -name \*.py -delete \
-    && find /usr/lib -name __pycache__ -exec rm -rf \{\} + \
+    && find /usr/lib -name __pycache__ -exec rm -rf "{}" + \
     # install docker registry
     && retry wget -q -O /bin/registry https://github.com/docker/distribution-library-image/raw/$REGISTRY_VER/amd64/registry \
     && retry wget -q -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/$REGISTRY_VER/amd64/config-example.yml \
