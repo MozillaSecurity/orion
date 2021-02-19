@@ -8,7 +8,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN useradd -d /home/worker -s /bin/bash -m worker
 

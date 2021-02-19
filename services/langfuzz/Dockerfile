@@ -8,7 +8,7 @@ LABEL maintainer Christian Holler <choller@mozilla.com>
 
 ENV LOGNAME         ubuntu
 ENV HOSTNAME        taskcluster-worker
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 ENV TASKCLUSTER_FUZZING_POOL unknown
 
 RUN useradd -d /home/ubuntu -s /bin/bash -m ubuntu

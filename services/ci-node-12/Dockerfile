@@ -6,7 +6,7 @@ FROM node:12-slim
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apt-get update -qq \

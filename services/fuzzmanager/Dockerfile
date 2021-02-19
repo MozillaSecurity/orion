@@ -8,7 +8,7 @@ LABEL maintainer Gary Kwong <gkwong@mozilla.com>
 
 RUN useradd -d /home/fuzzmanager -s /bin/bash -m fuzzmanager
 WORKDIR /home/fuzzmanager
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN \
   echo "deb http://ftp.us.debian.org/debian testing main contrib non-free" >> /etc/apt/sources.list \

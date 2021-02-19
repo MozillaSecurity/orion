@@ -8,7 +8,7 @@ LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
 ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
-ENV DEBIAN_FRONTEND noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
 
 COPY recipes/linux /tmp/recipes
 COPY services/bugmon/setup.sh /tmp/recipes
