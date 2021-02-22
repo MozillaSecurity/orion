@@ -92,18 +92,6 @@ class GitRepo:
             LOG.error("git command returned error:\n%s", exc.stderr)
             raise
 
-    def git_call(self, *args):
-        """Call a git command in the cloned repository, without capture.
-
-        Arguments:
-            *args (str): The git command line to run (eg. `git("commit", "-a")`
-
-        Returns:
-            int: exit code of the git command
-        """
-        LOG.debug("calling: git %s", " ".join(str(arg) for arg in args))
-        return run(("git",) + args, cwd=self.path).returncode
-
     def _clone(self, clone_url, clone_ref, commit):
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
@@ -211,7 +199,7 @@ class GithubEvent:
             self.branch = event["pull_request"]["base"]["ref"]
             self.commit = event["pull_request"]["head"]["sha"]
             self.commit_range = f"{event['pull_request']['base']['sha']}..{self.commit}"
-            self.fetch_ref = f"pull/{self.pull_request}/head"
+            self.fetch_ref = self.commit
         elif self.event_type == "release":
             self.tag = event["release"]["tag_name"]
             self.branch = self.tag
@@ -231,27 +219,12 @@ class GithubEvent:
                 self.commit_range = f"{event['commits'][0]['id']}^..{event['after']}"
             else:
                 self.commit_range = f"{event['before']}..{event['after']}"
-            self.fetch_ref = event["ref"]
+            self.fetch_ref = event["after"]
         self.repo = GitRepo(self.clone_url, self.fetch_ref, self.commit)
 
-        # check if we need to fetch both sides of the commit range
-        # for the case of force-push, `before` will not be under the same fetch ref
-        before, after = self.commit_range.split("..")
-        result = self.repo.git_call(
-            "merge-base",
-            "--is-ancestor",
-            before,
-            after,
-        )
-        if result == 128:
-            # 128 means "is that even a commit?"
-            # so yes, we need to fetch it
-            self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
-        elif result not in {0, 1}:
-            # 0 or 1 are fine. either way we can diff it
-            raise RuntimeError(
-                f"`git merge-base --is-ancestor {before} {after}`" f" returned {result}"
-            )
+        # fetch both sides of the commit range
+        before, _ = self.commit_range.split("..")
+        self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
 
         self.commit_message = self.repo.message(self.commit_range)
         return self

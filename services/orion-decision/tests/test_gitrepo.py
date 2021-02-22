@@ -96,7 +96,7 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "refs/heads/main", "post"),
+            call("https://github.com/allizom/test.git", "post", "post"),
         ),
         # github push to new branch
         (
@@ -123,7 +123,7 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "refs/heads/main", "post"),
+            call("https://github.com/allizom/test.git", "post", "post"),
         ),
         # github new/update PR
         (
@@ -157,7 +157,7 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "pull/7/head", "post"),
+            call("https://github.com/allizom/test.git", "post", "post"),
         ),
         (
             "github-release",
