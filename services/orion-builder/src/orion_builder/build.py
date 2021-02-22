@@ -39,6 +39,12 @@ class BuildArgs(CommonArgs):
             help="Path to the Dockerfile (default: Dockerfile)",
         )
         self.parser.add_argument(
+            "--build-arg",
+            action="append",
+            default=[],
+            help="Docker build args",
+        )
+        self.parser.add_argument(
             "--image",
             default=getenv("IMAGE_NAME"),
             help="Docker image name (without repository, default: IMAGE_NAME)",

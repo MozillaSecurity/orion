@@ -43,7 +43,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && git init /fuse-overlayfs \
     && cd /fuse-overlayfs \
     && git remote add origin https://github.com/containers/fuse-overlayfs \
-    && retry git fetch -q origin "$FUSE_OVERLAYFS_VER:$FUSE_OVERLAYFS_VER" \
+    && retry git fetch -q --depth 1 --no-tags origin "$FUSE_OVERLAYFS_VER:$FUSE_OVERLAYFS_VER" \
     && git -c advice.detachedHead=false checkout "$FUSE_OVERLAYFS_VER" \
     && ./autogen.sh \
     && ./configure --prefix /usr \
@@ -56,7 +56,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && git init /img \
     && cd /img \
     && git remote add origin https://github.com/genuinetools/img \
-    && retry git fetch -q origin "$IMG_VER" \
+    && retry git fetch -q --depth 1 --no-tags origin "$IMG_VER" \
     && git -c advice.detachedHead=false checkout "$IMG_VER" \
     && retry go get -u github.com/jteeuwen/go-bindata/... \
     && retry make BUILDTAGS="seccomp noembed" \
