@@ -22,7 +22,13 @@ from orion_decision import (
     WORKER_TYPE,
 )
 from orion_decision.git import GithubEvent
-from orion_decision.scheduler import BUILD_TASK, PUSH_TASK, TEST_TASK, Scheduler
+from orion_decision.scheduler import (
+    BUILD_TASK,
+    PUSH_TASK,
+    RECIPE_TEST_TASK,
+    TEST_TASK,
+    Scheduler,
+)
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
@@ -482,6 +488,93 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
             route=f"index.project.fuzzing.orion.{svc}.main",
             scheduler=SCHEDULER_ID,
             service_name=svc,
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected3["dependencies"].append(task2_id)
+    assert task3 == expected3
+
+
+def test_create_09(mocker):
+    """test recipe test task creation"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.clone_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["test5"].dirty = True
+    sched.services["test6"].dirty = True
+    sched.services.recipes["withdep.sh"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 3
+    task1_id, task1 = queue.createTask.call_args_list[0].args
+    assert task1 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test5/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test5.main",
+            scheduler=SCHEDULER_ID,
+            service_name="test5",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    task2_id, task2 = queue.createTask.call_args_list[1].args
+    expected2 = yaml_load(
+        RECIPE_TEST_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="services/test-recipes/Dockerfile",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            recipe_name="withdep.sh",
+            scheduler=SCHEDULER_ID,
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected2["dependencies"].append(task1_id)
+    assert task2 == expected2
+    _, task3 = queue.createTask.call_args_list[2].args
+    expected3 = yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test6/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            route="index.project.fuzzing.orion.test6.main",
+            scheduler=SCHEDULER_ID,
+            service_name="test6",
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,

@@ -90,7 +90,36 @@ def test_service_load04(defn):
             assert getattr(result, field) == value
 
 
-def test_service_deps(mocker):
+@pytest.mark.parametrize(
+    "dirty_paths,expect_services,expect_recipes",
+    (
+        # test that if install.sh changes, images that use it are marked dirty,
+        # script.sh is skipped as a test
+        (
+            [
+                Path("recipes") / "linux" / "tests" / "script.sh",
+                Path("recipes") / "linux" / "install.sh",
+            ],
+            {"test1", "test2", "test4"},
+            {"install.sh"},
+        ),
+        # test that change to files in test3 mark test3 dirty
+        (
+            [Path("test3") / "Dockerfile"],
+            {"test3"},
+            set(),
+        ),
+        # test that change to files in test5 mark `withdep` recipe dirty
+        # test6 marked dirty because it uses `withdep`
+        # test7 marked dirty because it forces a dep on test5
+        (
+            [Path("test5") / "Dockerfile"],
+            {"test5", "test6", "test7"},
+            {"withdep.sh"},
+        ),
+    ),
+)
+def test_service_deps(mocker, dirty_paths, expect_services, expect_recipes):
     """test that service dependencies are calculated and changes propagated"""
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
@@ -98,6 +127,7 @@ def test_service_deps(mocker):
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     svcs = Services(repo)
     assert set(svcs) == {"test1", "test2", "test3", "test4", "test5", "test6", "test7"}
+    assert set(svcs.recipes) == {"recipe_data", "install.sh", "withdep.sh"}
     assert len(svcs) == 7
     # these are calculated by changed paths, so should be clear
     assert not svcs["test1"].dirty
@@ -107,6 +137,9 @@ def test_service_deps(mocker):
     assert not svcs["test5"].dirty
     assert not svcs["test6"].dirty
     assert not svcs["test7"].dirty
+    assert not svcs.recipes["recipe_data"].dirty
+    assert not svcs.recipes["install.sh"].dirty
+    assert not svcs.recipes["withdep.sh"].dirty
 
     # check that deps are calculated
     assert svcs["test1"].service_deps == set()
@@ -114,10 +147,10 @@ def test_service_deps(mocker):
     assert svcs["test3"].service_deps == set()
     assert svcs["test4"].service_deps == set()
     assert svcs["test5"].service_deps == set()
-    assert svcs["test6"].service_deps == {"test5"}  # via withdep.sh
+    assert svcs["test6"].service_deps == set()
     assert svcs["test7"].service_deps == {"test5"}  # via direct dep
     assert svcs["test1"].path_deps == {
-        root / "recipes" / "linux" / "install.sh",
+        root / "common" / "script.sh",
         root / "test1" / "Dockerfile",
         root / "test1" / "data" / "file",
         root / "test1" / "service.yaml",
@@ -131,7 +164,6 @@ def test_service_deps(mocker):
         root / "test3" / "service.yaml",
     }
     assert svcs["test4"].path_deps == {
-        root / "recipes" / "linux" / "install.sh",
         root / "test4" / "Dockerfile",
         root / "test4" / "service.yaml",
     }
@@ -142,42 +174,45 @@ def test_service_deps(mocker):
     assert svcs["test6"].path_deps == {
         root / "test6" / "Dockerfile",
         root / "test6" / "service.yaml",
-        root / "recipes" / "linux" / "withdep.sh",
     }
     assert svcs["test7"].path_deps == {
         root / "test7" / "Dockerfile",
         root / "test7" / "service.yaml",
     }
+    assert svcs["test1"].recipe_deps == {"install.sh"}
+    assert svcs["test2"].recipe_deps == set()
+    assert svcs["test3"].recipe_deps == set()
+    assert svcs["test4"].recipe_deps == {"install.sh"}
+    assert svcs["test5"].recipe_deps == set()
+    assert svcs["test6"].recipe_deps == {"withdep.sh"}
+    assert svcs["test7"].recipe_deps == set()
+    assert svcs.recipes["recipe_data"].service_deps == set()
+    assert svcs.recipes["install.sh"].service_deps == set()
+    assert svcs.recipes["withdep.sh"].service_deps == {"test5"}
+    assert svcs.recipes["recipe_data"].path_deps == {
+        root / "recipes" / "linux" / "recipe_data"
+    }
+    assert svcs.recipes["install.sh"].path_deps == {
+        root / "recipes" / "linux" / "install.sh"
+    }
+    assert svcs.recipes["withdep.sh"].path_deps == {
+        root / "recipes" / "linux" / "withdep.sh"
+    }
+    assert svcs.recipes["recipe_data"].recipe_deps == set()
+    assert svcs.recipes["install.sh"].recipe_deps == set()
+    assert svcs.recipes["withdep.sh"].recipe_deps == set()
 
-    # test that if install.sh changes, both images are marked dirty, script.sh is
-    # skipped as a test
-    for svc in svcs.values():
-        svc.dirty = False
-    svcs.mark_changed_dirty(
-        [
-            root / "recipes" / "linux" / "tests" / "script.sh",
-            root / "recipes" / "linux" / "install.sh",
-        ]
-    )
-    assert svcs["test1"].dirty
-    assert svcs["test2"].dirty
-    assert not svcs["test3"].dirty
-    assert svcs["test4"].dirty
-    assert not svcs["test5"].dirty
-    assert not svcs["test6"].dirty
-    assert not svcs["test7"].dirty
-
-    # test that change to files in test3 mark test3 dirty
-    for svc in svcs.values():
-        svc.dirty = False
-    svcs.mark_changed_dirty([root / "test3" / "Dockerfile"])
-    assert not svcs["test1"].dirty
-    assert not svcs["test2"].dirty
-    assert svcs["test3"].dirty
-    assert not svcs["test4"].dirty
-    assert not svcs["test5"].dirty
-    assert not svcs["test6"].dirty
-    assert not svcs["test7"].dirty
+    svcs.mark_changed_dirty([root / path for path in dirty_paths])
+    for svc in svcs:
+        if svc in expect_services:
+            assert svcs[svc].dirty
+        else:
+            assert not svcs[svc].dirty
+    for rec in svcs.recipes:
+        if rec in expect_recipes:
+            assert svcs.recipes[rec].dirty
+        else:
+            assert not svcs.recipes[rec].dirty
 
 
 def test_services_repo(mocker):
@@ -193,3 +228,14 @@ def test_services_repo(mocker):
     svcs = Services(repo)
     assert set(svcs) == {"test1", "test2", "test4", "test5", "test6", "test7"}
     assert len(svcs) == 6
+
+
+def test_service_circular_deps(mocker):
+    """test that circular service dependencies raise an error"""
+    root = FIXTURES / "services07"
+    repo = mocker.Mock(spec="orion_decision.git.GitRepo")
+    repo.path = root
+    repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
+    with pytest.raises(RuntimeError) as exc:
+        Services(repo)
+    assert "cycle" in str(exc)

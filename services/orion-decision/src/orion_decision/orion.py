@@ -5,7 +5,9 @@
 """Orion service definitions"""
 import re
 from abc import ABC, abstractmethod
+from itertools import chain
 from logging import getLogger
+from pathlib import Path
 from platform import machine
 
 from dockerfile_parse import DockerfileParser
@@ -84,7 +86,6 @@ class ServiceTest(ABC):
             defn (dict): Test definition from service.yaml
             check_unknown (bool): Check for unknown fields as well as missing.
         """
-
         LOG.debug("got fields %r", cls.FIELDS)
         given_fields = frozenset(defn)
         missing = list(cls.FIELDS - given_fields)
@@ -172,6 +173,7 @@ class Service:
         name (str): Image name (Docker tag)
         service_deps (set(str)): Names of images that this one depends on.
         path_deps (set(Path)): Paths that this image depends on.
+        recipe_deps (set(str)): Names of recipes that this service depends on.
         dirty (bool): Whether or not this image needs to be rebuilt
         tests (list[ServiceTest]): Tests to run against this service
         root (Path): Path where service is defined
@@ -192,6 +194,7 @@ class Service:
         self.name = name
         self.service_deps = set()
         self.path_deps = set()
+        self.recipe_deps = set()
         self.dirty = False
         self.tests = tests
         self.root = root
@@ -230,12 +233,42 @@ class Service:
         return result
 
 
+class Recipe:
+    """Installation recipe used by Orion Services.
+
+    Attributes:
+        file (Path): Location of the recipe.
+        service_deps (set(str)): Set of services that this recipe depends on.
+        path_deps (set(Path)): Paths that this recipe depends on.
+        recipe_deps (set(str)): Names of other recipes that this recipe depends on.
+        dirty (bool): Whether or not this recipe needs tests run.
+    """
+
+    def __init__(self, file):
+        """Initialize a `Recipe` instance.
+
+        Arguments:
+            file (Path): Location of the recipe
+        """
+        self.file = file
+        self.service_deps = set()
+        self.path_deps = set([file])
+        self.recipe_deps = set()
+        self.dirty = False
+
+    @property
+    def name(self):
+        return self.file.name
+
+
 class Services(dict):
     """Collection of Orion Services.
 
     Attributes:
         services (dict(str -> Service)): Mapping of service name (`service.name`) to
                                          the `Service` instance.
+        recipes (dict(str -> Recipe)): Mapping of recipe name (`recipe.sh`) to the
+                                       `Recipe` instance.
         root (Path): The root for loading services and watching recipe scripts.
     """
 
@@ -247,6 +280,9 @@ class Services(dict):
         """
         super().__init__()
         self.root = repo.path
+        # scan files & recipes
+        self.recipes = {}
+        self._file_re = self._scan_files(repo)
         # scan the context recursively to find services
         for service_yaml in file_glob(repo, self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
@@ -254,6 +290,55 @@ class Services(dict):
             service.path_deps |= {service_yaml, service.dockerfile}
             self[service.name] = service
         self._calculate_depends(repo)
+
+    def _scan_files(self, repo):
+        # make a list of all file paths
+        file_strs = []
+        for file in file_glob(repo, self.root, relative=True):
+            file_strs.append(str(file))
+            # recipes are usually called using only their basename
+            if file.parts[0] == "recipes":
+                file_strs.append(file.name)
+                assert file.name not in self.recipes
+                self.recipes[file.name] = Recipe(self.root / file)
+            LOG.debug("found path: %s", file_strs[-1])
+        return re.compile("|".join(re.escape(file) for file in file_strs))
+
+    def _find_path_depends(self, obj, text):
+        """Search a file for path references.
+
+        Arguments:
+            obj (Recipe/Service): Object the file belongs to
+            text (str): File contents to search
+
+        Returns:
+            None
+        """
+        # search file for references to other files
+        for match in self._file_re.finditer(text):
+            match = match.group(0)
+            path = self.root / match
+            part0 = Path(match).parts[0]
+            if (not path.is_file() and match in self.recipes) or part0 == "recipes":
+                assert (
+                    path.name in self.recipes
+                ), f"{type(obj).__name__} {obj.name} depends on unknown recipe {match}"
+                if path.name not in obj.recipe_deps:
+                    obj.recipe_deps.add(path.name)
+                    LOG.info(
+                        "%s %s depends on Recipe %s",
+                        type(obj).__name__,
+                        obj.name,
+                        path.name,
+                    )
+            elif path not in obj.path_deps:
+                obj.path_deps.add(path)
+                LOG.info(
+                    "%s %s depends on path %s",
+                    type(obj).__name__,
+                    obj.name,
+                    path.relative_to(self.root),
+                )
 
     def _calculate_depends(self, repo):
         """Go through each service and try to determine what dependencies it has.
@@ -270,49 +355,29 @@ class Services(dict):
         Returns:
             None
         """
-        # make a list of all file paths
-        recipes_map = {}
-        recipe_deps = {}
-        file_strs = []
-        for file in file_glob(repo, self.root, relative=True):
-            file_strs.append(str(file))
-            # recipes are usually called using only their basename
-            if file.parts[0] == "recipes":
-                file_strs.append(file.name)
-                assert file.name not in recipes_map
-                recipes_map[file.name] = file
-                try:
-                    recipe_text = (self.root / file).read_text()
-                except UnicodeError:
-                    pass
-                else:
-                    # find force-deps in recipe
-                    for match in re.finditer(
-                        r"/force-deps=([A-Za-z0-9_.,-]+)", recipe_text
-                    ):
-                        for svc in match.group(1).split(","):
-                            assert (
-                                svc in self
-                            ), f"recipe {file} forces unknown dep: {svc}"
-                            recipe_deps.setdefault(file.name, set())
-                            if svc not in recipe_deps[file.name]:
-                                recipe_deps[file.name].add(svc)
-            if file.name in recipe_deps:
-                LOG.debug(
-                    "found path: %s (deps: [%s])",
-                    file_strs[-1],
-                    ", ".join(sorted(recipe_deps[file.name])),
-                )
-            else:
-                LOG.debug("found path: %s", file_strs[-1])
-        file_re = re.compile("|".join(re.escape(file) for file in file_strs))
+        for recipe in self.recipes.values():
+            try:
+                recipe_text = recipe.file.read_text()
+            except UnicodeError:
+                continue
+
+            # find force-deps in recipe
+            for match in re.finditer(r"/force-deps=([A-Za-z0-9_.,-]+)", recipe_text):
+                for svc in match.group(1).split(","):
+                    assert (
+                        svc in self
+                    ), f"Recipe {recipe.name} forces unknown dep: {svc}"
+                    recipe.service_deps.add(svc)
+
+            # search file for references to other files
+            self._find_path_depends(recipe, recipe_text)
 
         for service in self.values():
             # check force_deps
             # if a dep already exists, it had to come from force_deps in service.yaml
             for dep in service.service_deps:
                 assert dep in self, f"Service {service.name} forces unknown dep: {dep}"
-                LOG.info("Service %s depends on service %s (forced)", service.name, svc)
+                LOG.info("Service %s depends on service %s (forced)", service.name, dep)
 
             # calculate image dependencies
             parser = DockerfileParser(path=str(service.dockerfile))
@@ -324,7 +389,7 @@ class Services(dict):
                     baseimage = baseimage.split(":", 1)[0]
                 assert baseimage in self
                 service.service_deps.add(baseimage)
-                LOG.info("Service %s depends on service %s", service.name, baseimage)
+                LOG.info("Service %s depends on Service %s", service.name, baseimage)
 
             # scan service for references to files
             for entry in file_glob(repo, service.dockerfile.parent):
@@ -332,36 +397,47 @@ class Services(dict):
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
                     LOG.info(
-                        "Service %s depends on path %s",
+                        "Service %s depends on Path %s",
                         service.name,
                         entry.relative_to(self.root),
                     )
+
                 try:
                     entry_text = entry.read_text()
                 except UnicodeError:
                     continue
+
                 # search file for references to other files
-                for match in file_re.finditer(entry_text):
-                    path = self.root / match.group(0)
-                    if not path.is_file() and match.group(0) in recipes_map:
-                        path = self.root / recipes_map[match.group(0)]
-                    # check for recipe force-dep
-                    for svc in recipe_deps.get(path.name, []):
-                        if svc not in service.service_deps:
-                            service.service_deps.add(svc)
-                        LOG.info(
-                            "Service %s depends on service %s (forced via recipe %s)",
-                            service.name,
-                            svc,
-                            match.group(0),
+                self._find_path_depends(service, entry_text)
+
+        def _adjacent(obj):
+            for rec in obj.recipe_deps:
+                yield self.recipes[rec]
+            for svc in obj.service_deps:
+                yield self[svc]
+
+        # check that there are no cycles in the dependency graph
+        for start in chain(self.values(), self.recipes.values()):
+            stk = [_adjacent(start)]
+            bkt = [start]
+            while stk:
+                if stk[-1] is None:
+                    bkt.pop()
+                    stk.pop()
+                    continue
+                here = next(stk[-1], None)
+                if here is None:
+                    stk.pop()
+                else:
+                    if here in bkt:
+                        bkt.append(here)
+                        fmt_bkt = ", ".join(
+                            f"{type(obj).__name__} {obj.name}" for obj in bkt
                         )
-                    if path not in service.path_deps:
-                        service.path_deps.add(path)
-                        LOG.info(
-                            "Service %s depends on path %s",
-                            service.name,
-                            match.group(0),
-                        )
+                        raise RuntimeError(f"Dependency cycle detected: [{fmt_bkt}]")
+                    bkt.append(here)
+                    stk.append(None)  # sentinel
+                    stk.append(_adjacent(here))
 
     def mark_changed_dirty(self, changed_paths):
         """Find changed services and images that depend on them.
@@ -369,34 +445,39 @@ class Services(dict):
         Arguments:
             changed_paths (iterable(Path)): List of paths changed.
         """
+        stk = []
         # find first order dependencies
         for path in changed_paths:
-            for service in self.values():
-                # shortcut if service is already marked dirty
-                if service.dirty:
+            for here in chain(self.values(), self.recipes.values()):
+                # shortcut if already marked dirty
+                if here.dirty:
                     continue
                 # check for path dependencies
-                if path in service.path_deps:
+                if path in here.path_deps:
                     LOG.warning(
-                        "%s is dirty because path %s is changed",
-                        service.name,
+                        "%s %s is dirty because Path %s is changed",
+                        type(here).__name__,
+                        here.name,
                         path.relative_to(self.root),
                     )
-                    service.dirty = True
+                    here.dirty = True
+                    stk.append(here)
                     continue
 
-        # propagate dirty bit to image dependencies
-        while True:
-            any_changed = False
-            for service in self.values():
-                dirty_dep = next(
-                    (dep for dep in service.service_deps if self[dep].dirty), None
-                )
-                if not service.dirty and dirty_dep is not None:
+        # propagate dirty bit
+        while stk:
+            here = stk.pop()
+            for tgt in chain(self.values(), self.recipes.values()):
+                if not tgt.dirty and (
+                    (isinstance(here, Recipe) and here.name in tgt.recipe_deps)
+                    or (isinstance(here, Service) and here.name in tgt.service_deps)
+                ):
+                    tgt.dirty = True
                     LOG.warning(
-                        "%s is dirty because image %s is dirty", service.name, dirty_dep
+                        "%s %s is dirty because %s %s is dirty",
+                        type(tgt).__name__,
+                        tgt.name,
+                        type(here).__name__,
+                        here.name,
                     )
-                    service.dirty = True
-                    any_changed = True
-            if not any_changed:
-                break
+                    stk.append(tgt)

@@ -50,10 +50,9 @@ repos:
       - id: hadolint
         name: Lint dockerfiles
         language: system
-        files: Dockerfile
+        files: "Dockerfile(-[A-Za-z_.-]+)?"
         require_serial: true
         entry: ./scripts/pre-commit-hadolint.sh
-        exclude: "^.*/windows/.*$"
       - id: fuzzing-decision-lint
         name: Run linters for fuzzing_decision
         entry: bash -c 'cd services/fuzzing-decision && exec tox -e lint'

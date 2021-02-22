@@ -24,13 +24,14 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Services
+from .orion import Service, Services
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
+RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
 
 
 class Scheduler:
@@ -96,6 +97,183 @@ class Scheduler:
             )
         self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
+    def _create_build_task(
+        self, service, dirty_dep_tasks, test_tasks, service_build_tasks
+    ):
+        if self.github_event.pull_request is not None:
+            build_index = (
+                f"index.project.fuzzing.orion.{service.name}"
+                f".pull_request.{self.github_event.pull_request}"
+            )
+        else:
+            build_index = (
+                f"index.project.fuzzing.orion.{service.name}"
+                f".{self.github_event.branch}"
+            )
+        build_task = yaml_load(
+            BUILD_TASK.substitute(
+                clone_url=self.github_event.clone_url,
+                commit=self.github_event.commit,
+                deadline=stringDate(self.now + DEADLINE),
+                dockerfile=str(service.dockerfile.relative_to(service.context)),
+                expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                load_deps="1" if dirty_dep_tasks else "0",
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                route=build_index,
+                scheduler=SCHEDULER_ID,
+                service_name=service.name,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                worker=WORKER_TYPE,
+            )
+        )
+        build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
+        task_id = service_build_tasks[service.name]
+        LOG.info(
+            "%s task %s: %s", self._create_str, task_id, build_task["metadata"]["name"]
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, build_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating build task: %s", exc)
+                raise
+        return task_id
+
+    def _create_push_task(self, service, service_build_tasks):
+        push_task = yaml_load(
+            PUSH_TASK.substitute(
+                clone_url=self.github_event.clone_url,
+                commit=self.github_event.commit,
+                deadline=stringDate(self.now + DEADLINE),
+                docker_secret=self.docker_secret,
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                scheduler=SCHEDULER_ID,
+                service_name=service.name,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                worker=WORKER_TYPE,
+            )
+        )
+        push_task["dependencies"].append(service_build_tasks[service.name])
+        task_id = slugId()
+        LOG.info(
+            "%s task %s: %s", self._create_str, task_id, push_task["metadata"]["name"]
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, push_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating push task: %s", exc)
+                raise
+        return task_id
+
+    def _create_svc_test_task(self, service, test, service_build_tasks):
+        image = test.image
+        deps = []
+        if image in service_build_tasks:
+            if self.services[image].dirty:
+                deps.append(service_build_tasks[image])
+                image = {
+                    "type": "task-image",
+                    "taskId": service_build_tasks[image],
+                }
+            else:
+                image = {
+                    "type": "indexed-image",
+                    "namespace": (f"project.fuzzing.orion.{image}.{self.push_branch}"),
+                }
+            image["path"] = f"public/{test.image}.tar.zst"
+        test_task = yaml_load(
+            TEST_TASK.substitute(
+                deadline=stringDate(self.now + DEADLINE),
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                scheduler=SCHEDULER_ID,
+                service_name=service.name,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                test_name=test.name,
+                worker=WORKER_TYPE,
+            )
+        )
+        test_task["payload"]["image"] = image
+        test_task["dependencies"].extend(deps)
+        service_path = str(service.root.relative_to(self.services.root))
+        test.update_task(
+            test_task,
+            self.github_event.clone_url,
+            self.github_event.fetch_ref,
+            self.github_event.commit,
+            service_path,
+        )
+        task_id = slugId()
+        LOG.info(
+            "%s task %s: %s", self._create_str, task_id, test_task["metadata"]["name"]
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, test_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating test task: %s", exc)
+                raise
+        return task_id
+
+    def _create_recipe_test_task(self, recipe, dep_tasks, recipe_test_tasks):
+        service_path = self.services.root / "services" / "test-recipes"
+        dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
+        if not dockerfile.is_file():
+            dockerfile = service_path / "Dockerfile"
+        test_task = yaml_load(
+            RECIPE_TEST_TASK.substitute(
+                clone_url=self.github_event.clone_url,
+                commit=self.github_event.commit,
+                deadline=stringDate(self.now + DEADLINE),
+                dockerfile=str(dockerfile.relative_to(self.services.root)),
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                recipe_name=recipe.name,
+                scheduler=SCHEDULER_ID,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                worker=WORKER_TYPE,
+            )
+        )
+        test_task["dependencies"].extend(dep_tasks)
+        task_id = recipe_test_tasks[recipe.name]
+        LOG.info(
+            "%s task %s: %s", self._create_str, task_id, test_task["metadata"]["name"]
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, test_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating recipe test task: %s", exc)
+                raise
+        return task_id
+
+    @property
+    def _create_str(self):
+        if self.dry_run:
+            return "Would create"
+        return "Creating"
+
+    @property
+    def _created_str(self):
+        if self.dry_run:
+            return "Would create"
+        return "Created"
+
     def create_tasks(self):
         """Create test/build/push tasks in Taskcluster.
 
@@ -109,8 +287,8 @@ class Scheduler:
             self.github_event.event_type == "push"
             and self.github_event.branch == self.push_branch
         )
-        queue = Taskcluster.get_service("queue")
         service_build_tasks = {service: slugId() for service in self.services}
+        recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created = set()
         build_tasks_created = set()
         push_tasks_created = set()
@@ -121,172 +299,79 @@ class Scheduler:
                 self.github_event.branch,
                 self.push_branch,
             )
-        if self.dry_run:
-            created_msg = create_msg = "Would create"
-        else:
-            create_msg = "Creating"
-            created_msg = "Created"
-        services_to_create = list(sorted(self.services.values(), key=lambda x: x.name))
-        while services_to_create:
-            service = services_to_create.pop(0)
-            if self.github_event.pull_request is not None:
-                build_index = (
-                    f"index.project.fuzzing.orion.{service.name}"
-                    f".pull_request.{self.github_event.pull_request}"
-                )
-            else:
-                build_index = (
-                    f"index.project.fuzzing.orion.{service.name}"
-                    f".{self.github_event.branch}"
-                )
-            if not service.dirty:
-                LOG.info("service %s doesn't need to be rebuilt", service.name)
+        to_create = sorted(
+            self.services.recipes.values(), key=lambda x: x.name
+        ) + sorted(self.services.values(), key=lambda x: x.name)
+        while to_create:
+            obj = to_create.pop(0)
+            is_svc = isinstance(obj, Service)
+
+            if not obj.dirty:
+                if is_svc:
+                    LOG.info("Service %s doesn't need to be rebuilt", obj.name)
                 continue
             dirty_dep_tasks = [
                 service_build_tasks[dep]
-                for dep in service.service_deps
+                for dep in obj.service_deps
                 if self.services[dep].dirty
             ]
-            dirty_test_dep_tasks = [
-                service_build_tasks[test.image]
-                for test in service.tests
-                if test.image in service_build_tasks and self.services[test.image].dirty
+            if is_svc:
+                dirty_test_dep_tasks = [
+                    service_build_tasks[test.image]
+                    for test in obj.tests
+                    if test.image in service_build_tasks
+                    and self.services[test.image].dirty
+                ]
+            else:
+                dirty_test_dep_tasks = []
+            dirty_recipe_test_tasks = [
+                recipe_test_tasks[recipe]
+                for recipe in obj.recipe_deps
+                if self.services.recipes[recipe].dirty
             ]
 
-            if (set(dirty_dep_tasks) | set(dirty_test_dep_tasks)) - build_tasks_created:
+            pending_deps = (
+                set(dirty_dep_tasks) | set(dirty_test_dep_tasks)
+            ) - build_tasks_created
+            pending_deps |= set(dirty_recipe_test_tasks) - test_tasks_created
+            if pending_deps:
                 LOG.debug(
-                    "Can't create %s before dependencies: %s",
-                    service.name,
-                    list(
-                        (set(dirty_dep_tasks) | set(dirty_test_dep_tasks))
-                        - build_tasks_created
-                    ),
+                    "Can't create %s %s tasks before dependencies: %s",
+                    type(obj).__name__,
+                    obj.name,
+                    list(pending_deps),
                 )
-                services_to_create.append(service)
+                to_create.append(obj)
                 continue
 
-            test_tasks = []
-            for test in service.tests:
-                image = test.image
-                deps = []
-                if image in service_build_tasks:
-                    if self.services[image].dirty:
-                        deps.append(service_build_tasks[image])
-                        image = {
-                            "type": "task-image",
-                            "taskId": service_build_tasks[image],
-                        }
-                    else:
-                        image = {
-                            "type": "indexed-image",
-                            "namespace": (
-                                f"project.fuzzing.orion.{image}.{self.push_branch}"
-                            ),
-                        }
-                    image["path"] = f"public/{test.image}.tar.zst"
-                test_task = yaml_load(
-                    TEST_TASK.substitute(
-                        deadline=stringDate(self.now + DEADLINE),
-                        max_run_time=int(MAX_RUN_TIME.total_seconds()),
-                        now=stringDate(self.now),
-                        owner_email=OWNER_EMAIL,
-                        provisioner=PROVISIONER_ID,
-                        scheduler=SCHEDULER_ID,
-                        service_name=service.name,
-                        source_url=SOURCE_URL,
-                        task_group=self.task_group,
-                        test_name=test.name,
-                        worker=WORKER_TYPE,
+            if is_svc:
+                test_tasks = []
+                for test in obj.tests:
+                    task_id = self._create_svc_test_task(obj, test, service_build_tasks)
+                    test_tasks_created.add(task_id)
+                    test_tasks.append(task_id)
+                test_tasks.extend(dirty_recipe_test_tasks)
+
+                build_tasks_created.add(
+                    self._create_build_task(
+                        obj, dirty_dep_tasks, test_tasks, service_build_tasks
                     )
                 )
-                test_task["payload"]["image"] = image
-                test_task["dependencies"].extend(deps)
-                service_path = str(service.root.relative_to(self.services.root))
-                test.update_task(
-                    test_task,
-                    self.github_event.clone_url,
-                    self.github_event.fetch_ref,
-                    self.github_event.commit,
-                    service_path,
+                if should_push:
+                    push_tasks_created.add(
+                        self._create_push_task(obj, service_build_tasks)
+                    )
+            else:
+                test_tasks_created.add(
+                    self._create_recipe_test_task(
+                        obj,
+                        dirty_dep_tasks + dirty_recipe_test_tasks,
+                        recipe_test_tasks,
+                    )
                 )
-                task_id = slugId()
-                LOG.info(
-                    "%s task %s: %s", create_msg, task_id, test_task["metadata"]["name"]
-                )
-                if not self.dry_run:
-                    try:
-                        queue.createTask(task_id, test_task)
-                    except TaskclusterFailure as exc:  # pragma: no cover
-                        LOG.error("Error creating test task: %s", exc)
-                        raise
-                test_tasks_created.add(task_id)
-                test_tasks.append(task_id)
-            build_task = yaml_load(
-                BUILD_TASK.substitute(
-                    clone_url=self.github_event.clone_url,
-                    commit=self.github_event.commit,
-                    deadline=stringDate(self.now + DEADLINE),
-                    dockerfile=str(service.dockerfile.relative_to(service.context)),
-                    expires=stringDate(self.now + ARTIFACTS_EXPIRE),
-                    load_deps="1" if dirty_dep_tasks else "0",
-                    max_run_time=int(MAX_RUN_TIME.total_seconds()),
-                    now=stringDate(self.now),
-                    owner_email=OWNER_EMAIL,
-                    provisioner=PROVISIONER_ID,
-                    route=build_index,
-                    scheduler=SCHEDULER_ID,
-                    service_name=service.name,
-                    source_url=SOURCE_URL,
-                    task_group=self.task_group,
-                    worker=WORKER_TYPE,
-                )
-            )
-            build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
-            task_id = service_build_tasks[service.name]
-            LOG.info(
-                "%s task %s: %s", create_msg, task_id, build_task["metadata"]["name"]
-            )
-            if not self.dry_run:
-                try:
-                    queue.createTask(task_id, build_task)
-                except TaskclusterFailure as exc:  # pragma: no cover
-                    LOG.error("Error creating build task: %s", exc)
-                    raise
-            build_tasks_created.add(task_id)
-            if not should_push:
-                continue
-            push_task = yaml_load(
-                PUSH_TASK.substitute(
-                    clone_url=self.github_event.clone_url,
-                    commit=self.github_event.commit,
-                    deadline=stringDate(self.now + DEADLINE),
-                    docker_secret=self.docker_secret,
-                    max_run_time=int(MAX_RUN_TIME.total_seconds()),
-                    now=stringDate(self.now),
-                    owner_email=OWNER_EMAIL,
-                    provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
-                    service_name=service.name,
-                    source_url=SOURCE_URL,
-                    task_group=self.task_group,
-                    worker=WORKER_TYPE,
-                )
-            )
-            push_task["dependencies"].append(service_build_tasks[service.name])
-            task_id = slugId()
-            LOG.info(
-                "%s task %s: %s", create_msg, task_id, push_task["metadata"]["name"]
-            )
-            if not self.dry_run:
-                try:
-                    queue.createTask(task_id, push_task)
-                except TaskclusterFailure as exc:  # pragma: no cover
-                    LOG.error("Error creating build task: %s", exc)
-                    raise
-            push_tasks_created.add(task_id)
         LOG.info(
             "%s %d test tasks, %d build tasks and %d push tasks",
-            created_msg,
+            self._created_str,
             len(test_tasks_created),
             len(build_tasks_created),
             len(push_tasks_created),
