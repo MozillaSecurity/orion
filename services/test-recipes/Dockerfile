@@ -6,6 +6,7 @@ FROM ubuntu:20.04
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
+ARG DEBIAN_FRONTEND=noninteractive
 ARG recipe
 
 COPY recipes/linux /recipes

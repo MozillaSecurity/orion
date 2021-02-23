@@ -2,6 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# supports-test
 
 set -e
 set -x
@@ -12,11 +13,19 @@ source "${0%/*}/common.sh"
 
 #### Install NodeJS
 
-apt-install-auto \
-    binutils \
-    ca-certificates \
-    curl
+case "${1-install}" in
+  install)
+    apt-install-auto \
+      binutils \
+      ca-certificates \
+      curl
 
-curl --retry 5 -sL https://deb.nodesource.com/setup_12.x | bash -
-sys-embed nodejs
-strip --strip-unneeded /usr/bin/node
+    curl --retry 5 -sL https://deb.nodesource.com/setup_12.x | bash -
+    sys-embed nodejs
+    strip --strip-unneeded /usr/bin/node
+    ;;
+  test)
+    node --help
+    node --version
+    ;;
+esac

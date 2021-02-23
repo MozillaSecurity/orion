@@ -13,8 +13,6 @@ shift
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-SHIP="$(get-provider)"
-
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
@@ -27,7 +25,7 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = $HOME/signatures
 tool = bearspray
 EOF
-setup-fuzzmanager-hostname "$SHIP"
+setup-fuzzmanager-hostname
 chmod 0600 .fuzzmanagerconf
 
 # only clone if it wasn't already mounted via docker run -v
@@ -46,12 +44,7 @@ if [ ! -d /src/bearspray ]; then
 	EOF
 
   # Checkout bearspray
-  git init /src/bearspray
-  ( cd /src/bearspray
-    git remote add -t master origin git@bearspray:MozillaSecurity/bearspray.git
-    retry git fetch -v --depth 1 --no-tags origin master
-    git reset --hard FETCH_HEAD
-  )
+  git-clone git@bearspray:MozillaSecurity/bearspray.git /src/bearspray
 fi
 
 update-ec2-status "Setup: installing bearspray"

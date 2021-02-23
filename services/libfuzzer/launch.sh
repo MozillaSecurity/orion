@@ -15,7 +15,7 @@ then
   if [[ -z "$NO_CREDSTASH" ]]
   then
     # In some environments, we require credentials for talking to credstash
-    su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials '$SHIP'"
+    su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials"
     mkdir -p /etc/google/auth /etc/td-agent-bit
     su worker -c ". ~/.local/bin/common.sh && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
     chmod 0600 /etc/google/auth/application_default_credentials.json
@@ -48,7 +48,7 @@ then
 [FILTER]
     Name record_modifier
     Match *
-    Record host $(relative-hostname "$SHIP")
+    Record host $(relative-hostname)
     Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
     Remove_key file
 

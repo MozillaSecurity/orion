@@ -20,15 +20,13 @@ apt-install-auto \
   gpg-agent
 
 if [ ! -f /etc/apt/sources.list.d/ddebs.list ]; then
-  cat << EOF > /etc/apt/sources.list.d/ddebs.list
-deb http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
-deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
-EOF
+  cat <<- EOF > /etc/apt/sources.list.d/ddebs.list
+	deb http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
+	deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
+	deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
+	EOF
 
   curl --retry 5 -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
-  #apt-get install ubuntu-dbgsym-keyring
-  #apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F2EDC64DC5AEE1F6B9C621F0C8CAB6595FDFF622
   sys-update
 fi
 

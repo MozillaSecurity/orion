@@ -13,7 +13,7 @@ source ~/.local/bin/common.sh
 if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
 then
   retry credstash get fuzzmanagerconf > ~/.fuzzmanagerconf
-  setup-fuzzmanager-hostname "$SHIP"
+  setup-fuzzmanager-hostname
   chmod 0600 ~/.fuzzmanagerconf
 fi
 # don't use `Collector --refresh` because make_collector sets tool and sigdir

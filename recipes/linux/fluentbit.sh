@@ -2,6 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# supports-test
 
 set -e
 set -x
@@ -12,18 +13,25 @@ source "${0%/*}/common.sh"
 
 #### Install fluentbit logging agent
 
-apt-install-auto \
-    ca-certificates \
-    curl \
-    gpg \
-    gpg-agent \
-    lsb-release
+case "${1-install}" in
+  install)
+    apt-install-auto \
+      ca-certificates \
+      curl \
+      gpg \
+      gpg-agent \
+      lsb-release
 
-curl --retry 5 -sS "https://packages.fluentbit.io/fluentbit.key" | apt-key add -
-cat > /etc/apt/sources.list.d/fluentbit.list << EOF
-deb https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
-EOF
+    curl --retry 5 -sS "https://packages.fluentbit.io/fluentbit.key" | apt-key add -
+    cat > /etc/apt/sources.list.d/fluentbit.list <<- EOF
+	deb https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
+	EOF
 
-sys-update
-sys-embed \
-    td-agent-bit
+    sys-update
+    sys-embed td-agent-bit
+    ;;
+  test)
+    /opt/td-agent-bit/bin/td-agent-bit --help
+    /opt/td-agent-bit/bin/td-agent-bit --version
+    ;;
+esac

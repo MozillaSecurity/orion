@@ -27,7 +27,6 @@ SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./grcov.sh
 ./gsutil.sh
 ./htop.sh
-./rg.sh
 ./taskcluster.sh
 
 packages=(
@@ -47,6 +46,7 @@ packages=(
   nano
   openssh-client
   psmisc
+  ripgrep
   screen
   software-properties-common
   unzip

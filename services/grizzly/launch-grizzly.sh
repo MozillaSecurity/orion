@@ -41,7 +41,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [FILTER]
     Name record_modifier
     Match *
-    Record host $(relative-hostname "$(get-provider)")
+    Record host $(relative-hostname)
     Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
     Remove_key file
 

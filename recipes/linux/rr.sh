@@ -2,6 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
+# supports-test
 
 set -e
 set -x
@@ -17,47 +18,23 @@ if is-arm64; then
   exit
 fi
 
-"${0%/*}/llvm.sh" auto
-apt-install-auto \
-  capnproto \
-  cmake \
-  file \
-  g++-multilib \
-  gdb \
-  git \
-  libcapnp-dev \
-  ninja-build \
-  pkg-config \
-  python3-pexpect
+case "${1-install}" in
+  install)
+    apt-install-auto \
+      ca-certificates \
+      curl
 
-export CC=clang
-export CXX=clang++
-
-TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
-( cd "$TMPD"
-  git init rr
-  ( cd rr
-    git remote add -t master origin https://github.com/mozilla/rr.git
-    retry git fetch --no-tags origin master
-    git reset --hard 7788cc1378cd784964396be0546b0d67e8808f1f
-    PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
-    sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt
-    git apply << EOF
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -1548,3 +1548,4 @@
-+ set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-
- include (CPack)
-
-EOF
-  )
-  mkdir obj
-  ( cd obj
-    CC=clang CXX=clang++ cmake -G Ninja -Dstrip=TRUE ../rr
-    cmake --build .
-    cpack -G DEB
-    dpkg -i dist/rr-*.deb
-  )
-)
-rm -rf "$TMPD"
+    TMPD="$(mktemp -d -p. rr.dl.XXXXXXXXXX)"
+    pushd "$TMPD" >/dev/null
+      PLATFORM="Linux-x86_64"
+      LATEST_VERSION=$(get-latest-github-release "rr-debugger/rr")
+      FN="rr-$LATEST_VERSION-$PLATFORM.deb"
+      curl --retry 5 -sLO "https://github.com/rr-debugger/rr/releases/download/$LATEST_VERSION/$FN"
+      sys-embed "./$FN"
+    popd >/dev/null
+    rm -rf "$TMPD"
+    ;;
+  test)
+    rr help
+    ;;
+esac

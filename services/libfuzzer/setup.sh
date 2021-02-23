@@ -18,7 +18,6 @@ sys-update
 
 cd "${0%/*}"
 ./htop.sh
-./rg.sh
 ./fuzzfetch.sh
 ./credstash.sh
 ./berglas.sh
@@ -45,6 +44,7 @@ packages=(
   nano
   openssh-client
   psmisc
+  ripgrep
   screen
   software-properties-common
   unzip

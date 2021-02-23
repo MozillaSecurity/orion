@@ -36,7 +36,7 @@ if [[ -n "$OSSFUZZ_PROJECT" ]]
 then
   if  [[ ! -d "$HOME/oss-fuzz" ]]
   then
-    retry git clone --depth 1 --no-tags https://github.com/google/oss-fuzz
+    git-clone https://github.com/google/oss-fuzz.git
   fi
   if [[ ! -f "$HOME/.boto" ]] && [[ -z "$NO_CREDSTASH" ]]
   then
@@ -46,7 +46,7 @@ fi
 
 if [[ -n "$JSRT" ]]
 then
-  retry git clone -v --depth 1 git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git fuzzing-shells-private
+  git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
   TOOLNAME="${TOOLNAME:-libFuzzer-$FUZZER}"
   FUZZER="$WORKDIR/fuzzing-shells-private/$JSRT/$FUZZER"
   JS=1
@@ -63,7 +63,7 @@ then
 sigdir = $HOME/signatures
 EOF
   # Update Fuzzmanager config with suitable hostname based on the execution environment.
-  setup-fuzzmanager-hostname "$SHIP"
+  setup-fuzzmanager-hostname
   chmod 0600 ~/.fuzzmanagerconf
 fi
 
