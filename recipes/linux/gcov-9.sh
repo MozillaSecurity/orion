@@ -11,19 +11,19 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Install gcov-7
+#### Install gcov-9
 
 case "${1-install}" in
   install)
     apt-install-auto \
       ca-certificates \
       curl \
-      gcc-7
+      gcc-9
 
-    ln -L /usr/bin/gcov-7 /usr/local/bin/gcov-7
+    ln -L /usr/bin/gcov-9 /usr/local/bin/gcov-9
     ;;
   test)
-    gcov-7 --help
-    gcov-7 --version
+    gcov-9 --help
+    gcov-9 --version
     ;;
 esac

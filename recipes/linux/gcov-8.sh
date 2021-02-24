@@ -17,10 +17,10 @@ case "${1-install}" in
   install)
     apt-install-auto \
       ca-certificates \
-      curl
+      curl \
+      gcc-8
 
-    curl --retry 5 -sL "https://build.fuzzing.mozilla.org/builds/gcov-8" -o /usr/local/bin/gcov-8
-    chmod +x /usr/local/bin/gcov-8
+    ln -L /usr/bin/gcov-8 /usr/local/bin/gcov-8
     ;;
   test)
     gcov-8 --help
