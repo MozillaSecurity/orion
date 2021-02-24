@@ -12,12 +12,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN useradd -d /home/worker -s /bin/bash -m worker
 
-COPY recipes/linux/ /tmp/recipes/
+COPY recipes/linux/ /src/recipes/
 COPY services/fuzzing-decision /src/fuzzing-tc
-COPY services/grizzly/setup.sh /tmp/recipes/
+COPY services/grizzly/setup.sh /src/recipes/setup-grizzly.sh
 COPY base/linux/etc/pip.conf /etc/pip.conf
-RUN /tmp/recipes/setup.sh \
-    && rm -rf /tmp/recipes
+RUN /src/recipes/setup-grizzly.sh
 COPY services/grizzly/rwait.py /usr/local/bin/rwait
 COPY services/grizzly/launch-grizzly.sh services/grizzly/launch-grizzly-worker.sh /home/worker/
 

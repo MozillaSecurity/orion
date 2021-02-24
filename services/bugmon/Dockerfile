@@ -10,13 +10,11 @@ ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
 ARG DEBIAN_FRONTEND=noninteractive
 
-COPY recipes/linux /tmp/recipes
-COPY services/bugmon/setup.sh /tmp/recipes
+COPY services/bugmon/setup.sh /src/recipes/setup-bugmon.sh
 
 USER root
 
-# Install taskcluster CLI
-RUN /tmp/recipes/setup.sh && rm -rf /tmp/recipes
+RUN /src/recipes/setup-bugmon.sh
 
 COPY services/bugmon/launch.sh /home/worker
 

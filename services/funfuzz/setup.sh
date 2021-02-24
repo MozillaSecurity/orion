@@ -10,14 +10,10 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Bootstrap Packages
-
-dpkg --add-architecture i386
-sys-update
-
 #### Install recipes
 
 cd "${0%/*}"
+./js32_deps.sh  # does the initial sys-update
 ./berglas.sh
 ./credstash.sh
 ./fluentbit.sh
@@ -39,9 +35,8 @@ packages=(
   gpg-agent
   jshon
   less
-  libatomic1:i386
-  libc6:i386
-  libstdc++6:i386
+  libc6-dbg
+  libc6-dbg:i386
   locales
   nano
   openssh-client
@@ -123,10 +118,10 @@ EOF
 mkdir -p /home/worker/.local/bin
 
 # Add `cleanup.sh` to let images perform standard cleanup operations.
-cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
+ln "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
-cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
+ln "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
 /home/worker/.local/bin/cleanup.sh

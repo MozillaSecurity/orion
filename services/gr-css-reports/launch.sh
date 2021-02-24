@@ -3,17 +3,15 @@
 set -e
 set -o pipefail
 
-function get-secret () {
-  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "$1"
-}
-
+# shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-get-secret project/fuzzing/deploy-gr-css | jshon -e secret -e key -u >.ssh/gr.css_deploy
-get-secret project/fuzzing/deploy-gr-css-generator | jshon -e secret -e key -u >.ssh/gr.css.generator_deploy
-get-secret project/fuzzing/deploy-gr-css-reports | jshon -e secret -e key -u >.ssh/gr.css.reports_deploy
-get-secret project/fuzzing/deploy-octo-private | jshon -e secret -e key -u >.ssh/octo_private_deploy
-export GH_TOKEN=$(get-secret project/fuzzing/git-token-gr-css | jshon -e secret -e key -u)
+get-tc-secret deploy-gr-css .ssh/gr.css_deploy
+get-tc-secret deploy-gr-css-generator .ssh/gr.css.generator_deploy
+get-tc-secret deploy-gr-css-reports .ssh/gr.css.reports_deploy
+get-tc-secret deploy-octo-private .ssh/octo_private_deploy
+GH_TOKEN=$(get-tc-secret git-token-gr-css)
+export GH_TOKEN
 
 set -x
 chmod 0400 .ssh/*_deploy
