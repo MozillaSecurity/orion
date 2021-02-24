@@ -17,6 +17,7 @@ payload:
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/test-${recipe_name}"
+    LOAD_DEPS: "0"
   capabilities:
     privileged: true
   image: "mozillasecurity/orion-builder:latest"
