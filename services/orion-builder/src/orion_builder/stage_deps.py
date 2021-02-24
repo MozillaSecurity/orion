@@ -159,7 +159,7 @@ def stage_deps(target, args):
                 args.task_id, queue, "public/**.tar.zst"
             ):
                 img = download_artifact(queue, task_id, artifact_name, image_path)
-                image_name = Path(artifact_name).stem
+                image_name = Path(artifact_name).name[: -len(".tar.zst")]
                 check_call(
                     [
                         "skopeo",
