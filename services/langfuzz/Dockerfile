@@ -13,10 +13,10 @@ ENV TASKCLUSTER_FUZZING_POOL unknown
 
 RUN useradd -d /home/ubuntu -s /bin/bash -m ubuntu
 
-COPY services/fuzzing-decision /tmp/fuzzing-tc
-COPY services/langfuzz/setup.sh /tmp/
-RUN /tmp/setup.sh \
-    && rm -rf /tmp/setup.sh /tmp/fuzzing-tc
+COPY recipes/linux /src/recipes
+COPY services/fuzzing-decision /src/fuzzing-tc
+COPY services/langfuzz/setup.sh /src/recipes/setup-langfuzz.sh
+RUN /src/recipes/setup-langfuzz.sh
 COPY services/langfuzz/launch-langfuzz.sh /home/ubuntu/
 COPY services/langfuzz/fluentbit.conf /etc/td-agent-bit/td-agent-bit.conf
 COPY services/langfuzz/sysctl.conf /etc/sysctl.d/60-langfuzz.conf

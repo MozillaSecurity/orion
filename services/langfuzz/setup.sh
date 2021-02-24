@@ -7,34 +7,25 @@ set -e
 set -x
 set -o pipefail
 
-function retry () {
-  for _ in {1..9}; do
-    "$@" && return
-    sleep 30
-  done
-  "$@"
-}
+# shellcheck source=recipes/linux/common.sh
+source "${0%/*}/common.sh"
 
-retry apt-get update -qq
+#### Install recipes
 
-#### Install fluentbit repo for live-logging to Google Stackdriver
+cd "${0%/*}"
 
-retry apt-get install -y -qq --no-install-recommends \
-    ca-certificates \
-    curl \
-    gpg \
-    gpg-agent \
-    lsb-release
-# these are not needed except to install fluentbit. mark them auto
-apt-mark auto gpg gpg-agent lsb-release
+# also does the initial sys-update
+./js32_deps.sh
 
-curl --retry 5 -sS "https://packages.fluentbit.io/fluentbit.key" | apt-key add -
-cat > /etc/apt/sources.list.d/fluentbit.list << EOF
-deb https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
-EOF
+# for live-logging to Google Stackdriver
+./fluentbit.sh
 
-dpkg --add-architecture i386
-retry apt-get update -qq
+# this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
+# when run under Taskcluster
+EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
+
+./fuzzfetch.sh
+./taskcluster.sh
 
 #### Bootstrap Packages
 
@@ -81,16 +72,6 @@ packages=(
 )
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
-# Install fuzzing-tc
-# this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
-# when run under Taskcluster
-retry python3 -m pip install /tmp/fuzzing-tc
-
-# Install taskcluster CLI
-TC_VERSION="$(curl --retry 5 -s "https://github.com/taskcluster/taskcluster/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/')"
-curl --retry 5 -sSL "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/taskcluster-linux-amd64" -o /usr/local/bin/taskcluster
-chmod +x /usr/local/bin/taskcluster
-
 #### Base System Configuration
 
 # Generate locales
@@ -112,23 +93,15 @@ export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]
 EOF
 
 # Cleanup
-rm -rf /usr/share/man/ /usr/share/info/
-find /usr/share/doc -depth -type f ! -name copyright -exec rm {} +
-find /usr/share/doc -empty -exec rmdir {} +
-apt-get clean -y
-apt-get autoremove --purge -y
-rm -rf /var/lib/apt/lists/*
-rm -rf /var/log/*
-rm -rf /root/.cache/*
-rm -rf /tmp/*
+"${0%/*}/cleanup.sh"
 
 mkdir -p /home/ubuntu/.ssh /root/.ssh
 chmod 0700 /home/ubuntu/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config >> /home/ubuntu/.ssh/config
+cat << EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
 Host *
 UseRoaming no
 IdentitiesOnly yes
 EOF
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >> /home/ubuntu/.ssh/known_hosts
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/ubuntu/.ssh/known_hosts
 
 chown -R ubuntu:ubuntu /home/ubuntu
