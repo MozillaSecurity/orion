@@ -31,6 +31,8 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 
 packages=(
   autoconf2.13
+  ca-certificates
+  curl
   creduce
   g++
   g++-multilib
