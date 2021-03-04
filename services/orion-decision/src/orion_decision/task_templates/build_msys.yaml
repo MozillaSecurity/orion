@@ -1,0 +1,43 @@
+taskGroupId: "${task_group}"
+dependencies: []
+created: "${now}"
+deadline: "${deadline}"
+provisionerId: "${provisioner}"
+schedulerId: "${scheduler}"
+workerType: "${worker}"
+payload:
+  artifacts:
+    - expires: "${expires}"
+      name: public/msys2.tar.bz2
+      path: msys2.tar.bz2
+      type: file
+  command:
+    - set HOME=%CD%
+    - set ARTIFACTS=%CD%
+    - dir C:\cygwin\bin
+    - C:\cygwin\bin\curl.exe -sSL --retry 5 "${msys_base_url}" -o msys2.tar.xz
+    - C:\cygwin\bin\xzdec.exe msys2.tar.xz | C:\cygwin\bin\tar.exe x
+    - del msys2.tar.xz
+    - set PATH=%CD%\msys64\MINGW64\bin;%PATH%
+    - set PATH=%CD%\msys64\usr\bin;%PATH%
+    - git init orion
+    - cd orion
+    - git remote add origin "${clone_url}"
+    - git fetch -q --depth=1 origin "${commit}"
+    - git -c advice.detachedHead=false checkout "${commit}"
+    - cd ..
+    - bash -c -x -e "./orion/${setup_sh_path}"
+  env:
+    MSYSTEM: MINGW64
+  maxRunTime: !!int "${max_run_time}"
+routes:
+  - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
+  - "${route}"
+scopes:
+  - "queue:route:index.project.fuzzing.orion.*"
+  - "queue:scheduler-id:${scheduler}"
+metadata:
+  description: "Build the MSYS tar for ${service_name} tasks"
+  name: "Orion ${service_name} MSYS build"
+  owner: "${owner_email}"
+  source: "${source_url}"

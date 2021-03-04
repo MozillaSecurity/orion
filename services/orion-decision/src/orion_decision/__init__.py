@@ -21,4 +21,5 @@ PROVISIONER_ID = "proj-fuzzing"
 SCHEDULER_ID = "taskcluster-github"
 SOURCE_URL = "https://github.com/MozillaSecurity/orion"
 WORKER_TYPE = "ci"
+WORKER_TYPE_MSYS = "ci-windows"
 del os, relativedelta, timedelta, TaskclusterConfig

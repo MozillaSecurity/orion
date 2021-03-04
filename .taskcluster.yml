@@ -24,6 +24,7 @@ tasks:
       scopes:
         - docker-worker:capability:privileged
         - queue:create-task:highest:proj-fuzzing/ci
+        - queue:create-task:highest:proj-fuzzing/ci-*
         - queue:route:index.project.fuzzing.orion.*
         - queue:scheduler-id:taskcluster-github
         - secrets:get:project/fuzzing/docker-hub

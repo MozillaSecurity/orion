@@ -21,14 +21,16 @@ from . import (
     SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_MSYS,
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Service, Services
+from .orion import Service, ServiceMsys, Services
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
+MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
@@ -110,26 +112,50 @@ class Scheduler:
                 f"index.project.fuzzing.orion.{service.name}"
                 f".{self.github_event.branch}"
             )
-        build_task = yaml_load(
-            BUILD_TASK.substitute(
-                clone_url=self.github_event.clone_url,
-                commit=self.github_event.commit,
-                deadline=stringDate(self.now + DEADLINE),
-                dockerfile=str(service.dockerfile.relative_to(service.context)),
-                expires=stringDate(self.now + ARTIFACTS_EXPIRE),
-                load_deps="1" if dirty_dep_tasks else "0",
-                max_run_time=int(MAX_RUN_TIME.total_seconds()),
-                now=stringDate(self.now),
-                owner_email=OWNER_EMAIL,
-                provisioner=PROVISIONER_ID,
-                route=build_index,
-                scheduler=SCHEDULER_ID,
-                service_name=service.name,
-                source_url=SOURCE_URL,
-                task_group=self.task_group,
-                worker=WORKER_TYPE,
+        if isinstance(service, ServiceMsys):
+            build_task = yaml_load(
+                MSYS_TASK.substitute(
+                    clone_url=self.github_event.clone_url,
+                    commit=self.github_event.commit,
+                    deadline=stringDate(self.now + DEADLINE),
+                    expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                    max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                    msys_base_url=service.base,
+                    now=stringDate(self.now),
+                    owner_email=OWNER_EMAIL,
+                    provisioner=PROVISIONER_ID,
+                    route=build_index,
+                    scheduler=SCHEDULER_ID,
+                    service_name=service.name,
+                    setup_sh_path=str(
+                        (service.root / "setup.sh").relative_to(service.context)
+                    ),
+                    source_url=SOURCE_URL,
+                    task_group=self.task_group,
+                    worker=WORKER_TYPE_MSYS,
+                )
             )
-        )
+        else:
+            build_task = yaml_load(
+                BUILD_TASK.substitute(
+                    clone_url=self.github_event.clone_url,
+                    commit=self.github_event.commit,
+                    deadline=stringDate(self.now + DEADLINE),
+                    dockerfile=str(service.dockerfile.relative_to(service.context)),
+                    expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                    load_deps="1" if dirty_dep_tasks else "0",
+                    max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                    now=stringDate(self.now),
+                    owner_email=OWNER_EMAIL,
+                    provisioner=PROVISIONER_ID,
+                    route=build_index,
+                    scheduler=SCHEDULER_ID,
+                    service_name=service.name,
+                    source_url=SOURCE_URL,
+                    task_group=self.task_group,
+                    worker=WORKER_TYPE,
+                )
+            )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
         task_id = service_build_tasks[service.name]
         LOG.info(
@@ -305,6 +331,7 @@ class Scheduler:
         while to_create:
             obj = to_create.pop(0)
             is_svc = isinstance(obj, Service)
+            is_msys = isinstance(obj, ServiceMsys)
 
             if not obj.dirty:
                 if is_svc:
@@ -357,7 +384,7 @@ class Scheduler:
                         obj, dirty_dep_tasks, test_tasks, service_build_tasks
                     )
                 )
-                if should_push:
+                if should_push and not is_msys:
                     push_tasks_created.add(
                         self._create_push_task(obj, service_build_tasks)
                     )

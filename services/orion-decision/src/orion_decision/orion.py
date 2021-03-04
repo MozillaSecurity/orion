@@ -214,23 +214,59 @@ class Service:
         metadata = yaml_load(metadata_path.read_text())
         name = metadata["name"]
         LOG.info("Loading %s from %s", name, metadata_path)
-        cpu = {"x86_64": "amd64"}.get(machine(), machine())
-        if (
-            "arch" in metadata
-            and cpu in metadata["arch"]
-            and "dockerfile" in metadata["arch"][cpu]
-        ):
-            dockerfile = metadata_path.parent / metadata["arch"][cpu]["dockerfile"]
-        else:
-            dockerfile = metadata_path.parent / "Dockerfile"
-        assert dockerfile.is_file()
         if "tests" in metadata:
             tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
         else:
             tests = []
-        result = cls(dockerfile, context, name, tests, metadata_path.parent)
+        if "type" in metadata:
+            assert metadata["type"] in {"docker", "msys"}
+        if metadata.get("type") == "msys":
+            base = metadata["base"]
+            assert (metadata_path.parent / "setup.sh").is_file()
+            result = ServiceMsys(base, context, name, tests, metadata_path.parent)
+        else:
+            cpu = {"x86_64": "amd64"}.get(machine(), machine())
+            if (
+                "arch" in metadata
+                and cpu in metadata["arch"]
+                and "dockerfile" in metadata["arch"][cpu]
+            ):
+                dockerfile = metadata_path.parent / metadata["arch"][cpu]["dockerfile"]
+            else:
+                dockerfile = metadata_path.parent / "Dockerfile"
+            assert dockerfile.is_file()
+            result = cls(dockerfile, context, name, tests, metadata_path.parent)
         result.service_deps |= set(metadata.get("force_deps", []))
         return result
+
+
+class ServiceMsys(Service):
+    """Orion service (MSYS tar)
+
+    Attributes:
+        base (str): URL to MSYS base tar to use.
+        context (Path): build context
+        name (str): Image name
+        service_deps (set(str)): Names of images that this one depends on.
+        path_deps (set(Path)): Paths that this image depends on.
+        recipe_deps (set(str)): Names of recipes that this service depends on.
+        dirty (bool): Whether or not this image needs to be rebuilt
+        tests (list[ServiceTest]): Tests to run against this service
+        root (Path): Path where service is defined
+    """
+
+    def __init__(self, base, context, name, tests, root):
+        """Initialize a ServiceMsys instance.
+
+        Arguments:
+            base (str): URL to MSYS base tar to use.
+            context (Path): build context
+            name (str): Image name
+            tests (list[ServiceTest]): Tests to run against this service
+            root (Path): Path where service is defined
+        """
+        super().__init__(None, context, name, tests, root)
+        self.base = base
 
 
 class Recipe:
@@ -379,20 +415,26 @@ class Services(dict):
                 assert dep in self, f"Service {service.name} forces unknown dep: {dep}"
                 LOG.info("Service %s depends on service %s (forced)", service.name, dep)
 
-            # calculate image dependencies
-            parser = DockerfileParser(path=str(service.dockerfile))
-            if parser.baseimage is not None and parser.baseimage.startswith(
-                "mozillasecurity/"
-            ):
-                baseimage = parser.baseimage.split("/", 1)[1]
-                if ":" in baseimage:
-                    baseimage = baseimage.split(":", 1)[0]
-                assert baseimage in self
-                service.service_deps.add(baseimage)
-                LOG.info("Service %s depends on Service %s", service.name, baseimage)
+            if isinstance(service, ServiceMsys):
+                search_root = service.root
+            else:
+                # calculate image dependencies
+                parser = DockerfileParser(path=str(service.dockerfile))
+                if parser.baseimage is not None and parser.baseimage.startswith(
+                    "mozillasecurity/"
+                ):
+                    baseimage = parser.baseimage.split("/", 1)[1]
+                    if ":" in baseimage:
+                        baseimage = baseimage.split(":", 1)[0]
+                    assert baseimage in self
+                    service.service_deps.add(baseimage)
+                    LOG.info(
+                        "Service %s depends on Service %s", service.name, baseimage
+                    )
+                search_root = service.dockerfile.parent
 
             # scan service for references to files
-            for entry in file_glob(repo, service.dockerfile.parent):
+            for entry in file_glob(repo, search_root):
                 # add a direct dependency on any file in the service folder
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
