@@ -32,7 +32,7 @@ get_tc_secret () {
 	with urlopen(url) as req:
 	  data = json.loads(req.read().decode("utf-8"))
 	print(data["secret"]["$2"])
-EOF
+	EOF
 }
 
 # safely checkout a git commit for CI
@@ -47,6 +47,31 @@ clone () {
   git remote add origin "$url"
   retry git fetch -q --depth=1 origin "${FETCH_REF}"
   git -c advice.detachedHead=false checkout "${FETCH_REV}"
+}
+
+# setup deploy key
+# usage: deploy_key [identity]
+# required env: DEPLOY_SECRET (secret name in TC)
+deploy_key () {
+  mkdir -p "$HOME/.ssh"
+  if [ $# -eq 1 ]
+  then
+    op="$HOME/.ssh/id_rsa.$1"
+  else
+    op="$HOME/.ssh/id_rsa"
+  fi
+  set +x
+  get_tc_secret "$DEPLOY_SECRET" key > "$op"
+  set -x
+  chmod 0400 "$op"
+  if [ $# -eq 1 ]
+  then
+    cat <<- EOF >> "$HOME/.ssh/config"
+	Host $1
+	HostName github.com
+	IdentityFile ~/.ssh/id_rsa.$1
+	EOF
+  fi
 }
 
 # setup credentials and submit coverage to codecov
