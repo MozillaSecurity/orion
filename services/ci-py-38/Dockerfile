@@ -7,10 +7,12 @@ FROM python:3.8-slim
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY base/linux/etc/pip.conf /etc/pip.conf
+COPY recipes/linux/py-ci.sh /root/py-ci.sh
 
 WORKDIR /root
 
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+# hadolint ignore=SC1091
+RUN . ./py-ci.sh \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         bzip2 \
