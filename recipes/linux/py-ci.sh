@@ -55,10 +55,26 @@ clone () {
 tox_codecov () {
   # setup codecov secret
   set +x
-  CODECOV_TOKEN="$(get-tc-secret "${CODECOV_SECRET}" token)"
+  CODECOV_TOKEN="$(get_tc_secret "${CODECOV_SECRET}" token)"
   export CODECOV_TOKEN
   set -x
 
   # report to codecov
   retry tox -e codecov
+  unset CODECOV_TOKEN
+}
+
+# setup credentials and submit package to pypi
+# usage: tox_pypi
+# required env: PYPI_SECRET (secret name in TC)
+tox_pypi () {
+  set +x
+  TWINE_USERNAME="$(get_tc_secret "${PYPI_SECRET}" username)"
+  TWINE_PASSWORD="$(get_tc_secret "${PYPI_SECRET}" password)"
+  export TWINE_USERNAME TWINE_PASSWORD
+  set -x
+
+  # submit to pypi
+  retry tox -e pypi
+  unset TWINE_USERNAME TWINE_PASSWORD
 }
