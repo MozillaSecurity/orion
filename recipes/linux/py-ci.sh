@@ -30,7 +30,7 @@ get_tc_secret () {
 	import json
 	url = "http://taskcluster/secrets/v1/secret/project/fuzzing/$1"
 	with urlopen(url) as req:
-	  data = json.load(req)
+	  data = json.loads(req.read().decode("utf-8"))
 	print(data["secret"]["$2"])
 EOF
 }
