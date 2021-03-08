@@ -27,6 +27,7 @@ RUN . ./py-ci.sh \
         patch \
         xz-utils \
     && retry pip -q install tox \
+    && retry pip3 install poetry \
     && mkdir .ssh \
     && retry ssh-keyscan github.com > .ssh/known_hosts \
     && rm -rf /var/lib/apt/lists/*
