@@ -224,7 +224,8 @@ class GithubEvent:
 
         # fetch both sides of the commit range
         before, _ = self.commit_range.split("..")
-        self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
+        if "^" not in before:
+            self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
 
         self.commit_message = self.repo.message(self.commit_range)
         return self
