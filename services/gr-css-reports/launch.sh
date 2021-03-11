@@ -10,9 +10,7 @@ get-tc-secret deploy-gr-css .ssh/gr.css_deploy
 get-tc-secret deploy-gr-css-generator .ssh/gr.css.generator_deploy
 get-tc-secret deploy-gr-css-reports .ssh/gr.css.reports_deploy
 get-tc-secret deploy-octo-private .ssh/octo_private_deploy
-GRCSS_TOKEN=$(get-tc-secret git-token-gr-css)
-export GRCSS_TOKEN
-npm set //registry.npmjs.org/:_authToken="$(get-tc-secret git-token-gr-css)"
+npm set //registry.npmjs.org/:_authToken="$(get-tc-secret ci-git-token)"
 
 set -x
 chmod 0400 .ssh/*_deploy
