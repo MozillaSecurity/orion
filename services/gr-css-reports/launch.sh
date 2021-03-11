@@ -10,8 +10,9 @@ get-tc-secret deploy-gr-css .ssh/gr.css_deploy
 get-tc-secret deploy-gr-css-generator .ssh/gr.css.generator_deploy
 get-tc-secret deploy-gr-css-reports .ssh/gr.css.reports_deploy
 get-tc-secret deploy-octo-private .ssh/octo_private_deploy
-GH_TOKEN=$(get-tc-secret git-token-gr-css)
-export GH_TOKEN
+GRCSS_TOKEN=$(get-tc-secret git-token-gr-css)
+export GRCSS_TOKEN
+npm set //registry.npmjs.org/:_authToken="$(get-tc-secret git-token-gr-css)"
 
 set -x
 chmod 0400 .ssh/*_deploy
@@ -30,8 +31,8 @@ git init gr.css.reports
   retry git fetch -q --depth=10 origin main
   git -c advice.detachedHead=false checkout origin/main
   retry npm i --no-progress
-  retry npm i --no-save --no-progress --production git+ssh://git@gr-css/mozillasecurity/gr.css.git
-  node node_modules/gr.css/dist/gr.css.js ~/nightly/firefox src/grammar.json --token "$GH_TOKEN" &&
+  retry npm i --no-save --no-progress --production @mozillasecurity/gr.css
+  npx gr.css ~/nightly/firefox src/grammar.json &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
     git commit -m "chore(grammar): update grammar" src/grammar.json
