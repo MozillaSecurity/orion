@@ -1,0 +1,11 @@
+env:
+  global:
+    A: abc
+  jobs:
+    - B: def
+    - A: xyz
+language: python
+version:
+  - "3.9"
+script:
+  - test

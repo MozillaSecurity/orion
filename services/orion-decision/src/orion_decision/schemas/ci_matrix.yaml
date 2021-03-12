@@ -1,0 +1,160 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml"
+title: CIMatrix
+description: A build matrix for CI in TC
+type: object
+additionalProperties: false
+$defs:
+  language:
+    description: Programming language.
+    type: string
+    minLength: 1
+  anyversion:
+    description: Language version.
+    type: string
+    minLength: 1
+  platform:
+    description: Operating system.
+    type: string
+    enum:
+      - linux
+      - windows
+      - macos
+  envvar:
+    type: object
+    additionalProperties: false
+    description: Environment variable, where object key is variable name.
+    patternProperties:
+      "[^=]+":
+        type: string
+  jobenvs:
+    description: >-
+      Job matrix environment variables (each set creates a build in the job
+      matrix).
+    type: array
+    items:
+      $ref: "#/$defs/envvar"
+  command:
+    type: array
+    description: Command-line argument list.
+    items:
+      type: string
+    minItems: 1
+properties:
+  language:
+    $ref: "#/$defs/language"
+  version:
+    type: array
+    items:
+      $ref: "#/$defs/anyversion"
+  platform:
+    type: array
+    items:
+      $ref: "#/$defs/platform"
+    default: [linux]
+  env:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        properties:
+          global:
+            description: Global environment variables applied to all builds.
+            $ref: "#/$defs/envvar"
+          jobs:
+            $ref: "#/$defs/jobenvs"
+      - $ref: "#/$defs/jobenvs"
+  script:
+    oneOf:
+      - $ref: "#/$defs/command"
+      - type: array
+        description: >-
+          Job matrix commands to execute (each script creates a build in the
+          job matrix).
+        items:
+          $ref: "#/$defs/command"
+  jobs:
+    type: object
+    additionalProperties: false
+    properties:
+      include:
+        type: array
+        items:
+          description: Specifically include a job.
+          additionalProperties: false
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            language:
+              description: Required unless default is set at top-level.
+              $ref: "#/$defs/language"
+            version:
+              description: Required unless top-level has only one entry.
+              $ref: "#/$defs/anyversion"
+            platform:
+              description: Required unless top-level has only one entry.
+              $ref: "#/$defs/platform"
+            env:
+              description: Optional. Defaults empty.
+              $ref: "#/$defs/envvar"
+            script:
+              description: Required unless top-level has only one entry.
+              $ref: "#/$defs/command"
+            secrets:
+              description: Optional.
+              type: array
+              items:
+                $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_secret.yaml"
+            when:
+              additionalProperties: false
+              type: object
+              properties:
+                release:
+                  description: >-
+                    If set, this job is only scheduled for github releases (or
+                    not). If not set, run job for both cases (if true, branch
+                    is ignored).
+                  type: boolean
+                branch:
+                  description: >-
+                    Only run this job for pushes/PRs on the specified branch.
+                    Releases don't have a branch associated, so if `release` is
+                    true, this will be ignored.
+                  type: string
+                  minLength: 1
+                all_passed:
+                  description: >-
+                    If true, this job is only run if all other jobs have passed.
+                    If false, this job will run after other jobs, whether they
+                    pass or fail. If not set, run in parallel with other jobs.
+                    Any jobs with `all_passed` set will run in parallel after
+                    all jobs without.
+                  type: boolean
+              minProperties: 1
+      exclude:
+        type: array
+        items:
+          description: >-
+            Specifically exclude jobs. All keys are optional, but can't be empty.
+          additionalProperties: false
+          type: object
+          properties:
+            language:
+              $ref: "#/$defs/language"
+            version:
+              $ref: "#/$defs/anyversion"
+            platform:
+              $ref: "#/$defs/platform"
+            env:
+              description: Exclude job if all envs given here are equal.
+              $ref: "#/$defs/envvar"
+            script:
+              description: Exclude job if script matches exactly.
+              $ref: "#/$defs/command"
+          minProperties: 1
+  secrets:
+    type: array
+    items:
+      $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_secret.yaml"
+required: []

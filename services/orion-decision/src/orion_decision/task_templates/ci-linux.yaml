@@ -1,0 +1,28 @@
+taskGroupId: "${task_group}"
+provisionerId: "${provisioner}"
+workerType: "${worker}"
+created: "${now}"
+deadline: "${deadline}"
+dependencies: []
+schedulerId: "${scheduler}"
+payload:
+  env:
+    FETCH_REF: ${fetch_ref}
+    FETCH_REV: ${fetch_rev}
+    CLONE_REPO: ${clone_repo}
+    CI_JOB: ${ci_job}
+  command:
+    - ci-launch
+  image:
+    type: indexed-image
+    path: public/${image}.tar.zst
+    namespace: project.fuzzing.orion.${image}.master
+  maxRunTime: !!int "${max_run_time}"
+routes: []
+scopes:
+  - "queue:scheduler-id:${scheduler}"
+metadata:
+  name: "${project} ${name}"
+  description: "${project} ${name}"
+  owner: "${user}@users.noreply.github.com"
+  source: "${http_repo}/raw/${fetch_rev}/.taskcluster.yml"

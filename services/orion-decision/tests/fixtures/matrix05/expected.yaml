@@ -1,0 +1,38 @@
+jobs:
+  - name: python/linux/3.6
+    language: python
+    version: "3.6"
+    platform: linux
+    env: {A: abc}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+  - name: python/linux/3.7
+    language: python
+    version: "3.7"
+    platform: linux
+    env: {A: abc}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+  - name: python/linux/3.8
+    language: python
+    version: "3.8"
+    platform: linux
+    env: {A: abc}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+  - name: python/windows/3.7
+    language: python
+    version: "3.7"
+    platform: windows
+    env: {A: abc}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+secrets: []

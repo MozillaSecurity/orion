@@ -1,0 +1,22 @@
+language: python
+script: [test]
+jobs:
+  include:
+    - name: python test 3.6
+      version: "3.6"
+      when:
+        release: true
+        all_passed: false
+    - name: python test 3.7
+      version: "3.7"
+      when:
+        release: true
+        all_passed: true
+    - name: python test 3.8
+      version: "3.8"
+      when:
+        branch: main
+    - name: python test 3.9
+      version: "3.9"
+      when:
+        release: true

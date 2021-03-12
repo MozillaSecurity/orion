@@ -1,0 +1,30 @@
+jobs:
+  - name: python/linux/3.6
+    language: python
+    version: "3.6"
+    platform: linux
+    env: {}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets:
+      - type: env
+        name: TOKEN2
+        key: null
+        secret: project/test/token2
+secrets:
+  - type: env
+    name: TOKEN
+    key: key
+    secret: project/test/token
+  - type: file
+    path: /secret.cfg
+    key: null
+    secret: project/test/cfg
+  - type: key
+    secret: project/test/deploy
+    key: null
+  - type: key
+    secret: project/test/deploy-repo
+    key: null
+    hostname: repo

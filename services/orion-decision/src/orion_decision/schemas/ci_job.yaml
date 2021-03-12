@@ -1,0 +1,39 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_job.yaml"
+title: MatrixJob
+description: A CI build matrix job
+type: object
+additionalProperties: false
+properties:
+  name:
+    type: string
+    minLength: 1
+  language:
+    $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml#/$defs/language"
+  version:
+    $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml#/$defs/anyversion"
+  platform:
+    $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml#/$defs/platform"
+  env:
+    $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml#/$defs/envvar"
+  script:
+    $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_matrix.yaml#/$defs/command"
+  stage:
+    type: integer
+    exclusiveMinimum: 0
+  require_previous_stage_pass:
+    type: boolean
+  secrets:
+    type: array
+    items:
+      $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_secret.yaml"
+required:
+  - name
+  - language
+  - version
+  - platform
+  - env
+  - script
+  - stage
+  - require_previous_stage_pass
+  - secrets

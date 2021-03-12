@@ -137,7 +137,7 @@ def test_create_02(mocker):
     )
     evt.commit = "commit"
     evt.branch = "main"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
@@ -180,7 +180,7 @@ def test_create_03(mocker):
     evt.commit = "commit"
     evt.branch = "push"
     evt.event_type = "push"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
@@ -242,7 +242,7 @@ def test_create_04(mocker):
     )
     evt.commit = "commit"
     evt.branch = "main"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
@@ -328,7 +328,7 @@ def test_create_06(mocker):
     evt.commit = "commit"
     evt.branch = "push"
     evt.pull_request = None
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     sched = Scheduler(evt, now, "group", "secret", "push", dry_run=True)
     sched.services["test1"].dirty = True
     sched.create_tasks()
@@ -348,7 +348,7 @@ def test_create_07(mocker):
     )
     evt.commit = "commit"
     evt.branch = "push"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = 1
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test1"].dirty = True
@@ -408,7 +408,7 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
     evt.commit = "commit"
     evt.branch = "main"
     evt.fetch_ref = "fetch"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["testci1"].dirty = ci1_dirty
@@ -510,7 +510,7 @@ def test_create_09(mocker):
     )
     evt.commit = "commit"
     evt.branch = "main"
-    evt.clone_url = "https://example.com"
+    evt.http_url = "https://example.com"
     evt.pull_request = None
     sched = Scheduler(evt, now, "group", "secret", "push")
     sched.services["test5"].dirty = True

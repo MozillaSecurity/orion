@@ -7,14 +7,15 @@ FROM python:2.7-slim
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY base/linux/etc/pip.conf /etc/pip.conf
-COPY recipes/linux/py-ci.sh /root/py-ci.sh
+COPY recipes/linux /src/recipes
+COPY services/orion-decision /src/orion-decision
 
-WORKDIR /root
+ARG DEBIAN_FRONTEND=noninteractive
 
 # hadolint ignore=SC1091
-RUN . ./py-ci.sh \
-    && retry apt-get update -qq \
-    && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
+RUN . /src/recipes/common.sh \
+    && sys-update \
+    && sys-embed \
         bzip2 \
         curl \
         gcc \
@@ -27,6 +28,16 @@ RUN . ./py-ci.sh \
         patch \
         xz-utils \
     && retry pip -q install tox \
+    && retry pip install poetry \
+    && SRCDIR=/src/orion-decision EDIT=1 /src/recipes/orion_decision.sh \
+    && /src/recipes/worker.sh \
+    && /src/recipes/cleanup.sh
+
+USER worker
+WORKDIR /home/worker
+
+# hadolint ignore=SC1091
+RUN . /src/recipes/common.sh \
+    && ln /src/recipes/py-ci.sh . \
     && mkdir .ssh \
-    && retry ssh-keyscan github.com > .ssh/known_hosts \
-    && rm -rf /var/lib/apt/lists/*
+    && retry ssh-keyscan github.com > .ssh/known_hosts

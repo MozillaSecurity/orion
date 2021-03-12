@@ -1,0 +1,27 @@
+language: python
+version:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+platform:
+  - linux
+  - windows
+env:
+  - A: abc
+  - A: abc
+    B: def
+script:
+  - [test]
+  - [test2]
+jobs:
+  exclude:
+    - env:
+        B: def
+    # this one has no effect
+    - env:
+        A: def
+    - script: [test2]
+    - platform: windows
+      version: "3.6"
+    - platform: windows
+      version: "3.8"

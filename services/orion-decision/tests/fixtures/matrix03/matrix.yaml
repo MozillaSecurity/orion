@@ -1,0 +1,18 @@
+language: python
+script: [test]
+version:
+  - "3.7"
+jobs:
+  include:
+    - name: python test 3.8
+      version: "3.8"
+    - name: python test 3.9
+      version: "3.9"
+      script: [test2]
+      env:
+        A: abc
+    - name: python test 3.7 win
+      platform: windows
+    - name: node 12 test
+      language: node
+      version: "12"

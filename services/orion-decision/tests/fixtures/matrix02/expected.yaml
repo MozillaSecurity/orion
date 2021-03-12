@@ -1,0 +1,23 @@
+jobs:
+  - env:
+      A: abc
+      B: def
+    language: python
+    version: "3.9"
+    script: [test]
+    platform: linux
+    name: python/linux/3.9
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+  - env:
+      A: xyz
+    language: python
+    version: "3.9"
+    script: [test]
+    platform: linux
+    name: python/linux/3.9
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+secrets: []

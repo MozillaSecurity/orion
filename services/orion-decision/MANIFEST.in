@@ -1,0 +1,3 @@
+include src/orion_decision/github_test_events/*.yaml
+include src/orion_decision/task_templates/*.yaml
+include src/orion_decision/schemas/*.yaml

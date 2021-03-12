@@ -8,15 +8,23 @@ from argparse import ArgumentParser
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
-from os import getenv
+from os import chdir
+from os import environ as os_environ
+from os import execvpe, getenv
 from pathlib import Path
+from subprocess import list2cmdline
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
 
+from .ci_check import check_matrix
+from .ci_matrix import CISecretEnv, MatrixJob
+from .ci_scheduler import CIScheduler
 from .git import GitRepo
 from .orion import Services
 from .scheduler import Scheduler
+
+LOG = getLogger(__name__)
 
 
 def configure_logging(level=INFO):
@@ -59,32 +67,7 @@ def _define_logging_args(parser):
     )
 
 
-def parse_args(argv=None):
-    """Parse command-line arguments.
-
-    Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
-
-    Returns:
-        argparse.Namespace: parsed result
-    """
-    parser = ArgumentParser()
-    _define_logging_args(parser)
-    parser.add_argument(
-        "--task-group",
-        default=getenv("TASK_ID"),
-        help="Create tasks in this task group (default: TASK_ID).",
-    )
-    parser.add_argument(
-        "--push-branch",
-        default=getenv("PUSH_BRANCH", "master"),
-        help="Push to Docker Hub if push event is on this branch " "(default: master).",
-    )
-    parser.add_argument(
-        "--docker-hub-secret",
-        default=getenv("DOCKER_HUB_SECRET"),
-        help="Taskcluster secret holding Docker Hub credentials for push.",
-    )
+def _define_github_args(parser):
     parser.add_argument(
         "--github-event",
         default=getenv("GITHUB_EVENT", "{}"),
@@ -96,6 +79,22 @@ def parse_args(argv=None):
         default=getenv("GITHUB_ACTION"),
         choices={"github-push", "github-pull-request", "github-release"},
         help="The event action that triggered this decision.",
+    )
+
+
+def _sanity_check_github_args(parser, result):
+    if result.github_action is None:
+        parser.error("--github-action (or GITHUB_ACTION) is required!")
+
+    if not result.github_event:
+        parser.error("--github-event (or GITHUB_EVENT) is required!")
+
+
+def _define_decision_args(parser):
+    parser.add_argument(
+        "--task-group",
+        default=getenv("TASK_ID"),
+        help="Create tasks in this task group (default: TASK_ID).",
     )
     parser.add_argument(
         "--now",
@@ -111,14 +110,34 @@ def parse_args(argv=None):
         help="Do not queue tasks in Taskcluster, only calculate what would be done.",
     )
 
+
+def parse_args(argv=None):
+    """Parse command-line arguments.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser(prog="decision")
+    _define_logging_args(parser)
+    _define_github_args(parser)
+    _define_decision_args(parser)
+
+    parser.add_argument(
+        "--push-branch",
+        default=getenv("PUSH_BRANCH", "master"),
+        help="Push to Docker Hub if push event is on this branch " "(default: master).",
+    )
+    parser.add_argument(
+        "--docker-hub-secret",
+        default=getenv("DOCKER_HUB_SECRET"),
+        help="Taskcluster secret holding Docker Hub credentials for push.",
+    )
+
     result = parser.parse_args(argv)
-
-    if result.github_action is None:
-        parser.error("--github-action (or GITHUB_ACTION) is required!")
-
-    if not result.github_event:
-        parser.error("--github-event (or GITHUB_EVENT) is required!")
-
+    _sanity_check_github_args(parser, result)
     return result
 
 
@@ -131,7 +150,7 @@ def parse_check_args(argv=None):
     Returns:
         argparse.Namespace: parsed result
     """
-    parser = ArgumentParser()
+    parser = ArgumentParser(prog="orion-check")
     _define_logging_args(parser)
     parser.add_argument(
         "repo",
@@ -145,6 +164,147 @@ def parse_check_args(argv=None):
         help="Changed path(s)",
     )
     return parser.parse_args(argv)
+
+
+def parse_ci_check_args(argv=None):
+    """Parse command-line arguments for CI check.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser(prog="ci-check")
+    _define_logging_args(parser)
+    parser.add_argument(
+        "changed",
+        type=Path,
+        nargs="*",
+        help="Changed path(s)",
+    )
+    return parser.parse_args(argv)
+
+
+def parse_ci_launch_args(argv=None):
+    """Parse command-line arguments for CI launch.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser(prog="ci-launch")
+    _define_logging_args(parser)
+    parser.add_argument(
+        "--fetch-ref",
+        default=getenv("FETCH_REF"),
+        help="Git reference to fetch",
+    )
+    parser.add_argument(
+        "--fetch-rev",
+        default=getenv("FETCH_REV"),
+        help="Git revision to checkout",
+    )
+    parser.add_argument(
+        "--clone-repo",
+        default=getenv("CLONE_REPO"),
+        help="Git repository to clone",
+    )
+    parser.add_argument(
+        "--job",
+        default=getenv("CI_JOB"),
+        help="The CI job object",
+    )
+    result = parser.parse_args(argv)
+    if not result.job:
+        parser.error("--job (or CI_JOB) is required!")
+    if not result.fetch_ref:
+        parser.error("--fetch-ref (or FETCH_REF) is required!")
+    if not result.fetch_rev:
+        parser.error("--fetch-rev (or FETCH_REV) is required!")
+    if not result.clone_repo:
+        parser.error("--clone-repo (or CLONE_REPO) is required!")
+    result.job = MatrixJob.from_json(result.job)
+
+    return result
+
+
+def parse_ci_args(argv=None):
+    """Parse command-line arguments for CI.
+
+    Arguments:
+        argv (list(str) or None): Argument list, or sys.argv if None.
+
+    Returns:
+        argparse.Namespace: parsed result
+    """
+    parser = ArgumentParser(prog="ci-decision")
+    _define_logging_args(parser)
+    _define_github_args(parser)
+    _define_decision_args(parser)
+
+    parser.add_argument(
+        "--matrix",
+        default=getenv("CI_MATRIX", "{}"),
+        type=yaml_load,
+        help="The build matrix. TODO: document",
+    )
+    parser.add_argument(
+        "--project-name",
+        default=getenv("PROJECT_NAME"),
+        help="The human readable project name for CI",
+    )
+
+    result = parser.parse_args(argv)
+    _sanity_check_github_args(parser, result)
+
+    if not result.matrix:
+        parser.error("--matrix (or CI_MATRIX) is required!")
+    if not result.project_name:
+        parser.error("--project-name (or PROJECT_NAME) is required!")
+
+    return result
+
+
+def ci_main():
+    """CI decision entrypoint."""
+    args = parse_ci_args()
+    configure_logging(level=args.log_level)
+    sys.exit(CIScheduler.main(args))
+
+
+def ci_launch():
+    """CI task entrypoint."""
+    args = parse_ci_launch_args()
+    configure_logging(level=args.log_level)
+    env = os_environ.copy()
+    # fetch secrets
+    for secret in args.job.secrets:
+        if isinstance(secret, CISecretEnv):
+            env[secret.name] = secret.get_secret_data()
+        else:
+            secret.write()
+    # clone repo
+    repo = GitRepo(args.clone_repo, args.fetch_ref, args.fetch_rev)
+    chdir(repo.path)
+    # update env
+    env.update(args.job.env)
+    # update command
+    if args.job.platform == "windows":
+        command = ["bash", "-c", list2cmdline(args.job.script), args.job.script[0]]
+    else:
+        command = args.job.script
+    execvpe(command[0], command, env)
+
+
+def ci_check():
+    """CI build matrix check entrypoint."""
+    args = parse_ci_check_args()
+    configure_logging(level=args.log_level)
+    check_matrix(args)
+    sys.exit(0)
 
 
 def check():

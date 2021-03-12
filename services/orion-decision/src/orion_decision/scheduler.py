@@ -115,7 +115,7 @@ class Scheduler:
         if isinstance(service, ServiceMsys):
             build_task = yaml_load(
                 MSYS_TASK.substitute(
-                    clone_url=self.github_event.clone_url,
+                    clone_url=self.github_event.http_url,
                     commit=self.github_event.commit,
                     deadline=stringDate(self.now + DEADLINE),
                     expires=stringDate(self.now + ARTIFACTS_EXPIRE),
@@ -138,7 +138,7 @@ class Scheduler:
         else:
             build_task = yaml_load(
                 BUILD_TASK.substitute(
-                    clone_url=self.github_event.clone_url,
+                    clone_url=self.github_event.http_url,
                     commit=self.github_event.commit,
                     deadline=stringDate(self.now + DEADLINE),
                     dockerfile=str(service.dockerfile.relative_to(service.context)),
@@ -172,7 +172,7 @@ class Scheduler:
     def _create_push_task(self, service, service_build_tasks):
         push_task = yaml_load(
             PUSH_TASK.substitute(
-                clone_url=self.github_event.clone_url,
+                clone_url=self.github_event.http_url,
                 commit=self.github_event.commit,
                 deadline=stringDate(self.now + DEADLINE),
                 docker_secret=self.docker_secret,
@@ -236,7 +236,7 @@ class Scheduler:
         service_path = str(service.root.relative_to(self.services.root))
         test.update_task(
             test_task,
-            self.github_event.clone_url,
+            self.github_event.http_url,
             self.github_event.fetch_ref,
             self.github_event.commit,
             service_path,
@@ -260,7 +260,7 @@ class Scheduler:
             dockerfile = service_path / "Dockerfile"
         test_task = yaml_load(
             RECIPE_TEST_TASK.substitute(
-                clone_url=self.github_event.clone_url,
+                clone_url=self.github_event.http_url,
                 commit=self.github_event.commit,
                 deadline=stringDate(self.now + DEADLINE),
                 dockerfile=str(dockerfile.relative_to(self.services.root)),

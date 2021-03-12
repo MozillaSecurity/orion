@@ -1,0 +1,11 @@
+jobs:
+  - name: python test 3.8
+    language: python
+    version: "3.8"
+    platform: linux
+    env: {}
+    script: [test]
+    stage: 1
+    require_previous_stage_pass: false
+    secrets: []
+secrets: []

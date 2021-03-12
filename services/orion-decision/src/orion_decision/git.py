@@ -22,6 +22,8 @@ class GitRepo:
         path (Path): The location where the repository is cloned.
     """
 
+    __slots__ = ("path", "_cloned")
+
     def __init__(self, clone_url, clone_ref, commit, _clone=True):
         """Initialize a GitRepo instance.
 
@@ -136,6 +138,7 @@ class GithubEvent:
         repo_slug (str): Slug for the current repo (`owner_name/repo_name`).
         tag (str or None): Git tag for release event (or None).
         fetch_ref (str): Git reference to fetch
+        user (str): User that initiated this event.
     """
 
     def __init__(self):
@@ -152,6 +155,7 @@ class GithubEvent:
         self.tag = None
         self.repo = None
         self.fetch_ref = None
+        self.user = None
 
     def cleanup(self):
         """Cleanup resources held by this instance.
@@ -163,13 +167,22 @@ class GithubEvent:
             self.repo.cleanup()
 
     @property
-    def clone_url(self):
-        """Calculate the URL for cloning this repository.
+    def ssh_url(self):
+        """Calculate the URL for cloning this repository via ssh.
 
         Returns:
             str: The clone URL for this repository.
         """
-        return f"https://github.com/{self.repo_slug}.git"
+        return f"git@github.com:{self.repo_slug}"
+
+    @property
+    def http_url(self):
+        """Calculate the URL for cloning this repository via http.
+
+        Returns:
+            str: The clone URL for this repository.
+        """
+        return f"https://github.com/{self.repo_slug}"
 
     @classmethod
     def from_taskcluster(cls, action, event):
@@ -186,6 +199,7 @@ class GithubEvent:
             GithubEvent: Object describing the Github Event we're responding to.
         """
         self = cls()
+        self.user = event["sender"]["login"]
         self.event_type = {
             "github-push": "push",
             "github-pull-request": "pull_request",
@@ -220,7 +234,7 @@ class GithubEvent:
             else:
                 self.commit_range = f"{event['before']}..{event['after']}"
             self.fetch_ref = event["after"]
-        self.repo = GitRepo(self.clone_url, self.fetch_ref, self.commit)
+        self.repo = GitRepo(self.http_url, self.fetch_ref, self.commit)
 
         # fetch both sides of the commit range
         before, _ = self.commit_range.split("..")

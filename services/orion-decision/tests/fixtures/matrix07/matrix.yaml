@@ -1,0 +1,22 @@
+jobs:
+  include:
+    - language: python
+      version: "3.6"
+      script: [test]
+      secrets:
+        - type: env
+          name: TOKEN2
+          secret: project/test/token2
+secrets:
+  - type: env
+    name: TOKEN
+    key: key
+    secret: project/test/token
+  - type: file
+    path: /secret.cfg
+    secret: project/test/cfg
+  - type: key
+    secret: project/test/deploy
+  - type: key
+    secret: project/test/deploy-repo
+    hostname: repo

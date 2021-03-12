@@ -83,6 +83,9 @@ def test_retry(mocker):
                 "ref": "refs/heads/main",
                 "after": "post",
                 "before": "pre",
+                "sender": {
+                    "login": "me",
+                },
             },
             {
                 "branch": "main",
@@ -96,7 +99,7 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "post", "post"),
+            call("https://github.com/allizom/test", "post", "post"),
         ),
         # github push to new branch
         (
@@ -110,6 +113,9 @@ def test_retry(mocker):
                     {"id": "fork"},
                     {"id": "post"},
                 ],
+                "sender": {
+                    "login": "me",
+                },
             },
             {
                 "branch": "main",
@@ -123,7 +129,7 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "post", "post"),
+            call("https://github.com/allizom/test", "post", "post"),
         ),
         # github new/update PR
         (
@@ -144,6 +150,9 @@ def test_retry(mocker):
                         },
                     },
                 },
+                "sender": {
+                    "login": "me",
+                },
             },
             {
                 "branch": "main",
@@ -157,13 +166,16 @@ def test_retry(mocker):
                 "repo_slug": "allizom/test",
                 "tag": None,
             },
-            call("https://github.com/allizom/test.git", "post", "post"),
+            call("https://github.com/allizom/test", "post", "post"),
         ),
         (
             "github-release",
             {
                 "repository": {"full_name": "allizom/test"},
                 "release": {"tag_name": "1.0"},
+                "sender": {
+                    "login": "me",
+                },
             },
             {
                 "branch": "1.0",
@@ -178,7 +190,7 @@ def test_retry(mocker):
                 "tag": "1.0",
             },
             call(
-                "https://github.com/allizom/test.git",
+                "https://github.com/allizom/test",
                 "refs/tags/1.0:refs/tags/1.0",
                 "1.0",
             ),

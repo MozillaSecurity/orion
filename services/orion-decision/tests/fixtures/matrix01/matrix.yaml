@@ -1,0 +1,12 @@
+platform:
+  - linux
+env:
+  global:
+    A: abc
+language: python
+version:
+  - "3.8"
+  - "3.9"
+script:
+  - [test1]
+  - [test2]
