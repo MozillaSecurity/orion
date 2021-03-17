@@ -1,0 +1,5 @@
+**/node_modules
+**/.tox
+**/.coverage
+**/*.egg-info
+**/__pycache__

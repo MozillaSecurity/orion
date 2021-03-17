@@ -1,0 +1,6 @@
+name: test2
+tests:
+  - name: unittests
+    type: tox
+    image: test1
+    toxenv: py3

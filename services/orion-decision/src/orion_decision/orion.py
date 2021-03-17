@@ -174,6 +174,8 @@ class Service:
         service_deps (set(str)): Names of images that this one depends on.
         path_deps (set(Path)): Paths that this image depends on.
         recipe_deps (set(str)): Names of recipes that this service depends on.
+        weak_deps (set(str)): Names of images that should trigger a rebuild of this one
+                              but are not build deps.
         dirty (bool): Whether or not this image needs to be rebuilt
         tests (list[ServiceTest]): Tests to run against this service
         root (Path): Path where service is defined
@@ -195,6 +197,7 @@ class Service:
         self.service_deps = set()
         self.path_deps = set()
         self.recipe_deps = set()
+        self.weak_deps = set()
         self.dirty = False
         self.tests = tests
         self.root = root
@@ -237,6 +240,7 @@ class Service:
             assert dockerfile.is_file()
             result = cls(dockerfile, context, name, tests, metadata_path.parent)
         result.service_deps |= set(metadata.get("force_deps", []))
+        result.weak_deps |= set(metadata.get("force_dirty", []))
         return result
 
 
@@ -277,6 +281,8 @@ class Recipe:
         service_deps (set(str)): Set of services that this recipe depends on.
         path_deps (set(Path)): Paths that this recipe depends on.
         recipe_deps (set(str)): Names of other recipes that this recipe depends on.
+        weak_deps (set(str)): Names of images that should trigger a rebuild of this one
+                              but are not build deps.
         dirty (bool): Whether or not this recipe needs tests run.
     """
 
@@ -290,6 +296,7 @@ class Recipe:
         self.service_deps = set()
         self.path_deps = set([file])
         self.recipe_deps = set()
+        self.weak_deps = set()
         self.dirty = False
 
     @property
@@ -367,10 +374,10 @@ class Services(dict):
                         obj.name,
                         path.name,
                     )
-            elif path not in obj.path_deps:
+            elif path not in obj.path_deps and path.parent != self.root:
                 obj.path_deps.add(path)
                 LOG.info(
-                    "%s %s depends on path %s",
+                    "%s %s depends on Path %s",
                     type(obj).__name__,
                     obj.name,
                     path.relative_to(self.root),
@@ -379,11 +386,14 @@ class Services(dict):
     def _calculate_depends(self, repo):
         """Go through each service and try to determine what dependencies it has.
 
-        There are three types of dependencies:
+        There are four types of dependencies:
         - service: The base image used for the dockerfile (only for `mozillasecurity/`)
         - paths: Files in the same root that are used by the image.
         - forced: Use `/force-deps=service` in a recipe or "force_deps:[]" in
                   service.yaml to force a dependency on another service.
+        - weak: Use `/force-dirty=service` in a recipe or "force_dirty:[]" in
+                service.yaml to force rebuild of this service if another changes, but
+                not a build dependency.
 
         Arguments:
             repo (GitRepo): The git repo to load services and recipe scripts from.
@@ -398,12 +408,20 @@ class Services(dict):
                 continue
 
             # find force-deps in recipe
-            for match in re.finditer(r"/force-deps=([A-Za-z0-9_.,-]+)", recipe_text):
-                for svc in match.group(1).split(","):
-                    assert (
-                        svc in self
-                    ), f"Recipe {recipe.name} forces unknown dep: {svc}"
-                    recipe.service_deps.add(svc)
+            for match in re.finditer(
+                r"/force-(deps|dirty)=([A-Za-z0-9_.,-]+)", recipe_text
+            ):
+                for svc in match.group(2).split(","):
+                    msg = (
+                        "forces unknown dep"
+                        if match.group(1) == "deps"
+                        else "dirtied by unknown"
+                    )
+                    assert svc in self, f"Recipe {recipe.name} {msg}: {svc}"
+                    if match.group(1) == "deps":
+                        recipe.service_deps.add(svc)
+                    else:
+                        recipe.weak_deps.add(svc)
 
             # search file for references to other files
             self._find_path_depends(recipe, recipe_text)
@@ -414,6 +432,12 @@ class Services(dict):
             for dep in service.service_deps:
                 assert dep in self, f"Service {service.name} forces unknown dep: {dep}"
                 LOG.info("Service %s depends on service %s (forced)", service.name, dep)
+            # check force_dirty
+            for dep in service.weak_deps:
+                assert dep in self, f"Service {service.name} dirtied by unknown: {dep}"
+                LOG.info(
+                    "Service %s is dirty with service %s (forced)", service.name, dep
+                )
 
             if isinstance(service, ServiceMsys):
                 search_root = service.root
@@ -457,6 +481,11 @@ class Services(dict):
                 yield self.recipes[rec]
             for svc in obj.service_deps:
                 yield self[svc]
+            # include service test images
+            if hasattr(obj, "tests"):
+                for test in obj.tests:
+                    if hasattr(test, "image") and test.image in self:
+                        yield self[test.image]
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
@@ -512,7 +541,10 @@ class Services(dict):
             for tgt in chain(self.values(), self.recipes.values()):
                 if not tgt.dirty and (
                     (isinstance(here, Recipe) and here.name in tgt.recipe_deps)
-                    or (isinstance(here, Service) and here.name in tgt.service_deps)
+                    or (
+                        isinstance(here, Service)
+                        and here.name in tgt.weak_deps | tgt.service_deps
+                    )
                 ):
                     tgt.dirty = True
                     LOG.warning(

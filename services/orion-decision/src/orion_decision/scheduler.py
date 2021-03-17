@@ -362,11 +362,17 @@ class Scheduler:
             ) - build_tasks_created
             pending_deps |= set(dirty_recipe_test_tasks) - test_tasks_created
             if pending_deps:
+                if is_svc:
+                    task_id = service_build_tasks[obj.name]
+                else:
+                    task_id = recipe_test_tasks[obj.name]
+
                 LOG.debug(
-                    "Can't create %s %s tasks before dependencies: %s",
+                    "Can't create %s %s task %s before dependencies: %s",
                     type(obj).__name__,
                     obj.name,
-                    list(pending_deps),
+                    task_id,
+                    ", ".join(pending_deps),
                 )
                 to_create.append(obj)
                 continue

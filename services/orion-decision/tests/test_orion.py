@@ -215,6 +215,29 @@ def test_service_deps(mocker, dirty_paths, expect_services, expect_recipes):
             assert not svcs.recipes[rec].dirty
 
 
+def test_services_force_dirty(mocker):
+    root = FIXTURES / "services10"
+    repo = mocker.Mock(spec="orion_decision.git.GitRepo")
+    repo.path = root
+    repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
+    svcs = Services(repo)
+    assert set(svcs) == {"test1"}
+    assert set(svcs.recipes) == {"setup.sh"}
+    assert len(svcs) == 1
+
+    # check that deps are calculated
+    assert not svcs["test1"].service_deps
+    assert not svcs["test1"].weak_deps
+    assert not svcs["test1"].recipe_deps
+    assert not svcs.recipes["setup.sh"].service_deps
+    assert not svcs.recipes["setup.sh"].recipe_deps
+    assert svcs.recipes["setup.sh"].weak_deps == {"test1"}
+
+    svcs.mark_changed_dirty([svcs["test1"].dockerfile])
+    assert svcs["test1"].dirty
+    assert svcs.recipes["setup.sh"].dirty
+
+
 def test_services_repo(mocker):
     """test that local services (not known to git) are ignored"""
     root = FIXTURES / "services03"
@@ -230,12 +253,25 @@ def test_services_repo(mocker):
     assert len(svcs) == 6
 
 
-def test_service_circular_deps(mocker):
+@pytest.mark.parametrize("fixture", ["services07", "services09"])
+def test_service_circular_deps(mocker, fixture):
     """test that circular service dependencies raise an error"""
-    root = FIXTURES / "services07"
+    root = FIXTURES / fixture
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     with pytest.raises(RuntimeError) as exc:
         Services(repo)
     assert "cycle" in str(exc)
+
+
+def test_service_path_dep_top_level(mocker):
+    """test that similarly named files at top-level don't affect service deps"""
+    root = FIXTURES / "services08"
+    repo = mocker.Mock(spec="orion_decision.git.GitRepo")
+    repo.path = root
+    repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
+    svcs = Services(repo)
+    assert set(svcs) == {"test1"}
+    svcs.mark_changed_dirty([root / "setup.py"])
+    assert not svcs["test1"].dirty
