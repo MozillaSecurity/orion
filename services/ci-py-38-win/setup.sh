@@ -4,7 +4,6 @@ set -e -x
 # base msys packages
 pacman-key --init
 pacman-key --populate msys2
-pacman --noconfirm -Syu
 pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
   mingw-w64-x86_64-gcc \
