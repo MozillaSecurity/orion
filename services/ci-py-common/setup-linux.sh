@@ -1,0 +1,48 @@
+#!/bin/bash
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+set -e
+set -x
+set -o pipefail
+
+# shellcheck source=recipes/linux/common.sh
+source "${0%/*}/common.sh"
+
+#### Bootstrap Packages
+
+sys-update
+
+packages=(
+  bzip2
+  curl
+  gcc
+  git
+  jshon
+  libc6-dev
+  make
+  mercurial
+  openssh-client
+  patch
+  xz-utils
+)
+
+sys-update
+sys-embed "${packages[@]}"
+
+retry pip -q install tox
+retry pip install poetry
+
+#### Install recipes
+
+SRCDIR=/src/orion-decision EDIT=1 "${0%/*}/orion_decision.sh"
+"${0%/*}/worker.sh"
+"${0%/*}/cleanup.sh"
+
+ln "${0%/*}/py-ci.sh" /home/worker/py-ci.sh
+mkdir /home/worker/.ssh
+retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
+
+chown -R worker:worker /home/worker
+chmod 0777 /src
