@@ -143,7 +143,7 @@ def test_create_02(mocker):
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
-    _, task = queue.createTask.call_args.args
+    _, task = queue.createTask.call_args[0]
     assert task == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -186,7 +186,7 @@ def test_create_03(mocker):
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 2
-    build_task_id, build_task = queue.createTask.call_args_list[0].args
+    build_task_id, build_task = queue.createTask.call_args_list[0][0]
     assert build_task == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -207,7 +207,7 @@ def test_create_03(mocker):
             worker=WORKER_TYPE,
         )
     )
-    _, push_task = queue.createTask.call_args_list[1].args
+    _, push_task = queue.createTask.call_args_list[1][0]
     push_expected = yaml_load(
         PUSH_TASK.substitute(
             clone_url="https://example.com",
@@ -249,7 +249,7 @@ def test_create_04(mocker):
     sched.services["test2"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 2
-    task1_id, task1 = queue.createTask.call_args_list[0].args
+    task1_id, task1 = queue.createTask.call_args_list[0][0]
     assert task1 == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -270,7 +270,7 @@ def test_create_04(mocker):
             worker=WORKER_TYPE,
         )
     )
-    _, task2 = queue.createTask.call_args_list[1].args
+    _, task2 = queue.createTask.call_args_list[1][0]
     expected2 = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -354,7 +354,7 @@ def test_create_07(mocker):
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
-    _, task = queue.createTask.call_args.args
+    _, task = queue.createTask.call_args[0]
     assert task == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -418,7 +418,7 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
     assert queue.createTask.call_count == 3 if ci1_dirty else 2
     call_idx = 0
     if ci1_dirty:
-        task1_id, task1 = queue.createTask.call_args_list[call_idx].args
+        task1_id, task1 = queue.createTask.call_args_list[call_idx][0]
         call_idx += 1
         assert task1 == yaml_load(
             BUILD_TASK.substitute(
@@ -468,10 +468,10 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
     sched.services[svc].tests[0].update_task(
         expected2, "https://example.com", "fetch", "commit", svc
     )
-    task2_id, task2 = queue.createTask.call_args_list[call_idx].args
+    task2_id, task2 = queue.createTask.call_args_list[call_idx][0]
     call_idx += 1
     assert task2 == expected2
-    task3_id, task3 = queue.createTask.call_args_list[call_idx].args
+    task3_id, task3 = queue.createTask.call_args_list[call_idx][0]
     call_idx += 1
     expected3 = yaml_load(
         BUILD_TASK.substitute(
@@ -518,7 +518,7 @@ def test_create_09(mocker):
     sched.services.recipes["withdep.sh"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 3
-    task1_id, task1 = queue.createTask.call_args_list[0].args
+    task1_id, task1 = queue.createTask.call_args_list[0][0]
     assert task1 == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -539,7 +539,7 @@ def test_create_09(mocker):
             worker=WORKER_TYPE,
         )
     )
-    task2_id, task2 = queue.createTask.call_args_list[1].args
+    task2_id, task2 = queue.createTask.call_args_list[1][0]
     expected2 = yaml_load(
         RECIPE_TEST_TASK.substitute(
             clone_url="https://example.com",
@@ -559,7 +559,7 @@ def test_create_09(mocker):
     )
     expected2["dependencies"].append(task1_id)
     assert task2 == expected2
-    _, task3 = queue.createTask.call_args_list[2].args
+    _, task3 = queue.createTask.call_args_list[2][0]
     expected3 = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",

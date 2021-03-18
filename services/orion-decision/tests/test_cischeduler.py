@@ -35,7 +35,7 @@ def test_ci_main(mocker, commit_message):
     assert mtx.call_count == 1
     assert create.call_count == 1
     # get the scheduler instance from create call args
-    sched = create.call_args.args[0]
+    sched = create.call_args[0][0]
     assert args.dry_run == bool(commit_message)
     assert sched.dry_run == bool(commit_message)
 
@@ -114,7 +114,7 @@ def test_ci_create_02(mocker, platform, secret):
     sched = CIScheduler("test", evt, now, "group", "matrix")
     sched.create_tasks()
     assert queue.createTask.call_count == 1
-    _, task = queue.createTask.call_args.args
+    _, task = queue.createTask.call_args[0]
     kwds = {
         "ci_job": str(job),
         "clone_repo": clone_repo,
@@ -136,7 +136,7 @@ def test_ci_create_02(mocker, platform, secret):
         kwds["image"] = job.image
     else:
         assert index.findTask.call_count == 1
-        assert job.image in index.findTask.call_args.args[0]
+        assert job.image in index.findTask.call_args[0][0]
         kwds["msys_task"] = "msys-task"
     expected = yaml_load(TEMPLATES[platform].substitute(**kwds))
     expected["requires"] = "all-resolved"
@@ -186,7 +186,7 @@ def test_ci_create_03(mocker, previous_pass):
     sched = CIScheduler("test", evt, now, "group", "matrix")
     sched.create_tasks()
     assert queue.createTask.call_count == 2
-    task1_id, task1 = queue.createTask.call_args_list[0].args
+    task1_id, task1 = queue.createTask.call_args_list[0][0]
     kwds = {
         "ci_job": str(job1),
         "clone_repo": evt.http_repo,
@@ -209,7 +209,7 @@ def test_ci_create_03(mocker, previous_pass):
     expected["requires"] = "all-resolved"
     assert task1 == expected
 
-    _, task2 = queue.createTask.call_args_list[1].args
+    _, task2 = queue.createTask.call_args_list[1][0]
     kwds["ci_job"] = str(job2)
     kwds["image"] = job2.image
     kwds["name"] = job2.name
