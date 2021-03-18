@@ -20,23 +20,44 @@ case "${1-install}" in
       ca-certificates \
       git \
       openssh-client
+    apt-install-auto \
+      gcc
+
+    # check if we don't have Python 3 at all
     if ! which python3 >/dev/null
     then
+      NEED_SYS_PY3=1
+    # check if we don't have Python 3.6+
+    elif python3 -c "import sys;sys.exit(sys.version_info >= (3, 6))"
+    then
+      # We'll try installing the Ubuntu Python 3
+      # If we have python3 and it's not new enough, it should be installed
+      # in /usr/local which will take precedence over the Ubuntu version.
+      [[ "$(dirname "$(readlink -e "$(which python3)")")" == "/usr/local/bin" ]]
+      NEED_SYS_PY3=1
+    else
+      NEED_SYS_PY3=0
+    fi
+
+    if [[ $NEED_SYS_PY3 -eq 1 ]]
+    then
+      PY3=/usr/bin/python3
       sys-embed \
         python3 \
         python3-setuptools
       apt-install-auto \
-        gcc \
         python3-dev \
         python3-pip \
         python3-wheel
+    else
+      PY3="$(which python3)"
     fi
 
-    if [ "$EDIT" = "1" ]
+    if [[ "$EDIT" = "1" ]]
     then
-      retry pip3 install -e "$SRCDIR"
+      retry "$PY3" -m pip install -e "$SRCDIR"
     else
-      retry pip3 install "$SRCDIR"
+      retry "$PY3" -m pip install "$SRCDIR"
     fi
     ;;
   test)

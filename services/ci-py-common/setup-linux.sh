@@ -22,7 +22,6 @@ packages=(
   jshon
   libc6-dev
   make
-  mercurial
   openssh-client
   patch
   xz-utils
@@ -31,8 +30,13 @@ packages=(
 sys-update
 sys-embed "${packages[@]}"
 
-retry pip -q install tox
-retry pip install poetry
+py_packages=(
+  mercurial
+  poetry
+  tox
+)
+
+retry pip install "${py_packages[@]}"
 
 #### Install recipes
 
