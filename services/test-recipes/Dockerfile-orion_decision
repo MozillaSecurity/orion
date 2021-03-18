@@ -12,7 +12,7 @@ ARG recipe
 COPY recipes/linux /recipes
 COPY services/test-recipes/launch.sh /
 
-COPY services/fuzzing-decision /src/fuzzing-tc
-ARG SRCDIR=/src/fuzzing-tc
+COPY services/orion-decision /src/orion-decision
+ARG SRCDIR=/src/orion-decision
 
 RUN chmod +x /launch.sh && exec /launch.sh
