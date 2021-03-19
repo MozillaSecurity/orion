@@ -9,7 +9,14 @@ from pathlib import Path
 import pytest
 from yaml import safe_load as yaml_load
 
-from orion_decision.ci_matrix import CIMatrix, CISecret, MatrixJob
+from orion_decision.ci_matrix import (
+    CIMatrix,
+    CISecret,
+    CISecretEnv,
+    CISecretFile,
+    CISecretKey,
+    MatrixJob,
+)
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 pytestmark = pytest.mark.usefixtures("mock_ci_languages")
@@ -76,3 +83,47 @@ def test_matrix_unused(caplog):
     assert not mtx.secrets
     assert not mtx.jobs
     assert any(rec.levelname == "WARNING" for rec in caplog.get_records("call"))
+
+
+@pytest.mark.parametrize(
+    "secrets",
+    [
+        [],
+        [CISecretEnv("project/secret", "B")],
+        [CISecretKey("project/deploy")],
+    ],
+)
+def test_matrix_job_serialize(secrets):
+    """test that MatrixJob serialize/deserialize is lossless"""
+    job = MatrixJob(
+        "name",
+        "python",
+        "3.9",
+        "linux",
+        {"A": "abc"},
+        ["test"],
+        stage=2,
+        previous_pass=True,
+    )
+    job.secrets.extend(secrets)
+    job2 = MatrixJob.from_json(str(job))
+    assert job == job2
+
+
+@pytest.mark.parametrize(
+    "secret",
+    [
+        CISecretEnv("project/secret", "A"),
+        CISecretEnv("project/secret", "A", key="obj"),
+        CISecretFile("project/secret", "/path/to/cfg"),
+        CISecretFile("project/secret", "/path/to/cfg", key="obj"),
+        CISecretKey("project/secret"),
+        CISecretKey("project/secret", key="obj"),
+        CISecretKey("project/secret", hostname="repo"),
+        CISecretKey("project/secret", hostname="repo", key="obj"),
+    ],
+)
+def test_matrix_secret_serialize(secret):
+    """test that CISecret serialize/deserialize is lossless"""
+    secret2 = CISecret.from_json(str(secret))
+    assert secret == secret2

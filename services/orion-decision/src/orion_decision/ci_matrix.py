@@ -3,7 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Build matrix for CI tasks"""
-from abc import ABC
+from abc import ABC, abstractmethod
 from itertools import product
 from json import dumps as json_dumps
 from json import loads as json_loads
@@ -202,10 +202,26 @@ class MatrixJob:
         result.check()
         return result
 
+    def __eq__(self, other):
+        for attr in self.__slots__:
+            if attr == "secrets":
+                continue
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return all(secret in other.secrets for secret in self.secrets)
+
     def __str__(self):
+        return json_dumps(self.serialize())
+
+    def serialize(self):
+        """Return a JSON serializable copy of self.
+
+        Returns:
+            dict: JSON serializeable copy of this `MatrixJob`.
+        """
         obj = {attr: getattr(self, attr) for attr in self.__slots__}
-        obj["secrets"] = ([str(secret) for secret in self.secrets],)
-        return json_dumps(obj)
+        obj["secrets"] = [secret.serialize() for secret in self.secrets]
+        return obj
 
     def matches(
         self, language=None, version=None, platform=None, env=None, script=None
@@ -280,6 +296,15 @@ class CISecret(ABC):
         self.secret = secret
         self.key = key
 
+    def __eq__(self, other):
+        if type(self) is not type(other):
+            return False
+        for cls in type(self).__mro__:
+            for attr in getattr(cls, "__slots__", ()):
+                if getattr(self, attr) != getattr(other, attr):
+                    return False
+        return True
+
     def is_alias(self, other):
         """True if other aliases self.
 
@@ -308,6 +333,17 @@ class CISecret(ABC):
             assert self.key not in result["secret"], f"Missing secret key: {self.key}"
             return result["secret"][self.key]
         return result["secret"]
+
+    def __str__(self):
+        return json_dumps(self.serialize())
+
+    @abstractmethod
+    def serialize(self):
+        """Return a JSON serializable copy of self.
+
+        Returns:
+            dict: JSON serializeable copy of this `CISecret`.
+        """
 
     @staticmethod
     def from_json(data):
@@ -356,15 +392,18 @@ class CISecretEnv(CISecret):
         super().__init__(secret, key)
         self.name = name
 
-    def __str__(self):
-        return json_dumps(
-            {
-                "type": "env",
-                "key": self.key,
-                "secret": self.secret,
-                "name": self.name,
-            }
-        )
+    def serialize(self):
+        """Return a JSON serializable copy of self.
+
+        Returns:
+            dict: JSON serializeable copy of this `CISecretEnv`.
+        """
+        return {
+            "type": "env",
+            "key": self.key,
+            "secret": self.secret,
+            "name": self.name,
+        }
 
 
 class CISecretFile(CISecret):
@@ -389,15 +428,18 @@ class CISecretFile(CISecret):
         super().__init__(secret, key)
         self.path = path
 
-    def __str__(self):
-        return json_dumps(
-            {
-                "type": "file",
-                "key": self.key,
-                "secret": self.secret,
-                "path": self.path,
-            }
-        )
+    def serialize(self):
+        """Return a JSON serializable copy of self.
+
+        Returns:
+            dict: JSON serializeable copy of this `CISecretFile`.
+        """
+        return {
+            "type": "file",
+            "key": self.key,
+            "secret": self.secret,
+            "path": self.path,
+        }
 
     def write(self):
         """Write the secret to disk.
@@ -435,15 +477,18 @@ class CISecretKey(CISecret):
         super().__init__(secret, key)
         self.hostname = hostname
 
-    def __str__(self):
-        return json_dumps(
-            {
-                "type": "key",
-                "key": self.key,
-                "secret": self.secret,
-                "hostname": self.hostname,
-            }
-        )
+    def serialize(self):
+        """Return a JSON serializable copy of self.
+
+        Returns:
+            dict: JSON serializeable copy of this `CISecretKey`.
+        """
+        return {
+            "type": "key",
+            "key": self.key,
+            "secret": self.secret,
+            "hostname": self.hostname,
+        }
 
     def write(self):
         """Write the key to `~/.ssh`.
@@ -463,7 +508,9 @@ class CISecretKey(CISecret):
                 print(f"IdentityFile ~/.ssh/id_rsa.{self.hostname}", file=cfg)
         else:
             dest = Path.home() / ".ssh" / "id_rsa"
-        dest.write_text(self.get_secret_data())
+        key = self.get_secret_data()
+        assert isinstance(key, str), f"key has type {type(key).__name__}, expected str"
+        dest.write_text(key)
         dest.chmod(0o400)
 
 
