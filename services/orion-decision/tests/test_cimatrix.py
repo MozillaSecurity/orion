@@ -106,7 +106,10 @@ def test_matrix_job_serialize(secrets):
         previous_pass=True,
     )
     job.secrets.extend(secrets)
-    job2 = MatrixJob.from_json(str(job))
+    job_json = str(job)
+    if secrets:
+        assert all(secret.secret in job_json for secret in secrets)
+    job2 = MatrixJob.from_json(job_json)
     assert job == job2
 
 

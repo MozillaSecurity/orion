@@ -58,17 +58,18 @@ def test_ci_create_01(mocker):
 
 
 @pytest.mark.parametrize(
-    "platform, secret",
+    "platform, matrix_secret, job_secret",
     [
-        ("linux", None),
-        ("windows", None),
-        ("linux", "env"),
-        ("linux", "key"),
-        ("linux", "deploy"),
-        ("linux", "file"),
+        ("linux", None, None),
+        ("windows", None, None),
+        ("linux", "env", None),
+        ("linux", "key", None),
+        ("linux", "deploy", None),
+        ("linux", "file", None),
+        ("linux", "env", "key"),
     ],
 )
-def test_ci_create_02(mocker, platform, secret):
+def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
     """test single stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = mocker.Mock()
@@ -99,23 +100,37 @@ def test_ci_create_02(mocker, platform, secret):
     secrets = []
     scopes = []
     clone_repo = evt.http_url
-    if secret is not None:
-        if secret == "env":
+
+    def _create_secret(kind):
+        nonlocal clone_repo
+        if kind == "env":
             sec = CISecretEnv("project/test/token", "TOKEN")
-        elif secret == "deploy":
+        elif kind == "deploy":
             clone_repo = evt.ssh_url
             sec = CISecretKey("project/test/key")
-        elif secret == "key":
+        elif kind == "key":
             sec = CISecretKey("project/test/key", hostname="host")
-        elif secret == "file":
+        elif kind == "file":
             sec = CISecretFile("project/test/cfg", "/cfg")
-        secrets.append(sec)
+        else:
+            assert False, f"unknown secret kind: {kind}"
         scopes.append(f"secrets:get:{sec.secret}")
+        return sec
+
+    if job_secret is not None:
+        sec = _create_secret(job_secret)
+        job.secrets.append(sec)
+    if matrix_secret is not None:
+        sec = _create_secret(matrix_secret)
+        secrets.append(sec)
     mtx.return_value.secrets = secrets
     sched = CIScheduler("test", evt, now, "group", "matrix")
     sched.create_tasks()
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args[0]
+    # add matrix secrets to `job`. this is different than how it's done in the
+    # scheduler, but will have the same effect (and the scheduler is done with `job`)
+    job.secrets.extend(secrets)
     kwds = {
         "ci_job": json_dump(str(job)),
         "clone_repo": clone_repo,
@@ -142,10 +157,11 @@ def test_ci_create_02(mocker, platform, secret):
     expected = yaml_load(TEMPLATES[platform].substitute(**kwds))
     expected["requires"] = "all-resolved"
     expected["scopes"].extend(scopes)
-    if secret is not None:
+    if matrix_secret is not None or job_secret is not None:
         expected["payload"].setdefault("features", {})
         expected["payload"]["features"]["taskclusterProxy"] = True
     assert task == expected
+    assert all(sec.secret in task["payload"]["env"]["CI_JOB"] for sec in job.secrets)
 
 
 @pytest.mark.parametrize("previous_pass", [True, False])

@@ -96,8 +96,15 @@ class CIScheduler:
                     clone_repo = self.github_event.ssh_url
                 else:
                     clone_repo = self.github_event.http_url
+                job_ser = job.serialize()
+                job_ser["secrets"].extend(
+                    secret.serialize() for secret in self.matrix.secrets
+                )
                 kwds = {
-                    "ci_job": json_dump(str(job)),
+                    # need to json.dump twice so we get a string literal in the yaml
+                    # template. otherwise (since it's yaml) it would be interpreted
+                    # as an object.
+                    "ci_job": json_dump(json_dump(job_ser)),
                     "clone_repo": clone_repo,
                     "deadline": stringDate(self.now + DEADLINE),
                     "fetch_ref": self.github_event.fetch_ref,
