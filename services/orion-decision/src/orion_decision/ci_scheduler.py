@@ -124,7 +124,7 @@ class CIScheduler:
                     # need to resolve "image" to a task ID where the MSYS
                     # artifact is
                     idx = Taskcluster.get_service("index")
-                    result = idx.findTask(f"project.fuzzing.orion.${job.image}.master")
+                    result = idx.findTask(f"project.fuzzing.orion.{job.image}.master")
                     kwds["msys_task"] = result["taskId"]
                 else:
                     kwds["image"] = job.image
