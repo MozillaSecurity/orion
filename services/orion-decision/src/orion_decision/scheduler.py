@@ -415,7 +415,7 @@ class Scheduler:
         """Decision procedure.
 
         Arguments:
-            args (argparse.Namespace): Arguments as returned by `parse_args()`
+            args (argparse.Namespace): Arguments as returned by `parse_ci_args()`
 
         Returns:
             int: Shell return code.

@@ -36,11 +36,32 @@ WORKER_TYPES["windows"] = WORKER_TYPE_MSYS
 
 
 class CIScheduler:
-    """Decision logic for scheduling CI tasks in Taskcluster."""
+    """Decision logic for scheduling CI tasks in Taskcluster.
+
+    Attributes:
+        project_name (str): Project name to be used in task metadata.
+        github_event (GithubEvent): Github event that triggered this run.
+        now (datetime): Taskcluster time when decision was triggered.
+        task_group (str): Task group to create tasks in.
+        dry_run (bool): Calculate what should be created, but don't actually
+                        create tasks in Taskcluster.
+        matrix (CIMatrix): CI job matrix
+    """
 
     def __init__(
         self, project_name, github_event, now, task_group, matrix, dry_run=False
     ):
+        """Initialize a CIScheduler object.
+
+        Arguments:
+            project_name (str): Project name to be used in task metadata.
+            github_event (GithubEvent): Github event that triggered this run.
+            now (datetime): Taskcluster time when decision was triggered.
+            task_group (str): Task group to create tasks in.
+            matrix (CIMatrix): CI job matrix
+            dry_run (bool): Calculate what should be created, but don't actually
+                            create tasks in Taskcluster.
+        """
         self.project_name = project_name
         self.github_event = github_event
         self.now = now

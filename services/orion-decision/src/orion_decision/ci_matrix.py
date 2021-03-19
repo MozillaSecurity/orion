@@ -48,6 +48,23 @@ def _validate_schema_by_name(instance, name):
 
 
 class MatrixJob:
+    """Representation of a CI job.
+
+    Attributes:
+        env (dict(str -> str)): Environment variables to set for `script`.
+        language (str): The programming language under test (must be in `LANGUAGES`)
+        name (str): The name for this job
+        platform (str): The operating system to run test (must be in `PLATFORMS`)
+        require_previous_stage_pass (bool): This job should only run after all jobs
+                                            with a lower `stage` have succeeded.
+        script (list(str)): The command to run (single command).
+        secrets (list(CISecret)): Secrets to be fetched when the job is run.
+        stage (int): The CI stage. Stages are scheduled sequentially in ascending order,
+                     with all jobs in the same stage running in parallel.
+        version (str): Version number of `language` to run (must be in
+                       `VERSIONS[(language, platform)]`)
+    """
+
     __slots__ = (
         "env",
         "language",
@@ -71,6 +88,22 @@ class MatrixJob:
         stage=1,
         previous_pass=False,
     ):
+        """Initialize a MatrixJob.
+
+        Arguments:
+            name (str): The name for this job (or `None` to auto-name based on
+                        `language`/`platform`/`version`).
+            language (str): The programming language under test (must be in `LANGUAGES`)
+            version (str): Version number of `language` to run (must be in
+                           `VERSIONS[(language, platform)]`)
+            platform (str): The operating system to run test (must be in `PLATFORMS`)
+            env (dict(str -> str)): Environment variables to set for `script`.
+            script (list(str)): The command to run (single command).
+            stage (int): The CI stage. Stages are scheduled sequentially in ascending
+                         order, with all jobs in the same stage running in parallel.
+            previous_pass (bool): This job should only run after all jobs
+                                  with a lower `stage` have succeeded.
+        """
         self.language = language
         self.version = version
         self.platform = platform
@@ -86,9 +119,19 @@ class MatrixJob:
 
     @property
     def image(self):
+        """Get the image name to run tests for this `language`/`platform`/`version`.
+
+        Returns:
+            str: Orion service name to run job
+        """
         return IMAGES[(self.language, self.platform, self.version)]
 
     def check(self):
+        """Assert that all attributes are valid.
+
+        Returns:
+            None
+        """
         assert isinstance(self.name, str), "`name` must be a string"
         assert self.language in LANGUAGES, f"unknown `language`: {self.language}"
         assert self.platform in PLATFORMS, f"unknown `platform`: {self.platform}"
@@ -131,6 +174,15 @@ class MatrixJob:
 
     @classmethod
     def from_json(cls, data):
+        """Deserialize and create a MatrixJob from JSON.
+
+        Arguments:
+            data (str): JSON serialized MatrixJob. (`dict` also accepted if `data` is
+                        already deserialized).
+
+        Returns:
+            MatrixJob: Job object.
+        """
         if isinstance(data, dict):
             obj = data
         else:
@@ -158,6 +210,21 @@ class MatrixJob:
     def matches(
         self, language=None, version=None, platform=None, env=None, script=None
     ):
+        """Check if this object matches all given arguments.
+
+        Arguments:
+            language (str/None): If not None, check for match on `language` attribute.
+            version (str/None): If not None, check for match on `version` attribute.
+            platform (str/None): If not None, check for match on `platform` attribute.
+            env (dict/None): If not None, check that all given `env` values match self.
+                             `self.env` may have other keys, only the keys passed in
+                             `env` are checked.
+            script (list/None): If not None, check for match on `script` attribute.
+
+        Returns:
+            bool: True if self matches the given arguments.
+        """
+
         if language is not None and self.language != language:
             return False
 
@@ -182,9 +249,34 @@ class MatrixJob:
 
 
 class CISecret(ABC):
+    """Representation of a Taskcluster secret used by CI jobs.
+
+    The value is never contained in the object, it is only used as a pointer to the
+    secret in Taskcluster, and to fetch/return it.
+
+    Attributes:
+        secret (str): Taskcluster namespace where the secret is held.
+                      eg. `project/fuzzing/secret123`
+        key (str/None): Sub-key in the Taskcluster secret that contains the value.
+                        eg. Taskcluster might contain:
+
+                            {
+                                "key": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
+                            }
+
+                        Then passing `key="key"` will extract the value of the key
+                        instead of the dict.
+    """
+
     __slots__ = ("secret", "key")
 
     def __init__(self, secret, key=None):
+        """Initialize CISecret object.
+
+        Arguments:
+            secret (str): Taskcluster namespace where the secret is held.
+            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+        """
         self.secret = secret
         self.key = key
 
@@ -202,6 +294,14 @@ class CISecret(ABC):
         )
 
     def get_secret_data(self):
+        """Fetch the value of the secret from Taskcluster.
+
+        Note: the secret is JSON deserialized.
+
+        Returns:
+            str/list/dict/number: Deserialized value referenced in `secret`
+                                  (or `secret[key]`).
+        """
         result = Taskcluster.get_service("secrets").get(self.secret)
         assert "secret" in result, "Missing secret value"
         if self.key is not None:
@@ -211,6 +311,15 @@ class CISecret(ABC):
 
     @staticmethod
     def from_json(data):
+        """Deserialize and create a CISecret from JSON.
+
+        Arguments:
+            data (str): JSON serialized CISecret. (`dict` also accepted if `data` is
+                        already deserialized).
+
+        Returns:
+            CISecret: Secret object.
+        """
         if isinstance(data, dict):
             obj = data
         else:
@@ -226,9 +335,24 @@ class CISecret(ABC):
 
 
 class CISecretEnv(CISecret):
+    """Representation of a Taskcluster secret used by CI jobs as an env variable.
+
+    Attributes:
+        name (str): name of the environment variable (eg. `TOKEN`)
+
+        (see CISecret for attributes defined there)
+    """
+
     __slots__ = ("name",)
 
     def __init__(self, secret, name, key=None):
+        """Initialize CISecretEnv object.
+
+        Arguments:
+            secret (str): Taskcluster namespace where the secret is held.
+            name (str): name of the environment variable (eg. `TOKEN`)
+            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+        """
         super().__init__(secret, key)
         self.name = name
 
@@ -244,9 +368,24 @@ class CISecretEnv(CISecret):
 
 
 class CISecretFile(CISecret):
+    """Representation of a Taskcluster secret used by CI jobs as a file.
+
+    Attributes:
+        path (str): Path where secret should be written to.
+
+        (see CISecret for attributes defined there)
+    """
+
     __slots__ = ("path",)
 
     def __init__(self, secret, path, key=None):
+        """Initialize CISecretFile object.
+
+        Arguments:
+            secret (str): Taskcluster namespace where the secret is held.
+            path (str): Path where secret should be written to.
+            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+        """
         super().__init__(secret, key)
         self.path = path
 
@@ -261,6 +400,13 @@ class CISecretFile(CISecret):
         )
 
     def write(self):
+        """Write the secret to disk.
+
+        If the secret contains a complex type (list/dict), it will be JSON serialized.
+
+        Returns:
+            None
+        """
         data = self.get_secret_data()
         if not isinstance(data, str):
             data = json_dumps(data)
@@ -268,9 +414,24 @@ class CISecretFile(CISecret):
 
 
 class CISecretKey(CISecret):
+    """Representation of a Taskcluster secret used by CI jobs as an SSH key.
+
+    Attributes:
+        hostname (str/None): Hostname alias to configure for using this key.
+
+        (see CISecret for attributes defined there)
+    """
+
     __slots__ = ("hostname",)
 
     def __init__(self, secret, key=None, hostname=None):
+        """Initialize CISecretKey object.
+
+        Arguments:
+            secret (str): Taskcluster namespace where the secret is held.
+            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+            hostname (str/None): Hostname alias to configure for using this key.
+        """
         super().__init__(secret, key)
         self.hostname = hostname
 
@@ -285,6 +446,15 @@ class CISecretKey(CISecret):
         )
 
     def write(self):
+        """Write the key to `~/.ssh`.
+
+        The key is created as `~/.ssh/id_rsa`, unless `hostname` is set, then
+        `~/.ssh/id_rsa.{hostname}` is used. In that case the `hostname` alias to
+        `github.com` is also created in `~/.ssh/config`.
+
+        Returns:
+            None
+        """
         if self.hostname is not None:
             dest = Path.home() / ".ssh" / f"id_rsa.{self.hostname}"
             with (Path.home() / ".ssh" / "config").open("a") as cfg:
@@ -298,20 +468,32 @@ class CISecretKey(CISecret):
 
 
 class CIMatrix:
+    """CI Job Matrix.
+
+    See the jsonschema specification.
+
+    *NB* despite being superficially very similar to Travis syntax,
+         the semantics are different!
+
+    Matrix expansion has 3 steps:
+     - cartesian product of language/version/platform/env/script
+     - exclude jobs using jobs.exclude
+     - include jobs using jobs.include
+
+     Attributes:
+        jobs (list(MatrixJob)): CI jobs to run.
+        secrets (list(CISecret)): Secrets to be fetched when each job is run.
+    """
+
     __slots__ = ("jobs", "secrets")
 
     def __init__(self, matrix, branch, is_release):
-        """CI Job Matrix.
+        """Initialize a CIMatrix object.
 
-        See the jsonschema specification.
-
-        *NB* despite being superficially very similar to Travis syntax,
-             the semantics are different!
-
-        Matrix expansion has 3 steps:
-         - cartesian product of language/version/platform/env/script
-         - exclude jobs using jobs.exclude
-         - include jobs using jobs.include
+        Arguments:
+            matrix (dict): Matrix representation matching the CIMatrix jsonschema.
+            branch (str): Git branch name (for matching `when` expressions)
+            is_release (bool): Whether this is a Github release (for `when` expressions)
         """
         # matrix is language/platform/version
         self.jobs = []

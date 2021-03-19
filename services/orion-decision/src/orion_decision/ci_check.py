@@ -18,10 +18,20 @@ EVENTS_PATH = Path(__file__).parent / "github_test_events"
 
 
 def check_matrix(args):
+    """Check whether the CI matrix found in .taskcluster.yml can be loaded.
+
+    Raises if any error is found.
+
+    Arguments:
+        args (argparse.Namespace): Arguments as returned by `parse_ci_check_args()`
+
+    Returns:
+        None
+    """
     for changed in args.changed:
         # is it a taskcluster.yml?
         if changed.name != ".taskcluster.yml":
-            LOG.warning(f"Skipping unknown file: {changed}")
+            LOG.warning("Skipping unknown file: %s", changed)
             continue
 
         # use test data to render it
