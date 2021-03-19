@@ -11,7 +11,7 @@ import sys
 
 
 if __name__ == "__main__":
-    assert Path(sys.argv[1]).name == "setup.py"
+    assert Path(sys.argv[0]).name == "setup.py", f"unknown args: {sys.argv}"
     chdir(Path(__file__).parent / "services" / "orion-decision")
-    argv = [sys.executable, "setup.py"] + sys.argv[2:]
+    argv = [sys.executable, "setup.py"] + sys.argv[1:]
     execv(sys.executable, argv)
