@@ -71,16 +71,16 @@ class CIScheduler:
                     for sec in chain(self.matrix.secrets, job.secrets)
                 )
                 if has_deploy_key:
-                    clone_repo = self.github_event.ssh_repo
+                    clone_repo = self.github_event.ssh_url
                 else:
-                    clone_repo = self.github_event.http_repo
+                    clone_repo = self.github_event.http_url
                 kwds = {
                     "ci_job": str(job),
                     "clone_repo": clone_repo,
                     "deadline": stringDate(self.now + DEADLINE),
                     "fetch_ref": self.github_event.fetch_ref,
                     "fetch_rev": self.github_event.commit,
-                    "http_repo": self.github_event.http_repo,
+                    "http_repo": self.github_event.http_url,
                     "max_run_time": int(MAX_RUN_TIME.total_seconds()),
                     "name": job.name,
                     "now": stringDate(self.now),

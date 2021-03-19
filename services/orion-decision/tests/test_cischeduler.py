@@ -78,8 +78,8 @@ def test_ci_create_02(mocker, platform, secret):
     evt = mocker.Mock(
         branch="dev",
         event_type="push",
-        ssh_repo="ssh://repo",
-        http_repo="test://repo",
+        ssh_url="ssh://repo",
+        http_url="test://repo",
         fetch_ref="fetchref",
         commit="commit",
         user="testuser",
@@ -97,12 +97,12 @@ def test_ci_create_02(mocker, platform, secret):
     mtx.return_value.jobs = [job]
     secrets = []
     scopes = []
-    clone_repo = evt.http_repo
+    clone_repo = evt.http_url
     if secret is not None:
         if secret == "env":
             sec = CISecretEnv("project/test/token", "TOKEN")
         elif secret == "deploy":
-            clone_repo = evt.ssh_repo
+            clone_repo = evt.ssh_url
             sec = CISecretKey("project/test/key")
         elif secret == "key":
             sec = CISecretKey("project/test/key", hostname="host")
@@ -121,7 +121,7 @@ def test_ci_create_02(mocker, platform, secret):
         "deadline": stringDate(now + DEADLINE),
         "fetch_ref": evt.fetch_ref,
         "fetch_rev": evt.commit,
-        "http_repo": evt.http_repo,
+        "http_repo": evt.http_url,
         "max_run_time": int(MAX_RUN_TIME.total_seconds()),
         "name": job.name,
         "now": stringDate(now),
@@ -156,7 +156,7 @@ def test_ci_create_03(mocker, previous_pass):
     evt = mocker.Mock(
         branch="dev",
         event_type="push",
-        http_repo="test://repo",
+        http_url="test://repo",
         fetch_ref="fetchref",
         commit="commit",
         user="testuser",
@@ -189,11 +189,11 @@ def test_ci_create_03(mocker, previous_pass):
     task1_id, task1 = queue.createTask.call_args_list[0][0]
     kwds = {
         "ci_job": str(job1),
-        "clone_repo": evt.http_repo,
+        "clone_repo": evt.http_url,
         "deadline": stringDate(now + DEADLINE),
         "fetch_ref": evt.fetch_ref,
         "fetch_rev": evt.commit,
-        "http_repo": evt.http_repo,
+        "http_repo": evt.http_url,
         "max_run_time": int(MAX_RUN_TIME.total_seconds()),
         "name": job1.name,
         "now": stringDate(now),
