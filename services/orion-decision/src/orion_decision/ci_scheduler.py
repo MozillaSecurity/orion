@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for CI tasks"""
 from itertools import chain
+from json import dumps as json_dump
 from logging import getLogger
 from pathlib import Path
 from string import Template
@@ -75,7 +76,7 @@ class CIScheduler:
                 else:
                     clone_repo = self.github_event.http_url
                 kwds = {
-                    "ci_job": str(job),
+                    "ci_job": json_dump(str(job)),
                     "clone_repo": clone_repo,
                     "deadline": stringDate(self.now + DEADLINE),
                     "fetch_ref": self.github_event.fetch_ref,

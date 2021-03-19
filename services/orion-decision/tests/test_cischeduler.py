@@ -5,6 +5,7 @@
 """Tests for Orion CI scheduler"""
 
 from datetime import datetime
+from json import dumps as json_dump
 from pathlib import Path
 
 import pytest
@@ -116,7 +117,7 @@ def test_ci_create_02(mocker, platform, secret):
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args[0]
     kwds = {
-        "ci_job": str(job),
+        "ci_job": json_dump(str(job)),
         "clone_repo": clone_repo,
         "deadline": stringDate(now + DEADLINE),
         "fetch_ref": evt.fetch_ref,
@@ -188,7 +189,7 @@ def test_ci_create_03(mocker, previous_pass):
     assert queue.createTask.call_count == 2
     task1_id, task1 = queue.createTask.call_args_list[0][0]
     kwds = {
-        "ci_job": str(job1),
+        "ci_job": json_dump(str(job1)),
         "clone_repo": evt.http_url,
         "deadline": stringDate(now + DEADLINE),
         "fetch_ref": evt.fetch_ref,
@@ -210,7 +211,7 @@ def test_ci_create_03(mocker, previous_pass):
     assert task1 == expected
 
     _, task2 = queue.createTask.call_args_list[1][0]
-    kwds["ci_job"] = str(job2)
+    kwds["ci_job"] = json_dump(str(job2))
     kwds["image"] = job2.image
     kwds["name"] = job2.name
     kwds["worker"] = WORKER_TYPES[job2.platform]
