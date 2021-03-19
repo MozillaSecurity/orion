@@ -1,6 +1,4 @@
-![Orion](docs/assets/orion.png "Orion logo")
-
-<h2 align="center">Orion</h2>
+<p align="center"><img src="docs/assets/orion.png" alt="Orion logo" title="Orion"></p>
 
 <p align="center">
 <a href="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/latest"><img src="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/badge.svg" alt="Task Status"></a>
