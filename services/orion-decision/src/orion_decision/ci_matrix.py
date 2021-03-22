@@ -330,7 +330,7 @@ class CISecret(ABC):
         result = Taskcluster.get_service("secrets").get(self.secret)
         assert "secret" in result, "Missing secret value"
         if self.key is not None:
-            assert self.key not in result["secret"], f"Missing secret key: {self.key}"
+            assert self.key in result["secret"], f"Missing secret key: {self.key}"
             return result["secret"][self.key]
         return result["secret"]
 
