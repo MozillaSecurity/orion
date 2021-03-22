@@ -1,1 +1,3 @@
 name: ci-py-36
+force_dirty:
+  - orion-decision
