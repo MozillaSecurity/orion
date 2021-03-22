@@ -10,9 +10,11 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from taskcluster.helper import TaskclusterConfig
 
-Taskcluster = TaskclusterConfig(
-    os.getenv("TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com")
+TASKCLUSTER_ROOT_URL = os.getenv(
+    "TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com"
 )
+Taskcluster = TaskclusterConfig(TASKCLUSTER_ROOT_URL)
+
 ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
 DEADLINE = timedelta(hours=2)
 MAX_RUN_TIME = timedelta(hours=1)

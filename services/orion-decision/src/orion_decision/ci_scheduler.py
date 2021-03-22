@@ -18,6 +18,7 @@ from . import (
     MAX_RUN_TIME,
     PROVISIONER_ID,
     SCHEDULER_ID,
+    TASKCLUSTER_ROOT_URL,
     WORKER_TYPE,
     WORKER_TYPE_MSYS,
     Taskcluster,
@@ -100,6 +101,22 @@ class CIScheduler:
                 job_ser["secrets"].extend(
                     secret.serialize() for secret in self.matrix.secrets
                 )
+                # set CI environment vars for compatibility with eg. codecov
+                job_ser["env"].update(
+                    {
+                        "CI": "true",
+                        "CI_BUILD_ID": self.task_group,
+                        "CI_BUILD_URL": f"{TASKCLUSTER_ROOT_URL}/tasks/{task_id}",
+                        "CI_JOB_ID": task_id,
+                        "VCS_BRANCH_NAME": self.github_event.branch,
+                        "VCS_COMMIT_ID": self.github_event.commit,
+                        "VCS_PULL_REQUEST": str(
+                            self.github_event.pull_request or "false"
+                        ),
+                        "VCS_SLUG": self.github_event.repo_slug,
+                        "VCS_TAG": self.github_event.tag or "",
+                    }
+                )
                 kwds = {
                     # need to json.dump twice so we get a string literal in the yaml
                     # template. otherwise (since it's yaml) it would be interpreted
@@ -138,7 +155,6 @@ class CIScheduler:
                 if not job.require_previous_stage_pass:
                     task["requires"] = "all-resolved"
                 task["dependencies"].extend(prev_stage)
-                task["payload"]["env"].update(job.env)
                 LOG.info("task %s: %s", task_id, task["metadata"]["name"])
                 if not self.dry_run:
                     try:

@@ -83,6 +83,8 @@ def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
         ssh_url="ssh://repo",
         http_url="test://repo",
         fetch_ref="fetchref",
+        repo_slug="project/test",
+        tag=None,
         commit="commit",
         user="testuser",
         spec=GithubEvent(),
@@ -177,6 +179,8 @@ def test_ci_create_03(mocker, previous_pass):
         fetch_ref="fetchref",
         commit="commit",
         user="testuser",
+        repo_slug="project/test",
+        tag=None,
         spec=GithubEvent(),
     )
     mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
