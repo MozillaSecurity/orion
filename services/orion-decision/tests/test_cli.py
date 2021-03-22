@@ -201,7 +201,7 @@ def test_ci_check(mocker):
         ("windows", None),
     ],
 )
-def test_ci_launch(mocker, platform, secret):
+def test_ci_launch_01(mocker, platform, secret):
     """test CLI entrypoint for CI launch"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
@@ -209,7 +209,7 @@ def test_ci_launch(mocker, platform, secret):
     environ = mocker.patch("orion_decision.cli.os_environ", autospec=True)
     execvpe = mocker.patch("orion_decision.cli.execvpe", autospec=True)
     repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
-    mocker.patch.object(CISecretEnv, "get_secret_data", autospec=True)
+    mocker.patch.object(CISecretEnv, "get_secret_data", return_value="secret")
     copy = {}
     environ.copy.return_value = copy
 
@@ -260,6 +260,27 @@ def test_ci_launch(mocker, platform, secret):
     elif secret == "other":
         assert not copy
         assert sec.write.call_count == 1
+
+
+def test_ci_launch_02(mocker):
+    """test CLI entrypoint for CI launch"""
+    mocker.patch("orion_decision.cli.configure_logging", autospec=True)
+    parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
+    mocker.patch("orion_decision.cli.chdir", autospec=True)
+    environ = mocker.patch("orion_decision.cli.os_environ", autospec=True)
+    mocker.patch("orion_decision.cli.execvpe", autospec=True)
+    mocker.patch("orion_decision.cli.GitRepo", autospec=True)
+    mocker.patch.object(CISecretEnv, "get_secret_data", return_value={"key": "secret"})
+    copy = {}
+    environ.copy.return_value = copy
+
+    sec = CISecretEnv("secret", "name")
+    parser.return_value.job.secrets = [sec]
+
+    with pytest.raises(AssertionError) as exc:
+        ci_launch()
+
+    assert "missing `key`" in str(exc)
 
 
 def test_check(mocker):

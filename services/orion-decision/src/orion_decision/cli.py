@@ -284,6 +284,10 @@ def ci_launch():
     for secret in args.job.secrets:
         if isinstance(secret, CISecretEnv):
             env[secret.name] = secret.get_secret_data()
+            assert isinstance(env[secret.name], str), (
+                f"expected secret '{secret.secret}' to be a string "
+                f"(got {type(env[secret.name]).__name__})... missing `key`?"
+            )
         else:
             secret.write()
     # clone repo
