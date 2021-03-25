@@ -16,7 +16,10 @@ pacman --noconfirm -Sy \
   tar
 rm -rf /var/cache/pacman/pkg
 
-python -m pip install pip --upgrade
+# patch pip to workaround https://github.com/pypa/pip/issues/4368
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+  msys64/mingw64/lib/python*/site-packages/pip/_internal/operations/install/wheel.py
+
 pip install tox
 pip install poetry
 rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
