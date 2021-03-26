@@ -215,6 +215,7 @@ def test_ci_launch_01(mocker, platform, secret):
 
     if platform == "windows":
         parser.return_value.job.platform = "windows"
+        parser.return_value.job.script = ["/mock-test-path", "arg"]
         mocker.patch("orion_decision.cli.which", side_effect=lambda x: x)
 
     if secret == "env":
