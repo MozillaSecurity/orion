@@ -207,7 +207,7 @@ def test_ci_launch_01(mocker, platform, secret):
     parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
     chdir = mocker.patch("orion_decision.cli.chdir", autospec=True)
     environ = mocker.patch("orion_decision.cli.os_environ", autospec=True)
-    execvpe = mocker.patch("orion_decision.cli.execvpe", autospec=True)
+    run = mocker.patch("orion_decision.cli.run", autospec=True)
     repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value="secret")
     copy = {}
@@ -215,7 +215,7 @@ def test_ci_launch_01(mocker, platform, secret):
 
     if platform == "windows":
         parser.return_value.job.platform = "windows"
-        list2cmdline = mocker.patch("orion_decision.cli.list2cmdline", autospec=True)
+        mocker.patch("orion_decision.cli.which", side_effect=lambda x: x)
 
     if secret == "env":
         sec = CISecretEnv("secret", "name")
@@ -225,7 +225,10 @@ def test_ci_launch_01(mocker, platform, secret):
         sec = mocker.MagicMock()
         parser.return_value.job.secrets = [sec]
 
-    ci_launch()
+    with pytest.raises(SystemExit) as exc:
+        ci_launch()
+
+    assert exc.value.code == run.return_value.returncode
 
     assert log_init.call_count == 1
     assert parser.call_count == 1
@@ -238,18 +241,10 @@ def test_ci_launch_01(mocker, platform, secret):
         parser.return_value.fetch_rev,
     )
     assert chdir.call_args == call(repo.return_value.path)
-    assert execvpe.call_count == 1
+    assert run.call_count == 1
     cmd = parser.return_value.job.script
 
-    # check that windows command is written
-    if platform == "windows":
-        assert list2cmdline.call_count == 1
-        assert list2cmdline.call_args == call(cmd)
-        assert execvpe.call_args == call(
-            "bash", ["bash", "-c", list2cmdline.return_value, cmd[0]], copy
-        )
-    else:
-        assert execvpe.call_args == call(cmd[0], cmd, environ.copy.return_value)
+    assert run.call_args == call(cmd, env=environ.copy.return_value, check=True)
 
     # check that env secret is put in env
     if secret == "env":
@@ -268,7 +263,7 @@ def test_ci_launch_02(mocker):
     parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
     mocker.patch("orion_decision.cli.chdir", autospec=True)
     environ = mocker.patch("orion_decision.cli.os_environ", autospec=True)
-    mocker.patch("orion_decision.cli.execvpe", autospec=True)
+    mocker.patch("orion_decision.cli.run", autospec=True)
     mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value={"key": "secret"})
     copy = {}

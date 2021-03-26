@@ -10,9 +10,10 @@ from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import chdir
 from os import environ as os_environ
-from os import execvpe, getenv
+from os import getenv
 from pathlib import Path
-from subprocess import list2cmdline
+from shutil import which
+from subprocess import run
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
@@ -281,7 +282,9 @@ def ci_launch():
     configure_logging(level=args.log_level)
     env = os_environ.copy()
     # fetch secrets
+    LOG.info("Fetching %d secrets", len(args.job.secrets))
     for secret in args.job.secrets:
+        LOG.info("  secret: %s", secret.secret)
         if isinstance(secret, CISecretEnv):
             env[secret.name] = secret.get_secret_data()
             assert isinstance(env[secret.name], str), (
@@ -291,16 +294,20 @@ def ci_launch():
         else:
             secret.write()
     # clone repo
+    LOG.info("Cloning repo: %s @ %s", args.clone_repo, args.fetch_rev)
     repo = GitRepo(args.clone_repo, args.fetch_ref, args.fetch_rev)
     chdir(repo.path)
     # update env
     env.update(args.job.env)
     # update command
-    if args.job.platform == "windows":
-        command = ["bash", "-c", list2cmdline(args.job.script), args.job.script[0]]
-    else:
-        command = args.job.script
-    execvpe(command[0], command, env)
+    LOG.info("Running %r", args.job.script)
+    if args.job.platform == "windows" and not Path(args.job.script[0]).is_file():
+        binary = which(args.job.script[0])
+        assert (
+            binary is not None
+        ), f"Couldn't resolve script executable: {args.job.script[0]}"
+        args.job.script[0] = binary
+    sys.exit(run(args.job.script, env=env, check=True).returncode)
 
 
 def ci_check():
