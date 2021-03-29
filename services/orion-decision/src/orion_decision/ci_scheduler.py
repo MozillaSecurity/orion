@@ -152,6 +152,8 @@ class CIScheduler:
                     task["payload"]["features"]["taskclusterProxy"] = True
                     for sec in chain(job.secrets, self.matrix.secrets):
                         task["scopes"].append(f"secrets:get:{sec.secret}")
+                    # ensure scopes are unique
+                    task["scopes"] = list(set(task["scopes"]))
                 if not job.require_previous_stage_pass:
                     task["requires"] = "all-resolved"
                 task["dependencies"].extend(prev_stage)

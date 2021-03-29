@@ -162,6 +162,9 @@ def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
     if matrix_secret is not None or job_secret is not None:
         expected["payload"].setdefault("features", {})
         expected["payload"]["features"]["taskclusterProxy"] = True
+    assert set(task["scopes"]) == set(expected["scopes"])
+    assert len(task["scopes"]) == len(expected["scopes"])
+    task["scopes"] = expected["scopes"]
     assert task == expected
     assert all(sec.secret in task["payload"]["env"]["CI_JOB"] for sec in job.secrets)
 
