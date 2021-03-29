@@ -21,6 +21,10 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
   msys64/mingw64/lib/python*/site-packages/pip/_internal/operations/install/wheel.py
 
 pip install tox
+# patch tox to workaround https://github.com/tox-dev/tox/issues/1982
+sed -i "s/^        is_bin = ($/& True or/" \
+  msys64/mingw64/lib/python*/site-packages/tox/config/__init__.py
+
 pip install poetry
 rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
 cp -r orion/services/orion-decision orion-decision
