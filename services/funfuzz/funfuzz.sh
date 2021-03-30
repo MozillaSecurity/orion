@@ -113,7 +113,7 @@ function select-build () {
           exit 1
           ;;
       esac
-      if fuzzfetch "${flags[@]}"; then
+      if python3 -m fuzzfetch "${flags[@]}"; then
         break
       else
         echo "failed to download $build! ... picking again in 10s" >&2
