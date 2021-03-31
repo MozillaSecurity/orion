@@ -12,15 +12,14 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
     && retry apk add --no-cache \
         git \
         python3 \
-        py3-fasteners \
         py3-multidict \
         py3-pip \
         py3-psutil \
         py3-requests \
         py3-wheel \
-        py3-yaml \
         py3-yarl \
-    && retry python3 -m pip install --disable-pip-version-check --no-cache-dir -e /src \
+    && pip freeze > /src/os_constraints.txt \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off -e /src \
     && apk del git py3-pip py3-wheel \
     && python3 -m compileall -b -q /usr/lib \
     && find /usr/lib -name "*.py" -delete \
