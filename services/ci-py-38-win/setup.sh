@@ -50,6 +50,10 @@ EOF
 # otherwise /usr/bin/env will select the old `pip` in mozbuild
 python -m pip install --upgrade --force-reinstall pip
 
+# patch new pip to workaround https://github.com/pypa/pip/issues/4368
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+  msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
+
 # install utils to match linux ci images
 python -m pip install tox
 python -m pip install poetry
