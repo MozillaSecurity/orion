@@ -77,7 +77,7 @@ function run-afl-libfuzzer-daemon () {
 }
 
 # IPC
-if [ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]
+if [[ -n "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" ]]
 then
   mkdir -p settings/ipc
   retry svn export --force "$FUZZDATA_URL/$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST" "$MOZ_IPC_MESSAGE_FUZZ_BLACKLIST"
@@ -89,7 +89,7 @@ S3_QUEUE_UPLOAD_ARGS=()
 
 # %<---[Corpora]--------------------------------------------------------------
 
-if [ -n "$S3_PROJECT" ]
+if [[ -n "$S3_PROJECT" ]]
 then
   # Use S3 for corpus management and synchronization. Each instance will download the corpus
   # from S3 (either by downloading a bundle or by downloading a fraction of files).
@@ -103,36 +103,36 @@ then
 
   # This option ensures that we synchronize local finds from/to S3 queues.
   # When generating coverage, it does not make sense to use this.
-  if [ -z "$COVERAGE" ]
+  if [[ -z "$COVERAGE" ]]
   then
     S3_QUEUE_UPLOAD_ARGS+=(--s3-queue-upload)
   fi
 
   # This can be used to download only a subset of corpus files for fuzzing
   CORPUS_DOWNLOAD_ARGS=()
-  if [ -n "$S3_CORPUS_SUBSET_SIZE" ]
+  if [[ -n "$S3_CORPUS_SUBSET_SIZE" ]]
   then
     CORPUS_DOWNLOAD_ARGS+=(--s3-corpus-download-size "$S3_CORPUS_SUBSET_SIZE")
   fi
 
-  if [ -z "$S3_CORPUS_REFRESH" ]
+  if [[ -z "$S3_CORPUS_REFRESH" ]]
   then
     # Download the corpus from S3
     run-afl-libfuzzer-daemon "${CORPUS_DOWNLOAD_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --s3-corpus-download corpora/
   fi
-elif [ -n "$OSSFUZZ_PROJECT" ]
+elif [[ -n "$OSSFUZZ_PROJECT" ]]
 then
   # Use synced corpora from OSSFuzz.
   mkdir -p ./corpora
   python3 ./oss-fuzz/infra/helper.py download_corpora --fuzz-target "$FUZZER" "$OSSFUZZ_PROJECT" || true
   CORPORA_PATH="./oss-fuzz/build/corpus/$OSSFUZZ_PROJECT/$FUZZER"
-  if [ -d "$CORPORA_PATH" ]
+  if [[ -d "$CORPORA_PATH" ]]
   then
     set +x
     cp "$CORPORA_PATH"/* ./corpora/ || true
     set -x
   fi
-elif [ -n "$CORPORA" ]
+elif [[ -n "$CORPORA" ]]
 then
   # Use a static corpus instead
   retry svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
@@ -144,7 +144,7 @@ CORPORA="./corpora/"
 
 # %<---[Tokens]---------------------------------------------------------------
 
-if [ -n "$TOKENS" ]
+if [[ -n "$TOKENS" ]]
 then
   retry svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
   TOKENS="-dict=./tokens.dict"
@@ -181,7 +181,7 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 # %<---[StatusFile]-----------------------------------------------------------
 
-if [ "${SHIP,,}" = "taskcluster" ]; then
+if [[ "${SHIP,,}" = "taskcluster" ]]; then
 tee run-tcreport.sh << EOF
 #!/bin/bash
 while true; do python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30; sleep 30; done
@@ -208,20 +208,20 @@ then
 fi
 # shellcheck disable=SC2206
 LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $TOKEN $CORPORA)
-if [ -z "$LIBFUZZER_INSTANCES" ]
+if [[ -z "$LIBFUZZER_INSTANCES" ]]
 then
   LIBFUZZER_INSTANCES=$(nproc)
 fi
 
 # Support auto reduction, format is "MIN;PERCENT".
 LIBFUZZER_AUTOREDUCE_ARGS=()
-if [ -n "$LIBFUZZER_AUTOREDUCE" ]
+if [[ -n "$LIBFUZZER_AUTOREDUCE" ]]
 then
   IFS=';' read -r -a LIBFUZZER_AUTOREDUCE_PARAMS <<< "$LIBFUZZER_AUTOREDUCE"
   LIBFUZZER_AUTOREDUCE_ARGS+=(--libfuzzer-auto-reduce-min "${LIBFUZZER_AUTOREDUCE_PARAMS[0]}" --libfuzzer-auto-reduce "${LIBFUZZER_AUTOREDUCE_PARAMS[1]}")
 fi
 
-if [ -z "$S3_CORPUS_REFRESH" ]
+if [[ -z "$S3_CORPUS_REFRESH" ]]
 then
   update-ec2-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES instances" || true
   # Run LibFuzzer
