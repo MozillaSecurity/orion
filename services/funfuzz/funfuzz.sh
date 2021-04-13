@@ -46,6 +46,8 @@ else
   TARGET_TIME=28800
 fi
 
+if [[ -z "$COVERAGE" ]]
+then
 mode_args=()
 case "${MODE-default}" in
   "wasm")
@@ -61,6 +63,7 @@ case "${MODE-default}" in
     mode_args+=("--no-fuzz-wasm")
     ;;
 esac
+fi
 
 if [[ -z "$NO_PULL" ]]
 then
@@ -73,6 +76,8 @@ fi
 BUILDS="$HOME/builds"
 mkdir -p "$BUILDS"
 
+if [[ -z "$COVERAGE" ]]
+then
 builds=(
   mc-32-debug
   mc-32-debug
@@ -125,16 +130,28 @@ function select-build () {
   done
   echo "$build"
 }
+fi
 
 screen -d -m -L -S funfuzz
-nprocs="${NPROCS-$(python3 -c "import os;print(len(os.sched_getaffinity(0)))")}"
-update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
+if [[ -z "$COVERAGE" ]]
+then
+  nprocs="${NPROCS-$(python3 -c "import os;print(len(os.sched_getaffinity(0)))")}"
+  update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
+else
+  nprocs="${NPROCS-1}"
+  update-ec2-status "$(echo -e "About to start coverage $nprocs\n  with target time $TARGET_TIME ...")" || true
+fi
 echo "[$(date)] launching $nprocs processes..."
 for (( i=1; i<=nprocs; i++ ))
 do
-  build="$(select-build)"
-  screen -S funfuzz -X setenv LD_LIBRARY_PATH "$BUILDS/$build/dist/bin/"
-  screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "${mode_args[@]}" "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
+  if [[ -z "$COVERAGE" ]]
+  then
+    build="$(select-build)"
+    screen -S funfuzz -X setenv LD_LIBRARY_PATH "$BUILDS/$build/dist/bin/"
+    screen -S funfuzz -X screen python3 -u -m funfuzz.js.loop --repo=none --random-flags "${mode_args[@]}" "$JS_SHELL_DEFAULT_TIMEOUT" "" "$BUILDS/$build/dist/bin/js"
+  else
+    screen -S funfuzz -X screen python3 -u -m funfuzz.run_ccoverage --report --target-time="$((TARGET_TIME - 5 * 60))"
+  fi
   sleep 1
 done
 screen -S funfuzz -X screen ~/status.sh
