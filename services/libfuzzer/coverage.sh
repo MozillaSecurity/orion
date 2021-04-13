@@ -21,6 +21,13 @@ export COVERAGE=1
 REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 
+# Allow overriding some args with coverage specific versions
+if [[ -n "$COV_LIBFUZZER_ARGS" ]]
+then
+  LIBFUZZER_ARGS="$COV_LIBFUZZER_ARGS"
+  export LIBFUZZER_ARGS
+fi
+
 # Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 # For coverage, we also are pinned to a given revision and we need to fetch coverage builds.
