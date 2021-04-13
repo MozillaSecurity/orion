@@ -28,6 +28,12 @@ then
   export LIBFUZZER_ARGS
 fi
 
+if [[ -n "$COV_LIBFUZZER_INSTANCES" ]]
+then
+  LIBFUZZER_INSTANCES="$COV_LIBFUZZER_INSTANCES"
+  export LIBFUZZER_INSTANCES
+fi
+
 # Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 # For coverage, we also are pinned to a given revision and we need to fetch coverage builds.
