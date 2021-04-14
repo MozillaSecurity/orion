@@ -20,6 +20,7 @@ fi
 python3 -c "from funfuzz.util import create_collector; create_collector.make_collector().refresh()"
 
 JS_SHELL_DEFAULT_TIMEOUT=24
+export GCOV=/usr/local/bin/gcov-9
 
 if [[ -n "$EC2SPOTMANAGER_CYCLETIME" ]]
 then

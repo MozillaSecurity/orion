@@ -21,6 +21,7 @@ cd "${0%/*}"
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
+./gcov-9.sh
 ./gsutil.sh
 ./htop.sh
 ./taskcluster.sh
