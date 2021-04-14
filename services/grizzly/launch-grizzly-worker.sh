@@ -52,7 +52,7 @@ retry python3 -m pip install --user -U -e /src/bearspray
 
 update-ec2-status "Setup: launching bearspray"
 
-export GCOV=/usr/local/bin/gcov-7
+export GCOV=/usr/local/bin/gcov-9
 
 screen -dmLS grizzly /bin/bash
 sleep 5

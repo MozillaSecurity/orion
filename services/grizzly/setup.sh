@@ -26,8 +26,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./radamsa.sh
 ./redis.sh
 ./rr.sh
-./gcov-7.sh
-./gcov-8.sh
+./gcov-9.sh
 ./taskcluster.sh
 
 # shellcheck source=recipes/linux/dbgsyms.sh
