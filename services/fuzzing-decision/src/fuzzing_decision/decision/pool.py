@@ -50,6 +50,55 @@ DECISION_TASK = Template((TEMPLATES / "decision.yaml").read_text())
 FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
 
 
+class MountArtifactResolver:
+    CACHE = {}  # cache of orion service -> taskId
+
+    @classmethod
+    def lookup_taskid(cls, namespace):
+        assert isinstance(namespace, str)
+        if namespace not in cls.CACHE:
+            # need to resolve "image" to a task ID where the mount
+            # artifact is
+            idx = taskcluster.get_service("index")
+            result = idx.findTask(namespace)
+            cls.CACHE[namespace] = result["taskId"]
+
+        return cls.CACHE[namespace]
+
+
+def add_task_image(task, config):
+    """Add image or mount to task payload, depending on platform."""
+    if config.platform == "windows":
+        assert isinstance(config.container, dict)
+        assert config.container["type"] != "docker-image"
+        if config.container["type"] == "indexed-image":
+            # need to resolve "image" to a task ID where the mount artifact is
+            task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])
+        else:
+            task_id = config.container["taskId"]
+        task["payload"].setdefault("mounts", [])
+        suffixes = Path(config.container["path"]).suffixes
+        if len(suffixes) >= 2 and suffixes[-2] == ".tar":
+            fmt = f"tar{suffixes[-1]}"
+        else:
+            assert suffixes, "unabled to determine format from container path"
+            fmt = suffixes[-1][1:]
+        task["payload"]["mounts"].append(
+            {
+                "format": fmt,
+                "content": {
+                    "taskId": task_id,
+                    "artifact": config.container["path"],
+                },
+                "directory": ".",
+            }
+        )
+        task["dependencies"].append(task_id)
+    else:
+        # `container` can be either a string or a dict, so can't template it
+        task["payload"]["image"] = config.container
+
+
 def add_capabilities_for_scopes(task):
     """Request capabilities to match the scopes specified by the task"""
     capabilities = task["payload"].setdefault("capabilities", {})
@@ -62,6 +111,37 @@ def add_capabilities_for_scopes(task):
         capabilities["privileged"] = True
     if not capabilities["devices"]:
         del capabilities["devices"]
+    if not capabilities:
+        del task["payload"]["capabilities"]
+
+
+def configure_task(task, config, now, env):
+    task["payload"]["artifacts"].update(
+        config.artifact_map(stringDate(fromNow("1 week", now)))
+    )
+    task["scopes"] = sorted(chain(config.scopes, task["scopes"]))
+    add_capabilities_for_scopes(task)
+    add_task_image(task, config)
+    if config.platform == "windows":
+        task["payload"]["env"]["MSYSTEM"] = "MINGW64"
+        task["payload"]["command"] = [
+            "set HOME=%CD%",
+            "set ARTIFACTS=%CD%",
+            "set PATH="
+            + ";".join(
+                [
+                    r"%CD%\msys64\opt\python",
+                    r"%CD%\msys64\opt\python\Scripts",
+                    r"%CD%\msys64\MINGW64\bin",
+                    r"%CD%\msys64\usr\bin",
+                    "%PATH%",
+                ]
+            ),
+            "fuzzing-pool-launch",
+        ]
+    if env is not None:
+        assert set(task["payload"]["env"]).isdisjoint(set(env))
+        task["payload"]["env"].update(env)
 
 
 def cancel_tasks(worker_type):
@@ -155,12 +235,11 @@ class PoolConfiguration(CommonPoolConfiguration):
                 "reregistrationTimeout": parse_time("4d"),
             },
             "maxCapacity": (
-                # add +1 to expected size, so if we manually trigger the hook, the new
-                # decision can run without also manually cancelling a task
                 # * 2 since Taskcluster seems to not reuse workers very quickly in some
                 # cases, so we end up with a lot of pending tasks.
-                max(1, math.ceil(self.max_run_time / self.cycle_time)) * self.tasks * 2
-                + 1
+                max(1, math.ceil(self.max_run_time / self.cycle_time))
+                * self.tasks
+                * 2
             ),
             "minCapacity": 0,
         }
@@ -227,7 +306,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         # this artifact is required by pool_launch
         result["project/fuzzing/private/logs"] = {
             "expires": expires,
-            "path": "/logs/",
+            "path": "/logs/" if self.platform == "linux" else "logs",
             "type": "directory",
         }
         return result
@@ -258,18 +337,8 @@ class PoolConfiguration(CommonPoolConfiguration):
                     task_id=self.task_id,
                 )
             )
-            task["payload"]["artifacts"].update(
-                preprocess.artifact_map(stringDate(fromNow("1 week", now)))
-            )
             task["payload"]["env"]["TASKCLUSTER_FUZZING_PREPROCESS"] = "1"
-            # `container` can be either a string or a dict, so can't template it
-            task["payload"]["image"] = preprocess.container
-            task["scopes"] = sorted(chain(preprocess.scopes, task["scopes"]))
-            add_capabilities_for_scopes(task)
-            if env is not None:
-                assert set(task["payload"]["env"]).isdisjoint(set(env))
-                task["payload"]["env"].update(env)
-
+            configure_task(task, preprocess, now, env)
             preprocess_task_id = slugId()
             yield preprocess_task_id, task
 
@@ -291,19 +360,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                     task_id=self.task_id,
                 )
             )
-            task["payload"]["artifacts"].update(
-                self.artifact_map(stringDate(fromNow("1 week", now)))
-            )
-            # `container` can be either a string or a dict, so can't template it
-            task["payload"]["image"] = self.container
             if preprocess_task_id is not None:
                 task["dependencies"].append(preprocess_task_id)
-            task["scopes"] = sorted(chain(self.scopes, task["scopes"]))
-            add_capabilities_for_scopes(task)
-            if env is not None:
-                assert set(task["payload"]["env"]).isdisjoint(set(env))
-                task["payload"]["env"].update(env)
-
+            configure_task(task, self, now, env)
             yield slugId(), task
 
 
@@ -414,17 +473,7 @@ class PoolConfigMap(CommonPoolConfigMap):
                         task_id=self.task_id,
                     )
                 )
-                task["payload"]["artifacts"].update(
-                    pool.artifact_map(stringDate(fromNow("1 week", now)))
-                )
-                # `container` can be either a string or a dict, so can't template it
-                task["payload"]["image"] = pool.container
-                task["scopes"] = sorted(chain(pool.scopes, task["scopes"]))
-                add_capabilities_for_scopes(task)
-                if env is not None:
-                    assert set(task["payload"]["env"]).isdisjoint(set(env))
-                    task["payload"]["env"].update(env)
-
+                configure_task(task, pool, now, env)
                 yield slugId(), task
 
 

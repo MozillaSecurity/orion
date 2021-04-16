@@ -12,7 +12,6 @@ metadata:
   source: "https://github.com/MozillaSecurity/orion"
 payload:
   artifacts: {}
-  cache: {}
   command:
     - fuzzing-decision
     - "${pool_id}"
@@ -37,4 +36,4 @@ scopes:
   - "queue:scheduler-id:${scheduler}"
   - "secrets:get:${secret}"
 tags: {}
-workerType: "${task_id}"
+workerType: ci

@@ -11,8 +11,6 @@ metadata:
   source: "https://github.com/MozillaSecurity/orion"
 payload:
   artifacts: {}
-  cache: {}
-  capabilities: {}
   env:
     TASKCLUSTER_FUZZING_POOL: "${pool_id}"
     TASKCLUSTER_SECRET: "${secret}"
