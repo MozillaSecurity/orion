@@ -134,6 +134,7 @@ VALID_ROLE = {
     "roleId": "hook-id:project-fuzzing/linux-test",
     "scopes": [
         "queue:cancel-task:-/*",
+        "queue:create-task:highest:proj-fuzzing/ci",
         "queue:create-task:highest:proj-fuzzing/linux-test",
         "queue:scheduler-id:-",
         "secrets:get:project/fuzzing/decision",
