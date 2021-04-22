@@ -467,23 +467,14 @@ def test_tasks(env, scope_caps, platform, mocker):
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _check_date(task, *keys):
-        # Dates can not be checked directly as they are generated
-        assert keys, "must specify at least one key"
-        value = task
-        for key in keys:
-            obj = value
-            assert isinstance(obj, dict)
-            value = obj[key]
+    def _get_date(value):
         assert isinstance(value, str)
-        date = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
-        del obj[key]
-        return date
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     for i, task in enumerate(tasks):
-        created = _check_date(task, "created")
-        deadline = _check_date(task, "deadline")
-        expires = _check_date(task, "expires")
+        created = _get_date(task.pop("created"))
+        deadline = _get_date(task.pop("deadline"))
+        expires = _get_date(task.pop("expires"))
         assert expires >= deadline > created
         expected_env = {
             "TASKCLUSTER_FUZZING_POOL": "test",
@@ -492,18 +483,25 @@ def test_tasks(env, scope_caps, platform, mocker):
         if env is not None:
             expected_env.update(env)
 
-        log_expires = _check_date(
-            task, "payload", "artifacts", "project/fuzzing/private/logs", "expires"
+        if platform == "windows":
+            # translate to docker-worker style dict
+            task["payload"]["artifacts"] = {
+                artifact.pop("name"): artifact
+                for artifact in task["payload"]["artifacts"]
+            }
+        assert expires == _get_date(
+            task["payload"]["artifacts"]["project/fuzzing/private/logs"].pop("expires")
         )
-        assert log_expires == expires
-        log_expires = _check_date(
-            task, "payload", "artifacts", "project/fuzzing/private/file.txt", "expires"
+        assert expires == _get_date(
+            task["payload"]["artifacts"]["project/fuzzing/private/file.txt"].pop(
+                "expires"
+            )
         )
-        assert log_expires == expires
-        log_expires = _check_date(
-            task, "payload", "artifacts", "project/fuzzing/private/var-log", "expires"
+        assert expires == _get_date(
+            task["payload"]["artifacts"]["project/fuzzing/private/var-log"].pop(
+                "expires"
+            )
         )
-        assert log_expires == expires
         assert set(task["scopes"]) == set(
             ["secrets:get:project/fuzzing/decision"] + scopes
         )
@@ -553,6 +551,7 @@ def test_tasks(env, scope_caps, platform, mocker):
             "taskGroupId": "someTaskId",
             "workerType": f"{platform}-test",
         }
+
         if platform == "windows":
             expected["dependencies"].append("task-mount-abc")
             expected["payload"]["mounts"] = [
@@ -591,18 +590,9 @@ def test_preprocess_tasks():
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _check_date(task, *keys):
-        # Dates can not be checked directly as they are generated
-        assert keys, "must specify at least one key"
-        value = task
-        for key in keys:
-            obj = value
-            assert isinstance(obj, dict)
-            value = obj[key]
+    def _get_date(value):
         assert isinstance(value, str)
-        date = datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
-        del obj[key]
-        return date
+        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     expected = [
         {
@@ -613,9 +603,9 @@ def test_preprocess_tasks():
         {"deps": ["someTaskId", task_ids[0]], "extra_env": {}, "name": "1/1"},
     ]
     for task, expect in zip(tasks, expected):
-        created = _check_date(task, "created")
-        deadline = _check_date(task, "deadline")
-        expires = _check_date(task, "expires")
+        created = _get_date(task.pop("created"))
+        deadline = _get_date(task.pop("deadline"))
+        expires = _get_date(task.pop("expires"))
         assert expires >= deadline > created
         expected_env = {
             "TASKCLUSTER_FUZZING_POOL": "pre-pool",
@@ -623,10 +613,9 @@ def test_preprocess_tasks():
         }
         expected_env.update(expect["extra_env"])
 
-        log_expires = _check_date(
-            task, "payload", "artifacts", "project/fuzzing/private/logs", "expires"
+        assert expires == _get_date(
+            task["payload"]["artifacts"]["project/fuzzing/private/logs"].pop("expires")
         )
-        assert log_expires == expires
         assert set(task["scopes"]) == set(["secrets:get:project/fuzzing/decision"])
         # scopes are already asserted above
         # - read the value for comparison instead of deleting the key, so the object is

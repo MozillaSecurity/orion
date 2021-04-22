@@ -139,6 +139,12 @@ def configure_task(task, config, now, env):
             ),
             "fuzzing-pool-launch",
         ]
+        # translate artifacts from dict to array for generic-worker
+        task["payload"]["artifacts"] = [
+            # `... or artifact` because dict.update returns None
+            artifact.update({"name": name}) or artifact
+            for name, artifact in task["payload"]["artifacts"].items()
+        ]
     if env is not None:
         assert set(task["payload"]["env"]).isdisjoint(set(env))
         task["payload"]["env"].update(env)
