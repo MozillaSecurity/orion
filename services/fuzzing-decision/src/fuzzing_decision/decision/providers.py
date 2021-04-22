@@ -6,6 +6,8 @@ import logging
 
 import yaml
 
+from ..common.pool import parse_time
+
 LOG = logging.getLogger(__name__)
 
 
@@ -15,31 +17,50 @@ class Provider(object):
             (base_dir / "config" / "imagesets.yml").read_text()
         )
 
-    def get_worker_config(self, worker):
+    def get_worker_config(self, worker, platform):
         assert worker in self.imagesets, f"Missing worker {worker}"
         out = self.imagesets[worker].get("workerConfig", {})
-        out.setdefault("dockerConfig", {})
-        out.setdefault("genericWorker", {})
-        out["genericWorker"].setdefault("config", {})
 
-        out.update({"shutdown": {"enabled": True, "afterIdleSeconds": 15}})
-        out["dockerConfig"].update(
-            {"allowPrivileged": True, "allowDisableSeccomp": True}
-        )
+        if platform == "linux":
+            out.setdefault("dockerConfig", {})
+            out.update(
+                {
+                    "shutdown": {
+                        "enabled": True,
+                        "afterIdleSeconds": parse_time("3m"),
+                    }
+                }
+            )
+            out["dockerConfig"].update(
+                {"allowPrivileged": True, "allowDisableSeccomp": True}
+            )
 
-        # Fixed config for websocket tunnel
-        out["genericWorker"]["config"].update(
-            {
-                "wstAudience": "communitytc",
-                "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
-            }
-        )
+            # Clear any generic-worker specific config
+            out.pop("genericWorker", None)
 
-        # Add a deploymentId by hashing the config
-        payload = json.dumps(out, sort_keys=True).encode("utf-8")
-        out["genericWorker"]["config"]["deploymentId"] = hashlib.sha256(
-            payload
-        ).hexdigest()[:16]
+        else:
+            out.setdefault("genericWorker", {})
+            out["genericWorker"].setdefault("config", {})
+
+            # Fixed config for websocket tunnel
+            out["genericWorker"]["config"].update(
+                {
+                    "wstAudience": "communitytc",
+                    "wstServerURL": (
+                        "https://community-websocktunnel.services.mozilla.com"
+                    ),
+                }
+            )
+
+            # Add a deploymentId by hashing the config
+            payload = json.dumps(out, sort_keys=True).encode("utf-8")
+            out["genericWorker"]["config"]["deploymentId"] = hashlib.sha256(
+                payload
+            ).hexdigest()[:16]
+
+            # Clear any Docker specific config
+            out.pop("dockerConfig", None)
+            out.pop("shutdown", None)
 
         return out
 
@@ -73,10 +94,10 @@ class AWS(Provider):
         assert worker in self.imagesets, f"Missing worker {worker}"
         return self.imagesets[worker]["aws"]["amis"]
 
-    def build_launch_configs(self, imageset, machines, disk_size):
+    def build_launch_configs(self, imageset, machines, disk_size, platform):
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
-        worker_config = self.get_worker_config(imageset)
+        worker_config = self.get_worker_config(imageset, platform)
 
         return [
             {
@@ -117,7 +138,7 @@ class GCP(Provider):
         }
         LOG.info("Loaded GCP configuration")
 
-    def build_launch_configs(self, imageset, machines, disk_size):
+    def build_launch_configs(self, imageset, machines, disk_size, platform):
 
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
@@ -125,7 +146,7 @@ class GCP(Provider):
             "gcp" in self.imagesets[imageset]
         ), f"No GCP implementation for imageset {imageset}"
         source_image = self.imagesets[imageset]["gcp"]["image"]
-        worker_config = self.get_worker_config(imageset)
+        worker_config = self.get_worker_config(imageset, platform)
 
         return [
             {

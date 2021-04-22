@@ -227,13 +227,8 @@ class PoolConfiguration(CommonPoolConfiguration):
         machines = self.get_machine_list(machine_types)
         config = {
             "launchConfigs": provider.build_launch_configs(
-                self.imageset, machines, self.disk_size
+                self.imageset, machines, self.disk_size, self.platform
             ),
-            "lifecycle": {
-                # give workers 15 minutes to register before assuming they're broken
-                "registrationTimeout": parse_time("15m"),
-                "reregistrationTimeout": parse_time("4d"),
-            },
             "maxCapacity": (
                 # * 2 since Taskcluster seems to not reuse workers very quickly in some
                 # cases, so we end up with a lot of pending tasks.
@@ -243,6 +238,12 @@ class PoolConfiguration(CommonPoolConfiguration):
             ),
             "minCapacity": 0,
         }
+        if self.platform == "linux":
+            config["lifecycle"] = {
+                # give workers 15 minutes to register before assuming they're broken
+                "registrationTimeout": parse_time("15m"),
+                "reregistrationTimeout": parse_time("4d"),
+            }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
@@ -388,16 +389,17 @@ class PoolConfigMap(CommonPoolConfigMap):
         machines = self.get_machine_list(machine_types)
         config = {
             "launchConfigs": provider.build_launch_configs(
-                self.imageset, machines, self.disk_size
+                self.imageset, machines, self.disk_size, self.platform
             ),
-            "lifecycle": {
-                # give workers 15 minutes to register before assuming they're broken
-                "registrationTimeout": parse_time("15m"),
-                "reregistrationTimeout": parse_time("4d"),
-            },
             "maxCapacity": max(sum(pool.tasks for pool in pools) * 2, 3),
             "minCapacity": 0,
         }
+        if self.platform == "linux":
+            config["lifecycle"] = {
+                # give workers 15 minutes to register before assuming they're broken
+                "registrationTimeout": parse_time("15m"),
+                "reregistrationTimeout": parse_time("4d"),
+            }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(

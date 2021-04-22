@@ -15,4 +15,3 @@ generic-worker-A:
     genericWorker:
       config:
         anyKey: anyValue
-        os: linux
