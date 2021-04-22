@@ -69,11 +69,12 @@ class Workflow:
         """Clone remote repositories according to current setup"""
         assert isinstance(config, dict)
 
+        ssh_path = pathlib.Path("~/.ssh").expanduser()
+        ssh_path.mkdir(mode=0o700, exist_ok=True)
+
         # Setup ssh private key if any
         private_key = config.get("private_key")
         if private_key is not None:
-            ssh_path = pathlib.Path("~/.ssh").expanduser()
-            ssh_path.mkdir(mode=0o700, exist_ok=True)
             path = ssh_path / "id_rsa"
             if path.exists():
                 LOG.warning(f"Not overwriting pre-existing ssh key at {path}")
@@ -81,6 +82,9 @@ class Workflow:
                 path.write_text(private_key)
                 path.chmod(0o400)
                 LOG.info("Installed ssh private key")
+
+        with (ssh_path / "known_hosts").open("a") as hosts:
+            subprocess.check_call(["ssh-keyscan", "github.com"], stdout=hosts)
 
     def git_clone(self, url=None, path=None, revision=None, **kwargs):
         """Clone a configuration repository"""
