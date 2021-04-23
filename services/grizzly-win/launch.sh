@@ -1,7 +1,28 @@
 #!/bin/sh
 set -e -x
 
-get-tc-secret google-logging-creds google_logging_creds.json raw
+retry () {
+  i=0
+  while [ $i -lt 9 ]
+  do
+    "$@" && return
+    sleep 30
+    i="${i+1}"
+  done
+  "$@"
+}
+
+status () {
+  if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
+  then
+    python -m TaskStatusReporter --report "$@" || true
+  fi
+}
+
+
+set +x
+curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
+set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       On
@@ -51,7 +72,9 @@ EOF
 ./td-agent-bit/bin/td-agent-bit -c td-agent-bit.conf
 
 # Get fuzzmanager configuration from TC
-get-tc-secret fuzzmanagerconf .fuzzmanagerconf
+set +x
+curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+set -x
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
@@ -62,11 +85,13 @@ EOF
 setup-fuzzmanager-hostname
 chmod 0600 .fuzzmanagerconf
 
-update-ec2-status "Setup: cloning bearspray"
+status "Setup: cloning bearspray"
 
 # Get deployment key from TC
 mkdir -p .ssh
-get-tc-secret deploy-bearspray .ssh/id_ecdsa.bearspray
+set +x
+curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
+set -x
 
 cat << EOF >> .ssh/config
 
@@ -77,10 +102,15 @@ IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.bearspray
 EOF
 
 # Checkout bearspray
-git-clone git@bearspray:MozillaSecurity/bearspray.git bearspray
+git init bearspray
+cd  bearspray
+git remote add origin git@bearspray:MozillaSecurity/bearspray.git
+retry git fetch -q --depth 1 --no-tags origin HEAD
+git -c advice.detachedHead=false checkout FETCH_HEAD
+cd ..
 
-update-ec2-status "Setup: installing bearspray"
+status "Setup: installing bearspray"
 retry python -m pip install -U -e bearspray
 
-update-ec2-status "Setup: launching bearspray"
+status "Setup: launching bearspray"
 python -m bearspray

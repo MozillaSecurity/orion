@@ -6,6 +6,7 @@ pacman-key --init
 pacman-key --populate msys2
 pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
+  openssh \
   p7zip \
   patch \
   psmisc \
