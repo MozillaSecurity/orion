@@ -79,7 +79,8 @@ class Workflow:
             if path.exists():
                 LOG.warning(f"Not overwriting pre-existing ssh key at {path}")
             else:
-                path.write_text(private_key)
+                with path.open("w", newline="\n") as key_fp:
+                    key_fp.write(private_key)
                 path.chmod(0o400)
                 LOG.info("Installed ssh private key")
 
