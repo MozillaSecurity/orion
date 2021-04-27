@@ -52,8 +52,8 @@ cat > td-agent-bit.conf << EOF
 [FILTER]
     Name record_modifier
     Match *
-    Record host $(relative-hostname)
-    Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
+    Record host task-${TASK_ID}-run-${RUN_ID}
+    Record pool ${TASKCLUSTER_FUZZING_POOL-unknown}
     Remove_key file
 
 [OUTPUT]
@@ -69,7 +69,7 @@ cat > td-agent-bit.conf << EOF
     Format template
     Template {time} {message}
 EOF
-./td-agent-bit/bin/td-agent-bit -c td-agent-bit.conf
+./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf
 
 # Get fuzzmanager configuration from TC
 set +x
