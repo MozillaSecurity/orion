@@ -9,18 +9,17 @@ LABEL maintainer Christian Holler <choller@mozilla.com>
 ENV LOGNAME         ubuntu
 ENV HOSTNAME        taskcluster-worker
 ARG DEBIAN_FRONTEND=noninteractive
-ENV TASKCLUSTER_FUZZING_POOL unknown
 
 RUN useradd -d /home/ubuntu -s /bin/bash -m ubuntu
 
 COPY recipes/linux /src/recipes
-COPY services/fuzzing-decision /src/fuzzing-tc
 COPY services/js-tests-distiller/setup.sh /src/recipes/setup-js-tests-distiller.sh
+COPY services/js-tests-distiller/launch.sh /home/ubuntu/
 RUN /src/recipes/setup-js-tests-distiller.sh
-COPY services/js-tests-distiller/launch-js-tests-distiller.sh /home/ubuntu/
 
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 WORKDIR /home/ubuntu
-CMD ["/home/ubuntu/launch-js-tests-distiller.sh"]
+USER ubuntu
+CMD ["/home/ubuntu/launch.sh"]
