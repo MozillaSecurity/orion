@@ -25,7 +25,7 @@ curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/goog
 set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
-    Daemon       On
+    Daemon       Off
     Log_File     $USERPROFILE\\td-agent-bit.log
     Log_Level    info
     Parsers_File $USERPROFILE\\td-agent-bit\\conf\\parsers.conf
@@ -41,7 +41,6 @@ cat > td-agent-bit.conf << EOF
     Skip_Long_Lines On
     Buffer_Max_Size 1M
     DB td-grizzly-logs.pos
-    DB.locking true
 
 [FILTER]
     Name rewrite_tag
@@ -69,7 +68,7 @@ cat > td-agent-bit.conf << EOF
     Format template
     Template {time} {message}
 EOF
-./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf
+./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf &
 
 # Get fuzzmanager configuration from TC
 set +x
@@ -82,7 +81,11 @@ cat >> .fuzzmanagerconf << EOF
 sigdir = "$USERPROFILE\\signatures"
 tool = bearspray
 EOF
-setup-fuzzmanager-hostname
+
+# setup-fuzzmanager-hostname
+name="task-${TASK_ID}-run-${RUN_ID}"
+echo "Using '$name' as hostname." >&2
+echo "clientid = $name" >>.fuzzmanagerconf
 chmod 0600 .fuzzmanagerconf
 
 status "Setup: cloning bearspray"
