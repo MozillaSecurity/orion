@@ -1,7 +1,7 @@
 Building locally:
 
     TAG=dev
-    docker build -t mozillasecurity/js-test-distiller:$TAG ../.. -f Dockerfile
+    docker build -t mozillasecurity/js-tests-distiller:$TAG ../.. -f Dockerfile
 
 ... or to test the latest build:
 

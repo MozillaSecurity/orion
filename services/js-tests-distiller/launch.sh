@@ -34,6 +34,8 @@ JSTESTS=/home/ubuntu/gecko-dev/js/src/tests/
 
 # Fetch a build for timeout testing later
 retry python -mfuzzfetch --target js --debug -n debug64
+LD_LIBRARY_PATH="$(pwd)/debug64/dist/bin"
+export LD_LIBRARY_PATH
 
 # Clone all source repositories for their tests
 git-clone https://github.com/v8/v8
