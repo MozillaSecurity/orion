@@ -78,7 +78,7 @@ set -x
 # Update fuzzmanager config for this instance
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
-sigdir = "$USERPROFILE\\signatures"
+sigdir = $USERPROFILE\\signatures
 tool = bearspray
 EOF
 
