@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+set -e
+set -x
+set -o pipefail
+
+# shellcheck source=recipes/linux/common.sh
+source "${0%/*}/common.sh"
+
+#### Install recipes
+
+cd "${0%/*}"
+
+# also does the initial sys-update
+./js32_deps.sh
+
+./fuzzfetch.sh
+./taskcluster.sh
+
+#### Bootstrap Packages
+
+packages=(
+  autoconf2.13
+  ca-certificates
+  curl
+  g++
+  g++-multilib
+  gcc-multilib
+  gdb
+  git
+  htop
+  jshon
+  less
+  lib32z1
+  lib32z1-dev
+  libc6-dbg
+  libc6-dbg:i386
+  locales
+  mailutils
+  mercurial
+  nano
+  openssh-client
+  psmisc
+  python-is-python3
+  python3-dev
+  python3-pip
+  python3-setuptools
+  python3-wheel
+  screen
+  software-properties-common
+  unzip
+  valgrind
+  vim
+  zip
+  zstd
+)
+retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+#### Base System Configuration
+
+# Generate locales
+locale-gen en_US.utf8
+
+# Ensure we retry metadata requests in case of glitches
+# https://github.com/boto/boto/issues/1868
+cat << EOF | tee /etc/boto.cfg > /dev/null
+[Boto]
+metadata_service_num_attempts = 10
+EOF
+
+#### Base Environment Configuration
+
+cat << 'EOF' >> /home/ubuntu/.bashrc
+
+# FuzzOS
+export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
+EOF
+
+# Cleanup
+"${0%/*}/cleanup.sh"
+
+mkdir -p /home/ubuntu/.ssh /root/.ssh
+chmod 0700 /home/ubuntu/.ssh /root/.ssh
+cat << EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
+Host *
+UseRoaming no
+IdentitiesOnly yes
+EOF
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/ubuntu/.ssh/known_hosts
+
+chown -R ubuntu:ubuntu /home/ubuntu
