@@ -34,6 +34,7 @@ class ReductionUpdater(ReductionWorkflow):
             crash = CrashEntry(self.crash_id)
         except RuntimeError as exc:
             if "status code 404" in str(exc):
+                LOG.warning("FuzzManager returned 404, ignoring...")
                 return 0
             raise
         if (
@@ -70,7 +71,9 @@ class ReductionUpdater(ReductionWorkflow):
             )
             task = Taskcluster.get_service("queue").task(args.crash_from_reduce_task)
             crash = int(task["payload"]["env"]["INPUT"])
+            LOG.info("=> got crash ID %d", crash)
             return cls(crash, args.quality, args.only_if_quality)
+        LOG.info("Resetting crash ID %d", args.crash)
         return cls(args.crash, args.quality, args.only_if_quality)
 
 
