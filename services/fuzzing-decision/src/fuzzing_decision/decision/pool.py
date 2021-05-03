@@ -451,7 +451,8 @@ class PoolConfigMap(CommonPoolConfigMap):
         role = Role(
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             description=DESCRIPTION,
-            scopes=decision_task["scopes"],
+            scopes=decision_task["scopes"]
+            + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
 
         return [pool, hook, role]
