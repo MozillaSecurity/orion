@@ -30,7 +30,12 @@ class ReductionUpdater(ReductionWorkflow):
         self.only_if_quality = only_if_quality
 
     def run(self):
-        crash = CrashEntry(self.crash_id)
+        try:
+            crash = CrashEntry(self.crash_id)
+        except RuntimeError as exc:
+            if "status code 404" in str(exc):
+                return 0
+            raise
         if (
             self.only_if_quality is None
             or crash.testcase_quality == self.only_if_quality
