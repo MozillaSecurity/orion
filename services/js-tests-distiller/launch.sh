@@ -56,3 +56,23 @@ $DISTILLER --delete-timeouts --test $OUTPUT --binary debug64/dist/bin/js
 # Create zip bundle
 mkdir -p output
 zip output/jstests-distilled.zip -r tests
+
+# Cleanup
+rm -Rf tests
+
+## Legacy test bundle creation ##
+
+TEST262_LIST=/home/ubuntu/LangFuzz/tools/tests/test262.list
+
+# This is a hack to extract include directives for jit-tests and convert them to jstests shell.js style
+(cd $JITTESTS && for f in `grep -rnl " include:" . | grep directives` ; do cp lib/`egrep -o 'include:[a-zA-Z0-9\.\-]+' $f | head -n1 | sed -e 's/include://'` `echo $f | sed -e 's/directives.txt//'`shell.js ; done)
+
+cp -R $JITTESTS $JSTESTS .
+
+# Make a limited copy of test262 as it is too large to distribute it all
+cd tests
+rsync -rv --files-from $TEST262_LIST test262 test262-limited
+rm -Rf test262
+cd ..
+
+zip output/jstests-legacy.zip -r jit-test tests
