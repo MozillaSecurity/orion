@@ -52,6 +52,34 @@ then
   JS=1
 fi
 
+if [[ -n "$XPCRT" ]]
+then
+  if [[ ! -e ~/.ssh/id_rsa.domino ]] || [[ ! -e ~/.ssh/id_rsa.domino-xpcshell ]]
+  then
+    targets=( "domino" "domino-xpcshell" )
+    for target in "${targets[@]}"
+    do
+      echo "$(get-tc-secret deploy-$target)"
+      retry get-tc-secret "deploy-$target" "$HOME/.ssh/id_rsa.${target}"
+      chmod 0600 "$HOME/.ssh/id_rsa.${target}"
+      cat >> ~/.ssh/config <<-EOF
+			Host $target
+			Hostname github.com
+			IdentityFile ~/.ssh/id_rsa.$target
+			EOF
+    done
+  fi
+
+  npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
+  git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
+  (
+    cd domino-xpcshell
+    npm ci --no-progress
+    nohup node dist/server.js "$XPCRT" &
+  )
+fi
+
+
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
