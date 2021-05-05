@@ -37,14 +37,6 @@ then
     TARGET_BIN="js/dist/bin/fuzz-tests"
   fi
   chmod -R 0755 "$HOME/js"
-elif [[ "$XPC" = 1 ]] || [[ -n "$XPCRT" ]]
-then
-  if [[ ! -d "$HOME/xpcshell" ]]
-  then
-    retry fuzzfetch -n xpcshell --target xpcshell "${FETCH_ARGS[@]}"
-  fi
-  TARGET_BIN="xpcshell/xpcshell"
-  chmod -R 0755 "$HOME/xpcshell"
 else
   TARGET_BIN="firefox/firefox"
   if [[ ! -d "$HOME/firefox" ]]
@@ -52,5 +44,9 @@ else
     retry fuzzfetch -n firefox --gtest "${FETCH_ARGS[@]}"
   fi
   chmod -R 0755 "$HOME/firefox"
+  if [[ -n "$XPCRT" ]]
+  then
+    TARGET_BIN="$TARGET_BIN -xpcshell"
+  fi
 fi
 echo "$TARGET_BIN"
