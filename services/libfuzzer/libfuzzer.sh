@@ -234,6 +234,13 @@ if [[ "$JS" = 1 ]]
 then
   export LD_LIBRARY_PATH=~/js/dist/bin
 fi
+
+TARGET_ARGS=""
+if [[ -n "$XPCRT" ]]
+then
+  TARGET_ARGS="-xpcshell"
+fi
+
 # shellcheck disable=SC2206
 LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $TOKEN $CORPORA)
 if [[ -z "$LIBFUZZER_INSTANCES" ]]
@@ -259,7 +266,7 @@ then
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-    --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
+    --cmd "$HOME/$TARGET_BIN" "$TARGET_ARGS" "${LIBFUZZER_ARGS[@]}"
 else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \

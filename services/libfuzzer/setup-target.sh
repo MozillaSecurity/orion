@@ -44,9 +44,5 @@ else
     retry fuzzfetch -n firefox --gtest "${FETCH_ARGS[@]}"
   fi
   chmod -R 0755 "$HOME/firefox"
-  if [[ -n "$XPCRT" ]]
-  then
-    TARGET_BIN="$TARGET_BIN -xpcshell"
-  fi
 fi
 echo "$TARGET_BIN"
