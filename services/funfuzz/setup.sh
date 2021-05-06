@@ -14,8 +14,6 @@ source "${0%/*}/common.sh"
 
 cd "${0%/*}"
 ./js32_deps.sh  # does the initial sys-update
-./berglas.sh
-./credstash.sh
 ./fluentbit.sh
 ./fuzzfetch.sh
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh

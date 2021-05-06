@@ -10,9 +10,9 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
+if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_SECRETS" ]]
 then
-  retry credstash get fuzzmanagerconf > ~/.fuzzmanagerconf
+  get-tc-secret fuzzmanagerconf ~/.fuzzmanagerconf
   setup-fuzzmanager-hostname
   chmod 0600 ~/.fuzzmanagerconf
 fi
