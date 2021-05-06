@@ -104,7 +104,12 @@ TARGET_BIN="$(./setup-target.sh)"
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  if [[ -n "$XPCRT" ]]
+  then
+    xvfb-run python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  else
+    python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  fi
 }
 
 # IPC
