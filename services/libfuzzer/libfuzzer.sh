@@ -20,6 +20,12 @@ then
   exit 1
 fi
 
+if [[ -z "$NO_SECRETS" ]]
+then
+  # setup AWS credentials to use S3
+  setup-aws-credentials
+fi
+
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
 then
