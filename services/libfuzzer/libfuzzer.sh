@@ -21,10 +21,9 @@ then
 fi
 
 mkdir -p ~/.ssh
-if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_CREDSTASH" ]]
+if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
 then
-  retry credstash get deploy-fuzzing-shells-private.pem > ~/.ssh/id_rsa.fuzzing-shells-private
-  chmod 0600 ~/.ssh/id_*
+  get-tc-secret deploy-fuzzing-shells-private ~/.ssh/id_rsa.fuzzing-shells-private
 fi
 cat >> ~/.ssh/config << EOF
 Host fuzzing-shells-private github.com
@@ -38,9 +37,9 @@ then
   then
     git-clone https://github.com/google/oss-fuzz.git
   fi
-  if [[ ! -f "$HOME/.boto" ]] && [[ -z "$NO_CREDSTASH" ]]
+  if [[ ! -f "$HOME/.boto" ]] && [[ -z "$NO_SECRETS" ]]
   then
-    retry credstash get ossfuzz.gutils >> ~/.boto
+    get-tc-secret ossfuzz-gutils >> ~/.boto
   fi
 fi
 
@@ -52,11 +51,11 @@ then
   JS=1
 fi
 
-# Get FuzzManager configuration from credstash.
+# Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
-if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
+if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_SECRETS" ]]
 then
-  retry credstash get fuzzmanagerconf > .fuzzmanagerconf
+  get-tc-secret fuzzmanagerconf .fuzzmanagerconf
   # Update FuzzManager config for this instance.
   mkdir -p signatures
   cat >> .fuzzmanagerconf << EOF
