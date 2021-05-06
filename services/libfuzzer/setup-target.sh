@@ -36,13 +36,11 @@ then
     cp "$HOME/js/dist/bin/js.fuzzmanagerconf" "$HOME/js/dist/bin/fuzz-tests.fuzzmanagerconf"
     TARGET_BIN="js/dist/bin/fuzz-tests"
   fi
-  chmod -R 0755 "$HOME/js"
 else
   TARGET_BIN="firefox/firefox"
   if [[ ! -d "$HOME/firefox" ]]
   then
     retry fuzzfetch -n firefox --gtest "${FETCH_ARGS[@]}"
   fi
-  chmod -R 0755 "$HOME/firefox"
 fi
 echo "$TARGET_BIN"
