@@ -71,12 +71,15 @@ then
   fi
 
   npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
-  git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
-  (
-    cd domino-xpcshell
-    npm ci --no-progress
-    nohup node dist/server.js "$XPCRT" &
-  )
+  if [[ ! -e ~/domino-xpcshell ]]
+  then
+    git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
+    (
+      cd domino-xpcshell
+      npm ci --no-progress
+      nohup node dist/server.js "$XPCRT" &
+    )
+  fi
 fi
 
 
