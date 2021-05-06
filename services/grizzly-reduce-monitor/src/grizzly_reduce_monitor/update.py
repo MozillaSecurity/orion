@@ -32,16 +32,16 @@ class ReductionUpdater(ReductionWorkflow):
     def run(self):
         try:
             crash = CrashEntry(self.crash_id)
+            if (
+                self.only_if_quality is None
+                or crash.testcase_quality == self.only_if_quality
+            ):
+                crash.testcase_quality = self.quality
         except RuntimeError as exc:
             if "status code 404" in str(exc):
                 LOG.warning("FuzzManager returned 404, ignoring...")
                 return 0
             raise
-        if (
-            self.only_if_quality is None
-            or crash.testcase_quality == self.only_if_quality
-        ):
-            crash.testcase_quality = self.quality
         return 0
 
     @staticmethod
