@@ -69,7 +69,10 @@ then
     done
   fi
 
+  set +x
   npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
+  set -x
+
   if [[ ! -e ~/domino-xpcshell ]]
   then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
