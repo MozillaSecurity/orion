@@ -52,6 +52,42 @@ then
   JS=1
 fi
 
+if [[ -n "$XPCRT" ]]
+then
+  if [[ ! -e ~/.ssh/id_rsa.domino ]] || [[ ! -e ~/.ssh/id_rsa.domino-xpcshell ]]
+  then
+    targets=( "domino" "domino-xpcshell" )
+    for target in "${targets[@]}"
+    do
+      get-tc-secret "deploy-$target" "$HOME/.ssh/id_rsa.${target}"
+      chmod 0600 "$HOME/.ssh/id_rsa.${target}"
+      cat >> ~/.ssh/config <<-EOF
+			Host $target
+			Hostname github.com
+			IdentityFile ~/.ssh/id_rsa.$target
+			EOF
+    done
+  fi
+
+  set +x
+  npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
+  set -x
+
+  if [[ ! -e ~/domino-xpcshell ]]
+  then
+    git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
+    (
+      cd domino-xpcshell
+      npm ci --no-progress
+      nohup node dist/server.js "$XPCRT" &
+    )
+
+    TOOLNAME="${TOOLNAME:domino-xpcshell}"
+    FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
+  fi
+fi
+
+
 # Get FuzzManager configuration from credstash.
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_CREDSTASH" ]]
@@ -73,7 +109,12 @@ TARGET_BIN="$(./setup-target.sh)"
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  if [[ -n "$XPCRT" ]]
+  then
+    xvfb-run python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  else
+    python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  fi
 }
 
 # IPC
@@ -206,8 +247,20 @@ if [[ "$JS" = 1 ]]
 then
   export LD_LIBRARY_PATH=~/js/dist/bin
 fi
+
+TARGET_ARGS=""
+if [[ -n "$XPCRT" ]]
+then
+  TARGET_ARGS="-xpcshell"
+fi
+
+if [[ -n "$RSS_LIMIT" ]]
+then
+  RSS_LIMIT="-rss_limit_mb=$RSS_LIMIT"
+fi
+
 # shellcheck disable=SC2206
-LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $TOKEN $CORPORA)
+LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $RSS_LIMIT $TOKEN $CORPORA)
 if [[ -z "$LIBFUZZER_INSTANCES" ]]
 then
   LIBFUZZER_INSTANCES=$(nproc)
@@ -231,7 +284,7 @@ then
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-    --cmd "$HOME/$TARGET_BIN" "${LIBFUZZER_ARGS[@]}"
+    --cmd "$HOME/$TARGET_BIN" "$TARGET_ARGS" "${LIBFUZZER_ARGS[@]}"
 else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
