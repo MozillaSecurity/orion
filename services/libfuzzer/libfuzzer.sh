@@ -59,8 +59,7 @@ then
     targets=( "domino" "domino-xpcshell" )
     for target in "${targets[@]}"
     do
-      echo "$(get-tc-secret deploy-$target)"
-      retry get-tc-secret "deploy-$target" "$HOME/.ssh/id_rsa.${target}"
+      get-tc-secret "deploy-$target" "$HOME/.ssh/id_rsa.${target}"
       chmod 0600 "$HOME/.ssh/id_rsa.${target}"
       cat >> ~/.ssh/config <<-EOF
 			Host $target
