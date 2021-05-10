@@ -254,13 +254,8 @@ then
   TARGET_ARGS="-xpcshell"
 fi
 
-if [[ -n "$RSS_LIMIT" ]]
-then
-  RSS_LIMIT="-rss_limit_mb=$RSS_LIMIT"
-fi
-
 # shellcheck disable=SC2206
-LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $RSS_LIMIT $TOKEN $CORPORA)
+LIBFUZZER_ARGS=($LIBFUZZER_ARGS -entropic=1 $TOKEN $CORPORA)
 if [[ -z "$LIBFUZZER_INSTANCES" ]]
 then
   LIBFUZZER_INSTANCES=$(nproc)
