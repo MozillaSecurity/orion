@@ -12,13 +12,10 @@ source ~worker/.local/bin/common.sh
 
 if [[ "$(id -u)" = "0" ]]
 then
-  if [[ -z "$NO_CREDSTASH" ]]
+  if [[ -z "$NO_SECRETS" ]]
   then
-    # In some environments, we require credentials for talking to credstash
-    su worker -c ". ~/.local/bin/common.sh && setup-aws-credentials"
-    mkdir -p /etc/google/auth /etc/td-agent-bit
-    su worker -c ". ~/.local/bin/common.sh && retry credstash get google-logging-creds.json" > /etc/google/auth/application_default_credentials.json
-    chmod 0600 /etc/google/auth/application_default_credentials.json
+    get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
+    mkdir -p /etc/td-agent-bit
     cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       On

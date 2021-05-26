@@ -33,43 +33,25 @@ CI and CD are performed autonomously with Taskcluster and the [Orion Decision](h
 
 #### Usage
 
-You can build, test and push locally, which is great for testing locally. In order to do
-that run the command below and adjust the path to the service you want to interact and the
-repository `DOCKER_ORG` to which you intent to push. `DOCKER_ORG` is used as tag name for the image.
+You can build, test and push locally, which is great for testing locally. The commands below are general,
+and each service may have more specific instructions defined in the README.md of the service.
 
-> Note that you might want to edit the `service.yaml` of the image too, if you intent to make use of
-> custom `build_args`, parent images and manifest destinations.
+    TAG=dev
+    docker build -t mozillasecurity/service:$TAG ../.. -f Dockerfile
 
-```bash
-#!/usr/bin/env bash
-export DOCKER_ORG=<DOCKER_USERNAME>
-export TRAVIS_PULL_REQUEST=false
-export TRAVIS_BRANCH=master
-export TRAVIS_EVENT_TYPE=cron
-./monorepo.py -ci travis -build -test -deliver -path core/linux
-./monorepo.py -ci travis -build -test -deliver -path base/linux/fuzzos
-```
+... or to test the latest build:
 
-```
-make help
-```
+    TAG=latest
+
+Running the fuzzer locally:
+
+    eval $(TASKCLUSTER_ROOT_URL=https://community-tc.services.mozilla.com taskcluster signin)
+    LOGS="logs-$(date +%Y%m%d%H%M%S)"
+    mkdir -p "$LOGS"
+    docker run --rm -e TASKCLUSTER_ROOT_URL -e TASKCLUSTER_CLIENT_ID -e TASKCLUSTER_ACCESS_TOKEN -it -v "$(pwd)/$LOGS":/logs mozillasecurity/service:$TAG 2>&1 | tee "$LOGS/live.log"
+
+... add any environment variables required by the fuzzer using `-e VAR=value`. Some fuzzer images alter kernel sysctls and will require `docker run --privileged`.
 
 #### Testing
 
 Before a build task is initiated in Taskcluster, each shell script and Dockerfile undergo a linting and testing process which may or may not abort each succeeding task. To ensure your Dockerfile passes, you are encouraged to install the [`pre-commit`](https://pre-commit.com/) hook (`pre-commit install`) prior to commit, and to run any tests defined in the service folder before pushing your commit.
-
-#### Known Issues
-
-#### error creating overlay mount to /var/lib/docker/overlay2/<...>/merged: device or resource busy
-
-Workaround: https://github.com/docker/for-linux/issues/711
-
-```
-$ sudo systemctl stop docker
-$ sudo nano /etc/docker/daemon.json
-{
-  "max-concurrent-uploads": 1
-}
-$ sudo systemctl start docker
-$ docker push [...]
-```

@@ -30,12 +30,18 @@ class ReductionUpdater(ReductionWorkflow):
         self.only_if_quality = only_if_quality
 
     def run(self):
-        crash = CrashEntry(self.crash_id)
-        if (
-            self.only_if_quality is None
-            or crash.testcase_quality == self.only_if_quality
-        ):
-            crash.testcase_quality = self.quality
+        try:
+            crash = CrashEntry(self.crash_id)
+            if (
+                self.only_if_quality is None
+                or crash.testcase_quality == self.only_if_quality
+            ):
+                crash.testcase_quality = self.quality
+        except RuntimeError as exc:
+            if "status code 404" in str(exc):
+                LOG.warning("FuzzManager returned 404, ignoring...")
+                return 0
+            raise
         return 0
 
     @staticmethod
@@ -65,7 +71,9 @@ class ReductionUpdater(ReductionWorkflow):
             )
             task = Taskcluster.get_service("queue").task(args.crash_from_reduce_task)
             crash = int(task["payload"]["env"]["INPUT"])
+            LOG.info("=> got crash ID %d", crash)
             return cls(crash, args.quality, args.only_if_quality)
+        LOG.info("Resetting crash ID %d", args.crash)
         return cls(args.crash, args.quality, args.only_if_quality)
 
 
