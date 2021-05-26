@@ -119,7 +119,7 @@ def configure_task(task, config, now, env):
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("1 week", now)))
     )
-    task["scopes"] = sorted(chain(config.scopes, task["scopes"]))
+    task["scopes"] = sorted(chain(config.get_scopes(), task["scopes"]))
     add_capabilities_for_scopes(task)
     add_task_image(task, config)
     if config.platform == "windows":
@@ -145,6 +145,10 @@ def configure_task(task, config, now, env):
             artifact.update({"name": name}) or artifact
             for name, artifact in task["payload"]["artifacts"].items()
         ]
+        if config.run_as_admin:
+            task["payload"].setdefault("osGroups", [])
+            task["payload"]["osGroups"].append("Administrators")
+            task["payload"]["features"]["runAsAdministrator"] = True
     if env is not None:
         assert set(task["payload"]["env"]).isdisjoint(set(env))
         task["payload"]["env"].update(env)
@@ -222,6 +226,23 @@ class PoolConfiguration(CommonPoolConfiguration):
     def task_id(self):
         return f"{self.platform}-{self.pool_id}"
 
+    def get_scopes(self):
+        result = self.scopes.copy()
+        if self.platform == "windows" and self.run_as_admin:
+            result.extend(
+                (
+                    (
+                        "generic-worker:"
+                        f"os-group:{PROVISIONER_ID}/{self.task_id}/Administrators"
+                    ),
+                    (
+                        "generic-worker:"
+                        f"run-as-administrator:{PROVISIONER_ID}/{self.task_id}"
+                    ),
+                )
+            )
+        return result
+
     def build_resources(self, providers, machine_types, env=None):
         """Build the full tc-admin resources to compare and build the pool"""
 
@@ -264,7 +285,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                 task_id=self.task_id,
             )
         )
-        decision_task["scopes"] = sorted(chain(decision_task["scopes"], self.scopes))
+        decision_task["scopes"] = sorted(
+            chain(decision_task["scopes"], self.get_scopes())
+        )
         add_capabilities_for_scopes(decision_task)
         if env is not None:
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
@@ -389,7 +412,9 @@ class PoolConfigMap(CommonPoolConfigMap):
         provider = providers[self.cloud]
 
         pools = list(self.iterpools())
-        all_scopes = tuple(set(chain.from_iterable(pool.scopes for pool in pools)))
+        all_scopes = tuple(
+            set(chain.from_iterable(pool.get_scopes() for pool in pools))
+        )
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)

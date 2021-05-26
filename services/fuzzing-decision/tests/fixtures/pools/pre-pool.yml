@@ -18,3 +18,4 @@ cpu: x64
 platform: linux
 preprocess: pre
 macros: {}
+run_as_admin: false

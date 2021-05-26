@@ -171,6 +171,7 @@ def test_aws_resources(env, mock_clouds, mock_machines, platform):
             "schedule_start": "1970-01-01T00:00:00Z",
             "scopes": [],
             "tasks": 3,
+            "run_as_admin": False,
         },
     )
     resources = conf.build_resources(mock_clouds, mock_machines, env=env)
@@ -273,6 +274,7 @@ def test_gcp_resources(env, mock_clouds, mock_machines):
             "schedule_start": "1970-01-01T00:00:00Z",
             "scopes": [],
             "tasks": 3,
+            "run_as_admin": False,
         },
     )
     resources = conf.build_resources(mock_clouds, mock_machines, env=env)
@@ -410,13 +412,27 @@ def test_gcp_resources(env, mock_clouds, mock_machines):
         ),
     ],
 )
-@pytest.mark.parametrize("platform", ["linux", "windows"])
-def test_tasks(env, scope_caps, platform, mocker):
+@pytest.mark.parametrize(
+    "platform, run_as_admin",
+    [
+        ("linux", False),
+        ("windows", False),
+        ("windows", True),
+    ],
+)
+def test_tasks(env, scope_caps, platform, run_as_admin, mocker):
     mocker.patch.dict(
         "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
         {"orion.fuzzer.main": "task-mount-abc"},
     )
     scopes, expected_capabilities = scope_caps
+    if run_as_admin:
+        scopes.extend(
+            (
+                "generic-worker:os-group:proj-fuzzing/windows-test/Administrators",
+                "generic-worker:run-as-administrator:proj-fuzzing/windows-test",
+            )
+        )
     conf = PoolConfiguration(
         "test",
         {
@@ -455,6 +471,7 @@ def test_tasks(env, scope_caps, platform, mocker):
             "schedule_start": None,
             "scopes": scopes,
             "tasks": 2,
+            "run_as_admin": run_as_admin,
         },
     )
 
@@ -564,6 +581,9 @@ def test_tasks(env, scope_caps, platform, mocker):
                     "format": "tar.bz2",
                 },
             ]
+            if run_as_admin:
+                expected["payload"]["osGroups"] = ["Administrators"]
+                expected["payload"]["features"]["runAsAdministrator"] = True
             expected["payload"]["env"]["MSYSTEM"] = "MINGW64"
             # command is unique to windows, since we have no Docker entrypoint
             assert task["payload"]["command"]
@@ -776,6 +796,7 @@ def test_cycle_crons():
             "schedule_start": "1970-01-01T00:00:00Z",
             "scopes": [],
             "tasks": 2,
+            "run_as_admin": False,
         },
     )
 

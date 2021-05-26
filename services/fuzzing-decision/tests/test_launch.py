@@ -56,6 +56,7 @@ def test_load_params(tmp_path):
         "platform": "linux",
         "preprocess": "",
         "macros": {"ENVVAR1": "123456", "ENVVAR2": "789abc"},
+        "run_as_admin": False,
     }
 
     # test 1: environment from pool is merged
@@ -112,6 +113,7 @@ def test_load_params(tmp_path):
         "platform": None,
         "preprocess": None,
         "macros": {"PREPROC": "1"},
+        "run_as_admin": False,
     }
     pool_data["preprocess"] = "preproc"
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:

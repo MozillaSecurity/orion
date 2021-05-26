@@ -36,6 +36,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "name": str,
         "platform": str,
         "preprocess": str,
+        "run_as_admin": bool,
         "schedule_start": (datetime, str),
         "scopes": list,
         "tasks": int,
@@ -199,6 +200,8 @@ class CommonPoolConfiguration(abc.ABC):
         pool_id (str): basename of the pool on disk (eg. "pool1" for pool1.yml)
         preprocess (str): name of pool configuration to apply and run before fuzzing
                           tasks
+        run_as_admin (bool): whether to run as Administrator or unprivileged user
+                             (only valid when platform is windows)
         schedule_start (datetime): reference date for `cycle_time` scheduling
         scopes (list): list of taskcluster scopes required by the target
         tasks (int): number of tasks to run (each with `cores_per_task`)
@@ -293,6 +296,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.platform = data.get("platform")
         self.tasks = data.get("tasks")
         self.preprocess = data.get("preprocess")
+        self.run_as_admin = data.get("run_as_admin")
 
         # dict fields
         self.artifacts = data.get("artifacts", {})
@@ -528,6 +532,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "preprocess",
             "schedule_start",
             "tasks",
+            "run_as_admin",
         )
         merge_dict_fields = ("artifacts", "macros")
         merge_list_fields = ("scopes",)

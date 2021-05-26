@@ -18,3 +18,4 @@ platform: null
 preprocess: null
 macros:
   PREPROCESS: "1"
+run_as_admin: false

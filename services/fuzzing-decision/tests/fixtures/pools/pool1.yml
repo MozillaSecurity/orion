@@ -22,3 +22,4 @@ preprocess: null
 macros:
   ENVVAR1: 123456
   ENVVAR2: 789abc
+run_as_admin: false

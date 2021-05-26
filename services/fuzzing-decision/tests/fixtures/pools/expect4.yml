@@ -22,3 +22,4 @@ preprocess: ""
 macros:
   ENVVAR1: "abc"
   ENVVAR5: "xyz"
+run_as_admin: false

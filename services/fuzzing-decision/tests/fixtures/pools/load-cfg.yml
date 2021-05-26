@@ -12,3 +12,4 @@ cloud: gcp
 cpu: x64
 container: test
 platform: test
+run_as_admin: false
