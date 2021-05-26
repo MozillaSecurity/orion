@@ -24,6 +24,7 @@ EDIT=1 ./fuzzmanager.sh
 ./gsutil.sh
 ./fluentbit.sh
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
+./nodejs.sh
 ./taskcluster.sh
 
 packages=(
