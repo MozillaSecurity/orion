@@ -87,7 +87,7 @@ then
       nohup node dist/server.js "$XPCRT" &
     )
 
-    TOOLNAME="${TOOLNAME:domino-xpcshell}"
+    TOOLNAME="${TOOLNAME:-domino-xpcshell}"
     FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
   fi
 fi
