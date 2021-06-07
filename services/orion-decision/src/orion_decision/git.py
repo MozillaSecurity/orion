@@ -225,7 +225,6 @@ class GithubEvent:
             self.tag = event["release"]["tag_name"]
             self.branch = self.tag
             self.commit = self.tag
-            self.commit_range = f"{self.tag}^..{self.tag}"
             self.fetch_ref = f"refs/tags/{self.tag}:refs/tags/{self.tag}"
         else:
             # Strip ref branch prefix
@@ -234,19 +233,17 @@ class GithubEvent:
                 branch = branch.split("/", 2)[2]
             self.branch = branch
             self.commit = event["after"]
-            if set(event["before"]) == {"0"}:
-                # for a new branch, we aren't directly told where the branch came from
-                # use the commit prior to the first commit in the push instead
-                self.commit_range = f"{event['commits'][0]['id']}^..{event['after']}"
-            else:
+            # for a new branch, we aren't directly told where the branch came from
+            if set(event["before"]) != {"0"}:
                 self.commit_range = f"{event['before']}..{event['after']}"
             self.fetch_ref = event["after"]
         self.repo = GitRepo(self.http_url, self.fetch_ref, self.commit)
 
         # fetch both sides of the commit range
-        before, _ = self.commit_range.split("..")
-        if "^" not in before:
-            self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
+        if self.commit_range is not None:
+            before, _ = self.commit_range.split("..")
+            if "^" not in before:
+                self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
 
         self.commit_message = self.repo.message(self.commit_range)
         return self
@@ -260,7 +257,11 @@ class GithubEvent:
         Yields:
             Path: files changed by a commit range
         """
-        changed = self.repo.git("diff", "--name-only", self.commit_range)
+        if self.commit_range is None:
+            # no way to know what has changed.. so list all files.
+            changed = self.repo.git("ls-files")
+        else:
+            changed = self.repo.git("diff", "--name-only", self.commit_range)
         for line in set(changed.splitlines()):
             LOG.info("Path changed in %s: %s", self.commit_range, line)
             yield self.repo.path / line
