@@ -245,7 +245,7 @@ class GithubEvent:
             if "^" not in before:
                 self.repo.git("fetch", "-q", "origin", before, tries=RETRIES)
 
-        self.commit_message = self.repo.message(self.commit_range)
+        self.commit_message = self.repo.message(self.commit_range or self.commit)
         return self
 
     def list_changed_paths(self):
