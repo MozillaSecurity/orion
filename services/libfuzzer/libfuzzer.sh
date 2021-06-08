@@ -249,10 +249,15 @@ then
   export LD_LIBRARY_PATH=~/js/dist/bin
 fi
 
-TARGET_ARGS=""
+TARGET_ARGS=()
 if [[ -n "$XPCRT" ]]
 then
-  TARGET_ARGS="-xpcshell"
+  # The official truber maneuver™
+  #
+  # Firefox strips the -xpcshell arg, but if libfuzzer forks a subprocess
+  # (which it does during merge) then the -xpcshell flag is missing. Repeating
+  # the argument generates a warning at launch, but -merge will work.
+  TARGET_ARGS+=(-xpcshell -xpcshell)
 fi
 
 # shellcheck disable=SC2206
@@ -280,7 +285,7 @@ then
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-    --cmd "$HOME/$TARGET_BIN" "$TARGET_ARGS" "${LIBFUZZER_ARGS[@]}"
+    --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
 else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
