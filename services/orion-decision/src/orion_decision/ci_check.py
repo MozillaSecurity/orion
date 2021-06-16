@@ -85,5 +85,5 @@ def check_matrix(args):
 
                 # create CIMatrix for each branch and is_release=True
                 for branch in branches:
-                    CIMatrix(matrix, branch, is_release=False)
-                CIMatrix(matrix, None, is_release=True)
+                    CIMatrix(matrix, branch, event_data["type"])
+                CIMatrix(matrix, None, event_data["type"])

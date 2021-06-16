@@ -71,7 +71,7 @@ class CIScheduler:
         self.matrix = CIMatrix(
             matrix,
             github_event.branch,
-            github_event.event_type == "release",
+            github_event.event_type,
         )
 
     def create_tasks(self):

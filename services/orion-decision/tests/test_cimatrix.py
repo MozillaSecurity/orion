@@ -52,9 +52,9 @@ def test_matrix_load(fixture):
 @pytest.mark.parametrize(
     "case, branch, release",
     [
-        ("release", "dev", True),
-        ("on_branch", "main", False),
-        ("off_branch", "dev", False),
+        ("release", "dev", "release"),
+        ("on_branch", "main", "push"),
+        ("off_branch", "dev", "push"),
     ],
 )
 def test_matrix_release(case, branch, release):

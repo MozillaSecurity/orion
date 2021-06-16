@@ -534,20 +534,20 @@ class CIMatrix:
 
     __slots__ = ("jobs", "secrets")
 
-    def __init__(self, matrix, branch, is_release):
+    def __init__(self, matrix, branch, event_type):
         """Initialize a CIMatrix object.
 
         Arguments:
             matrix (dict): Matrix representation matching the CIMatrix jsonschema.
             branch (str): Git branch name (for matching `when` expressions)
-            is_release (bool): Whether this is a Github release (for `when` expressions)
+            event_type (str): Git event type (for `when` expressions)
         """
         # matrix is language/platform/version
         self.jobs = []
         self.secrets = []
-        self._parse_matrix(matrix, branch, is_release)
+        self._parse_matrix(matrix, branch, event_type)
 
-    def _parse_matrix(self, matrix, branch, is_release):
+    def _parse_matrix(self, matrix, branch, event_type):
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 
         given = set()
@@ -630,9 +630,8 @@ class CIMatrix:
                     name = include.get("name")
 
                     if "when" in include:
-                        if include["when"].get("release") is not None:
-                            if include["when"]["release"] != is_release:
-                                continue
+                        if include["when"].get("release") and event_type != "release":
+                            continue
 
                         elif include["when"].get("branch") is not None:
                             if include["when"]["branch"] != branch:
