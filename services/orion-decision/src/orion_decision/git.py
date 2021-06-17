@@ -14,6 +14,12 @@ LOG = getLogger(__name__)
 RETRY_SLEEP = 30
 RETRIES = 10
 
+GIT_EVENT_TYPES = {
+    "github-push": "push",
+    "github-pull-request": "pull_request",
+    "github-release": "release",
+}
+
 
 class GitRepo:
     """A git repository.
@@ -207,11 +213,7 @@ class GithubEvent:
         """
         self = cls()
         self.user = event["sender"]["login"]
-        self.event_type = {
-            "github-push": "push",
-            "github-pull-request": "pull_request",
-            "github-release": "release",
-        }[action]
+        self.event_type = GIT_EVENT_TYPES[action]
         self.repo_slug = event["repository"]["full_name"]
         if self.event_type == "pull_request":
             self.pull_request = event["number"]

@@ -12,6 +12,7 @@ from yaml import dump as yaml_dump
 from yaml import safe_load as yaml_load
 
 from .ci_matrix import CIMatrix
+from .git import GIT_EVENT_TYPES
 
 LOG = getLogger(__name__)
 EVENTS_PATH = Path(__file__).parent / "github_test_events"
@@ -84,6 +85,7 @@ def check_matrix(args):
                             branches.add(include["on"]["branch"])
 
                 # create CIMatrix for each branch and is_release=True
+                event_type = GIT_EVENT_TYPES[event_data["action"]]
                 for branch in branches:
-                    CIMatrix(matrix, branch, is_release=False)
-                CIMatrix(matrix, None, is_release=True)
+                    CIMatrix(matrix, branch, event_type)
+                CIMatrix(matrix, None, event_type)
