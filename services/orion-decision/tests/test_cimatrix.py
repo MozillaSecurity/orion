@@ -50,19 +50,19 @@ def test_matrix_load(fixture):
 
 
 @pytest.mark.parametrize(
-    "case, branch, release",
+    "case, branch, event_type",
     [
         ("release", "dev", "release"),
         ("on_branch", "main", "push"),
         ("off_branch", "dev", "push"),
     ],
 )
-def test_matrix_release(case, branch, release):
+def test_matrix_release(case, branch, event_type):
     """test job `when` conditions"""
     obj = yaml_load((FIXTURES / "matrix04" / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / "matrix04" / f"expected_{case}.yaml").read_text())
     assert set(exp) == {"jobs", "secrets"}
-    mtx = CIMatrix(obj, branch, release)
+    mtx = CIMatrix(obj, branch, event_type)
     jobs = set(str(MatrixJob.from_json(data)) for data in exp["jobs"])
     assert set(str(job) for job in mtx.jobs) == jobs
     assert not exp["secrets"]
