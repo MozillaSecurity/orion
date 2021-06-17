@@ -630,11 +630,14 @@ class CIMatrix:
                     name = include.get("name")
 
                     if "when" in include:
-                        if include["when"].get("release") and event_type != "release":
+                        if include["when"].get("release") is (event_type != "release"):
                             continue
 
                         elif include["when"].get("branch") is not None:
-                            if include["when"]["branch"] != branch:
+                            if (
+                                include["when"]["branch"] != branch
+                                or event_type != "push"
+                            ):
                                 continue
 
                     assert "script" in include or len(specified_scripts) == 1
