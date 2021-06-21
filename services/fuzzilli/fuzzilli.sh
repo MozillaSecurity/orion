@@ -125,7 +125,7 @@ ls -al /opt/swift5
 
 export PATH=/opt/swift5/usr/bin:$PATH
 
-if [[ -n "$MERGE" ]]
+if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   mozilla/merge.sh $HOME/build/dist/bin/js
 else
