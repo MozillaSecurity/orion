@@ -287,7 +287,7 @@ function get-provider () {
       return 0
       ;;
     *)
-      if [[ -n "$TASKCLUSTER_ROOT_URL" ]] && [[ -n "$TASK_ID" ]]
+      if [[ -n "$TASKCLUSTER_ROOT_URL" ]]
       then
         echo "Taskcluster"
         return 0
