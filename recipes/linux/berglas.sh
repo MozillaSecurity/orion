@@ -20,7 +20,7 @@ case "${1-install}" in
     # A tool for managing secrets on Google Cloud.
     # https://github.com/GoogleCloudPlatform/berglas
 
-    AMD64_DOWNLOAD_URL="https://storage.googleapis.com/berglas/master/linux_amd64/berglas"
+    AMD64_DOWNLOAD_URL="https://storage.googleapis.com/berglas/main/linux_amd64/berglas"
 
     if is-amd64; then
       curl -sL --retry 5 "$AMD64_DOWNLOAD_URL" -o /usr/local/bin/berglas
