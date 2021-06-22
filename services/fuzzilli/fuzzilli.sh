@@ -56,10 +56,8 @@ else
 fi
 
 # Get the deploy key for fuzzilli from Taskcluster
-tc-get-secret deploy-fuzzilli | jshon -e secret -e key -u > $HOME/.ssh/id_rsa.fuzzilli
-tc-get-secret deploy-langfuzz-config | jshon -e secret -e key -u > $HOME/.ssh/id_rsa.langfuzz-config
-
-chmod 0600 $HOME/.ssh/id_rsa.*
+get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
+get-tc-secret deploy-langfuzz-config $HOME/.ssh/id_rsa.langfuzz-config
 
 # Setup Key Identities
 cat << EOF > $HOME/.ssh/config
