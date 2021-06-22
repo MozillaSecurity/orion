@@ -58,7 +58,6 @@ EOF
 
 cd $HOME
 
-git-clone git@langfuzz-config:MozillaSecurity/langfuzz-config.git config
 git-clone https://github.com/MozillaSecurity/FuzzManager/
 
 # Checkout the configuration with bootstrap script
@@ -67,23 +66,12 @@ git-clone git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
 # Copy over the S3Manager, we need it for the fuzzilli daemon
 cp FuzzManager/misc/afl-libfuzzer/S3Manager.py fuzzilli/mozilla/
 
-#------- BEGIN BOOTSTRAP
+get-tc-secret fuzzmanagerconf $HOME/.fuzzmanagerconf
+cat >> $HOME/.fuzzmanagerconf << EOF
+sigdir = $HOME/signatures
+tool = ${TOOLNAME-Fuzzilli}
+EOF
 
-#!/bin/bash
-set -e -x
-
-function retry {
-  for i in {1..9}; do "$@" && return || sleep 10; done
-  "$@"
-}
-
-cd $HOME
-
-cp config/fuzzmanagerconf $HOME/.fuzzmanagerconf
-if [ -n "$TOOLNAME" ]
-then
-    sed -i -e "s/tool = Fuzzilli/tool = ${TOOLNAME}/" $HOME/.fuzzmanagerconf
-fi
 if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
     echo "clientid = task-${TASK_ID}-run-${RUN_ID}"
 elif [ -n "$EC2SPOTMANAGER_POOLID" ]; then
@@ -91,7 +79,6 @@ elif [ -n "$EC2SPOTMANAGER_POOLID" ]; then
 else
     echo "clientid = ${CLIENT_ID-$(uname -n)}"
 fi >> $HOME/.fuzzmanagerconf
-chmod 600 $HOME/.fuzzmanagerconf
 
 # Download our build
 python3 -mfuzzfetch --central --target js --debug --fuzzilli -n build
