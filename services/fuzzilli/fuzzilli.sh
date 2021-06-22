@@ -40,7 +40,6 @@ fi
 
 # Get the deploy key for fuzzilli from Taskcluster
 get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
-get-tc-secret deploy-langfuzz-config $HOME/.ssh/id_rsa.langfuzz-config
 
 # Setup Key Identities
 cat << EOF > $HOME/.ssh/config
@@ -48,10 +47,6 @@ cat << EOF > $HOME/.ssh/config
 Host fuzzilli
 Hostname github.com
 IdentityFile $HOME/.ssh/id_rsa.fuzzilli
-
-Host langfuzz-config
-Hostname github.com
-IdentityFile $HOME/.ssh/id_rsa.langfuzz-config
 EOF
 
 # -----------------------------------------------------------------------------
