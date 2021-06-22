@@ -12,10 +12,6 @@ source /home/ubuntu/.local/bin/common.sh
 
 if [[ "$(id -u)" = "0" ]]
 then
-  function tc-get-secret () {
-    TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1"
-  }
-
   # Config and run the logging service
   mkdir -p /etc/google/auth /var/lib/td-agent-bit/pos
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
