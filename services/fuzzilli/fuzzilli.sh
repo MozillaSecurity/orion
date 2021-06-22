@@ -7,23 +7,6 @@ set -e
 set -x
 set -o pipefail
 
-function retry () {
-  op="$(mktemp)"
-  for _ in {1..9}; do
-    if "$@" >"$op"; then
-      cat "$op"
-      rm "$op"
-      return
-    fi
-    sleep 30
-  done
-  rm "$op"
-  "$@"
-}
-
-function tc-get-secret () {
-  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1"
-}
 
 # shellcheck source=recipes/linux/common.sh
 source $HOME/.local/bin/common.sh
