@@ -18,8 +18,7 @@ then
 
   # Config and run the logging service
   mkdir -p /etc/google/auth /var/lib/td-agent-bit/pos
-  tc-get-secret google-logging-creds | jshon -e secret -e key > /etc/google/auth/application_default_credentials.json
-  chmod 0600 /etc/google/auth/application_default_credentials.json
+get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
   /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
   function onexit () {
