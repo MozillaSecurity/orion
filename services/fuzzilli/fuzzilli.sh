@@ -100,13 +100,9 @@ else
   mozilla/bootstrap.sh
   screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh $HOME/build/dist/bin/js
   mozilla/monitor.sh $HOME/build/dist/bin/js
+
+  # sleep to keep docker container running
+  echo "[$(date -u -Iseconds)] waiting ${TARGET_TIME}s"
+  sleep $TARGET_TIME
+  echo "[$(date -u -Iseconds)] ${TARGET_TIME}s elapsed, exiting..."
 fi
-
-#------- END BOOTSTRAP
-
-
-
-# sleep to keep docker container running
-echo "[$(date -u -Iseconds)] waiting ${TARGET_TIME}s"
-sleep $TARGET_TIME
-echo "[$(date -u -Iseconds)] ${TARGET_TIME}s elapsed, exiting..."
