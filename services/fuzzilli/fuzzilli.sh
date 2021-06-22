@@ -75,11 +75,11 @@ EOF
 
 cd $HOME
 
-retry git clone -v --depth 1 git@langfuzz-config:MozillaSecurity/langfuzz-config.git config
-retry git clone -v --depth 1 https://github.com/MozillaSecurity/FuzzManager/
+git-clone git@langfuzz-config:MozillaSecurity/langfuzz-config.git config
+git-clone https://github.com/MozillaSecurity/FuzzManager/
 
 # Checkout the configuration with bootstrap script
-retry git clone -v --depth 1 git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
+git-clone git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
 
 # Copy over the S3Manager, we need it for the fuzzilli daemon
 cp FuzzManager/misc/afl-libfuzzer/S3Manager.py fuzzilli/mozilla/
