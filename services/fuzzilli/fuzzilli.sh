@@ -90,14 +90,9 @@ export PATH=/opt/swift5/usr/bin:$PATH
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
-  mozilla/merge.sh $HOME/build/dist/bin/js
+  timeout -s 2 ${TARGET_TIME} mozilla/merge.sh $HOME/build/dist/bin/js
 else
   mozilla/bootstrap.sh
   screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh $HOME/build/dist/bin/js
-  mozilla/monitor.sh $HOME/build/dist/bin/js
-
-  # sleep to keep docker container running
-  echo "[$(date -u -Iseconds)] waiting ${TARGET_TIME}s"
-  sleep $TARGET_TIME
-  echo "[$(date -u -Iseconds)] ${TARGET_TIME}s elapsed, exiting..."
+  timeout -s 2 ${TARGET_TIME} mozilla/monitor.sh $HOME/build/dist/bin/js || [[ $? -eq 124 ]]
 fi
