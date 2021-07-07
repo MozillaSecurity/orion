@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e -x
+PATH="$PWD/msys64/opt/node:$PATH"
 
 retry () {
   i=0
@@ -107,7 +108,7 @@ EOF
 
 # Checkout bearspray
 git init bearspray
-cd  bearspray
+cd bearspray
 git remote add origin git@bearspray:MozillaSecurity/bearspray.git
 retry git fetch -q --depth 1 --no-tags origin HEAD
 git -c advice.detachedHead=false checkout FETCH_HEAD

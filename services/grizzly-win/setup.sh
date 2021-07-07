@@ -69,6 +69,19 @@ python -m pip install --upgrade --force-reinstall pip
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
+# get node.js
+VER=14.17.3
+curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
+7z x node.zip
+rm node.zip
+rm -rf msys64/opt/node
+mkdir -p msys64/opt
+mv "node-v${VER}-win-x64" msys64/opt/node
+PATH="$PWD/msys64/opt/node:$PATH"
+which node
+node -v
+npm -v
+
 # install utils to match linux ci images
 python -m pip install \
   psutil \
