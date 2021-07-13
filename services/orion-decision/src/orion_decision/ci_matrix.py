@@ -15,13 +15,20 @@ from yaml import safe_load as yaml_load
 
 from . import Taskcluster
 
-LANGUAGES = ["python"]
+LANGUAGES = ["python", "node"]
 PLATFORMS = ["linux", "windows"]
 VERSIONS = {
+    ("node", "linux"): ["10", "12", "14", "16"],
+    ("node", "windows"): ["14"],
     ("python", "linux"): ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9"],
     ("python", "windows"): ["3.8"],
 }
 IMAGES = {
+    ("node", "linux", "10"): "ci-node-10",
+    ("node", "linux", "12"): "ci-node-12",
+    ("node", "linux", "14"): "ci-node-14",
+    ("node", "linux", "16"): "ci-node-16",
+    ("node", "windows", "14"): "ci-node-14-win",
     ("python", "linux", "2.7"): "ci-py-27",
     ("python", "linux", "3.5"): "ci-py-35",
     ("python", "linux", "3.6"): "ci-py-36",

@@ -1,1 +1,3 @@
 name: ci-node-10
+force_dirty:
+  - orion-decision

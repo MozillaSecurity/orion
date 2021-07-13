@@ -2,34 +2,32 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM node:14-slim
+FROM node:14-alpine
 
 LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
-ARG DEBIAN_FRONTEND=noninteractive
+COPY services/orion-decision /src/orion-decision
 
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
-    && retry apt-get update -qq \
-    && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
-        ca-certificates \
-        curl \
-        git \
-        jshon \
-        locales \
-        openssh-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd -d /home/worker -s /bin/bash -m worker \
-    && echo "LANGUAGE=en" >> /etc/environment \
-    && echo "LANG=en_US.UTF-8" >> /etc/environment \
-    && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
-    && sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen \
-    && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
-    && locale-gen en_US.UTF-8 \
-    && npm install -g npm@7
+ENV LANGUAGE en
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+
+RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
+    && adduser -D worker \
+    && retry apk add --no-cache curl git libintl openssh-client python3 py3-yarl \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && retry apk --no-cache --virtual .locale_build add cmake make musl-dev gcc gettext-dev \
+    && git clone https://gitlab.com/rilian-la-te/musl-locales \
+    && cd musl-locales && cmake -DLOCALE_PROFILE=OFF -DCMAKE_INSTALL_PREFIX:PATH=/usr . && make && make install \
+    && cd .. && rm -r musl-locales \
+    && apk del .locale_build \
+    && retry python -m pip install --no-cache-dir --disable-pip-version-check --progress-bar off -e "/src/orion-decision" \
+    && python -m compileall -b -q /usr/lib \
+    && find /usr/lib -name \*.py -delete \
+    && find /usr/lib -name __pycache__ -exec rm -rf "{}" + \
+    && npm install -g npm@7 \
+    && su worker -c "mkdir ~worker/.ssh" \
+    && retry su worker -c "ssh-keyscan github.com > ~worker/.ssh/known_hosts"
 
 USER worker
 WORKDIR /home/worker
-
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
-    && mkdir .ssh \
-    && retry ssh-keyscan github.com > .ssh/known_hosts
