@@ -23,9 +23,11 @@ case "${1-install}" in
     curl --retry 5 -sL https://deb.nodesource.com/setup_14.x | bash -
     sys-embed nodejs
     strip --strip-unneeded /usr/bin/node
+    npm install -g npm@7
     ;;
   test)
     node --help
     node --version
+    npm --version
     ;;
 esac
