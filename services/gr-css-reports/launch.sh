@@ -33,7 +33,7 @@ git init gr.css.reports
   retry git fetch -q --depth=10 origin main
   git -c advice.detachedHead=false checkout origin/main
   retry npm i --no-progress
-  retry npm i --no-save --no-progress --production @mozillasecurity/gr.css
+  retry npm i --no-save --no-progress @mozillasecurity/gr.css
   npx gr.css ~/nightly/firefox src/grammar.json &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
