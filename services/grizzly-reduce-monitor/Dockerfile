@@ -16,6 +16,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         py3-pip \
         py3-psutil \
         py3-requests \
+        py3-six \
         py3-wheel \
         py3-yarl \
     && pip freeze > /src/os_constraints.txt \
