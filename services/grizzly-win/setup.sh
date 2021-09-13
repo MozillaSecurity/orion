@@ -81,6 +81,7 @@ mv "node-v${VER}-win-x64" msys64/opt/node
 PATH="$PWD/msys64/opt/node:$PATH"
 which node
 node -v
+curl -qL https://www.npmjs.com/install.sh | npm_install="7.22.0" sh
 npm -v
 
 # install utils to match linux ci images
