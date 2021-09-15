@@ -6,10 +6,7 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-get-tc-secret deploy-gr-css .ssh/gr.css_deploy
-get-tc-secret deploy-gr-css-generator .ssh/gr.css.generator_deploy
 get-tc-secret deploy-gr-css-reports .ssh/gr.css.reports_deploy
-get-tc-secret deploy-octo-private .ssh/octo_private_deploy
 
 GRCSS_TOKEN=$(get-tc-secret ci-git-token)
 export GRCSS_TOKEN
