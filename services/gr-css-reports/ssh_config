@@ -1,18 +1,6 @@
 Host *
 UseRoaming no
 
-Host gr-css
-HostName github.com
-IdentityFile ~/.ssh/gr.css_deploy
-
-Host gr-css-generator
-HostName github.com
-IdentityFile ~/.ssh/gr.css.generator_deploy
-
 Host gr-css-reports
 HostName github.com
 IdentityFile ~/.ssh/gr.css.reports_deploy
-
-Host octo-private
-HostName github.com
-IdentityFile ~/.ssh/octo_private_deploy
