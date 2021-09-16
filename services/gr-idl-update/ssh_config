@@ -1,0 +1,6 @@
+Host *
+UseRoaming no
+
+Host gridl
+HostName github.com
+IdentityFile ~/.ssh/gridl_deploy
