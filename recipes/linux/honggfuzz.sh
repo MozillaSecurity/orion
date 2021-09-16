@@ -31,23 +31,6 @@ case "${1-install}" in
     pushd "$TMPD" >/dev/null
       git-clone https://github.com/google/honggfuzz
       cd honggfuzz
-      git apply <<- EOF
-	diff --git a/linux/trace.c b/linux/trace.c
-	index 02834637..fdde321a 100644
-	--- a/linux/trace.c
-	+++ b/linux/trace.c
-	@@ -232,8 +232,8 @@ struct user_regs_struct {
-	 #endif /* defined(__ANDROID__) */
-
-	 #if defined(__clang__)
-	-_Pragma("clang Diagnostic push\n");
-	-_Pragma("clang Diagnostic ignored \"-Woverride-init\"\n");
-	+_Pragma("clang diagnostic push");
-	+_Pragma("clang diagnostic ignored \"-Woverride-init\"");
-	 #endif
-
-	 static struct {
-	EOF
       CC=clang make
       install honggfuzz /usr/local/bin/
       install hfuzz_cc/hfuzz-cc /usr/local/bin/
