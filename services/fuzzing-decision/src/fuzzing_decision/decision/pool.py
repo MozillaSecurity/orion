@@ -7,11 +7,12 @@
 import logging
 import math
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
 
+import dateutil.parser
 import yaml
 from taskcluster.exceptions import TaskclusterFailure, TaskclusterRestFailure
 from taskcluster.utils import fromNow, slugId, stringDate
@@ -22,6 +23,7 @@ from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
 from ..common.pool import parse_time
 from . import (
+    CANCEL_TASK_DAYS,
     DECISION_TASK_SECRET,
     HOOK_PREFIX,
     OWNER_EMAIL,
@@ -161,11 +163,19 @@ def cancel_tasks(worker_type):
     hooks = taskcluster.get_service("hooks")
     queue = taskcluster.get_service("queue")
 
+    # cycle only hook fires after this limit
+    cycle_limit = datetime.utcnow().replace(tzinfo=timezone.utc) - timedelta(
+        days=CANCEL_TASK_DAYS
+    )
+
     # Get tasks by hook
     def iter_tasks_by_hook(hook_id):
         try:
             for fire in hooks.listLastFires(HOOK_PREFIX, hook_id)["lastFires"]:
                 if fire["result"] != "success":
+                    continue
+                task_created_time = dateutil.parser.isoparse(fire["taskCreateTime"])
+                if task_created_time < cycle_limit:
                     continue
                 try:
                     result = queue.listTaskGroup(fire["taskId"])
