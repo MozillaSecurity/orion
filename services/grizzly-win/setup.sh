@@ -10,6 +10,7 @@ pacman --noconfirm -Sy \
   p7zip \
   patch \
   psmisc \
+  subversion \
   tar \
   zstd
 killall -TERM gpg-agent
