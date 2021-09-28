@@ -29,7 +29,7 @@ git init gridl
   retry npm i --no-progress
   npm run update-idls &&
   npm test &&
-  if ! git diff --quiet data/idls; then
+  if [[ -z $(git status -s) ]]; then
     git commit -m "feat(grammar): update webidls" data/idls
     retry git push origin HEAD:master
   fi
