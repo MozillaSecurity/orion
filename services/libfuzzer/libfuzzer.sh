@@ -135,7 +135,7 @@ TARGET_BIN="$(./setup-target.sh)"
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
 }
 
 # IPC
