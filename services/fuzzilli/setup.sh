@@ -27,6 +27,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzfetch.sh
 ./taskcluster.sh
 ./fuzzmanager.sh
+./grcov.sh
 
 #### Bootstrap Packages
 

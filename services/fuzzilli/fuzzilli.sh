@@ -91,6 +91,8 @@ export PATH=/opt/swift5/usr/bin:$PATH
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   timeout -s 2 ${TARGET_TIME} mozilla/merge.sh $HOME/build/dist/bin/js
+elif [[ $COVERAGE ]]
+  timeout -s 2 ${TARGET_TIME} mozilla/coverage.sh $HOME/build/dist/bin/js $HOME/build/
 else
   mozilla/bootstrap.sh
   screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh $HOME/build/dist/bin/js
