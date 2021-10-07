@@ -26,6 +26,27 @@ then
   setup-aws-credentials
 fi
 
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
+  function get-deadline () {
+    tmp="$(mktemp -d)"
+    retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
+    retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json"
+    deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
+    started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
+    max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
+    rm -rf "$tmp"
+    run_end="$((started + max_run_time))"
+    if [[ $run_end -lt $deadline ]]; then
+      echo "$run_end"
+    else
+      echo "$deadline"
+    fi
+  }
+  TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
+else
+  TARGET_TIME=$((10 * 365 * 24 * 3600))
+fi
+
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
 then
@@ -114,7 +135,7 @@ TARGET_BIN="$(./setup-target.sh)"
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@"
+  timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
 }
 
 # IPC
