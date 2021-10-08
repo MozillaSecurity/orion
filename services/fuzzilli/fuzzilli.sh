@@ -92,6 +92,7 @@ if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   timeout -s 2 ${TARGET_TIME} mozilla/merge.sh $HOME/build/dist/bin/js
 elif [[ $COVERAGE ]]
+then
   timeout -s 2 ${TARGET_TIME} mozilla/coverage.sh $HOME/build/dist/bin/js $HOME/build/
 else
   mozilla/bootstrap.sh
