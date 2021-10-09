@@ -76,7 +76,12 @@ else
 fi >> $HOME/.fuzzmanagerconf
 
 # Download our build
-python3 -mfuzzfetch --central --target js --debug --fuzzilli -n build
+if [[ $COVERAGE ]]
+then
+  python3 -mfuzzfetch --central --target js --coverage -n build
+else
+  python3 -mfuzzfetch --central --target js --debug --fuzzilli -n build
+fi
 
 cd fuzzilli
 chmod +x mozilla/*.sh
