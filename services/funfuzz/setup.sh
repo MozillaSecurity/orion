@@ -23,6 +23,7 @@ SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./gsutil.sh
 ./htop.sh
 ./taskcluster.sh
+./llvm-symbolizer.sh
 
 packages=(
   apt-utils

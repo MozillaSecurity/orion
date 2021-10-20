@@ -28,6 +28,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./taskcluster.sh
 ./fuzzmanager.sh
 ./grcov.sh
+./llvm-symbolizer.sh
 
 #### Bootstrap Packages
 

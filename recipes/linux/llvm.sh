@@ -58,5 +58,6 @@ case "${1-install}" in
     ;;
   test)
     clang --version
+    llvm-symbolizer --version
     ;;
 esac
