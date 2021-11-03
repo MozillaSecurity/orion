@@ -118,4 +118,4 @@ status "Setup: installing bearspray"
 retry python -m pip install -U -e bearspray
 
 status "Setup: launching bearspray"
-python -m bearspray
+python -m bearspray "$ADAPTER"
