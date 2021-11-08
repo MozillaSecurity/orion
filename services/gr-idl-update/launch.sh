@@ -31,7 +31,7 @@ git init gridl
   npm test &&
   if git status -s; then
     git add data/idls
-    git commit -m "feat(grammar): update webidls"
+    git commit -m "fix(grammar): update webidls"
     retry git push origin HEAD:master
   fi
 )> /live.log 2>&1
