@@ -78,9 +78,7 @@ packages=(
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 # Install swift
-curl -O https://swift.org/builds/swift-5.4-release/ubuntu2004/swift-5.4-RELEASE/swift-5.4-RELEASE-ubuntu20.04.tar.gz
-tar -xzf swift-5*.tar.gz
-rm swift-5*.tar.gz
+curl -sSL https://swift.org/builds/swift-5.4-release/ubuntu2004/swift-5.4-RELEASE/swift-5.4-RELEASE-ubuntu20.04.tar.gz | tar -xz
 mv swift-5* /opt/swift5
 
 echo "export PATH=/opt/swift5/usr/bin:$PATH" >> /home/ubuntu/.bashrc
