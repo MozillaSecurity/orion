@@ -119,7 +119,7 @@ def add_capabilities_for_scopes(task):
 
 def configure_task(task, config, now, env):
     task["payload"]["artifacts"].update(
-        config.artifact_map(stringDate(fromNow("1 week", now)))
+        config.artifact_map(stringDate(fromNow("4 weeks", now)))
     )
     task["scopes"] = sorted(chain(config.get_scopes(), task["scopes"]))
     add_capabilities_for_scopes(task)
@@ -366,7 +366,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                         now + timedelta(seconds=preprocess.max_run_time)
                     ),
                     description=DESCRIPTION.replace("\n", "\\n"),
-                    expires=stringDate(fromNow("1 week", now)),
+                    expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=preprocess.max_run_time,
                     name=f"Fuzzing task {self.task_id} - preprocess",
                     owner_email=OWNER_EMAIL,
@@ -389,7 +389,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                     created=stringDate(now),
                     deadline=stringDate(now + timedelta(seconds=self.max_run_time)),
                     description=DESCRIPTION.replace("\n", "\\n"),
-                    expires=stringDate(fromNow("1 week", now)),
+                    expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=self.max_run_time,
                     name=f"Fuzzing task {self.task_id} - {i}/{self.tasks}",
                     owner_email=OWNER_EMAIL,
@@ -503,7 +503,7 @@ class PoolConfigMap(CommonPoolConfigMap):
                         created=stringDate(now),
                         deadline=stringDate(now + timedelta(seconds=pool.max_run_time)),
                         description=DESCRIPTION.replace("\n", "\\n"),
-                        expires=stringDate(fromNow("1 week", now)),
+                        expires=stringDate(fromNow("4 weeks", now)),
                         max_run_time=pool.max_run_time,
                         name=(
                             f"Fuzzing task {pool.platform}-{pool.pool_id} - "
