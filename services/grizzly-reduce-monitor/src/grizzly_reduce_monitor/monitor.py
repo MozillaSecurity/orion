@@ -85,6 +85,7 @@ def _fuzzmanager_get_crashes(tool_list):
             "op": "AND",
             "bucket__isnull": True,
             "testcase__quality__in": [
+                # TODO: these constants have moved in grizzly 0.14
                 FuzzManagerReporter.QUAL_UNREDUCED,
                 FuzzManagerReporter.QUAL_REQUEST_SPECIFIC,
             ],
