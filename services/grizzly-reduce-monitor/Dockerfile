@@ -12,6 +12,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
     && retry apk add --no-cache \
         git \
         python3 \
+        py3-aiohttp \
         py3-multidict \
         py3-pip \
         py3-psutil \
