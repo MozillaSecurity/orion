@@ -85,8 +85,8 @@ def _fuzzmanager_get_crashes(tool_list):
             "op": "AND",
             "bucket__isnull": True,
             "testcase__quality__in": [
-                Quality.UNREDUCED,
-                Quality.REQUEST_SPECIFIC,
+                Quality.UNREDUCED.value,
+                Quality.REQUEST_SPECIFIC.value,
             ],
             "tool__name__in": tool_list,
         },
@@ -109,8 +109,8 @@ def _fuzzmanager_get_crashes(tool_list):
         }
     ):
         if bucket["best_quality"] not in {
-            Quality.UNREDUCED,
-            Quality.REQUEST_SPECIFIC,
+            Quality.UNREDUCED.value,
+            Quality.REQUEST_SPECIFIC.value,
         }:
             continue
         # for each bucket+tool, get crashes with specified quality
@@ -119,8 +119,8 @@ def _fuzzmanager_get_crashes(tool_list):
                 "op": "AND",
                 "bucket_id": bucket["id"],
                 "testcase__quality__in": [
-                    Quality.UNREDUCED,
-                    Quality.REQUEST_SPECIFIC,
+                    Quality.UNREDUCED.value,
+                    Quality.REQUEST_SPECIFIC.value,
                 ],
                 "tool__name__in": tool_list,
             },
@@ -229,7 +229,7 @@ class ReductionMonitor(ReductionWorkflow):
             LOG.error("Error creating task: %s", exc)
             return
         LOG.info("Marking %d Q4 (in progress)", crash_id)
-        CrashManager().update_testcase_quality(crash_id, Quality.REDUCING)
+        CrashManager().update_testcase_quality(crash_id, Quality.REDUCING.value)
 
     def run(self):
         srv = CrashManager()
@@ -239,7 +239,7 @@ class ReductionMonitor(ReductionWorkflow):
         for crash in srv.list_crashes(
             {
                 "op": "AND",
-                "testcase__quality": Quality.REQUEST_SPECIFIC,
+                "testcase__quality": Quality.REQUEST_SPECIFIC.value,
                 "tool__name__in": list(self.tool_list),
                 "_": {
                     "op": "NOT",
@@ -250,17 +250,17 @@ class ReductionMonitor(ReductionWorkflow):
             LOG.info(
                 "crash %d updating Q%d => Q%d, platform is %s",
                 crash["id"],
-                Quality.REQUEST_SPECIFIC,
-                Quality.NOT_REPRODUCIBLE,
+                Quality.REQUEST_SPECIFIC.value,
+                Quality.NOT_REPRODUCIBLE.value,
                 crash["os"],
             )
             if not self.dry_run:
-                srv.update_testcase_quality(crash["id"], Quality.NOT_REPRODUCIBLE)
+                srv.update_testcase_quality(crash["id"], Quality.NOT_REPRODUCIBLE.value)
 
         # get all crashes for Q=5 and project in tool_list
         for sig, reduction in _get_unique_crashes(self.tool_list):
             LOG.info("queuing %d for %s", reduction.crash, sig)
-            if reduction.quality == Quality.UNREDUCED:
+            if reduction.quality == Quality.UNREDUCED.value:
                 # perform first pass with generic platform reducer on Q5
                 os_name = GENERIC_PLATFORM
             elif reduction.os in TC_QUEUES and reduction.os != GENERIC_PLATFORM:
@@ -270,12 +270,12 @@ class ReductionMonitor(ReductionWorkflow):
                 LOG.info(
                     "> updating Q%d => Q%d, platform is %s",
                     reduction.quality,
-                    Quality.NOT_REPRODUCIBLE,
+                    Quality.NOT_REPRODUCIBLE.value,
                     reduction.os,
                 )
                 if not self.dry_run:
                     srv.update_testcase_quality(
-                        reduction.crash, Quality.NOT_REPRODUCIBLE
+                        reduction.crash, Quality.NOT_REPRODUCIBLE.value
                     )
                 continue
             self.queue_reduction_task(os_name, reduction.crash)
