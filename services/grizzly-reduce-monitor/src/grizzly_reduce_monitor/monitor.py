@@ -58,7 +58,7 @@ def _fuzzmanager_get_crashes(tool_list):
     from FuzzManager.
 
     Yields all crashes where:
-        quality = 5 OR quality = 6
+        quality = 4 OR quality = 5 OR quality = 6
         AND
         tool is in tool_list
         AND
@@ -100,14 +100,25 @@ def _fuzzmanager_get_crashes(tool_list):
             "_": {
                 "op": "OR",
                 # get unbucketed crashes with specified quality
-                "bucket__isnull": True,
+                "_a": {
+                    "op": "AND",
+                    "bucket__isnull": True,
+                    "testcase__quality__in": [
+                        Quality.UNREDUCED.value,
+                        Quality.REDUCING.value,
+                        Quality.REQUEST_SPECIFIC.value,
+                    ],
+                },
                 # for each bucket+tool, get crashes with specified quality
-                "bucket_id__in": list(buckets),
+                "_b": {
+                    "op": "AND",
+                    "bucket_id__in": list(buckets),
+                    "testcase__quality__in": [
+                        Quality.UNREDUCED.value,
+                        Quality.REQUEST_SPECIFIC.value,
+                    ],
+                },
             },
-            "testcase__quality__in": [
-                Quality.UNREDUCED.value,
-                Quality.REQUEST_SPECIFIC.value,
-            ],
             "tool__name__in": tool_list,
         },
         ordering=["testcase__size", "-id"],
@@ -125,8 +136,48 @@ def _fuzzmanager_get_crashes(tool_list):
         )
 
 
+def _filter_reducing_unbucketed(tool_list):
+    """This function calls `_fuzzmanager_get_crashes` and filters unbucketed
+    tool/shortSignature crashes if any are reducing already.
+
+    Arguments:
+        tool_list (list): List of tools to monitor for reduction.
+
+    Yields:
+        ReducibleCrash: Description and all info needed to queue a crash
+                        for reduction
+    """
+    # set of tags where we have already seen a reducing crash
+    skip = set()
+    # dict of tag -> list of crashes, for crashes where a reducing crash has not been
+    # seen yet
+    queue = {}
+
+    for crash in _fuzzmanager_get_crashes(tool_list):
+        if crash.bucket is not None:
+            yield crash
+        else:
+            tag = (crash.tool, crash.description)
+            if tag not in skip:
+                if crash.quality == Quality.REDUCING.value:
+                    LOG.warning(
+                        "skipped: %s/%s (already reducing)",
+                        crash.tool,
+                        crash.description,
+                    )
+                    skip.add(tag)
+                    queue.pop(tag, None)
+                else:
+                    queue.setdefault(tag, [])
+                    queue[tag].append(crash)
+
+    # we got all crashes and haven't seen any reducing for these shortDescriptions
+    for crashes in queue.values():
+        yield from crashes
+
+
 def _get_unique_crashes(tool_list):
-    """This function calls `_fuzzmanager_get_crashes` and picks one unique result
+    """This function calls `_filter_reducing_unbucketed` and picks one unique result
     per bucket/shortSignature to reduce.
 
     Arguments:
@@ -142,7 +193,7 @@ def _get_unique_crashes(tool_list):
     # that have been selected for randomization
     randomize_crashes = {}
 
-    for crash in _fuzzmanager_get_crashes(tool_list):
+    for crash in _filter_reducing_unbucketed(tool_list):
         sig = f"{crash.tool}:{crash.bucket!r}:{crash.description}:{crash.quality!r}"
         if sig not in seen:
             seen.add(sig)
