@@ -84,6 +84,8 @@ class CrashManager(Reporter):
             params["query"] = json.dumps(query)
         if ordering is not None:
             params["ordering"] = ",".join(ordering)
+        if endpoint == "crashes":
+            params["include_raw"] = "0"
 
         next_url = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"

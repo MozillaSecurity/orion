@@ -79,11 +79,31 @@ def _fuzzmanager_get_crashes(tool_list):
     assert isinstance(tool_list, list)
     srv = CrashManager()
 
-    # get unbucketed crashes with specified quality
+    # get map of bucket IDs -> shortDescription for buckets with best testcase
+    # having specified quality
+    buckets = {}
+    for bucket in srv.list_buckets(
+        {
+            "op": "AND",
+            "crashentry__tool__name__in": tool_list,
+        }
+    ):
+        if bucket["best_quality"] in {
+            Quality.UNREDUCED.value,
+            Quality.REQUEST_SPECIFIC.value,
+        }:
+            buckets[bucket["id"]] = bucket["shortDescription"]
+
     for crash in srv.list_crashes(
         {
             "op": "AND",
-            "bucket__isnull": True,
+            "_": {
+                "op": "OR",
+                # get unbucketed crashes with specified quality
+                "bucket__isnull": True,
+                # for each bucket+tool, get crashes with specified quality
+                "bucket_id__in": list(buckets),
+            },
             "testcase__quality__in": [
                 Quality.UNREDUCED.value,
                 Quality.REQUEST_SPECIFIC.value,
@@ -92,48 +112,17 @@ def _fuzzmanager_get_crashes(tool_list):
         },
         ordering=["testcase__size", "-id"],
     ):
+        description = crash["shortSignature"]
+        if crash["bucket"] is not None:
+            description = buckets[crash["bucket"]]
         yield ReducibleCrash(
             crash=crash["id"],
-            bucket=None,
+            bucket=crash["bucket"],
             tool=crash["tool"],
-            description=crash["shortSignature"],
+            description=description,
             os=crash["os"],
             quality=crash["testcase_quality"],
         )
-
-    # get list of buckets with best testcase with specified quality
-    for bucket in srv.list_buckets(
-        {
-            "op": "AND",
-            "crashentry__tool__name__in": tool_list,
-        }
-    ):
-        if bucket["best_quality"] not in {
-            Quality.UNREDUCED.value,
-            Quality.REQUEST_SPECIFIC.value,
-        }:
-            continue
-        # for each bucket+tool, get crashes with specified quality
-        for crash in srv.list_crashes(
-            {
-                "op": "AND",
-                "bucket_id": bucket["id"],
-                "testcase__quality__in": [
-                    Quality.UNREDUCED.value,
-                    Quality.REQUEST_SPECIFIC.value,
-                ],
-                "tool__name__in": tool_list,
-            },
-            ordering=["testcase__size", "-id"],
-        ):
-            yield ReducibleCrash(
-                crash=crash["id"],
-                bucket=bucket["id"],
-                tool=crash["tool"],
-                description=bucket["shortDescription"],
-                os=crash["os"],
-                quality=crash["testcase_quality"],
-            )
 
 
 def _get_unique_crashes(tool_list):
@@ -147,27 +136,28 @@ def _get_unique_crashes(tool_list):
         (str, ReducibleCrash): Description and all info needed to queue a crash
                                for reduction
     """
+    # set of all crash signatures processed already
     seen = set()
+    # map of crash signature -> list of ReducibleCrash objects
+    # that have been selected for randomization
     randomize_crashes = {}
-    for reduction in _fuzzmanager_get_crashes(tool_list):
-        sig = (
-            f"{reduction.tool}:{reduction.bucket!r}:"
-            f"{reduction.description}:{reduction.quality!r}"
-        )
+
+    for crash in _fuzzmanager_get_crashes(tool_list):
+        sig = f"{crash.tool}:{crash.bucket!r}:{crash.description}:{crash.quality!r}"
         if sig not in seen:
             seen.add(sig)
             # maybe don't yield this sig right away, but save all possible sigs
             # and return one at random
             if random() < RANDOMIZE_CRASH_SELECT:
-                randomize_crashes[sig] = [reduction]
+                randomize_crashes[sig] = [crash]
             else:
-                yield (sig, reduction)
+                yield (sig, crash)
         elif sig in randomize_crashes:
-            randomize_crashes[sig].append(reduction)
-    for sig, reductions in randomize_crashes.items():
-        if len(reductions) > 1:
-            LOG.info("picking from %d possible crashes for %s", len(reductions), sig)
-        yield (sig, choice(reductions))
+            randomize_crashes[sig].append(crash)
+    for sig, crashes in randomize_crashes.items():
+        if len(crashes) > 1:
+            LOG.info("picking from %d possible crashes for %s", len(crashes), sig)
+        yield (sig, choice(crashes))
 
 
 class ReductionMonitor(ReductionWorkflow):
