@@ -9,17 +9,24 @@ import os
 import sys
 from collections import namedtuple
 from datetime import datetime, timedelta
-from logging import getLogger
+from logging import WARNING, getLogger
 from pathlib import Path
 from random import choice, random
 from string import Template
+from time import time
 
 from grizzly.common.reporter import Quality
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
 from yaml import safe_load as yaml_load
 
-from .common import CommonArgParser, CrashManager, ReductionWorkflow, Taskcluster
+from .common import (
+    CommonArgParser,
+    CrashManager,
+    ReductionWorkflow,
+    Taskcluster,
+    format_seconds,
+)
 
 LOG = getLogger(__name__)
 
@@ -79,58 +86,89 @@ def _fuzzmanager_get_crashes(tool_list):
     assert isinstance(tool_list, list)
     srv = CrashManager()
 
-    # get map of bucket IDs -> shortDescription for buckets with best testcase
+    # get map of bucket ID/tool -> shortDescription for buckets with best testcase
     # having specified quality
-    buckets = {}
-    for bucket in srv.list_buckets(
-        {
-            "op": "AND",
-            "crashentry__tool__name__in": tool_list,
-        }
-    ):
-        if bucket["best_quality"] in {
-            Quality.UNREDUCED.value,
-            Quality.REQUEST_SPECIFIC.value,
-        }:
-            buckets[bucket["id"]] = bucket["shortDescription"]
+    bucket_descs = {}
+    bucket_tools = set()
+    for tool in tool_list:
+        LOG.debug("retrieving buckets for tool %s", tool)
 
+        for bucket in srv.list_buckets(
+            {
+                "op": "AND",
+                "crashentry__tool__name": tool,
+            }
+        ):
+            if bucket["best_quality"] in {
+                Quality.UNREDUCED.value,
+                Quality.REQUEST_SPECIFIC.value,
+            }:
+                bucket_descs[bucket["id"]] = bucket["shortDescription"]
+                bucket_tools.add((bucket["id"], tool))
+                LOG.debug(
+                    "adding bucket %d (%s) Q%d",
+                    bucket["id"],
+                    tool,
+                    bucket["best_quality"],
+                )
+
+    # for each bucket+tool, get crashes with specified quality
+    LOG.debug(
+        "retrieving crashes for %d buckets (%d bucket/tools)",
+        len(bucket_descs),
+        len(bucket_tools),
+    )
+
+    buckets_by_tool = {}
+    for (bucket, tool) in bucket_tools:
+        buckets_by_tool.setdefault(tool, [])
+        buckets_by_tool[tool].append(bucket)
+    for tool, bucket_filter in buckets_by_tool.items():
+        LOG.debug("retrieving %d buckets for tool %s", len(bucket_filter), tool)
+        for crash in srv.list_crashes(
+            {
+                "op": "AND",
+                "tool__name": tool,
+                "bucket_id__in": bucket_filter,
+                "testcase__quality__in": [
+                    Quality.UNREDUCED.value,
+                    Quality.REQUEST_SPECIFIC.value,
+                ],
+            },
+            ordering=["testcase__size", "-id"],
+        ):
+            yield ReducibleCrash(
+                crash=crash["id"],
+                bucket=crash["bucket"],
+                tool=crash["tool"],
+                description=bucket_descs[crash["bucket"]],
+                os=crash["os"],
+                quality=crash["testcase_quality"],
+            )
+
+    # get unbucketed crashes with specified quality
+    # include Q0/Q4 so we can limit these just like bucketed
+    LOG.debug("retrieving unbucketed crashes")
     for crash in srv.list_crashes(
         {
             "op": "AND",
-            "_": {
-                "op": "OR",
-                # get unbucketed crashes with specified quality
-                "_a": {
-                    "op": "AND",
-                    "bucket__isnull": True,
-                    "testcase__quality__in": [
-                        Quality.UNREDUCED.value,
-                        Quality.REDUCING.value,
-                        Quality.REQUEST_SPECIFIC.value,
-                    ],
-                },
-                # for each bucket+tool, get crashes with specified quality
-                "_b": {
-                    "op": "AND",
-                    "bucket_id__in": list(buckets),
-                    "testcase__quality__in": [
-                        Quality.UNREDUCED.value,
-                        Quality.REQUEST_SPECIFIC.value,
-                    ],
-                },
-            },
+            "bucket__isnull": True,
+            "testcase__quality__in": [
+                Quality.DO_NOT_REDUCE.value,
+                Quality.REDUCED.value,
+                Quality.REDUCING.value,
+                Quality.REQUEST_SPECIFIC.value,
+                Quality.UNREDUCED.value,
+            ],
             "tool__name__in": tool_list,
         },
         ordering=["testcase__size", "-id"],
     ):
-        description = crash["shortSignature"]
-        if crash["bucket"] is not None:
-            description = buckets[crash["bucket"]]
         yield ReducibleCrash(
             crash=crash["id"],
-            bucket=crash["bucket"],
+            bucket=None,
             tool=crash["tool"],
-            description=description,
+            description=crash["shortSignature"],
             os=crash["os"],
             quality=crash["testcase_quality"],
         )
@@ -147,29 +185,46 @@ def _filter_reducing_unbucketed(tool_list):
         ReducibleCrash: Description and all info needed to queue a crash
                         for reduction
     """
-    # set of tags where we have already seen a reducing crash
-    skip = set()
+    # dict of tag -> min quality where we have a quality < UNREDUCED
+    skip = {}
     # dict of tag -> list of crashes, for crashes where a reducing crash has not been
     # seen yet
     queue = {}
 
     for crash in _fuzzmanager_get_crashes(tool_list):
-        if crash.bucket is not None:
-            yield crash
+        tag = (crash.bucket, crash.tool, crash.description)
+        if tag in skip:
+            skip[tag] = min(crash.quality, skip[tag])
         else:
-            tag = (crash.tool, crash.description)
-            if tag not in skip:
-                if crash.quality == Quality.REDUCING.value:
-                    LOG.warning(
-                        "skipped: %s/%s (already reducing)",
-                        crash.tool,
-                        crash.description,
-                    )
-                    skip.add(tag)
-                    queue.pop(tag, None)
-                else:
-                    queue.setdefault(tag, [])
-                    queue[tag].append(crash)
+            if crash.quality < Quality.UNREDUCED.value:
+                skip[tag] = crash.quality
+                queue.pop(tag, None)
+            else:
+                queue.setdefault(tag, [])
+                queue[tag].append(crash)
+
+    for (bucket, tool, description), quality in skip.items():
+        if quality == Quality.REDUCING.value:
+            reason = "reducing"
+        elif quality == Quality.DO_NOT_REDUCE.value:
+            reason = "marked do-not-reduce"
+        elif quality == Quality.REDUCED.value:
+            # hide output for bucketed Q0 ... this is expected case
+            # and doesn't help debugging
+            if bucket is not None:
+                continue
+            reason = "reduced test exists"
+        else:
+            # Q1 is not expected here, as Q1 should always have a corresponding Q0
+            reason = f"unexpected quality {quality!r}"
+
+        LOG.warning(
+            "skipped: tool=%s/bucket=%r/desc=%s (%s)",
+            tool,
+            bucket,
+            description,
+            reason,
+        )
 
     # we got all crashes and haven't seen any reducing for these shortDescriptions
     for crashes in queue.values():
@@ -273,6 +328,7 @@ class ReductionMonitor(ReductionWorkflow):
         CrashManager().update_testcase_quality(crash_id, Quality.REDUCING.value)
 
     def run(self):
+        start_time = time()
         srv = CrashManager()
 
         LOG.info("starting poll of FuzzManager")
@@ -299,6 +355,7 @@ class ReductionMonitor(ReductionWorkflow):
                 srv.update_testcase_quality(crash["id"], Quality.NOT_REPRODUCIBLE.value)
 
         # get all crashes for Q=5 and project in tool_list
+        queued = 0
         for sig, reduction in _get_unique_crashes(self.tool_list):
             LOG.info("queuing %d for %s", reduction.crash, sig)
             if reduction.quality == Quality.UNREDUCED.value:
@@ -319,8 +376,13 @@ class ReductionMonitor(ReductionWorkflow):
                         reduction.crash, Quality.NOT_REPRODUCIBLE.value
                     )
                 continue
+            queued += 1
             self.queue_reduction_task(os_name, reduction.crash)
-        LOG.info("finished polling FuzzManager")
+        LOG.info(
+            "finished polling FuzzManager (%s elapsed, %d tasks queued)",
+            format_seconds(time() - start_time),
+            queued,
+        )
         return 0
 
     @staticmethod
@@ -344,4 +406,7 @@ class ReductionMonitor(ReductionWorkflow):
 
 
 if __name__ == "__main__":
+    getLogger("mohawk").setLevel(WARNING)
+    getLogger("taskcluster").setLevel(WARNING)
+    getLogger("urllib3").setLevel(WARNING)
     sys.exit(ReductionMonitor.main())

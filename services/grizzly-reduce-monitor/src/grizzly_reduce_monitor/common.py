@@ -6,10 +6,11 @@
 """
 
 import json
+import re
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from functools import wraps
-from logging import DEBUG, INFO, WARNING, basicConfig
+from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
 
 from Reporter.Reporter import Reporter
@@ -17,6 +18,22 @@ from taskcluster.helper import TaskclusterConfig
 
 # Shared taskcluster configuration
 Taskcluster = TaskclusterConfig("https://community-tc.services.mozilla.com")
+LOG = getLogger(__name__)
+
+
+# this is duplicated from grizzly status_reporter.py
+def format_seconds(duration):
+    # format H:M:S, and then remove all leading zeros with regex
+    minutes, seconds = divmod(int(duration), 60)
+    hours, minutes = divmod(minutes, 60)
+    result = re.sub("^[0:]*", "", "%d:%02d:%02d" % (hours, minutes, seconds))
+    # if the result is all zeroes, ensure one zero is output
+    if not result:
+        result = "0"
+    # a bare number is ambiguous. output 's' for seconds
+    if ":" not in result:
+        result += "s"
+    return result
 
 
 def remote_checks(wrapped):
@@ -86,6 +103,9 @@ class CrashManager(Reporter):
             params["ordering"] = ",".join(ordering)
         if endpoint == "crashes":
             params["include_raw"] = "0"
+        params["limit"] = 1000
+
+        returned = 0
 
         next_url = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"
@@ -104,6 +124,8 @@ class CrashManager(Reporter):
             next_url = resp_json["next"]
             params = None
 
+            returned += len(resp_json["results"])
+            LOG.debug("yielding %d/%d %s", returned, resp_json["count"], endpoint)
             yield from resp_json["results"]
 
     def list_crashes(self, query=None, ordering=None):
