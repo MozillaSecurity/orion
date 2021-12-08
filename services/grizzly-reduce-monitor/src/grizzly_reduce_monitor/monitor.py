@@ -8,13 +8,14 @@
 import os
 import sys
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from logging import WARNING, getLogger
 from pathlib import Path
 from random import choice, random
 from string import Template
 from time import time
 
+from dateutil.parser import isoparse
 from grizzly.common.reporter import Quality
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -85,6 +86,7 @@ def _fuzzmanager_get_crashes(tool_list):
     """
     assert isinstance(tool_list, list)
     srv = CrashManager()
+    crashentry_cutoff = datetime.now(timezone.utc) - timedelta(days=60)
 
     # get map of bucket ID/tool -> shortDescription for buckets with best testcase
     # having specified quality
@@ -130,6 +132,7 @@ def _fuzzmanager_get_crashes(tool_list):
                 "op": "AND",
                 "tool__name": tool,
                 "bucket_id__in": bucket_filter,
+                "created__gt": crashentry_cutoff.isoformat(),
                 "testcase__quality__in": [
                     Quality.UNREDUCED.value,
                     Quality.REQUEST_SPECIFIC.value,
@@ -153,6 +156,9 @@ def _fuzzmanager_get_crashes(tool_list):
         {
             "op": "AND",
             "bucket__isnull": True,
+            # Quality.ORIGINAL is not in this list for a reason
+            # this probably means the REDUCED crash went into a bucket
+            # or the description changed. we want to keep trying those
             "testcase__quality__in": [
                 Quality.DO_NOT_REDUCE.value,
                 Quality.REDUCED.value,
@@ -164,6 +170,15 @@ def _fuzzmanager_get_crashes(tool_list):
         },
         ordering=["testcase__size", "-id"],
     ):
+        if (
+            crash["testcase_quality"]
+            in {
+                Quality.UNREDUCED.value,
+                Quality.REQUEST_SPECIFIC.value,
+            }
+            and isoparse(crash["created"]) < crashentry_cutoff
+        ):
+            continue
         yield ReducibleCrash(
             crash=crash["id"],
             bucket=None,
@@ -300,7 +315,7 @@ class ReductionMonitor(ReductionWorkflow):
         dest_queue = TC_QUEUES[os_name]
         my_task_id = os.environ.get("TASK_ID")
         task_id = slugId()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         task = yaml_load(
             REDUCE_TASK.substitute(
                 task_group=my_task_id,
