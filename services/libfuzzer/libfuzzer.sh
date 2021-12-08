@@ -262,7 +262,6 @@ fi
 # %<---[LibFuzzer]------------------------------------------------------------
 
 export LIBFUZZER=1
-export MOZ_HEADLESS=1
 export MOZ_RUN_GTEST=1
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
 if [[ "$JS" = 1 ]]
