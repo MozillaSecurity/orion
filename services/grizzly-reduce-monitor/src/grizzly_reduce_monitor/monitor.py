@@ -160,7 +160,7 @@ def _fuzzmanager_get_crashes(tool_list):
             # this probably means the REDUCED crash went into a bucket
             # or the description changed. we want to keep trying those
             "testcase__quality__in": [
-                Quality.DO_NOT_REDUCE.value,
+                Quality.IGNORED.value,
                 Quality.REDUCED.value,
                 Quality.REDUCING.value,
                 Quality.REQUEST_SPECIFIC.value,
@@ -221,7 +221,7 @@ def _filter_reducing_unbucketed(tool_list):
     for (bucket, tool, description), quality in skip.items():
         if quality == Quality.REDUCING.value:
             reason = "reducing"
-        elif quality == Quality.DO_NOT_REDUCE.value:
+        elif quality == Quality.IGNORED.value:
             reason = "marked do-not-reduce"
         elif quality == Quality.REDUCED.value:
             # hide output for bucketed Q0 ... this is expected case
