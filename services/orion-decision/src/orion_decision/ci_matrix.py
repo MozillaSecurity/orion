@@ -18,7 +18,7 @@ from . import Taskcluster
 LANGUAGES = ["python"]
 PLATFORMS = ["linux", "windows"]
 VERSIONS = {
-    ("python", "linux"): ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9"],
+    ("python", "linux"): ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10"],
     ("python", "windows"): ["3.8"],
 }
 IMAGES = {
@@ -28,6 +28,7 @@ IMAGES = {
     ("python", "linux", "3.7"): "ci-py-37",
     ("python", "linux", "3.8"): "ci-py-38",
     ("python", "linux", "3.9"): "ci-py-39",
+    ("python", "linux", "3.10"): "ci-py-310",
     ("python", "windows", "3.8"): "ci-py-38-win",
 }
 SCHEMA_CACHE = {}
