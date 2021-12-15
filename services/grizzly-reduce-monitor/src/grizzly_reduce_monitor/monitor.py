@@ -102,8 +102,9 @@ def _fuzzmanager_get_crashes(tool_list):
             }
         ):
             if bucket["best_quality"] in {
-                Quality.UNREDUCED.value,
+                Quality.ORIGINAL.value,
                 Quality.REQUEST_SPECIFIC.value,
+                Quality.UNREDUCED.value,
             }:
                 bucket_descs[bucket["id"]] = bucket["shortDescription"]
                 bucket_tools.add((bucket["id"], tool))
@@ -134,8 +135,9 @@ def _fuzzmanager_get_crashes(tool_list):
                 "bucket_id__in": bucket_filter,
                 "created__gt": crashentry_cutoff.isoformat(),
                 "testcase__quality__in": [
-                    Quality.UNREDUCED.value,
+                    Quality.IGNORED.value,
                     Quality.REQUEST_SPECIFIC.value,
+                    Quality.UNREDUCED.value,
                 ],
             },
             ordering=["testcase__size", "-id"],
