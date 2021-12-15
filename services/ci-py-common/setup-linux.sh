@@ -21,6 +21,7 @@ packages=(
   git
   jshon
   libc6-dev
+  libffi-dev
   make
   openssh-client
   patch
