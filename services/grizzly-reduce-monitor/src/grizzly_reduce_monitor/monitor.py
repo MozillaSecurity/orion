@@ -136,6 +136,7 @@ def _fuzzmanager_get_crashes(tool_list):
                 "created__gt": crashentry_cutoff.isoformat(),
                 "testcase__quality__in": [
                     Quality.IGNORED.value,
+                    Quality.REDUCING.value,
                     Quality.REQUEST_SPECIFIC.value,
                     Quality.UNREDUCED.value,
                 ],
