@@ -135,7 +135,13 @@ TARGET_BIN="$(./setup-target.sh)"
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  if [[ -n "$XPCRT" ]]
+  then
+    xvfb-run timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  else
+    timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  fi
+
 }
 
 # IPC
@@ -262,6 +268,7 @@ fi
 # %<---[LibFuzzer]------------------------------------------------------------
 
 export LIBFUZZER=1
+export MOZ_HEADLESS=1
 export MOZ_RUN_GTEST=1
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
 if [[ "$JS" = 1 ]]
