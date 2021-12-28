@@ -109,8 +109,15 @@ then
       npm ci --no-progress
       nohup node dist/server.js "$XPCRT" &
     )
-
   fi
+
+  if [[ ! -e ~/prefs.js ]]
+  then
+    prefpicker browser-fuzzing.yml ~/prefs.js
+  fi
+
+  # Required by the XPCShell test harness
+  export PREFS_FILE=~/prefs.js
 fi
 
 

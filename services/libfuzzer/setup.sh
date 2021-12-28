@@ -19,6 +19,7 @@ sys-update
 cd "${0%/*}"
 ./htop.sh
 ./fuzzfetch.sh
+./prefpicker.sh
 EDIT=1 ./fuzzmanager.sh
 ./grcov.sh
 ./gsutil.sh
