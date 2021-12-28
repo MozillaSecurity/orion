@@ -118,6 +118,8 @@ then
 
   # Required by the XPCShell test harness
   export PREFS_FILE=~/prefs.js
+  XPCSHELL_TEST_PROFILE_DIR="$(mktemp -d)"
+  export XPCSHELL_TEST_PROFILE_DIR
 fi
 
 
@@ -137,6 +139,8 @@ EOF
 fi
 
 TARGET_BIN="$(./setup-target.sh)"
+BUILD_DIR="$HOME/$(dirname "${TARGET_BIN}")"
+export BUILD_DIR
 
 # %<---[Constants]------------------------------------------------------------
 
