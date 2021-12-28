@@ -80,6 +80,7 @@ fi
 
 if [[ -n "$XPCRT" ]]
 then
+  TOOLNAME="${TOOLNAME:-domino-xpcshell}"
   if [[ ! -e ~/.ssh/id_rsa.domino ]] || [[ ! -e ~/.ssh/id_rsa.domino-xpcshell ]]
   then
     targets=( "domino" "domino-xpcshell" )
@@ -99,6 +100,7 @@ then
   npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
   set -x
 
+  FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
   if [[ ! -e ~/domino-xpcshell ]]
   then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
@@ -108,8 +110,6 @@ then
       nohup node dist/server.js "$XPCRT" &
     )
 
-    TOOLNAME="${TOOLNAME:-domino-xpcshell}"
-    FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
   fi
 fi
 
