@@ -37,10 +37,10 @@ then
     TARGET_BIN="js/dist/bin/fuzz-tests"
   fi
 else
-  FETCH_ARGS+=(--target firefox gtest xpcshell)
   TARGET_BIN="firefox/firefox"
   if [[ ! -d "$HOME/firefox" ]]
   then
+    FETCH_ARGS+=(--target firefox common gtest xpcshell)
     retry fuzzfetch -n firefox "${FETCH_ARGS[@]}"
   fi
 fi
