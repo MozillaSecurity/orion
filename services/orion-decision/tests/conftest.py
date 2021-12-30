@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from typing import Iterator
 from unittest import mock
 
 import pytest
@@ -14,7 +15,7 @@ from orion_decision.ci_matrix import IMAGES, VERSIONS
 
 
 @pytest.fixture(scope="session")
-def mock_ci_languages():
+def mock_ci_languages() -> Iterator[None]:
     """Populate fake language list for use in CIMatrix testing"""
     with mock.patch(
         "orion_decision.ci_matrix.LANGUAGES", ["python", "node"]
