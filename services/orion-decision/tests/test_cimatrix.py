@@ -4,7 +4,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion CI matrix loading"""
 
+
 from pathlib import Path
+from typing import List, Optional
 
 import pytest
 from yaml import safe_load as yaml_load
@@ -37,7 +39,7 @@ pytestmark = pytest.mark.usefixtures("mock_ci_languages")
         "matrix07",
     ],
 )
-def test_matrix_load(fixture):
+def test_matrix_load(fixture: str) -> None:
     """simple matrix load"""
     obj = yaml_load((FIXTURES / fixture / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / fixture / "expected.yaml").read_text())
@@ -57,7 +59,7 @@ def test_matrix_load(fixture):
         ("off_branch", "dev", "push"),
     ],
 )
-def test_matrix_release(case, branch, event_type):
+def test_matrix_release(case: str, branch: str, event_type: str) -> None:
     """test job `when` conditions"""
     obj = yaml_load((FIXTURES / "matrix04" / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / "matrix04" / f"expected_{case}.yaml").read_text())
@@ -69,7 +71,7 @@ def test_matrix_release(case, branch, event_type):
     assert not mtx.secrets
 
 
-def test_matrix_unused(caplog):
+def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
     """test that unused CI matrix dimensions trigger a warning"""
     obj = yaml_load((FIXTURES / "matrix06" / "matrix.yaml").read_text())
     mtx = CIMatrix(obj, "master", False)
@@ -93,7 +95,7 @@ def test_matrix_unused(caplog):
         [CISecretKey("project/deploy")],
     ],
 )
-def test_matrix_job_serialize(secrets):
+def test_matrix_job_serialize(secrets: List[Optional[CISecret]]) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(
         "name",
@@ -108,7 +110,7 @@ def test_matrix_job_serialize(secrets):
     job.secrets.extend(secrets)
     job_json = str(job)
     if secrets:
-        assert all(secret.secret in job_json for secret in secrets)
+        assert all(secret.secret in job_json for secret in secrets if secret)
     job2 = MatrixJob.from_json(job_json)
     assert job == job2
 
@@ -126,7 +128,7 @@ def test_matrix_job_serialize(secrets):
         CISecretKey("project/secret", hostname="repo", key="obj"),
     ],
 )
-def test_matrix_secret_serialize(secret):
+def test_matrix_secret_serialize(secret: CISecret) -> None:
     """test that CISecret serialize/deserialize is lossless"""
     secret2 = CISecret.from_json(str(secret))
     assert secret == secret2

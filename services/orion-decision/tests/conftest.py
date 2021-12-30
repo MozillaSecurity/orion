@@ -4,6 +4,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Fixtures for Orion Decision tests"""
 
+
+from typing import Iterable
 from unittest import mock
 
 import pytest
@@ -12,7 +14,7 @@ from orion_decision.ci_matrix import IMAGES, VERSIONS
 
 
 @pytest.fixture(scope="session")
-def mock_ci_languages():
+def mock_ci_languages() -> Iterable[None]:
     """Populate fake language list for use in CIMatrix testing"""
     with mock.patch(
         "orion_decision.ci_matrix.LANGUAGES", ["python", "node"]

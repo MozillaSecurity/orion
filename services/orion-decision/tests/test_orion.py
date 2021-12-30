@@ -4,9 +4,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion service classes"""
 
+
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
 import pytest
+from pytest_mock import MockerFixture
 from yaml import safe_load as yaml_load
 
 from orion_decision.orion import Service, Services, ServiceTest, ToxServiceTest
@@ -14,7 +17,7 @@ from orion_decision.orion import Service, Services, ServiceTest, ToxServiceTest
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
 
-def test_service_load01():
+def test_service_load01() -> None:
     """test that service is loaded from metadata"""
     root = FIXTURES / "services01"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
@@ -29,7 +32,7 @@ def test_service_load01():
     assert not svc.dirty
 
 
-def test_service_load02(mocker):
+def test_service_load02(mocker: MockerFixture) -> None:
     """test that service is loaded from metadata"""
     mocker.patch("orion_decision.orion.machine", autospec=True, return_value="monkey")
     root = FIXTURES / "services02"
@@ -45,7 +48,7 @@ def test_service_load02(mocker):
     assert not svc.dirty
 
 
-def test_service_load03():
+def test_service_load03() -> None:
     """test that service tests are loaded from metadata"""
     root = FIXTURES / "services04"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
@@ -62,7 +65,7 @@ def test_service_load03():
     assert svc.tests[0].name == "test-test"
     assert svc.tests[0].image == "test-test-image"
     assert svc.tests[0].toxenv == "toxenvpy3"
-    task = {"payload": {}}
+    task: Dict[str, Dict[str, str]] = {"payload": {}}
     svc.tests[0].update_task(
         task, "{clone_url}", "{branch}", "{commit}", "/path/to/test"
     )
@@ -76,7 +79,7 @@ def test_service_load03():
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )
-def test_service_load04(defn):
+def test_service_load04(defn: Dict[str, Any]) -> None:
     """test that service test errors are raised"""
     expect = defn.pop("expect")
     if "raises" in expect:
@@ -119,7 +122,12 @@ def test_service_load04(defn):
         ),
     ),
 )
-def test_service_deps(mocker, dirty_paths, expect_services, expect_recipes):
+def test_service_deps(
+    mocker: MockerFixture,
+    dirty_paths: List[Path],
+    expect_services: Set[str],
+    expect_recipes: Set[Optional[str]],
+) -> None:
     """test that service dependencies are calculated and changes propagated"""
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
@@ -202,7 +210,7 @@ def test_service_deps(mocker, dirty_paths, expect_services, expect_recipes):
     assert svcs.recipes["install.sh"].recipe_deps == set()
     assert svcs.recipes["withdep.sh"].recipe_deps == set()
 
-    svcs.mark_changed_dirty([root / path for path in dirty_paths])
+    svcs.mark_changed_dirty(root / path for path in dirty_paths)
     for svc in svcs:
         if svc in expect_services:
             assert svcs[svc].dirty
@@ -215,7 +223,7 @@ def test_service_deps(mocker, dirty_paths, expect_services, expect_recipes):
             assert not svcs.recipes[rec].dirty
 
 
-def test_services_force_dirty(mocker):
+def test_services_force_dirty(mocker: MockerFixture) -> None:
     root = FIXTURES / "services10"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
     repo.path = root
@@ -238,7 +246,7 @@ def test_services_force_dirty(mocker):
     assert svcs.recipes["setup.sh"].dirty
 
 
-def test_services_repo(mocker):
+def test_services_repo(mocker: MockerFixture) -> None:
     """test that local services (not known to git) are ignored"""
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
@@ -254,7 +262,7 @@ def test_services_repo(mocker):
 
 
 @pytest.mark.parametrize("fixture", ["services07", "services09"])
-def test_service_circular_deps(mocker, fixture):
+def test_service_circular_deps(mocker: MockerFixture, fixture: str) -> None:
     """test that circular service dependencies raise an error"""
     root = FIXTURES / fixture
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
@@ -265,7 +273,7 @@ def test_service_circular_deps(mocker, fixture):
     assert "cycle" in str(exc)
 
 
-def test_service_path_dep_top_level(mocker):
+def test_service_path_dep_top_level(mocker: MockerFixture) -> None:
     """test that similarly named files at top-level don't affect service deps"""
     root = FIXTURES / "services08"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")

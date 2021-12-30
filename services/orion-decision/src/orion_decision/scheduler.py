@@ -3,10 +3,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for Orion tasks"""
+
+
+import argparse
+
+from datetime import datetime
 import re
 from logging import getLogger
 from pathlib import Path
 from string import Template
+from typing import Dict, List, Optional
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -26,7 +32,14 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Service, ServiceHomebrew, ServiceMsys, Services
+from .orion import (
+    Recipe,
+    Service,
+    ServiceHomebrew,
+    ServiceMsys,
+    Services,
+    ToxServiceTest,
+)
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
@@ -43,27 +56,33 @@ class Scheduler:
     """Decision logic for scheduling Orion build/push tasks in Taskcluster.
 
     Attributes:
-        github_event (GithubEvent): The event that triggered this decision.
-        now (datetime): The time to calculate task times from.
-        task_group (str): The taskGroupID to add created tasks to.
-        docker_secret (str): The Taskcluster secret name holding Docker Hub credentials.
-        push_branch (str): The branch name that should trigger a push to Docker Hub.
+        github_event: The event that triggered this decision.
+        now: The time to calculate task times from.
+        task_group: The taskGroupID to add created tasks to.
+        docker_secret: The Taskcluster secret name holding Docker Hub credentials.
+        push_branch: The branch name that should trigger a push to Docker Hub.
         services (Services): The services
-        dry_run (bool): Perform everything *except* actually queuing tasks in TC.
+        dry_run: Perform everything *except* actually queuing tasks in TC.
     """
 
     def __init__(
-        self, github_event, now, task_group, docker_secret, push_branch, dry_run=False
-    ):
+        self,
+        github_event: GithubEvent,
+        now: Optional[datetime],
+        task_group: str,
+        docker_secret: str,
+        push_branch: str,
+        dry_run: bool = False,
+    ) -> None:
         """Initialize a Scheduler instance.
 
         Arguments:
-            github_event (GithubEvent): The event that triggered this decision.
-            now (datetime): The time to calculate task times from.
-            task_group (str): The taskGroupID to add created tasks to.
-            docker_secret (str): The Taskcluster secret name holding Docker Hub creds.
-            push_branch (str): The branch name that should trigger a push to Docker Hub.
-            dry_run (bool): Don't actually queue tasks in Taskcluster.
+            github_event: The event that triggered this decision.
+            now: The time to calculate task times from.
+            task_group: The taskGroupID to add created tasks to.
+            docker_secret: The Taskcluster secret name holding Docker Hub creds.
+            push_branch: The branch name that should trigger a push to Docker Hub.
+            dry_run: Don't actually queue tasks in Taskcluster.
         """
         self.github_event = github_event
         self.now = now
@@ -71,16 +90,15 @@ class Scheduler:
         self.docker_secret = docker_secret
         self.push_branch = push_branch
         self.dry_run = dry_run
+        assert self.github_event.repo is not None
         self.services = Services(self.github_event.repo)
 
-    def mark_services_for_rebuild(self):
+    def mark_services_for_rebuild(self) -> None:
         """Check for services that need to be rebuilt.
         These will have their `dirty` attribute set, which is used to create tasks.
-
-        Returns:
-            None
         """
         forced = set()
+        assert self.github_event.commit_message is not None
         for match in re.finditer(
             r"/force-rebuild(=[A-Za-z0-9_.,-]+)?", self.github_event.commit_message
         ):
@@ -95,7 +113,7 @@ class Scheduler:
                 LOG.info("/force-rebuild detected, all services will be marked dirty")
                 for service in self.services.values():
                     service.dirty = True
-                return  # short-cut, no point in continuing
+                return None  # short-cut, no point in continuing
         if forced:
             LOG.info(
                 "/force-rebuild detected for service: %s", ", ".join(sorted(forced))
@@ -115,6 +133,7 @@ class Scheduler:
                 f"index.project.fuzzing.orion.{service.name}"
                 f".{self.github_event.branch}"
             )
+        assert self.now is not None
         if isinstance(service, ServiceMsys):
             if service.base.endswith(".exe"):
                 if not service.base.endswith(".sfx.exe"):
@@ -202,6 +221,7 @@ class Scheduler:
         return task_id
 
     def _create_push_task(self, service, service_build_tasks):
+        assert self.now is not None
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self.github_event.http_url,
@@ -232,22 +252,30 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_svc_test_task(self, service, test, service_build_tasks):
-        image = test.image
+    def _create_svc_test_task(
+        self,
+        service: Service,
+        test: ToxServiceTest,
+        service_build_tasks: Dict[str, str],
+    ):
+        test_image = test.image
         deps = []
-        if image in service_build_tasks:
-            if self.services[image].dirty:
-                deps.append(service_build_tasks[image])
+        if test_image in service_build_tasks:
+            if self.services[test_image].dirty:
+                deps.append(service_build_tasks[test_image])
                 image = {
                     "type": "task-image",
-                    "taskId": service_build_tasks[image],
+                    "taskId": service_build_tasks[test_image],
                 }
             else:
                 image = {
                     "type": "indexed-image",
-                    "namespace": (f"project.fuzzing.orion.{image}.{self.push_branch}"),
+                    "namespace": (
+                        f"project.fuzzing.orion.{test_image}.{self.push_branch}"
+                    ),
                 }
             image["path"] = f"public/{test.image}.tar.zst"
+        assert self.now is not None
         test_task = yaml_load(
             TEST_TASK.substitute(
                 deadline=stringDate(self.now + DEADLINE),
@@ -265,7 +293,10 @@ class Scheduler:
         )
         test_task["payload"]["image"] = image
         test_task["dependencies"].extend(deps)
+        assert self.services.root is not None
         service_path = str(service.root.relative_to(self.services.root))
+        assert self.github_event.commit is not None
+        assert self.github_event.fetch_ref is not None
         test.update_task(
             test_task,
             self.github_event.http_url,
@@ -285,11 +316,15 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_recipe_test_task(self, recipe, dep_tasks, recipe_test_tasks):
+    def _create_recipe_test_task(
+        self, recipe: Recipe, dep_tasks: List[str], recipe_test_tasks: Dict[str, str]
+    ) -> str:
+        assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"
         dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
         if not dockerfile.is_file():
             dockerfile = service_path / "Dockerfile"
+        assert self.now is not None
         test_task = yaml_load(
             RECIPE_TEST_TASK.substitute(
                 clone_url=self.github_event.http_url,
@@ -321,26 +356,22 @@ class Scheduler:
         return task_id
 
     @property
-    def _create_str(self):
+    def _create_str(self) -> str:
         if self.dry_run:
             return "Would create"
         return "Creating"
 
     @property
-    def _created_str(self):
+    def _created_str(self) -> str:
         if self.dry_run:
             return "Would create"
         return "Created"
 
-    def create_tasks(self):
-        """Create test/build/push tasks in Taskcluster.
-
-        Returns:
-            None
-        """
+    def create_tasks(self) -> None:
+        """Create test/build/push tasks in Taskcluster."""
         if self.github_event.event_type == "release":
             LOG.warning("Detected release event. Nothing to do!")
-            return
+            return None
         should_push = (
             self.github_event.event_type == "push"
             and self.github_event.branch == self.push_branch
@@ -413,6 +444,7 @@ class Scheduler:
             if is_svc:
                 test_tasks = []
                 for test in obj.tests:
+                    assert isinstance(obj, Service)
                     task_id = self._create_svc_test_task(obj, test, service_build_tasks)
                     test_tasks_created.add(task_id)
                     test_tasks.append(task_id)
@@ -444,14 +476,14 @@ class Scheduler:
         )
 
     @classmethod
-    def main(cls, args):
+    def main(cls, args: argparse.Namespace) -> int:
         """Decision procedure.
 
         Arguments:
-            args (argparse.Namespace): Arguments as returned by `parse_ci_args()`
+            args: Arguments as returned by `parse_ci_args()`
 
         Returns:
-            int: Shell return code.
+            Shell return code.
         """
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)

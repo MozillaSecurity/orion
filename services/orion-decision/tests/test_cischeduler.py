@@ -4,16 +4,25 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion CI scheduler"""
 
+
 from datetime import datetime
 from json import dumps as json_dump
 from pathlib import Path
+from typing import Optional
 
 import pytest
+from pytest_mock import MockerFixture
 from taskcluster.utils import stringDate
 from yaml import safe_load as yaml_load
 
 from orion_decision import DEADLINE, MAX_RUN_TIME, PROVISIONER_ID, SCHEDULER_ID
-from orion_decision.ci_matrix import CISecretEnv, CISecretFile, CISecretKey, MatrixJob
+from orion_decision.ci_matrix import (
+    CISecret,
+    CISecretEnv,
+    CISecretFile,
+    CISecretKey,
+    MatrixJob,
+)
 from orion_decision.ci_scheduler import TEMPLATES, WORKER_TYPES, CIScheduler
 from orion_decision.git import GithubEvent
 
@@ -22,7 +31,7 @@ pytestmark = pytest.mark.usefixtures("mock_ci_languages")
 
 
 @pytest.mark.parametrize("commit_message", [None, "[skip ci]", "[skip tc]"])
-def test_ci_main(mocker, commit_message):
+def test_ci_main(mocker: MockerFixture, commit_message: Optional[str]) -> None:
     """test CI scheduler main"""
     evt = mocker.patch("orion_decision.ci_scheduler.GithubEvent", autospec=True)
     mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
@@ -41,7 +50,7 @@ def test_ci_main(mocker, commit_message):
     assert sched.dry_run == bool(commit_message)
 
 
-def test_ci_create_01(mocker):
+def test_ci_create_01(mocker: MockerFixture) -> None:
     """test no CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -69,7 +78,12 @@ def test_ci_create_01(mocker):
         ("linux", "env", "key"),
     ],
 )
-def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
+def test_ci_create_02(
+    mocker: MockerFixture,
+    platform: str,
+    matrix_secret: Optional[str],
+    job_secret: Optional[str],
+) -> None:
     """test single stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = mocker.Mock()
@@ -103,8 +117,9 @@ def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
     scopes = []
     clone_repo = evt.http_url
 
-    def _create_secret(kind):
+    def _create_secret(kind: str) -> CISecret:
         nonlocal clone_repo
+        sec: CISecret
         if kind == "env":
             sec = CISecretEnv("project/test/token", "TOKEN")
         elif kind == "deploy":
@@ -170,7 +185,7 @@ def test_ci_create_02(mocker, platform, matrix_secret, job_secret):
 
 
 @pytest.mark.parametrize("previous_pass", [True, False])
-def test_ci_create_03(mocker, previous_pass):
+def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
     """test two stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value

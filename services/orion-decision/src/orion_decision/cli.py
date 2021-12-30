@@ -3,8 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion scheduler"""
-import sys
-from argparse import ArgumentParser
+
+
+import argparse
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
@@ -14,6 +15,8 @@ from os import getenv
 from pathlib import Path
 from shutil import which
 from subprocess import run
+import sys
+from typing import List, Optional
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
@@ -28,14 +31,11 @@ from .scheduler import Scheduler
 LOG = getLogger(__name__)
 
 
-def configure_logging(level=INFO):
+def configure_logging(level: int = INFO) -> None:
     """Configure a log handler.
 
     Arguments:
-        level (int): Log verbosity constant from the `logging` module.
-
-    Returns:
-        None
+        level: Log verbosity constant from the `logging` module.
     """
     setlocale(LC_ALL, "")
     basicConfig(format="[%(levelname).1s] %(message)s", level=level)
@@ -45,7 +45,7 @@ def configure_logging(level=INFO):
         getLogger("urllib3").setLevel(INFO)
 
 
-def _define_logging_args(parser):
+def _define_logging_args(parser: argparse.ArgumentParser) -> None:
     log_levels = parser.add_mutually_exclusive_group()
     log_levels.add_argument(
         "--quiet",
@@ -68,7 +68,7 @@ def _define_logging_args(parser):
     )
 
 
-def _define_github_args(parser):
+def _define_github_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--github-event",
         default=getenv("GITHUB_EVENT", "{}"),
@@ -83,7 +83,9 @@ def _define_github_args(parser):
     )
 
 
-def _sanity_check_github_args(parser, result):
+def _sanity_check_github_args(
+    parser: argparse.ArgumentParser, result: argparse.Namespace
+) -> None:
     if result.github_action is None:
         parser.error("--github-action (or GITHUB_ACTION) is required!")
 
@@ -91,7 +93,7 @@ def _sanity_check_github_args(parser, result):
         parser.error("--github-event (or GITHUB_EVENT) is required!")
 
 
-def _define_decision_args(parser):
+def _define_decision_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--task-group",
         default=getenv("TASK_ID"),
@@ -112,16 +114,16 @@ def _define_decision_args(parser):
     )
 
 
-def parse_args(argv=None):
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments.
 
     Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
+        argv: Argument list, or sys.argv if None.
 
     Returns:
-        argparse.Namespace: parsed result
+        parsed result
     """
-    parser = ArgumentParser(prog="decision")
+    parser = argparse.ArgumentParser(prog="decision")
     _define_logging_args(parser)
     _define_github_args(parser)
     _define_decision_args(parser)
@@ -142,16 +144,16 @@ def parse_args(argv=None):
     return result
 
 
-def parse_check_args(argv=None):
+def parse_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for check.
 
     Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
+        argv: Argument list, or sys.argv if None.
 
     Returns:
-        argparse.Namespace: parsed result
+        parsed result
     """
-    parser = ArgumentParser(prog="orion-check")
+    parser = argparse.ArgumentParser(prog="orion-check")
     _define_logging_args(parser)
     parser.add_argument(
         "repo",
@@ -167,16 +169,16 @@ def parse_check_args(argv=None):
     return parser.parse_args(argv)
 
 
-def parse_ci_check_args(argv=None):
+def parse_ci_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI check.
 
     Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
+        argv: Argument list, or sys.argv if None.
 
     Returns:
-        argparse.Namespace: parsed result
+        parsed result
     """
-    parser = ArgumentParser(prog="ci-check")
+    parser = argparse.ArgumentParser(prog="ci-check")
     _define_logging_args(parser)
     parser.add_argument(
         "changed",
@@ -187,16 +189,16 @@ def parse_ci_check_args(argv=None):
     return parser.parse_args(argv)
 
 
-def parse_ci_launch_args(argv=None):
+def parse_ci_launch_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI launch.
 
     Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
+        argv: Argument list, or sys.argv if None.
 
     Returns:
-        argparse.Namespace: parsed result
+        parsed result
     """
-    parser = ArgumentParser(prog="ci-launch")
+    parser = argparse.ArgumentParser(prog="ci-launch")
     _define_logging_args(parser)
     parser.add_argument(
         "--fetch-ref",
@@ -232,16 +234,16 @@ def parse_ci_launch_args(argv=None):
     return result
 
 
-def parse_ci_args(argv=None):
+def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI.
 
     Arguments:
-        argv (list(str) or None): Argument list, or sys.argv if None.
+        argv: Argument list, or sys.argv if None.
 
     Returns:
-        argparse.Namespace: parsed result
+        parsed result
     """
-    parser = ArgumentParser(prog="ci-decision")
+    parser = argparse.ArgumentParser(prog="ci-decision")
     _define_logging_args(parser)
     _define_github_args(parser)
     _define_decision_args(parser)
@@ -269,14 +271,14 @@ def parse_ci_args(argv=None):
     return result
 
 
-def ci_main():
+def ci_main() -> None:
     """CI decision entrypoint."""
     args = parse_ci_args()
     configure_logging(level=args.log_level)
     sys.exit(CIScheduler.main(args))
 
 
-def ci_launch():
+def ci_launch() -> None:
     """CI task entrypoint."""
     args = parse_ci_launch_args()
     configure_logging(level=args.log_level)
@@ -296,6 +298,7 @@ def ci_launch():
     # clone repo
     LOG.info("Cloning repo: %s @ %s", args.clone_repo, args.fetch_rev)
     repo = GitRepo(args.clone_repo, args.fetch_ref, args.fetch_rev)
+    assert repo.path is not None
     chdir(repo.path)
     # update env
     env.update(args.job.env)
@@ -310,7 +313,7 @@ def ci_launch():
     sys.exit(run(args.job.script, env=env, check=True).returncode)
 
 
-def ci_check():
+def ci_check() -> None:
     """CI build matrix check entrypoint."""
     args = parse_ci_check_args()
     configure_logging(level=args.log_level)
@@ -318,7 +321,7 @@ def ci_check():
     sys.exit(0)
 
 
-def check():
+def check() -> None:
     """Service definition check entrypoint."""
     args = parse_check_args()
     configure_logging(level=args.log_level)
@@ -327,7 +330,7 @@ def check():
     sys.exit(0)
 
 
-def main():
+def main() -> None:
     """Decision entrypoint. Does not return."""
     args = parse_args()
     configure_logging(level=args.log_level)
