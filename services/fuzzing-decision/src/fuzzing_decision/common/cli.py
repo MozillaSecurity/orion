@@ -4,13 +4,15 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+
 import argparse
 import logging
 import os
 import pathlib
+from typing import Any
 
 
-def build_cli_parser(*args, **kwargs):
+def build_cli_parser(*args: Any, **kwargs: Any) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(*args, **kwargs)
     parser.add_argument(
         "--taskcluster-secret",

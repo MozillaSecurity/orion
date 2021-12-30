@@ -4,6 +4,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+
 import os
 import sys
 from ctypes import get_errno
@@ -12,6 +13,7 @@ from pathlib import Path
 from platform import system
 from shutil import which
 from subprocess import call
+from typing import Any, Dict, List, Optional
 
 from ..common.pool import PoolConfigLoader
 from ..common.workflow import Workflow
@@ -22,27 +24,31 @@ LOG = getLogger(__name__)
 class PoolLauncher(Workflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
-    def __init__(self, command, pool_name, preprocess=False):
+    def __init__(
+        self, command: List[str], pool_name: Optional[str], preprocess: bool = False
+    ) -> None:
         super().__init__()
 
+        self.apply: Optional[str]
         self.command = command.copy()
         self.environment = os.environ.copy()
         if pool_name is not None and "/" in pool_name:
             self.apply, self.pool_name = pool_name.split("/")
         else:
+            assert pool_name is not None
             self.pool_name = pool_name
             self.apply = None
         self.preprocess = preprocess
         self.log_dir = Path("/logs" if sys.platform == "linux" else "logs")
 
-    def clone(self, config):
+    def clone(self, config: Dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
         # Clone fuzzing & community configuration repos
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
 
-    def load_params(self):
+    def load_params(self) -> None:
         path = self.fuzzing_config_dir / f"{self.pool_name}.yml"
         assert path.exists(), f"Missing pool {self.pool_name}"
 
@@ -59,7 +65,7 @@ class PoolLauncher(Workflow):
             self.command = pool_config.command.copy()
         self.environment.update(pool_config.macros)
 
-    def exec(self):
+    def exec(self) -> None:
         assert self.command
 
         if system() == "Windows" and not Path(self.command[0]).is_file():

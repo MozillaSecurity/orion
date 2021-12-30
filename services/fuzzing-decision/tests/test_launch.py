@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 
+
 import os
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 import yaml
 
+from fuzzing_decision.common.pool import PoolConfigData
 from fuzzing_decision.pool_launch import cli
 from fuzzing_decision.pool_launch.launcher import PoolLauncher
 
 
 @patch("fuzzing_decision.pool_launch.cli.PoolLauncher", autospec=True)
-def test_main_calls(mock_launcher):
+def test_main_calls(mock_launcher) -> None:
     # if configure returns None, clone/load_params should not be called
     mock_launcher.return_value.configure.return_value = None
     cli.main([])
@@ -34,9 +37,9 @@ def test_main_calls(mock_launcher):
 
 
 @patch("os.environ", {})
-def test_load_params(tmp_path):
+def test_load_params(tmp_path: Path) -> None:
     os.environ["STATIC"] = "value"
-    pool_data = {
+    pool_data: PoolConfigData = {
         "cloud": "aws",
         "scopes": [],
         "disk_size": "120g",
@@ -93,7 +96,7 @@ def test_load_params(tmp_path):
         launcher.load_params()
 
     # test 4: preprocess task is loaded
-    preproc_data = {
+    preproc_data: PoolConfigData = {
         "cloud": None,
         "scopes": [],
         "disk_size": None,
@@ -129,7 +132,7 @@ def test_load_params(tmp_path):
     assert launcher.environment == {"STATIC": "value", "PREPROC": "1"}
 
 
-def test_launch_exec(tmp_path, monkeypatch):
+def test_launch_exec(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Start with taskcluster detection disabled, even on CI
     monkeypatch.delenv("TASK_ID", raising=False)
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)

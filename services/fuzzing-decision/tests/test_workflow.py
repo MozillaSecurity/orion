@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 import pathlib
 import re
 
@@ -14,7 +15,7 @@ fuzzing_config:
 """
 
 
-def test_patterns(tmp_path):
+def test_patterns(tmp_path: pathlib.Path) -> None:
 
     # Write community fuzzing config
     conf = tmp_path / "config" / "projects" / "fuzzing.yml"
@@ -40,7 +41,7 @@ def test_patterns(tmp_path):
         "Role=hook-id:project-fuzzing/(?!(B)$)",
     ]
 
-    def _match(test):
+    def _match(test: str) -> bool:
         return any([re.match(pattern, test) for pattern in patterns])
 
     # Check all fuzzing hooks are managed
@@ -56,7 +57,7 @@ def test_patterns(tmp_path):
     assert _match("WorkerPool=proj-fuzzing/ci-bis")
 
 
-def test_configure_local(tmp_path):
+def test_configure_local(tmp_path: pathlib.Path) -> None:
     workflow = Workflow()
 
     # Fails on missing file
@@ -82,7 +83,7 @@ def test_configure_local(tmp_path):
     }
 
 
-def test_configure_secret(mock_taskcluster_workflow):
+def test_configure_secret(mock_taskcluster_workflow: Workflow) -> None:
     workflow = mock_taskcluster_workflow
 
     # Read a remote conf from Taskcluster secret

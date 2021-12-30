@@ -4,6 +4,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+
 import logging
 import math
 import os
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
+from typing import Any, Dict, List, Optional, Union
 
 import dateutil.parser
 import yaml
@@ -19,6 +21,7 @@ from taskcluster.utils import fromNow, slugId, stringDate
 from tcadmin.resources import Hook, Role, WorkerPool
 
 from ..common import taskcluster
+from ..common.pool import MachineTypes
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
 from ..common.pool import parse_time
@@ -32,6 +35,7 @@ from . import (
     SCHEDULER_ID,
     WORKER_POOL_PREFIX,
 )
+from .providers import AWS, GCP
 
 LOG = logging.getLogger(__name__)
 
@@ -53,10 +57,10 @@ FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
 
 
 class MountArtifactResolver:
-    CACHE = {}  # cache of orion service -> taskId
+    CACHE: Dict[str, int] = {}  # cache of orion service -> taskId
 
     @classmethod
-    def lookup_taskid(cls, namespace):
+    def lookup_taskid(cls, namespace: str) -> int:
         assert isinstance(namespace, str)
         if namespace not in cls.CACHE:
             # need to resolve "image" to a task ID where the mount
@@ -68,11 +72,12 @@ class MountArtifactResolver:
         return cls.CACHE[namespace]
 
 
-def add_task_image(task, config):
+def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     """Add image or mount to task payload, depending on platform."""
     if config.platform in {"macos", "windows"}:
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
+        task_id: Union[str, int]
         if config.container["type"] == "indexed-image":
             # need to resolve "image" to a task ID where the mount artifact is
             task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])
@@ -101,7 +106,7 @@ def add_task_image(task, config):
         task["payload"]["image"] = config.container
 
 
-def add_capabilities_for_scopes(task):
+def add_capabilities_for_scopes(task: Dict[str, Any]) -> None:
     """Request capabilities to match the scopes specified by the task"""
     capabilities = task["payload"].setdefault("capabilities", {})
     scopes = set(task["scopes"])
@@ -117,7 +122,12 @@ def add_capabilities_for_scopes(task):
         del task["payload"]["capabilities"]
 
 
-def configure_task(task, config, now, env):
+def configure_task(
+    task: Dict[str, Any],
+    config: "PoolConfiguration",
+    now: datetime,
+    env: Optional[Dict[str, str]],
+) -> None:
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("4 weeks", now)))
     )
@@ -167,7 +177,7 @@ def configure_task(task, config, now, env):
         task["payload"]["env"].update(env)
 
 
-def cancel_tasks(worker_type):
+def cancel_tasks(worker_type: str) -> None:
     # Avoid cancelling self
     self_task_id = os.getenv("TASK_ID")
 
@@ -180,7 +190,7 @@ def cancel_tasks(worker_type):
     )
 
     # Get tasks by hook
-    def iter_tasks_by_hook(hook_id):
+    def iter_tasks_by_hook(hook_id: str):
         try:
             for fire in hooks.listLastFires(HOOK_PREFIX, hook_id)["lastFires"]:
                 if fire["result"] != "success":
@@ -208,7 +218,7 @@ def cancel_tasks(worker_type):
                 ]
         except TaskclusterRestFailure as msg:
             if "No such hook" in str(msg):
-                return
+                return None
             raise
 
     tasks_to_cancel = []
@@ -221,7 +231,7 @@ def cancel_tasks(worker_type):
                 # cancel anything. if cycle_time is shorter than max_run_time, we
                 # want prior tasks to remain running
                 LOG.info(f"{self_task_id} is scheduled, not cancelling tasks")
-                return
+                return None
             # avoid cancelling self
             continue
 
@@ -244,10 +254,10 @@ def cancel_tasks(worker_type):
 
 class PoolConfiguration(CommonPoolConfiguration):
     @property
-    def task_id(self):
+    def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def get_scopes(self):
+    def get_scopes(self) -> List[str]:
         result = self.scopes.copy()
         if self.platform == "windows" and self.run_as_admin:
             result.extend(
@@ -264,7 +274,12 @@ class PoolConfiguration(CommonPoolConfiguration):
             )
         return result
 
-    def build_resources(self, providers, machine_types, env=None):
+    def build_resources(
+        self,
+        providers: Dict[str, Union["AWS", "GCP"]],
+        machine_types: MachineTypes,
+        env: Optional[Dict[str, str]] = None,
+    ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -273,7 +288,14 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
-        config = {
+        assert self.imageset is not None
+        assert machines is not None
+        assert self.disk_size is not None
+        assert self.platform is not None
+        assert self.max_run_time is not None
+        assert self.cycle_time is not None
+        assert self.tasks is not None
+        config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
             ),
@@ -314,6 +336,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
+        assert self.cloud is not None
         if self.cloud != "static":
             yield WorkerPool(
                 config=config,
@@ -324,6 +347,8 @@ class PoolConfiguration(CommonPoolConfiguration):
                 workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
             )
 
+        self_cycle_crons = self.cycle_crons()
+        assert self_cycle_crons is not None
         yield Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -332,7 +357,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
+            schedule=list(self_cycle_crons),
             task=decision_task,
             triggerSchema={},
         )
@@ -344,7 +369,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
 
-    def artifact_map(self, expires):
+    def artifact_map(self, expires: str) -> Dict[str, Dict[str, str]]:
         result = {}
         for local_path, value in self.artifacts.items():
             assert isinstance(value["url"], str)
@@ -362,13 +387,14 @@ class PoolConfiguration(CommonPoolConfiguration):
         }
         return result
 
-    def build_tasks(self, parent_task_id, env=None):
+    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
         preprocess_task_id = None
 
         preprocess = self.create_preprocess()
         if preprocess is not None:
+            assert preprocess.max_run_time is not None
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
@@ -393,6 +419,8 @@ class PoolConfiguration(CommonPoolConfiguration):
             preprocess_task_id = slugId()
             yield preprocess_task_id, task
 
+        assert self.max_run_time is not None
+        assert self.tasks is not None
         for i in range(1, self.tasks + 1):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
@@ -421,10 +449,15 @@ class PoolConfigMap(CommonPoolConfigMap):
     RESULT_TYPE = PoolConfiguration
 
     @property
-    def task_id(self):
+    def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def build_resources(self, providers, machine_types, env=None):
+    def build_resources(
+        self,
+        providers: Dict[str, Union["AWS", "GCP"]],
+        machine_types: MachineTypes,
+        env=None,
+    ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -438,11 +471,15 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
-        config = {
+        assert self.imageset is not None
+        assert machines is not None
+        assert self.disk_size is not None
+        assert self.platform is not None
+        config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
             ),
-            "maxCapacity": max(sum(pool.tasks for pool in pools) * 2, 3),
+            "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,
         }
         if self.platform == "linux":
@@ -471,6 +508,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
+        assert self.cloud is not None
         if self.cloud != "static":
             yield WorkerPool(
                 config=config,
@@ -481,6 +519,8 @@ class PoolConfigMap(CommonPoolConfigMap):
                 workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
             )
 
+        self_cycle_crons = self.cycle_crons()
+        assert self_cycle_crons is not None
         yield Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -489,7 +529,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
+            schedule=list(self_cycle_crons),
             task=decision_task,
             triggerSchema={},
         )
@@ -501,11 +541,13 @@ class PoolConfigMap(CommonPoolConfigMap):
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
 
-    def build_tasks(self, parent_task_id, env=None):
+    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
 
         for pool in self.iterpools():
+            assert pool.max_run_time is not None
+            assert pool.tasks is not None
             for i in range(1, pool.tasks + 1):
                 task = yaml.safe_load(
                     FUZZING_TASK.substitute(
@@ -533,10 +575,11 @@ class PoolConfigMap(CommonPoolConfigMap):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml):
+    def from_file(pool_yml: Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
+            assert isinstance(cls, CommonPoolConfiguration)
             if set(cls.FIELD_TYPES) >= set(data) >= cls.REQUIRED_FIELDS:
                 return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
         LOG.error(
