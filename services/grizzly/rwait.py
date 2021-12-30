@@ -36,7 +36,7 @@ class RemoteWait:
         assert self._token is None, "token already has a value"
         self._token = value
 
-    def new(self):
+    def new(self) -> None:
         self.token = str(uuid.uuid4())
         TOKEN_PATH.mkdir(exist_ok=True)
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
