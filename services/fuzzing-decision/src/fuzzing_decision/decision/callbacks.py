@@ -4,7 +4,9 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+
 import logging
+from typing import List
 
 from tcadmin.resources import Hook, WorkerPool
 
@@ -14,7 +16,7 @@ from .pool import cancel_tasks
 LOG = logging.getLogger(__name__)
 
 
-async def cancel_pool_tasks(action, resource):
+async def cancel_pool_tasks(action: List[str], resource: WorkerPool) -> None:
     """Cancel all the tasks on a WorkerPool being updated or deleted"""
     assert isinstance(resource, WorkerPool)
 
@@ -22,7 +24,7 @@ async def cancel_pool_tasks(action, resource):
     cancel_tasks(worker_type)
 
 
-async def trigger_hook(action, resource):
+async def trigger_hook(action: List[str], resource: WorkerPool) -> None:
     """Trigger a Hook after it is created or updated"""
     assert isinstance(resource, Hook)
 

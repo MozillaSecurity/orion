@@ -4,12 +4,14 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+
 import atexit
 import logging
 import pathlib
 import re
 import shutil
 import tempfile
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from tcadmin.appconfig import AppConfig
@@ -27,23 +29,23 @@ LOG = logging.getLogger(__name__)
 class Workflow(CommonWorkflow):
     """Fuzzing decision task workflow"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-        self.fuzzing_config_dir = None
-        self.community_config_dir = None
+        self.fuzzing_config_dir: Optional[pathlib.Path] = None
+        self.community_config_dir: Optional[pathlib.Path] = None
 
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args, **kwds):
+    def configure(self, *args: Any, **kwds: Any) -> Optional[Dict[str, object]]:
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")
         return config
 
     @classmethod
-    async def tc_admin_boot(cls, resources):
+    async def tc_admin_boot(cls, resources) -> None:
         """Setup the workflow to be usable by tc-admin"""
         appconfig = AppConfig.current()
 
@@ -60,13 +62,14 @@ class Workflow(CommonWorkflow):
             fuzzing_git_revision=appconfig.options.get("fuzzing_git_revision"),
         )
 
+        assert config is not None
         # Retrieve remote repositories
         workflow.clone(config)
 
         # Then generate all our Taskcluster resources
         workflow.generate(resources, config)
 
-    def clone(self, config):
+    def clone(self, config: Dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
@@ -74,13 +77,14 @@ class Workflow(CommonWorkflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
         self.community_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config):
+    def generate(self, resources, config: Dict[str, Any]) -> None:
 
         # Setup resources manager to track only fuzzing instances
         for pattern in self.build_resources_patterns():
             resources.manage(pattern)
 
         # Load the cloud configuration from community config
+        assert self.community_config_dir is not None
         clouds = {
             "aws": AWS(self.community_config_dir),
             "gcp": GCP(self.community_config_dir),
@@ -88,6 +92,7 @@ class Workflow(CommonWorkflow):
         }
 
         # Load the machine types
+        assert self.fuzzing_config_dir is not None
         machines = MachineTypes.from_file(self.fuzzing_config_dir / "machines.yml")
 
         # Pass fuzzing-tc-config repository through to decision tasks, if specified
@@ -101,16 +106,17 @@ class Workflow(CommonWorkflow):
             pool_config = PoolConfigLoader.from_file(config_file)
             resources.update(pool_config.build_resources(clouds, machines, env))
 
-    def build_resources_patterns(self):
+    def build_resources_patterns(self) -> Union[List[str], str]:
         """Build regex patterns to manage our resources"""
 
         # Load existing workerpools from community config
-        path = self.community_config_dir / "config" / "projects" / "fuzzing.yml"
-        assert path.exists(), f"Missing fuzzing community config in {path}"
-        community = yaml.safe_load(path.read_text())
+        assert self.community_config_dir is not None
+        path_ = self.community_config_dir / "config" / "projects" / "fuzzing.yml"
+        assert path_.exists(), f"Missing fuzzing community config in {path_}"
+        community = yaml.safe_load(path_.read_text())
         assert "fuzzing" in community, "Missing fuzzing main key in community config"
 
-        def _suffix(data, key):
+        def _suffix(data: Dict[str, Any], key: str) -> str:
             existing = data.get(key, {})
             if not existing:
                 # Manage every resource possible
@@ -142,9 +148,16 @@ class Workflow(CommonWorkflow):
             rf"Role=hook-id:{HOOK_PREFIX}/{role_suffix}",
         ]
 
-    def build_tasks(self, pool_name, task_id, config, dry_run=False):
-        path = self.fuzzing_config_dir / f"{pool_name}.yml"
-        assert path.exists(), f"Missing pool {pool_name}"
+    def build_tasks(
+        self,
+        pool_name: str,
+        task_id: int,
+        config: Dict[str, Any],
+        dry_run: bool = False,
+    ) -> None:
+        assert self.fuzzing_config_dir is not None
+        path_ = self.fuzzing_config_dir / f"{pool_name}.yml"
+        assert path_.exists(), f"Missing pool {pool_name}"
 
         # Pass fuzzing-tc-config repository through to tasks, if specified
         env = {}
@@ -153,7 +166,7 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
         # Build tasks needed for a specific pool
-        pool_config = PoolConfigLoader.from_file(path)
+        pool_config = PoolConfigLoader.from_file(path_)
 
         # cancel any previously running tasks
         if not dry_run:
@@ -164,16 +177,16 @@ class Workflow(CommonWorkflow):
         if not dry_run:
             # Create all the tasks on taskcluster
             queue = taskcluster.get_service("queue")
-            for task_id, task in tasks:
-                LOG.info(f"Creating task {task['metadata']['name']} as {task_id}")
-                queue.createTask(task_id, task)
+            for task_id_, task in tasks:
+                LOG.info(f"Creating task {task['metadata']['name']} as {task_id_}")
+                queue.createTask(task_id_, task)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup temporary folders at end of execution"""
         for folder in (self.community_config_dir, self.fuzzing_config_dir):
             if folder is None or not folder.exists():
                 continue
-            folder = str(folder)
-            if folder.startswith(tempfile.gettempdir()):
-                LOG.info(f"Removing tempdir clone {folder}")
-                shutil.rmtree(folder)
+            folder_ = str(folder)
+            if folder_.startswith(tempfile.gettempdir()):
+                LOG.info(f"Removing tempdir clone {folder_}")
+                shutil.rmtree(folder_)

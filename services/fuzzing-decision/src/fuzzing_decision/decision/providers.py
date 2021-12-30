@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+
 import hashlib
 import json
 import logging
+from pathlib import Path
+from typing import Any, Dict, FrozenSet, Iterable, List, Tuple, Union
 
 import yaml
 
@@ -12,14 +15,14 @@ LOG = logging.getLogger(__name__)
 
 
 class Provider(object):
-    def __init__(self, base_dir):
+    def __init__(self, base_dir: Path) -> None:
         self.imagesets = yaml.safe_load(
             (base_dir / "config" / "imagesets.yml").read_text()
         )
 
-    def get_worker_config(self, worker, platform):
+    def get_worker_config(self, worker: str, platform: str) -> Dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
-        out = self.imagesets[worker].get("workerConfig", {})
+        out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
         if platform == "linux":
             out.setdefault("dockerConfig", {})
@@ -68,13 +71,13 @@ class Provider(object):
 class AWS(Provider):
     """Amazon Cloud provider config for Taskcluster"""
 
-    def __init__(self, base_dir):
+    def __init__(self, base_dir: Path) -> None:
         # Load configuration from cloned community config
         super().__init__(base_dir)
         self.regions = self.load_regions(base_dir / "config" / "aws.yml")
         LOG.info("Loaded AWS configuration")
 
-    def load_regions(self, path):
+    def load_regions(self, path: Path) -> Dict[str, Any]:
         """Load AWS regions from community tc file"""
         aws = yaml.safe_load(path.read_text())
         assert "subnets" in aws, "Missing subnets in AWS config"
@@ -90,11 +93,17 @@ class AWS(Provider):
             for region, subnets in aws["subnets"].items()
         }
 
-    def get_amis(self, worker):
+    def get_amis(self, worker: str):
         assert worker in self.imagesets, f"Missing worker {worker}"
         return self.imagesets[worker]["aws"]["amis"]
 
-    def build_launch_configs(self, imageset, machines, disk_size, platform):
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+    ) -> List[Dict[str, object]]:
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)
@@ -127,17 +136,40 @@ class AWS(Provider):
 class Static(Provider):
     """Fake provider for static machines not provisioned by Taskcluster"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def build_launch_configs(self, imageset, machines, disk_size, platform):
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+    ) -> List[
+        Dict[
+            str,
+            Union[
+                Dict[str, str],
+                List[
+                    Dict[
+                        str,
+                        Union[
+                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
+                        ],
+                    ]
+                ],
+                int,
+                str,
+            ],
+        ]
+    ]:
         return []
 
 
 class GCP(Provider):
     """Google Cloud provider config for Taskcluster"""
 
-    def __init__(self, base_dir):
+    def __init__(self, base_dir: Path) -> None:
         # Load configuration from cloned community config
         super().__init__(base_dir)
         gcp_config = yaml.safe_load((base_dir / "config" / "gcp.yml").read_text())
@@ -148,7 +180,30 @@ class GCP(Provider):
         }
         LOG.info("Loaded GCP configuration")
 
-    def build_launch_configs(self, imageset, machines, disk_size, platform):
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+    ) -> List[
+        Dict[
+            str,
+            Union[
+                Dict[str, str],
+                List[
+                    Dict[
+                        str,
+                        Union[
+                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
+                        ],
+                    ]
+                ],
+                int,
+                str,
+            ],
+        ]
+    ]:
 
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
