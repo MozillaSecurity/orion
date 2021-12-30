@@ -3,7 +3,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/push script"""
+
+
+import argparse
+
 import sys
+from typing import List, Optional
 
 from taskboot.push import push_artifacts
 
@@ -13,7 +18,7 @@ from .cli import CommonArgs, configure_logging
 class PushArgs(CommonArgs):
     """CLI arguments for Orion pusher"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.parser.set_defaults(
             artifact_filter="public/**.tar.zst",
@@ -21,7 +26,7 @@ class PushArgs(CommonArgs):
             push_tool="skopeo",
         )
 
-    def sanity_check(self, args):
+    def sanity_check(self, args: argparse.Namespace) -> None:
         super().sanity_check(args)
         if args.secret is None:
             self.parser.error("--registry-secret (or TASKCLUSTER_SECRET) is required!")
@@ -32,7 +37,7 @@ class PushArgs(CommonArgs):
             )
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)

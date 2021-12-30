@@ -3,20 +3,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI functions for Orion builder"""
-from argparse import ArgumentParser
+
+
+import argparse
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import getenv
+from typing import List, Optional
 
 
-def configure_logging(level=INFO):
+def configure_logging(level: int = INFO) -> None:
     """Configure a log handler.
 
     Arguments:
-        level (int): Log verbosity constant from the `logging` module.
-
-    Returns:
-        None
+        Log verbosity constant from the `logging` module.
     """
     setlocale(LC_ALL, "")
     basicConfig(level=level)
@@ -27,8 +27,8 @@ def configure_logging(level=INFO):
 
 
 class BaseArgs:
-    def __init__(self):
-        self.parser = ArgumentParser()
+    def __init__(self) -> None:
+        self.parser = argparse.ArgumentParser()
         log_levels = self.parser.add_mutually_exclusive_group()
         log_levels.add_argument(
             "--quiet",
@@ -52,28 +52,28 @@ class BaseArgs:
         )
 
     @classmethod
-    def parse_args(cls, argv=None):
+    def parse_args(cls, argv: Optional[List[str]] = None) -> argparse.Namespace:
         """Parse command-line arguments.
 
         Arguments:
-            argv (list(str) or None): Argument list, or sys.argv if None.
+            Argument list, or sys.argv if None.
 
         Returns:
-            argparse.Namespace: parsed result
+            parsed result
         """
         self = cls()
         result = self.parser.parse_args(argv)
         self.sanity_check(result)
         return result
 
-    def sanity_check(self, args):
+    def sanity_check(self, args: argparse.Namespace) -> None:
         pass
 
 
 class CommonArgs(BaseArgs):
     """Parser for common command-line arguments."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.parser.add_argument(
             "--git-repository",
@@ -103,7 +103,7 @@ class CommonArgs(BaseArgs):
             target=None,
         )
 
-    def sanity_check(self, args):
+    def sanity_check(self, args: argparse.Namespace) -> None:
         if args.git_repository is None:
             self.parser.error("--git-repository (or GIT_REPOSITORY) is required!")
 

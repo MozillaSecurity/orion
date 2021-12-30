@@ -3,12 +3,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/build script"""
+
+
+import argparse
+
 import logging
 import subprocess
 import sys
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
+from typing import List, Optional
 
 from taskboot.build import build_image
 from taskboot.target import Target
@@ -20,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class PatchedTarget(Target):
-    def clone(self, repository, revision):
+    def clone(self, repository: str, revision: str) -> None:
         logger.info("Cloning {} @ {}".format(repository, revision))
 
         # Clone
@@ -52,7 +57,7 @@ class PatchedTarget(Target):
 class BuildArgs(CommonArgs):
     """CLI arguments for Orion builder"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.parser.add_argument(
             "--output",
@@ -100,7 +105,7 @@ class BuildArgs(CommonArgs):
             push=False,
         )
 
-    def sanity_check(self, args):
+    def sanity_check(self, args: argparse.Namespace) -> None:
         super().sanity_check(args)
         args.tag = [args.git_revision, "latest"]
 
@@ -129,7 +134,7 @@ class BuildArgs(CommonArgs):
             )
 
 
-def main(argv=None):
+def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
     configure_logging(level=args.log_level)
