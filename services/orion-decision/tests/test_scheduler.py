@@ -4,10 +4,13 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion scheduler"""
 
+
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import pytest
+from pytest_mock import MockerFixture
 from taskcluster.utils import stringDate
 from yaml import safe_load as yaml_load
 
@@ -33,7 +36,7 @@ from orion_decision.scheduler import (
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
 
-def test_main(mocker):
+def test_main(mocker: MockerFixture) -> None:
     """test scheduler main"""
     evt = mocker.patch("orion_decision.scheduler.GithubEvent", autospec=True)
     svcs = mocker.patch("orion_decision.scheduler.Services", autospec=True)
@@ -48,7 +51,7 @@ def test_main(mocker):
     assert create.call_count == 1
 
 
-def test_mark_rebuild_01(mocker):
+def test_mark_rebuild_01(mocker: MockerFixture) -> None:
     """test that "/force-rebuild" marks all services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -64,7 +67,7 @@ def test_mark_rebuild_01(mocker):
     assert evt.list_changed_paths.call_count == 0
 
 
-def test_mark_rebuild_02(mocker):
+def test_mark_rebuild_02(mocker: MockerFixture) -> None:
     """test that changed paths mark dependent services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -86,7 +89,7 @@ def test_mark_rebuild_02(mocker):
     assert not sched.services["test7"].dirty
 
 
-def test_mark_rebuild_03(mocker):
+def test_mark_rebuild_03(mocker: MockerFixture) -> None:
     """test that "/force-rebuild=svc" marks some services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -108,7 +111,7 @@ def test_mark_rebuild_03(mocker):
     assert not sched.services["test7"].dirty
 
 
-def test_create_01(mocker):
+def test_create_01(mocker: MockerFixture) -> None:
     """test no task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -124,7 +127,7 @@ def test_create_01(mocker):
     assert queue.createTask.call_count == 0
 
 
-def test_create_02(mocker):
+def test_create_02(mocker: MockerFixture) -> None:
     """test non-push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -166,7 +169,7 @@ def test_create_02(mocker):
     )
 
 
-def test_create_03(mocker):
+def test_create_03(mocker: MockerFixture) -> None:
     """test push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -229,7 +232,7 @@ def test_create_03(mocker):
     assert push_task == push_expected
 
 
-def test_create_04(mocker):
+def test_create_04(mocker: MockerFixture) -> None:
     """test dependent tasks creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -295,7 +298,7 @@ def test_create_04(mocker):
     assert task2 == expected2
 
 
-def test_create_05(mocker):
+def test_create_05(mocker: MockerFixture) -> None:
     """test no tasks are created for release event"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -313,7 +316,7 @@ def test_create_05(mocker):
     assert queue.createTask.call_count == 0
 
 
-def test_create_06(mocker):
+def test_create_06(mocker: MockerFixture) -> None:
     """test no tasks are created for --dry-run"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -335,7 +338,7 @@ def test_create_06(mocker):
     assert queue.createTask.call_count == 0
 
 
-def test_create_07(mocker):
+def test_create_07(mocker: MockerFixture) -> None:
     """test PR doesn't create push task"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -394,7 +397,13 @@ def test_create_07(mocker):
         (False, False, True, "python:latest"),
     ],
 )
-def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
+def test_create_08(
+    mocker: MockerFixture,
+    ci1_dirty: bool,
+    svc1_dirty: bool,
+    svc2_dirty: bool,
+    expected_image: Dict[str, str],
+) -> None:
     """test "test" tasks creation with dirty ci image"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -497,7 +506,7 @@ def test_create_08(mocker, ci1_dirty, svc1_dirty, svc2_dirty, expected_image):
     assert task3 == expected3
 
 
-def test_create_09(mocker):
+def test_create_09(mocker: MockerFixture) -> None:
     """test recipe test task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value

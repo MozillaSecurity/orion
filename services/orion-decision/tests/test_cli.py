@@ -4,15 +4,19 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion decision CLI"""
 
+
 from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path
+from typing import Dict, Optional
+from unittest.mock import MagicMock
 from unittest.mock import call
 
 import pytest
+from pytest_mock import MockerFixture
 
+from orion_decision.ci_matrix import CISecretEnv
 from orion_decision.cli import (
-    CISecretEnv,
     check,
     ci_check,
     ci_launch,
@@ -27,7 +31,7 @@ from orion_decision.cli import (
 )
 
 
-def test_args(mocker):
+def test_args(mocker: MockerFixture) -> None:
     """test decision argument parsing"""
     mocker.patch("orion_decision.cli.getenv", autospec=True, return_value=None)
     with pytest.raises(SystemExit):
@@ -37,7 +41,7 @@ def test_args(mocker):
     parse_args(["--github-action", "github-push", "--github-event", "{blah}"])
 
 
-def test_check_args():
+def test_check_args() -> None:
     """test service check argument parsing"""
     with pytest.raises(SystemExit):
         parse_check_args([])
@@ -45,7 +49,7 @@ def test_check_args():
     assert result.repo == Path("path")
 
 
-def test_ci_args(mocker):
+def test_ci_args(mocker: MockerFixture) -> None:
     """test CI decision argument parsing"""
     mocker.patch("orion_decision.cli.getenv", autospec=True, return_value=None)
     test_matrix = {
@@ -86,13 +90,13 @@ def test_ci_args(mocker):
     assert result.project_name == "Orion"
 
 
-def test_ci_check_args():
+def test_ci_check_args() -> None:
     """test CI check argument parsing"""
     result = parse_ci_check_args(["123", "456"])
     assert result.changed == [Path("123"), Path("456")]
 
 
-def test_ci_launch_args(mocker):
+def test_ci_launch_args(mocker: MockerFixture) -> None:
     """test CI launcher argument parsing"""
     mocker.patch("orion_decision.cli.getenv", autospec=True, return_value=None)
     test_job = {
@@ -135,7 +139,7 @@ def test_ci_launch_args(mocker):
     assert result.clone_repo == "test.allizom.org"
 
 
-def test_logging_init(mocker):
+def test_logging_init(mocker: MockerFixture) -> None:
     """test logging initializer"""
     locale = mocker.patch("orion_decision.cli.setlocale", autospec=True)
     log_init = mocker.patch("orion_decision.cli.basicConfig", autospec=True)
@@ -147,7 +151,7 @@ def test_logging_init(mocker):
     )
 
 
-def test_ci_main(mocker):
+def test_ci_main(mocker: MockerFixture) -> None:
     """test CLI main entrypoint for CI decision"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_args", autospec=True)
@@ -162,7 +166,7 @@ def test_ci_main(mocker):
     assert exc.value.code == sched.main.return_value
 
 
-def test_main(mocker):
+def test_main(mocker: MockerFixture) -> None:
     """test CLI main entrypoint"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_args", autospec=True)
@@ -177,7 +181,7 @@ def test_main(mocker):
     assert exc.value.code == sched.main.return_value
 
 
-def test_ci_check(mocker):
+def test_ci_check(mocker: MockerFixture) -> None:
     """test CLI entrypoint for CI check"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_check_args", autospec=True)
@@ -201,7 +205,9 @@ def test_ci_check(mocker):
         ("windows", None),
     ],
 )
-def test_ci_launch_01(mocker, platform, secret):
+def test_ci_launch_01(
+    mocker: MockerFixture, platform: Optional[str], secret: Optional[str]
+) -> None:
     """test CLI entrypoint for CI launch"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
@@ -210,7 +216,7 @@ def test_ci_launch_01(mocker, platform, secret):
     run = mocker.patch("orion_decision.cli.run", autospec=True)
     repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value="secret")
-    copy = {}
+    copy: Dict[str, str] = {}
     environ.copy.return_value = copy
 
     if platform == "windows":
@@ -255,10 +261,11 @@ def test_ci_launch_01(mocker, platform, secret):
     # check that non-env secret gets written
     elif secret == "other":
         assert not copy
+        assert isinstance(sec, MagicMock)
         assert sec.write.call_count == 1
 
 
-def test_ci_launch_02(mocker):
+def test_ci_launch_02(mocker: MockerFixture) -> None:
     """test CLI entrypoint for CI launch"""
     mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_launch_args", autospec=True)
@@ -267,7 +274,7 @@ def test_ci_launch_02(mocker):
     mocker.patch("orion_decision.cli.run", autospec=True)
     mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value={"key": "secret"})
-    copy = {}
+    copy: Dict[str, str] = {}
     environ.copy.return_value = copy
 
     sec = CISecretEnv("secret", "name")
@@ -279,7 +286,7 @@ def test_ci_launch_02(mocker):
     assert "missing `key`" in str(exc)
 
 
-def test_check(mocker):
+def test_check(mocker: MockerFixture) -> None:
     """test CLI check entrypoint"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_check_args", autospec=True)

@@ -3,11 +3,17 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for CI tasks"""
+
+
+import argparse
+
+from datetime import datetime
 from itertools import chain
 from json import dumps as json_dump
 from logging import getLogger
 from pathlib import Path
 from string import Template
+from typing import List
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -43,48 +49,51 @@ class CIScheduler:
     """Decision logic for scheduling CI tasks in Taskcluster.
 
     Attributes:
-        project_name (str): Project name to be used in task metadata.
-        github_event (GithubEvent): Github event that triggered this run.
-        now (datetime): Taskcluster time when decision was triggered.
-        task_group (str): Task group to create tasks in.
-        dry_run (bool): Calculate what should be created, but don't actually
-                        create tasks in Taskcluster.
-        matrix (CIMatrix): CI job matrix
+        project_name: Project name to be used in task metadata.
+        github_event: Github event that triggered this run.
+        now: Taskcluster time when decision was triggered.
+        task_group: Task group to create tasks in.
+        dry_run: Calculate what should be created, but don't actually
+                 create tasks in Taskcluster.
+        matrix: CI job matrix
     """
 
     def __init__(
-        self, project_name, github_event, now, task_group, matrix, dry_run=False
-    ):
+        self,
+        project_name: str,
+        github_event: GithubEvent,
+        now: datetime,
+        task_group: str,
+        matrix: str,
+        dry_run: bool = False,
+    ) -> None:
         """Initialize a CIScheduler object.
 
         Arguments:
-            project_name (str): Project name to be used in task metadata.
-            github_event (GithubEvent): Github event that triggered this run.
-            now (datetime): Taskcluster time when decision was triggered.
-            task_group (str): Task group to create tasks in.
-            matrix (CIMatrix): CI job matrix
-            dry_run (bool): Calculate what should be created, but don't actually
-                            create tasks in Taskcluster.
+            project_name: Project name to be used in task metadata.
+            github_event: Github event that triggered this run.
+            now: Taskcluster time when decision was triggered.
+            task_group: Task group to create tasks in.
+            matrix: CI job matrix
+            dry_run: Calculate what should be created, but don't actually
+                     create tasks in Taskcluster.
         """
         self.project_name = project_name
         self.github_event = github_event
         self.now = now
         self.task_group = task_group
         self.dry_run = dry_run
+        assert github_event.event_type is not None
         self.matrix = CIMatrix(
             matrix,
             github_event.branch,
             github_event.event_type,
         )
 
-    def create_tasks(self):
-        """Create CI tasks in Taskcluster.
-
-        Returns:
-            None
-        """
+    def create_tasks(self) -> None:
+        """Create CI tasks in Taskcluster."""
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
-        prev_stage = []
+        prev_stage: List[str] = []
         for stage in sorted(set(job.stage for job in self.matrix.jobs)):
             this_stage = []
             for job in self.matrix.jobs:
@@ -101,6 +110,7 @@ class CIScheduler:
                 else:
                     clone_repo = self.github_event.http_url
                 job_ser = job.serialize()
+                assert isinstance(job_ser["secrets"], list)
                 job_ser["secrets"].extend(
                     secret.serialize() for secret in self.matrix.secrets
                 )
@@ -177,17 +187,18 @@ class CIScheduler:
             prev_stage = this_stage
 
     @classmethod
-    def main(cls, args):
+    def main(cls, args: argparse.Namespace) -> int:
         """Decision procedure.
 
         Arguments:
-            args (argparse.Namespace): Arguments as returned by `parse_ci_args()`
+            args: Arguments as returned by `parse_ci_args()`
 
         Returns:
-            int: Shell return code.
+            Shell return code.
         """
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
+        assert evt.commit_message is not None
         try:
             if "[skip ci]" in evt.commit_message or "[skip tc]" in evt.commit_message:
                 LOG.warning(
