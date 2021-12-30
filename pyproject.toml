@@ -1,0 +1,47 @@
+[tool.mypy]
+strict = true
+show_error_codes = true
+
+# Add Python modules to be ignored by mypy here
+[[tool.mypy.overrides]]
+module = [
+    "dockerfile_parse",  # Package: dockerfile_parse
+    "fasteners",  # Package: fasteners
+    "grizzly.common.fuzzmanager",  # Package: grizzly
+    "grizzly.common.reporter",  # Package: grizzly
+    "jsone",  # Package: jsone
+    "jsonschema",  # Package: jsonschema
+    "slugid",  # Package: slugid
+    "subprocess32",  # Package: subprocess32
+    "taskboot.build",  # Package: taskboot
+    "taskboot.config",  # Package: taskboot
+    "taskboot.docker",  # Package: taskboot
+    "taskboot.push",  # Package: taskboot
+    "taskboot.target",  # Package: taskboot
+    "taskboot.utils",  # Package: taskboot
+    "taskcluster",  # Package: taskcluster
+    "taskcluster.exceptions",  # Package: taskcluster
+    "taskcluster.helper",  # Package: taskcluster
+    "taskcluster.utils",  # Package: taskcluster
+    "tcadmin.appconfig",  # Package: tcadmin
+    "tcadmin.resources",  # Package: tcadmin
+    "xvfbwrapper",  # Package: xvfbwrapper
+    ###
+    "fuzzing_decision.common",  # Package: orion
+    "fuzzing_decision.common.pool",  # Package: orion
+    "fuzzing_decision.decision.callbacks",  # Package: orion
+    "fuzzing_decision.decision.pool",  # Package: orion
+    "fuzzing_decision.decision.providers",  # Package: orion
+    "fuzzing_decision.decision.workflow",  # Package: orion
+    "fuzzing_decision.pool_launch",  # Package: orion
+    "fuzzing_decision.pool_launch.launcher",  # Package: orion
+    "orion_decision",  # Package: orion
+    "orion_decision.ci_matrix",  # Package: orion
+    "orion_decision.ci_scheduler",  # Package: orion
+    "orion_decision.cli",  # Package: orion
+    "orion_decision.git",  # Package: orion
+    "orion_decision.orion",  # Package: orion
+    "orion_decision.scheduler",  # Package: orion
+    "Reporter.Reporter",  # Package: FuzzManager
+]
+ignore_missing_imports = true
