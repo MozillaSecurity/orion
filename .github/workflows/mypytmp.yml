@@ -57,4 +57,4 @@ jobs:
       run: flake8 .
     - name: Run mypy
       run: |
-        find . -name "*.py" ! -name "setup.py" ! -name "conftest.py" -exec mypy {} + ;
+        find . -name "*.py" ! -name "setup.py" ! -wholename "./services/orion-decision/tests/conftest.py" -exec mypy {} + ;
