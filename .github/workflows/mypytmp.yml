@@ -50,6 +50,7 @@ jobs:
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
         python -u -m pip install --upgrade pip setuptools wheel
+        pip install --upgrade pytest types-requests types-six types-python-dateutil types-PyYAML
         pip install --upgrade flake8 mypy
 
     - name: Run flake8 ignore line lengths
