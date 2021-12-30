@@ -29,7 +29,7 @@ from orion_decision.cli import (
 )
 
 
-def test_args(mocker):
+def test_args(mocker) -> None:
     """test decision argument parsing"""
     mocker.patch("orion_decision.cli.getenv", autospec=True, return_value=None)
     with pytest.raises(SystemExit):
@@ -39,7 +39,7 @@ def test_args(mocker):
     parse_args(["--github-action", "github-push", "--github-event", "{blah}"])
 
 
-def test_check_args():
+def test_check_args() -> None:
     """test service check argument parsing"""
     with pytest.raises(SystemExit):
         parse_check_args([])
@@ -47,7 +47,7 @@ def test_check_args():
     assert result.repo == Path("path")
 
 
-def test_ci_args(mocker):
+def test_ci_args(mocker) -> None:
     """test CI decision argument parsing"""
     mocker.patch("orion_decision.cli.getenv", autospec=True, return_value=None)
     test_matrix = {
@@ -88,7 +88,7 @@ def test_ci_args(mocker):
     assert result.project_name == "Orion"
 
 
-def test_ci_check_args():
+def test_ci_check_args() -> None:
     """test CI check argument parsing"""
     result = parse_ci_check_args(["123", "456"])
     assert result.changed == [Path("123"), Path("456")]

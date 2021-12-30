@@ -71,6 +71,6 @@ def mock_machines():
 
 
 @pytest.fixture(autouse=True)
-def disable_cleanup():
+def disable_cleanup() -> None:
     """Disable workflow cleanup in unit tests as tmpdir is automatically removed"""
     Workflow.cleanup = Mock()

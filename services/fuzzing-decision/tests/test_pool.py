@@ -710,7 +710,7 @@ def test_flatten(pool_path):
     assert pool.tasks == expect.tasks
 
 
-def test_pool_map():
+def test_pool_map() -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
         def _flatten(self, _):
             pass
@@ -775,7 +775,7 @@ def test_pool_loader(loader, config_cls, map_cls):
     assert isinstance(obj, map_cls)
 
 
-def test_cycle_crons():
+def test_cycle_crons() -> None:
     conf = CommonPoolConfiguration(
         "test",
         {
@@ -855,7 +855,7 @@ def test_cycle_crons():
         assert calc_none == list(conf.cycle_crons())
 
 
-def test_required():
+def test_required() -> None:
     CommonPoolConfiguration("test", {"name": "test pool"}, _flattened={})
     with pytest.raises(AssertionError):
         CommonPoolConfiguration("test", {}, _flattened={})

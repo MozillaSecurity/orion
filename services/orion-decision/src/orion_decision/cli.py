@@ -272,14 +272,14 @@ def parse_ci_args(argv=None):
     return result
 
 
-def ci_main():
+def ci_main() -> None:
     """CI decision entrypoint."""
     args = parse_ci_args()
     configure_logging(level=args.log_level)
     sys.exit(CIScheduler.main(args))
 
 
-def ci_launch():
+def ci_launch() -> None:
     """CI task entrypoint."""
     args = parse_ci_launch_args()
     configure_logging(level=args.log_level)
@@ -313,7 +313,7 @@ def ci_launch():
     sys.exit(run(args.job.script, env=env, check=True).returncode)
 
 
-def ci_check():
+def ci_check() -> None:
     """CI build matrix check entrypoint."""
     args = parse_ci_check_args()
     configure_logging(level=args.log_level)
@@ -321,7 +321,7 @@ def ci_check():
     sys.exit(0)
 
 
-def check():
+def check() -> None:
     """Service definition check entrypoint."""
     args = parse_check_args()
     configure_logging(level=args.log_level)
@@ -330,7 +330,7 @@ def check():
     sys.exit(0)
 
 
-def main():
+def main() -> None:
     """Decision entrypoint. Does not return."""
     args = parse_args()
     configure_logging(level=args.log_level)
