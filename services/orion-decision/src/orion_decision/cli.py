@@ -3,6 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion scheduler"""
+
+from __future__ import annotations
+
 import sys
 from argparse import ArgumentParser
 from datetime import datetime

@@ -5,6 +5,8 @@
 """Launcher to redirect all stdout/stderr to a private log file.
 """
 
+from __future__ import annotations
+
 import ctypes
 import os
 import sys

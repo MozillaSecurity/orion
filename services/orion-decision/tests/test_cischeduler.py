@@ -4,6 +4,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion CI scheduler"""
 
+from __future__ import annotations
+
 from datetime import datetime
 from json import dumps as json_dump
 from pathlib import Path

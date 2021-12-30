@@ -3,6 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Stage build deps Orion builder"""
+
+from __future__ import annotations
+
 from argparse import Namespace
 from pathlib import Path
 from shutil import copyfileobj, rmtree

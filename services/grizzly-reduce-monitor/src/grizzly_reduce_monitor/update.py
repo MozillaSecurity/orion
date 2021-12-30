@@ -5,6 +5,8 @@
 """Update the original crash in CrashManager following reduction.
 """
 
+from __future__ import annotations
+
 import sys
 from logging import getLogger
 

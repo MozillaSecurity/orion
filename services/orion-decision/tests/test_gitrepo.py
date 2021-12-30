@@ -4,6 +4,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for GitRepo"""
 
+from __future__ import annotations
+
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import gettempdir

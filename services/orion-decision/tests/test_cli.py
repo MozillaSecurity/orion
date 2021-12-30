@@ -4,6 +4,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion decision CLI"""
 
+from __future__ import annotations
+
 from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path

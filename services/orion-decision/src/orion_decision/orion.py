@@ -3,6 +3,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Orion service definitions"""
+
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
 from itertools import chain
