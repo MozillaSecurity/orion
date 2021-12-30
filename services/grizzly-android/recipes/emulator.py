@@ -3,6 +3,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+
 from __future__ import print_function
 import argparse
 import logging
@@ -14,10 +15,12 @@ import sys
 import telnetlib
 import tempfile
 import time
+from typing import Optional, Tuple, Union
 import xml.etree.ElementTree
 import zipfile
 import requests
 from six.moves.urllib.parse import urlparse
+
 if sys.version_info.major == 2:
     import subprocess32 as subprocess  # pylint: disable=import-error
 else:
@@ -34,7 +37,7 @@ HOME = os.path.expanduser("~")
 LOG = logging.getLogger("emulator_install")
 
 
-def si(number):
+def si(number: float) -> str:
     suffixes = ["", "k", "M", "G", "T"]
     while number > 1024:
         number /= 1024.0
@@ -42,41 +45,70 @@ def si(number):
     return "%0.2f%s" % (number, suffixes.pop(0))
 
 
-def makedirs(*dirs):
+def makedirs(*dirs) -> str:
     while dirs:
         if not os.path.isdir(dirs[0]):
             os.mkdir(dirs[0])
         if len(dirs) == 1:
-            return dirs[0]
+            return str(dirs[0])
         dirs = [os.path.join(dirs[0], dirs[1])] + list(dirs[2:])
+    return ""
 
 
 class AndroidSDKRepo(object):
-
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         parts = urlparse(url)
-        self.url_base = parts.scheme + "://" + parts.netloc + os.path.dirname(parts.path)
+        self.url_base = (
+            parts.scheme + "://" + parts.netloc + os.path.dirname(parts.path)
+        )
         xml_string = requests.get(url).content
         LOG.info("Downloaded manifest: %s (%sB)", url, si(len(xml_string)))
         self.root = xml.etree.ElementTree.fromstring(xml_string)
 
     @staticmethod
-    def read_revision(element):
+    def read_revision(
+        element: xml.etree.ElementTree.Element,
+    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
         rev = element.find("revision")
+        assert rev is not None
         major = rev.find("major")
-        major = int(major.text) if major is not None else None
+        if major is not None:
+            assert major.text is not None
+            final_major = int(major.text)
+        else:
+            final_major = None
         minor = rev.find("minor")
-        minor = int(minor.text) if minor is not None else None
+        if minor is not None:
+            assert minor.text is not None
+            final_minor = int(minor.text)
+        else:
+            final_minor = None
         micro = rev.find("micro")
-        micro = int(micro.text) if micro is not None else None
-        return (major, minor, micro)
+        if micro is not None:
+            assert micro.text is not None
+            final_micro = int(micro.text)
+        else:
+            final_micro = None
+        return (final_major, final_minor, final_micro)
 
-    def get_file(self, package_path, out_path=".", host="linux", extract_package_path=True):
-        package = self.root.find(".//remotePackage[@path='%s']/channelRef[@ref='channel-0']/.." % (package_path,))
+    def get_file(
+        self,
+        package_path: str,
+        out_path: str = ".",
+        host: Optional[str] = "linux",
+        extract_package_path: bool = True,
+    ) -> None:
+        package = self.root.find(
+            ".//remotePackage[@path='%s']/channelRef[@ref='channel-0']/.."
+            % (package_path,)
+        )
+        assert package is not None
         if host is None:
             url = package.find("./archives/archive/complete/url")
         else:
-            url = package.find("./archives/archive/[host-os='%s']/complete/url" % (host,))
+            url = package.find(
+                "./archives/archive/[host-os='%s']/complete/url" % (host,)
+            )
 
         # figure out where to extract package to
         path_parts = package_path.split(";")
@@ -94,76 +126,131 @@ class AndroidSDKRepo(object):
         if os.path.isfile(manifest_path):
             # compare the remote version with local
             remote_rev = self.read_revision(package)
-            local_rev = self.read_revision(xml.etree.ElementTree.parse(manifest_path).find("localPackage"))
+            parsed_manifest_path_find_local_package = xml.etree.ElementTree.parse(
+                manifest_path
+            ).find("localPackage")
+            assert parsed_manifest_path_find_local_package is not None
+            local_rev = self.read_revision(parsed_manifest_path_find_local_package)
             if remote_rev <= local_rev:
-                fmt_rev = ".".join("" if ver is None else ("%d" % (ver,)) for ver in local_rev).strip(".")
-                LOG.info("Installed %s revision %s is sufficiently new", package_path, fmt_rev)
-                return
+                fmt_rev = ".".join(
+                    "" if ver is None else ("%d" % (ver,)) for ver in local_rev
+                ).strip(".")
+                LOG.info(
+                    "Installed %s revision %s is sufficiently new",
+                    package_path,
+                    fmt_rev,
+                )
+                return None
 
         tmp_fp, ziptmp = tempfile.mkstemp(suffix=".zip")
         os.close(tmp_fp)
         try:
             downloaded = 0
             with open(ziptmp, "wb") as zipf:
+                assert url is not None
+                assert url.text is not None
                 response = requests.get(self.url_base + "/" + url.text, stream=True)
                 total_size = int(response.headers["Content-Length"])
                 start_time = report_time = time.time()
-                LOG.info("Downloading package: %s (%sB total)", url.text, si(total_size))
+                LOG.info(
+                    "Downloading package: %s (%sB total)", url.text, si(total_size)
+                )
                 for chunk in response.iter_content(1024 * 1024):
                     zipf.write(chunk)
                     downloaded += len(chunk)
                     now = time.time()
                     if (now - report_time) > 30 and downloaded != total_size:
-                        LOG.info(".. still downloading (%0.1f%%, %sB/s)", 100.0 * downloaded / total_size,
-                                 si(float(downloaded) / (now - start_time)))
+                        LOG.info(
+                            ".. still downloading (%0.1f%%, %sB/s)",
+                            100.0 * downloaded / total_size,
+                            si(float(downloaded) / (now - start_time)),
+                        )
                         report_time = now
             assert downloaded == total_size
-            LOG.info(".. downloaded (%sB/s)", si(float(downloaded) / (time.time() - start_time)))
-            with zipfile.ZipFile(ziptmp) as zipf:
-                for info in zipf.infolist():
-                    zipf.extract(info, out_path)
+            LOG.info(
+                ".. downloaded (%sB/s)",
+                si(float(downloaded) / (time.time() - start_time)),
+            )
+            with zipfile.ZipFile(ziptmp) as zipf_chmod:
+                for info in zipf_chmod.infolist():
+                    zipf_chmod.extract(info, out_path)
                     perm = info.external_attr >> 16
-                    perm |= stat.S_IREAD  # make sure we're not accidentally setting this to 0
+                    perm |= (
+                        stat.S_IREAD
+                    )  # make sure we're not accidentally setting this to 0
                     os.chmod(os.path.join(out_path, info.filename), perm)
         finally:
             os.unlink(ziptmp)
 
         # write manifest
-        xml.etree.ElementTree.register_namespace("common", "http://schemas.android.com/repository/android/common/01")
-        xml.etree.ElementTree.register_namespace("generic", "http://schemas.android.com/repository/android/generic/01")
-        xml.etree.ElementTree.register_namespace("sys-img", "http://schemas.android.com/sdk/android/repo/sys-img2/01")
-        xml.etree.ElementTree.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
-        manifest = xml.etree.ElementTree.Element("{http://schemas.android.com/repository/android/common/01}repository")
+        xml.etree.ElementTree.register_namespace(
+            "common", "http://schemas.android.com/repository/android/common/01"
+        )
+        xml.etree.ElementTree.register_namespace(
+            "generic", "http://schemas.android.com/repository/android/generic/01"
+        )
+        xml.etree.ElementTree.register_namespace(
+            "sys-img", "http://schemas.android.com/sdk/android/repo/sys-img2/01"
+        )
+        xml.etree.ElementTree.register_namespace(
+            "xsi", "http://www.w3.org/2001/XMLSchema-instance"
+        )
+        manifest = xml.etree.ElementTree.Element(
+            "{http://schemas.android.com/repository/android/common/01}repository"
+        )
         license = package.find("uses-license")
-        manifest.append(self.root.find("./license[@id='%s']" % (license.get("ref"),)))
+        assert license is not None
+        assert self.root is not None
+        root_found_license = self.root.find(
+            "./license[@id='%s']" % (license.get("ref"),)
+        )
+        assert root_found_license is not None
+        manifest.append(root_found_license)
         local_package = xml.etree.ElementTree.SubElement(manifest, "localPackage")
         local_package.set("path", package_path)
         local_package.set("obsolete", "false")
-        local_package.append(package.find("type-details"))
-        local_package.append(package.find("revision"))
-        local_package.append(package.find("display-name"))
+        package_find_type_details = package.find("type-details")
+        assert package_find_type_details is not None
+        local_package.append(package_find_type_details)
+        package_find_revision = package.find("revision")
+        assert package_find_revision is not None
+        local_package.append(package_find_revision)
+        package_find_display_name = package.find("display-name")
+        assert package_find_display_name is not None
+        local_package.append(package_find_display_name)
         local_package.append(license)
         deps = package.find("dependencies")
         if deps is not None:
             local_package.append(deps)
-        manifest_bytes = (b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-                          xml.etree.ElementTree.tostring(manifest, encoding="UTF-8"))
+        manifest_bytes = (
+            b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + xml.etree.ElementTree.tostring(manifest, encoding="UTF-8")
+        )
         # etree doesn't support xmlns in attribute values, so insert them manually
-        if b"xmlns:generic=" not in manifest_bytes and b"\"generic:" in manifest_bytes:
+        if b"xmlns:generic=" not in manifest_bytes and b'"generic:' in manifest_bytes:
             manifest_bytes = manifest_bytes.replace(
                 b"<common:repository ",
-                b'<common:repository xmlns:generic="http://schemas.android.com/repository/android/generic/01" ')
-        if b"xmlns:sys-img=" not in manifest_bytes and b"\"sys-img:" in manifest_bytes:
+                b'<common:repository xmlns:generic="http://schemas.android.com/repository/android/generic/01" ',
+            )
+        if b"xmlns:sys-img=" not in manifest_bytes and b'"sys-img:' in manifest_bytes:
             manifest_bytes = manifest_bytes.replace(
                 b"<common:repository ",
-                b'<common:repository xmlns:sys-img="http://schemas.android.com/sdk/android/repo/sys-img2/01" ')
+                b'<common:repository xmlns:sys-img="http://schemas.android.com/sdk/android/repo/sys-img2/01" ',
+            )
         with open(manifest_path, "wb") as manifest_fp:
             manifest_fp.write(manifest_bytes)
 
 
 class AndroidHelper(object):
-
-    def __init__(self, android_port=5554, avd_name=None, no_window=False, sdcard_size=500, use_snapshot=False, writable=False):
+    def __init__(
+        self,
+        android_port: int = 5554,
+        avd_name: Optional[str] = None,
+        no_window: bool = False,
+        sdcard_size: int = 500,
+        use_snapshot: Union[bool, str] = False,
+        writable: bool = False,
+    ) -> None:
         self.android_port = android_port
         self.avd_name = avd_name
         self.no_window = no_window
@@ -171,7 +258,7 @@ class AndroidHelper(object):
         self.use_snapshot = use_snapshot
         self.writable = writable
 
-    def install(self):
+    def install(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
@@ -196,7 +283,7 @@ class AndroidHelper(object):
         # PANIC: Cannot find AVD system path. Please define ANDROID_SDK_ROOT
         makedirs(sdk, "platforms")
 
-    def avd(self):
+    def avd(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
@@ -205,6 +292,7 @@ class AndroidHelper(object):
         api_gapi = os.path.join(sdk, "system-images", "android-29", "default")
 
         # create an avd
+        assert self.avd_name is not None
         avd_ini = os.path.join(avd_path, self.avd_name + ".ini")
         assert not os.path.isfile(avd_ini), "File exists %r" % avd_ini
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
@@ -252,7 +340,9 @@ class AndroidHelper(object):
             print("hw.sensors.orientation=yes", file=fp)
             print("hw.sensors.proximity=yes", file=fp)
             print("hw.trackBall=no", file=fp)
-            print("image.sysdir.1=system-images/android-28/google_apis/x86_64/", file=fp)
+            print(
+                "image.sysdir.1=system-images/android-28/google_apis/x86_64/", file=fp
+            )
             print("runtime.network.latency=none", file=fp)
             print("runtime.network.speed=full", file=fp)
             print("sdcard.size=%dM" % (self.sdcard_size,), file=fp)
@@ -273,12 +363,15 @@ class AndroidHelper(object):
         subprocess.check_output([mksd, "%dM" % (self.sdcard_size,), sdcard])
         shutil.copy(sdcard, sdcard + ".firstboot")
 
-    def emulator_run(self, use_snapshot, quiet=True):
+    def emulator_run(
+        self, use_snapshot: Union[bool, str], quiet: bool = True
+    ) -> subprocess.Popen:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
         sdk = makedirs(android, "Sdk")
         avd_path = makedirs(avd_home, "avd")
+        assert self.avd_name is not None
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
 
@@ -324,12 +417,13 @@ class AndroidHelper(object):
 
         return result
 
-    def firstboot(self):
+    def firstboot(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         sdk = makedirs(android, "Sdk")
         avd_home = makedirs(HOME, ".android")
         avd_path = makedirs(avd_home, "avd")
+        assert self.avd_name is not None
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         sdcard = os.path.join(avd_dir, "sdcard.img")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
@@ -354,37 +448,45 @@ class AndroidHelper(object):
 
         LOG.info("All done. Try running: `%s @%s`", emulator_bin, self.avd_name)
 
-    def kill(self):
-        ctl = telnetlib.Telnet('localhost', self.android_port)
+    def kill(self) -> None:
+        ctl = telnetlib.Telnet("localhost", self.android_port)
 
-        lines = ctl.read_until('OK\r\n', 10).rstrip().splitlines()
+        lines = ctl.read_until("OK\r\n", 10).rstrip().splitlines()
         try:
-            auth_token_idx = lines.index('Android Console: you can find your <auth_token> in ')
+            auth_token_idx = lines.index(
+                "Android Console: you can find your <auth_token> in "
+            )
         except IndexError:
             pass
         else:
             auth_token_path = lines[auth_token_idx + 1].strip("'")
             with open(auth_token_path) as auth_token_fp:
                 auth_token = auth_token_fp.read()
-            ctl.write('auth %s\n' % (auth_token,))
-            ctl.read_until('OK\r\n', 10)
+            ctl.write("auth %s\n" % (auth_token,))
+            ctl.read_until("OK\r\n", 10)
 
-        ctl.write('kill\n')
+        ctl.write("kill\n")
         ctl.close()
 
-    def wait_for_boot_completed(self):
+    def wait_for_boot_completed(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         sdk = makedirs(android, "Sdk")
         platform_tools = makedirs(sdk, "platform-tools")
 
-        subprocess.check_output([os.path.join(platform_tools, "adb"),
-                                 "wait-for-device",
-                                 "shell", "while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done"],
-                                timeout=60, env={"ANDROID_SERIAL": "emulator-%d" % (self.android_port,)})
+        subprocess.check_output(
+            [
+                os.path.join(platform_tools, "adb"),
+                "wait-for-device",
+                "shell",
+                "while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done",
+            ],
+            timeout=60,
+            env={"ANDROID_SERIAL": "emulator-%d" % (self.android_port,)},
+        )
         time.sleep(5)
 
-    def run(self):
+    def run(self) -> None:
         proc = self.emulator_run(self.use_snapshot, quiet=False)
         try:
             exit_code = proc.wait()
@@ -395,19 +497,48 @@ class AndroidHelper(object):
         assert exit_code == 0, "emulator returned %d" % (exit_code,)
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     aparse = argparse.ArgumentParser()
-    aparse.add_argument("actions", nargs="*", choices=["avd", "install", "firstboot", "kill", "run",
-                                                       "wait-for-boot-completed"])
-    aparse.add_argument("--android-port", default=5554, type=int, help="Port to run emulator on (default: 5554)")
-    aparse.add_argument("--avd-name", default="x86_64", help="Name of AVD to create/use (default: x86_64)")
-    aparse.add_argument("--no-window", action="store_true", help="Pass -no-window to emulator")
-    aparse.add_argument("--sdcard", default=500, type=int, help="SD card size in MB (default: 500)")
-    aparse.add_argument("--snapshot", default="never", choices=["never", "always", "save", "load"],
-                        help="Use snapshots for fast reset (default: never)")
-    aparse.add_argument("--writable", action="store_true", help="Allow remount /system (default: False)")
+    aparse.add_argument(
+        "actions",
+        nargs="*",
+        choices=[
+            "avd",
+            "install",
+            "firstboot",
+            "kill",
+            "run",
+            "wait-for-boot-completed",
+        ],
+    )
+    aparse.add_argument(
+        "--android-port",
+        default=5554,
+        type=int,
+        help="Port to run emulator on (default: 5554)",
+    )
+    aparse.add_argument(
+        "--avd-name",
+        default="x86_64",
+        help="Name of AVD to create/use (default: x86_64)",
+    )
+    aparse.add_argument(
+        "--no-window", action="store_true", help="Pass -no-window to emulator"
+    )
+    aparse.add_argument(
+        "--sdcard", default=500, type=int, help="SD card size in MB (default: 500)"
+    )
+    aparse.add_argument(
+        "--snapshot",
+        default="never",
+        choices=["never", "always", "save", "load"],
+        help="Use snapshots for fast reset (default: never)",
+    )
+    aparse.add_argument(
+        "--writable", action="store_true", help="Allow remount /system (default: False)"
+    )
     aparse.add_argument("--xvfb", action="store_true", help="Run emulator under XVFB")
     args = aparse.parse_args()
 
@@ -420,7 +551,14 @@ def main():
         if xvfb is not None:
             xvfb.start()
 
-        ah = AndroidHelper(args.android_port, args.avd_name, args.no_window, args.sdcard, args.snapshot, args.writable)
+        ah = AndroidHelper(
+            args.android_port,
+            args.avd_name,
+            args.no_window,
+            args.sdcard,
+            args.snapshot,
+            args.writable,
+        )
         for action in args.actions:
             getattr(ah, action.replace("-", "_"))()
     finally:
