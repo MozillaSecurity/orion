@@ -25,7 +25,7 @@ LOG = getLogger(__name__)
 
 
 # this is duplicated from grizzly status_reporter.py
-def format_seconds(duration):
+def format_seconds(duration: float) -> str:
     # format H:M:S, and then remove all leading zeros with regex
     minutes, seconds = divmod(int(duration), 60)
     hours, minutes = divmod(minutes, 60)
@@ -72,7 +72,7 @@ def remote_checks(wrapped):
 class CommonArgParser(ArgumentParser):
     """Argument parser with common arguments used by reduction scripts."""
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, *args, **kwds) -> None:
         super().__init__(*args, **kwds)
         group = self.add_mutually_exclusive_group()
         group.add_argument(
@@ -98,7 +98,7 @@ class CrashManager(Reporter):
     """Class to manage access to CrashManager server."""
 
     @remote_checks
-    def _list_objs(self, endpoint, query=None, ordering=None):
+    def _list_objs(self, endpoint: str, query=None, ordering=None):
         params = {}
         if query is not None:
             params["query"] = json.dumps(query)
@@ -157,15 +157,12 @@ class CrashManager(Reporter):
         yield from self._list_objs("buckets", query=query)
 
     @remote_checks
-    def update_testcase_quality(self, crash_id, testcase_quality):
+    def update_testcase_quality(self, crash_id: int, testcase_quality: int) -> None:
         """Update a CrashEntry's testcase quality.
 
         Arguments:
-            crash_id (int): Crash ID to update.
-            testcase_quality (int): Testcase quality to set.
-
-        Returns:
-            None
+            crash_id: Crash ID to update.
+            testcase_quality: Testcase quality to set.
         """
         url = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"
@@ -225,11 +222,12 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args: list[str] | None = None) -> int:
+    def main(cls, args: argparse.Namespace | None = None) -> int:
         """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()
 
+        assert isinstance(args, argparse.Namespace)
         # Setup logger
         basicConfig(level=args.log_level)
 
