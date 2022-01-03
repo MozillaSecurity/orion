@@ -19,22 +19,22 @@ TOKEN_PATH = pathlib.Path(tempfile.gettempdir()) / "rwait"
 
 
 class RemoteWait:
-    def __init__(self, token=None):
-        self._token = None
+    def __init__(self, token: str | None = None) -> None:
+        self._token: str | None = None
         if token is not None:
             self.token = token
 
     @property
-    def _token_file(self):
-        return TOKEN_PATH / self.token
+    def _token_file(self) -> pathlib.Path:
+        return TOKEN_PATH / str(self.token)
 
     @property
-    def token(self):
+    def token(self) -> str | None:
         assert self._token is not None, "token has not been created/set"
         return self._token
 
     @token.setter
-    def token(self, value):
+    def token(self, value: str | None) -> None:
         assert self._token is None, "token already has a value"
         self._token = value
 
@@ -45,7 +45,7 @@ class RemoteWait:
             assert not self._token_file.is_file()
             self._token_file.write_text(json.dumps({"state": "new"}))
 
-    def run(self, cmd):
+    def run(self, cmd: list[str]) -> int:
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
             data = json.loads(self._token_file.read_text())
             assert data["state"] == "new"
@@ -66,13 +66,13 @@ class RemoteWait:
             self._token_file.write_text(json.dumps(data))
         return result
 
-    def poll(self):
+    def poll(self) -> int:
         """Return 0 while program is pre-run or running, 1 if program is exited"""
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
             data = json.loads(self._token_file.read_text())
         return 0 if data["state"] in {"new", "running"} else 1
 
-    def wait(self):
+    def wait(self) -> int:
         """Hang until target exits, then return its exit code."""
         is_pid1 = os.getpid() == 1
         while True:
@@ -85,7 +85,7 @@ class RemoteWait:
                 while os.waitpid(-1, os.WNOHANG) != (0, 0):
                     pass
             time.sleep(1)
-        return data["result"]
+        return int(data["result"])
 
     def delete(self) -> None:
         """Remove resources used by the token."""
@@ -93,11 +93,11 @@ class RemoteWait:
             self._token_file.unlink()
         (self._token_file.parent / (self._token_file.stem + ".lck")).unlink()
 
-    def __str__(self):
-        return self.token
+    def __str__(self) -> str:
+        return str(self.token)
 
     @staticmethod
-    def arg_parser():
+    def arg_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog="rwait")
         parser.set_defaults(token=None)
         subparsers = parser.add_subparsers(dest="subcommand")
@@ -124,9 +124,9 @@ class RemoteWait:
         return parser
 
     @classmethod
-    def main(cls, args=None):
+    def main(cls, input_args: list[str] | None = None) -> None:
         parser = cls.arg_parser()
-        args = parser.parse_args(args)
+        args = parser.parse_args(input_args)
         rwait = cls(args.token)
         if args.subcommand == "run":
             sys.exit(rwait.run(args.command))
