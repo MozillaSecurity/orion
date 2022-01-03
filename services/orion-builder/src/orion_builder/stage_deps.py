@@ -15,6 +15,7 @@ from tempfile import mkdtemp, mkstemp
 import taskcluster
 from taskboot.config import Configuration
 from taskboot.docker import Img, patch_dockerfile
+from taskboot.target import Target
 from taskboot.utils import download_artifact, load_artifacts
 
 from .cli import BaseArgs, configure_logging
@@ -139,7 +140,7 @@ class Registry:
         rmtree("/var/lib/registry", ignore_errors=True)
 
 
-def stage_deps(target: taskboot.target.Target, args: argparse.Namespace) -> None:
+def stage_deps(target: Target, args: argparse.Namespace) -> None:
     """Pull image dependencies into the `img` store.
 
     Arguments:
