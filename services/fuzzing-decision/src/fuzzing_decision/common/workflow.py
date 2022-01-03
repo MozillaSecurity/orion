@@ -10,7 +10,6 @@ import logging
 import os
 import pathlib
 import subprocess
-from sys import path
 import tempfile
 
 import yaml
@@ -96,7 +95,7 @@ class Workflow:
         path: pathlib.Path | None = None,
         revision: str | None = None,
         **kwargs,
-    ) -> Path:
+    ) -> pathlib.Path:
         """Clone a configuration repository"""
         local_path = False
 

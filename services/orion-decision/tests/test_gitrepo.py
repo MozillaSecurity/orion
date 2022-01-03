@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import gettempdir
-from unittest.mock import Mock, call
+from unittest.mock import call
 
 import pytest
 from pytest_mock import MockerFixture
