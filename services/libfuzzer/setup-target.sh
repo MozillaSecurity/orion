@@ -40,7 +40,8 @@ else
   TARGET_BIN="firefox/firefox"
   if [[ ! -d "$HOME/firefox" ]]
   then
-    retry fuzzfetch -n firefox --gtest "${FETCH_ARGS[@]}"
+    FETCH_ARGS+=(--target firefox common gtest xpcshell)
+    retry fuzzfetch -n firefox "${FETCH_ARGS[@]}"
   fi
 fi
 echo "$TARGET_BIN"

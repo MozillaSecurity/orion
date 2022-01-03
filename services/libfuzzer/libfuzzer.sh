@@ -80,6 +80,7 @@ fi
 
 if [[ -n "$XPCRT" ]]
 then
+  TOOLNAME="${TOOLNAME:-domino-xpcshell}"
   if [[ ! -e ~/.ssh/id_rsa.domino ]] || [[ ! -e ~/.ssh/id_rsa.domino-xpcshell ]]
   then
     targets=( "domino" "domino-xpcshell" )
@@ -99,6 +100,7 @@ then
   npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
   set -x
 
+  FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
   if [[ ! -e ~/domino-xpcshell ]]
   then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
@@ -107,10 +109,17 @@ then
       npm ci --no-progress
       nohup node dist/server.js "$XPCRT" &
     )
-
-    TOOLNAME="${TOOLNAME:-domino-xpcshell}"
-    FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
   fi
+
+  if [[ ! -e ~/prefs.js ]]
+  then
+    prefpicker browser-fuzzing.yml ~/prefs.js
+  fi
+
+  # Required by the XPCShell test harness
+  export PREFS_FILE=~/prefs.js
+  XPCSHELL_TEST_PROFILE_DIR="$(mktemp -d)"
+  export XPCSHELL_TEST_PROFILE_DIR
 fi
 
 
@@ -130,12 +139,20 @@ EOF
 fi
 
 TARGET_BIN="$(./setup-target.sh)"
+BUILD_DIR="$HOME/$(dirname "${TARGET_BIN}")"
+export BUILD_DIR
 
 # %<---[Constants]------------------------------------------------------------
 
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  if [[ -n "$XPCRT" ]]
+  then
+    xvfb-run timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  else
+    timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+  fi
+
 }
 
 # IPC
@@ -262,6 +279,7 @@ fi
 # %<---[LibFuzzer]------------------------------------------------------------
 
 export LIBFUZZER=1
+export MOZ_HEADLESS=1
 export MOZ_RUN_GTEST=1
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
 if [[ "$JS" = 1 ]]
