@@ -29,6 +29,6 @@ case "${1-install}" in
     retry pip3 install prefpicker
     ;;
   test)
-    fuzzfetch -h
+    prefpicker -h
     ;;
 esac
