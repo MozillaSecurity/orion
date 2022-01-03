@@ -13,6 +13,8 @@ import pathlib
 import re
 import types
 from typing import Iterator
+from typing import cast
+from typing_extensions import TypedDict
 from datetime import datetime, timedelta, timezone
 
 import dateutil.parser
@@ -145,7 +147,7 @@ class MachineTypes:
         self._data = machines_data
 
     @classmethod
-    def from_file(cls, machines_yml: Path) -> MachineTypes:
+    def from_file(cls, machines_yml: pathlib.Path) -> MachineTypes:
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
@@ -154,7 +156,7 @@ class MachineTypes:
 
     def zone_blacklist(
         self, provider: str, architecture: str, machine: str
-    ) -> frozenset:
+    ) -> frozenset[str]:
         return frozenset(
             self._data[provider][architecture][machine].get("zone_blacklist", [])
         )
@@ -188,39 +190,65 @@ class MachineTypes:
                     yield name
 
 
+class PoolConfigData(TypedDict):
+    """PoolConfigData type specification."""
+
+    artifacts: dict[str, str]
+    apply_to: list[str]
+    cloud: str | None
+    scopes: list[str]
+    disk_size: int | str | None
+    cycle_time: int | str | None
+    max_run_time: int | str | None
+    schedule_start: datetime | str | None
+    cores_per_task: int | None
+    metal: bool | None
+    name: str
+    tasks: int
+    command: list[str] | None
+    container: dict[str, str] | str | None
+    minimum_memory_per_core: float | str | None
+    imageset: str | None
+    parents: list[str] | None
+    cpu: str | None
+    platform: str | None
+    preprocess: str | None
+    macros: dict[str, str]
+    run_as_admin: bool
+
+
 class CommonPoolConfiguration(abc.ABC):
     """Fuzzing Pool Configuration
 
     Attributes:
-        artifacts (dict): dictionary of local path ->
-                          {url: taskcluster path, type: file/directory}
-        cloud (str): cloud provider, like aws or gcp
-        command (list): list of strings, command to execute in the image/container
-        container (str/dict): image to run. takes the same options as
+        artifacts: dictionary of local path ->
+                   {url: taskcluster path, type: file/directory}
+        cloud: cloud provider, like aws or gcp
+        command: list of strings, command to execute in the image/container
+        container: image to run. takes the same options as
             https://docs.taskcluster.net/docs/reference/workers/docker-worker/payload
-        cores_per_task (int): number of cores to be allocated per task
-        cpu (int): cpu architecture (eg. x64/arm64)
-        cycle_time (int): schedule for running this pool in seconds
-        disk_size (int): disk size in GB
-        imageset (str): imageset name in community-tc-config/config/imagesets.yml
-        macros (dict): dictionary of environment variables passed to the target
-        max_run_time (int): maximum run time of this pool in seconds
-        metal (bool): whether or not the target requires to be run on bare metal
-        minimum_memory_per_core (float): minimum RAM to be made available per core in GB
-        name (str): descriptive name of the configuration
-        platform (str): operating system of the target (linux, windows)
-        pool_id (str): basename of the pool on disk (eg. "pool1" for pool1.yml)
-        preprocess (str): name of pool configuration to apply and run before fuzzing
-                          tasks
-        run_as_admin (bool): whether to run as Administrator or unprivileged user
-                             (only valid when platform is windows)
-        schedule_start (datetime): reference date for `cycle_time` scheduling
-        scopes (list): list of taskcluster scopes required by the target
-        tasks (int): number of tasks to run (each with `cores_per_task`)
+        cores_per_task: number of cores to be allocated per task
+        cpu: cpu architecture (eg. x64/arm64)
+        cycle_time: schedule for running this pool in seconds
+        disk_size: disk size in GB
+        imageset: imageset name in community-tc-config/config/imagesets.yml
+        macros: dictionary of environment variables passed to the target
+        max_run_time: maximum run time of this pool in seconds
+        metal: whether or not the target requires to be run on bare metal
+        minimum_memory_per_core: minimum RAM to be made available per core in GB
+        name: descriptive name of the configuration
+        platform: operating system of the target (linux, windows)
+        pool_id: basename of the pool on disk (eg. "pool1" for pool1.yml)
+        preprocess: name of pool configuration to apply and run before fuzzing tasks
+        run_as_admin: whether to run as Administrator or unprivileged user
+                      (only valid when platform is windows)
+        schedule_start: reference date for `cycle_time` scheduling
+        scopes: list of taskcluster scopes required by the target
+        tasks: number of tasks to run (each with `cores_per_task`)
     """
 
     def __init__(
-        self, pool_id: str, data, base_dir: pathlib.Path | None = None
+        self, pool_id: str, data: PoolConfigData, base_dir: pathlib.Path | None = None
     ) -> None:
         LOG.debug(f"creating pool {pool_id}")
         extra = list(set(data) - set(self.FIELD_TYPES))
@@ -245,6 +273,7 @@ class CommonPoolConfiguration(abc.ABC):
                 )
         if isinstance(data.get("container"), dict):
             value = data["container"]
+            assert isinstance(value, dict)
             assert "type" in value, "'container' missing required key: 'type'"
             assert value["type"] in {
                 "docker-image",
@@ -318,7 +347,9 @@ class CommonPoolConfiguration(abc.ABC):
 
         # list fields
         # command is an overwriting field, null is allowed
+        self.command: list[str] | None
         if data.get("command") is not None:
+            assert isinstance(data["command"], list)
             self.command = data["command"].copy()
         else:
             self.command = None
@@ -340,16 +371,19 @@ class CommonPoolConfiguration(abc.ABC):
         self.max_run_time = None
         if data.get("max_run_time") is not None:
             self.max_run_time = parse_time(str(data["max_run_time"]))
-        self.schedule_start = None
+        self.schedule_start: datetime | str | None = None
         if data.get("schedule_start") is not None:
             if isinstance(data["schedule_start"], datetime):
+                assert isinstance(data["schedule_start"], datetime)
                 self.schedule_start = data["schedule_start"]
             else:
+                assert isinstance(data["schedule_start"], str)
                 self.schedule_start = dateutil.parser.isoparse(data["schedule_start"])
 
         # other special fields
         self.cpu = None
         if data.get("cpu") is not None:
+            assert isinstance(data["cpu"], str)
             cpu = self.alias_cpu(data["cpu"])
             assert cpu in ARCHITECTURES
             self.cpu = cpu
@@ -370,7 +404,9 @@ class CommonPoolConfiguration(abc.ABC):
             **kwds,
         )
 
-    def get_machine_list(self, machine_types: MachineTypes) -> Iterator[str, int, str]:
+    def get_machine_list(
+        self, machine_types: MachineTypes
+    ) -> Iterator[tuple[str, int, str]]:
         """
         Args:
             machine_types: database of all machine types
@@ -379,6 +415,9 @@ class CommonPoolConfiguration(abc.ABC):
             instance type name and task capacity
         """
         yielded = False
+        assert isinstance(self.cloud, str)
+        assert isinstance(self.cpu, str)
+        assert isinstance(self.cpu, int)
         for machine in machine_types.filter(
             self.cloud,
             self.cpu,
@@ -401,6 +440,7 @@ class CommonPoolConfiguration(abc.ABC):
         """
         if self.schedule_start is not None:
             now = self.schedule_start
+            assert isinstance(now, datetime)
             if now.utcoffset() is None:
                 # no timezone was specified. treat it as UTC
                 now = now.replace(tzinfo=timezone.utc)
@@ -409,6 +449,7 @@ class CommonPoolConfiguration(abc.ABC):
                 now = now.astimezone(timezone.utc)
         else:
             now = datetime.now(timezone.utc)
+        assert self.cycle_time
         interval = timedelta(seconds=self.cycle_time)
 
         # special case if the cycle time is a factor of 24 hours
@@ -459,11 +500,19 @@ class PoolConfiguration(CommonPoolConfiguration):
     FIELD_TYPES = POOL_CONFIG_FIELD_TYPES
     REQUIRED_FIELDS = COMMON_REQUIRED_FIELDS
 
-    def __init__(self, pool_id, data, base_dir=None, _flattened=None) -> None:
+    def __init__(
+        self,
+        pool_id: str,
+        data: PoolConfigData,
+        base_dir: pathlib.Path | None = None,
+        _flattened: set[str] | None = None,
+    ) -> None:
         super().__init__(pool_id, data, base_dir)
 
         # specific fields defined in pool config
-        self.parents = data.get("parents", []).copy()
+        parents_data = data.get("parents", [])
+        assert isinstance(parents_data, list)
+        self.parents = parents_data.copy()
 
         top_level = False
         if _flattened is None:
@@ -493,7 +542,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
 
-    def create_preprocess(self) -> CommonPoolConfiguration:
+    def create_preprocess(self) -> CommonPoolConfiguration | None:
         """
         Return a new PoolConfiguration based on the value of self.preprocess
         """
@@ -525,7 +574,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         result.name = f"{self.name} ({result.name})"
         return result
 
-    def _flatten(self, flattened) -> None:
+    def _flatten(self, flattened: set[str] | None) -> None:
         overwriting_fields = (
             "cloud",
             "command",
@@ -555,6 +604,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             field: getattr(self, field).copy() for field in merge_dict_fields
         }
 
+        assert isinstance(flattened, set)
         for parent_id in self.parents:
             assert parent_id not in flattened, (
                 f"attempt to resolve cyclic configuration, {parent_id} already "
@@ -612,7 +662,12 @@ class PoolConfigMap(CommonPoolConfiguration):
     REQUIRED_FIELDS = POOL_MAP_REQUIRED_FIELDS
     RESULT_TYPE = PoolConfiguration
 
-    def __init__(self, pool_id, data, base_dir=None) -> None:
+    def __init__(
+        self,
+        pool_id: str,
+        data: PoolConfigData,
+        base_dir: pathlib.Path | None = None,
+    ) -> None:
         super().__init__(pool_id, data, base_dir)
 
         # specific fields defined in pool config
@@ -647,12 +702,19 @@ class PoolConfigMap(CommonPoolConfiguration):
 
     def apply(self, parent: str) -> CommonPoolConfiguration:
         pool_id = f"{parent}/{self.pool_id}"
-        data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
+        data = cast(
+            PoolConfigData, {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
+        )
         # convert special fields
         for gig_field in ("disk_size", "minimum_memory_per_core"):
             if data[gig_field] is not None:
-                data[gig_field] *= 1024 * 1024 * 1024
+                data_gig_field = data[gig_field]
+                assert isinstance(data_gig_field, int) or isinstance(
+                    data_gig_field, float
+                )
+                data[gig_field] = data_gig_field * 1024 * 1024 * 1024
         if data["schedule_start"] is not None:
+            assert isinstance(data["schedule_start"], datetime)
             data["schedule_start"] = data["schedule_start"].isoformat()
         # override fields
         data["parents"] = [parent]
@@ -660,14 +722,14 @@ class PoolConfigMap(CommonPoolConfiguration):
         data["name"] = f"{name} ({self.name})"
         return self.RESULT_TYPE(pool_id, data, self.base_dir)
 
-    def iterpools(self):
+    def iterpools(self) -> Iterator[CommonPoolConfiguration]:
         for parent in self.apply_to:
             yield self.apply(parent)
 
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml: pathlib.Path) -> CommonPoolConfiguration:
+    def from_file(pool_yml: pathlib.Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
