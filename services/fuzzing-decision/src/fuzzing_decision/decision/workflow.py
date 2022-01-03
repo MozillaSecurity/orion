@@ -32,13 +32,13 @@ class Workflow(CommonWorkflow):
     def __init__(self) -> None:
         super().__init__()
 
-        self.fuzzing_config_dir = None
-        self.community_config_dir = None
+        self.fuzzing_config_dir: pathlib.Path | None = None
+        self.community_config_dir: pathlib.Path | None = None
 
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args, **kwds):
+    def configure(self, *args: str, **kwds):
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")

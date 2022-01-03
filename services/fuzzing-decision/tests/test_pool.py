@@ -33,7 +33,7 @@ WST_URL = "https://community-websocktunnel.services.mozilla.com"
         ("128t", "1g", 128 * 1024),
     ],
 )
-def test_parse_size(size, divisor, result):
+def test_parse_size(size: str, divisor: str, result: int) -> None:
     if isinstance(divisor, str):
         divisor = parse_size(divisor)
 
@@ -57,7 +57,15 @@ def test_parse_size(size, divisor, result):
         ("dummy", "x64", 1, 1, False, KeyError),
     ],
 )
-def test_machine_filters(mock_machines, provider, cpu, ram, cores, metal, result):
+def test_machine_filters(
+    mock_machines,
+    provider: str,
+    cpu: str,
+    ram: int,
+    cores: int,
+    metal: bool,
+    result: list[str | None] | KeyError,
+) -> None:
 
     if isinstance(result, list):
         assert list(mock_machines.filter(provider, cpu, cores, ram, metal)) == result
@@ -149,7 +157,7 @@ def _get_expected_role(platform="linux"):
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
-def test_aws_resources(env, mock_clouds, mock_machines, platform):
+def test_aws_resources(env, mock_clouds, mock_machines, platform: list[str]) -> None:
 
     conf = PoolConfiguration(
         "test",
@@ -253,7 +261,7 @@ def test_aws_resources(env, mock_clouds, mock_machines, platform):
 
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
-def test_gcp_resources(env, mock_clouds, mock_machines):
+def test_gcp_resources(env, mock_clouds, mock_machines) -> None:
     conf = PoolConfiguration(
         "test",
         {
@@ -422,7 +430,7 @@ def test_gcp_resources(env, mock_clouds, mock_machines):
         ("windows", True),
     ],
 )
-def test_tasks(env, scope_caps, platform, run_as_admin, mocker):
+def test_tasks(env, scope_caps, platform, run_as_admin, mocker) -> None:
     mocker.patch.dict(
         "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
         {"orion.fuzzer.main": "task-mount-abc"},
@@ -486,7 +494,7 @@ def test_tasks(env, scope_caps, platform, run_as_admin, mocker):
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value):
+    def _get_date(value: str) -> str:
         assert isinstance(value, str)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -600,7 +608,7 @@ def test_tasks(env, scope_caps, platform, run_as_admin, mocker):
         assert task == expected
 
 
-def test_preprocess_tasks():
+def test_preprocess_tasks() -> None:
     conf = PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
 
     task_ids, tasks = zip(*conf.build_tasks("someTaskId"))
@@ -612,7 +620,7 @@ def test_preprocess_tasks():
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value):
+    def _get_date(value: str) -> str:
         assert isinstance(value, str)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -681,7 +689,7 @@ def test_preprocess_tasks():
 
 
 @pytest.mark.parametrize("pool_path", POOL_FIXTURES.glob("pool*.yml"))
-def test_flatten(pool_path):
+def test_flatten(pool_path) -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
         def _flatten(self, _):
             pass
@@ -768,7 +776,7 @@ def test_pool_map() -> None:
         (PoolConfigLoader, PoolConfiguration, PoolConfigMap),
     ],
 )
-def test_pool_loader(loader, config_cls, map_cls):
+def test_pool_loader(loader, config_cls, map_cls) -> None:
     obj = loader.from_file(POOL_FIXTURES / "load-cfg.yml")
     assert isinstance(obj, config_cls)
     obj = loader.from_file(POOL_FIXTURES / "load-map.yml")

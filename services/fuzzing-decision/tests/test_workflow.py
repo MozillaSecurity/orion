@@ -34,7 +34,7 @@ def test_patterns(tmp_path: pathlib.Path) -> None:
 
     # Build resources patterns using that configuration
     workflow = Workflow()
-    workflow.community_config_dir: pathlib.Path = tmp_path
+    workflow.community_config_dir = tmp_path
     patterns = workflow.build_resources_patterns()
     assert patterns == [
         "Hook=project-fuzzing/.*",
