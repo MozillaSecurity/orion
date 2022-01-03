@@ -12,6 +12,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
+from typing import Iterator
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
@@ -116,7 +117,7 @@ class GitRepo:
         self.git("fetch", "-q", "origin", clone_ref, tries=RETRIES)
         self.git("-c", "advice.detachedHead=false", "checkout", commit)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up any resources held by this instance.
 
         Returns:
@@ -157,7 +158,7 @@ class GithubEvent:
         user (str): User that initiated this event.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Create an unpopulated GithubEvent."""
         self.branch = None
         self.commit = None
@@ -173,7 +174,7 @@ class GithubEvent:
         self.fetch_ref = None
         self.user = None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup resources held by this instance.
 
         Returns:
@@ -183,20 +184,20 @@ class GithubEvent:
             self.repo.cleanup()
 
     @property
-    def ssh_url(self):
+    def ssh_url(self) -> str:
         """Calculate the URL for cloning this repository via ssh.
 
         Returns:
-            str: The clone URL for this repository.
+            The clone URL for this repository.
         """
         return f"git@github.com:{self.repo_slug}"
 
     @property
-    def http_url(self):
+    def http_url(self) -> str:
         """Calculate the URL for cloning this repository via http.
 
         Returns:
-            str: The clone URL for this repository.
+            The clone URL for this repository.
         """
         return f"https://github.com/{self.repo_slug}"
 
@@ -253,11 +254,8 @@ class GithubEvent:
         self.commit_message = self.repo.message(self.commit_range or self.commit)
         return self
 
-    def list_changed_paths(self):
+    def list_changed_paths(self) -> Iterator[Path]:
         """Calculate paths that were changed in the commit range.
-
-        Arguments:
-            commit_range (str): Commit range in the form: "before_sha..after_sha"
 
         Yields:
             Path: files changed by a commit range

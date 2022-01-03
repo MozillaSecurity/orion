@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
+import argparse
 from pathlib import Path
 from shutil import copyfileobj, rmtree
 from subprocess import Popen, check_call
@@ -25,19 +25,22 @@ SRV_KEY = Path.home() / "srvkey.pem"
 SRV_CRT = Path.home() / "srv.pem"
 
 
-def create_cert(key_path, cert_path, ca=False, ca_key=None, ca_cert=None):
+def create_cert(
+    key_path: Path,
+    cert_path: Path,
+    ca: bool = False,
+    ca_key: Path | None = None,
+    ca_cert: Path | None = None,
+) -> None:
     """Create a self-signed localhost certificate. If a CA certificate is created,
     install in the system ca-certificate store.
 
     Arguments:
-        key_path (Path): output path for key
-        cert_path (Path): output path for certificate
-        ca (bool): whether or not the certificate is a CA root
-        ca_key (Path or None): CA root key to sign the created cert
-        ca_cert (Path or None): CA root certificate to sign the created cert
-
-    Returns:
-        None
+        key_path: output path for key
+        cert_path: output path for certificate
+        ca: whether or not the certificate is a CA root
+        ca_key: CA root key to sign the created cert
+        ca_cert: CA root certificate to sign the created cert
     """
     if ca:
         assert ca_key is None and ca_cert is None, "Can't give ca_key/cert when ca=True"
@@ -115,7 +118,7 @@ def create_cert(key_path, cert_path, ca=False, ca_key=None, ca_cert=None):
 class Registry:
     """Docker registry at localhost."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.proc = Popen(
             ["registry", "serve", "/root/registry.yml"],
             env={
@@ -127,24 +130,21 @@ class Registry:
             },
         )
 
-    def __enter__(self):
+    def __enter__(self) -> Registry:
         return self
 
-    def __exit__(self, _exc_type, _exc_value, _exc_traceback):
+    def __exit__(self, _exc_type, _exc_value, _exc_traceback) -> None:
         self.proc.kill()
         self.proc.wait()
         rmtree("/var/lib/registry", ignore_errors=True)
 
 
-def stage_deps(target, args):
+def stage_deps(target: taskboot.target.Target, args: argparse.Namespace) -> None:
     """Pull image dependencies into the `img` store.
 
     Arguments:
-        target (taskboot.target.Target): Target
-        args (argparse.Namespace): CLI arguments
-
-    Returns:
-        None
+        target: Target
+        args: CLI arguments
     """
     create_cert(CA_KEY, CA_CRT, ca=True)
     create_cert(SRV_KEY, SRV_CRT, ca_key=CA_KEY, ca_cert=CA_CRT)
@@ -153,7 +153,7 @@ def stage_deps(target, args):
     # retrieve image archives from dependency tasks to /images
     image_path = Path(mkdtemp(prefix="image-deps-"))
     try:
-        config = Configuration(Namespace(secret=None, config=None))
+        config = Configuration(argparse.Namespace(secret=None, config=None))
         queue = taskcluster.Queue(config.get_taskcluster_options())
 
         # load images into the img image store via Docker registry
@@ -197,7 +197,7 @@ def stage_deps(target, args):
     patch_dockerfile(target.check_path(args.dockerfile), img_tool.list_images())
 
 
-def registry_main(argv=None):
+def registry_main(argv: list[str] = None) -> None:
     """Registry entrypoint. Does not return."""
     args = BaseArgs.parse_args(argv)
     configure_logging(level=args.log_level)

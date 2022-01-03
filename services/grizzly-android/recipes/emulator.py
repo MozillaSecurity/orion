@@ -36,7 +36,7 @@ HOME = os.path.expanduser("~")
 LOG = logging.getLogger("emulator_install")
 
 
-def si(number):
+def si(number: float) -> str:
     suffixes = ["", "k", "M", "G", "T"]
     while number > 1024:
         number /= 1024.0
@@ -44,17 +44,18 @@ def si(number):
     return "%0.2f%s" % (number, suffixes.pop(0))
 
 
-def makedirs(*dirs):
+def makedirs(*dirs) -> str:
     while dirs:
         if not os.path.isdir(dirs[0]):
             os.mkdir(dirs[0])
         if len(dirs) == 1:
             return dirs[0]
         dirs = [os.path.join(dirs[0], dirs[1])] + list(dirs[2:])
+    return ""
 
 
 class AndroidSDKRepo(object):
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         parts = urlparse(url)
         self.url_base = (
             parts.scheme + "://" + parts.netloc + os.path.dirname(parts.path)
@@ -64,7 +65,7 @@ class AndroidSDKRepo(object):
         self.root = xml.etree.ElementTree.fromstring(xml_string)
 
     @staticmethod
-    def read_revision(element):
+    def read_revision(element: xml.etree.ElementTree.Element) -> tuple[int, int, int]:
         rev = element.find("revision")
         major = rev.find("major")
         major = int(major.text) if major is not None else None
@@ -75,8 +76,12 @@ class AndroidSDKRepo(object):
         return (major, minor, micro)
 
     def get_file(
-        self, package_path, out_path=".", host="linux", extract_package_path=True
-    ):
+        self,
+        package_path: str,
+        out_path: str = ".",
+        host: str = "linux",
+        extract_package_path: bool = True,
+    ) -> None:
         package = self.root.find(
             ".//remotePackage[@path='%s']/channelRef[@ref='channel-0']/.."
             % (package_path,)
@@ -116,7 +121,7 @@ class AndroidSDKRepo(object):
                     package_path,
                     fmt_rev,
                 )
-                return
+                return None
 
         tmp_fp, ziptmp = tempfile.mkstemp(suffix=".zip")
         os.close(tmp_fp)
@@ -206,13 +211,13 @@ class AndroidSDKRepo(object):
 class AndroidHelper(object):
     def __init__(
         self,
-        android_port=5554,
+        android_port: int = 5554,
         avd_name=None,
-        no_window=False,
-        sdcard_size=500,
-        use_snapshot=False,
-        writable=False,
-    ):
+        no_window: bool = False,
+        sdcard_size: int = 500,
+        use_snapshot: bool = False,
+        writable: bool = False,
+    ) -> None:
         self.android_port = android_port
         self.avd_name = avd_name
         self.no_window = no_window
@@ -220,7 +225,7 @@ class AndroidHelper(object):
         self.use_snapshot = use_snapshot
         self.writable = writable
 
-    def install(self):
+    def install(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
@@ -245,7 +250,7 @@ class AndroidHelper(object):
         # PANIC: Cannot find AVD system path. Please define ANDROID_SDK_ROOT
         makedirs(sdk, "platforms")
 
-    def avd(self):
+    def avd(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
@@ -324,7 +329,7 @@ class AndroidHelper(object):
         subprocess.check_output([mksd, "%dM" % (self.sdcard_size,), sdcard])
         shutil.copy(sdcard, sdcard + ".firstboot")
 
-    def emulator_run(self, use_snapshot, quiet=True):
+    def emulator_run(self, use_snapshot: str, quiet: bool = True):
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
@@ -375,7 +380,7 @@ class AndroidHelper(object):
 
         return result
 
-    def firstboot(self):
+    def firstboot(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         sdk = makedirs(android, "Sdk")
@@ -405,7 +410,7 @@ class AndroidHelper(object):
 
         LOG.info("All done. Try running: `%s @%s`", emulator_bin, self.avd_name)
 
-    def kill(self):
+    def kill(self) -> None:
         ctl = telnetlib.Telnet("localhost", self.android_port)
 
         lines = ctl.read_until("OK\r\n", 10).rstrip().splitlines()
@@ -425,7 +430,7 @@ class AndroidHelper(object):
         ctl.write("kill\n")
         ctl.close()
 
-    def wait_for_boot_completed(self):
+    def wait_for_boot_completed(self) -> None:
         # create folder structure
         android = makedirs(HOME, "Android")
         sdk = makedirs(android, "Sdk")
@@ -443,7 +448,7 @@ class AndroidHelper(object):
         )
         time.sleep(5)
 
-    def run(self):
+    def run(self) -> None:
         proc = self.emulator_run(self.use_snapshot, quiet=False)
         try:
             exit_code = proc.wait()
@@ -454,7 +459,7 @@ class AndroidHelper(object):
         assert exit_code == 0, "emulator returned %d" % (exit_code,)
 
 
-def main():
+def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     aparse = argparse.ArgumentParser()

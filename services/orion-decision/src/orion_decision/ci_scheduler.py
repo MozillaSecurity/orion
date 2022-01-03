@@ -5,7 +5,9 @@
 """Scheduler for CI tasks"""
 
 from __future__ import annotations
+import argparse
 
+from datetime import datetime
 from itertools import chain
 from json import dumps as json_dump
 from logging import getLogger
@@ -43,28 +45,34 @@ class CIScheduler:
     """Decision logic for scheduling CI tasks in Taskcluster.
 
     Attributes:
-        project_name (str): Project name to be used in task metadata.
-        github_event (GithubEvent): Github event that triggered this run.
-        now (datetime): Taskcluster time when decision was triggered.
-        task_group (str): Task group to create tasks in.
-        dry_run (bool): Calculate what should be created, but don't actually
-                        create tasks in Taskcluster.
-        matrix (CIMatrix): CI job matrix
+        project_name: Project name to be used in task metadata.
+        github_event: Github event that triggered this run.
+        now: Taskcluster time when decision was triggered.
+        task_group: Task group to create tasks in.
+        dry_run: Calculate what should be created, but don't actually
+                 create tasks in Taskcluster.
+        matrix: CI job matrix
     """
 
     def __init__(
-        self, project_name, github_event, now, task_group, matrix, dry_run=False
-    ):
+        self,
+        project_name: str,
+        github_event: GithubEvent,
+        now: datetime,
+        task_group: str,
+        matrix: CIMatrix,
+        dry_run: bool = False,
+    ) -> None:
         """Initialize a CIScheduler object.
 
         Arguments:
-            project_name (str): Project name to be used in task metadata.
-            github_event (GithubEvent): Github event that triggered this run.
-            now (datetime): Taskcluster time when decision was triggered.
-            task_group (str): Task group to create tasks in.
-            matrix (CIMatrix): CI job matrix
-            dry_run (bool): Calculate what should be created, but don't actually
-                            create tasks in Taskcluster.
+            project_name: Project name to be used in task metadata.
+            github_event: Github event that triggered this run.
+            now: Taskcluster time when decision was triggered.
+            task_group: Task group to create tasks in.
+            matrix: CI job matrix
+            dry_run: Calculate what should be created, but don't actually
+                     create tasks in Taskcluster.
         """
         self.project_name = project_name
         self.github_event = github_event
@@ -77,12 +85,8 @@ class CIScheduler:
             github_event.event_type,
         )
 
-    def create_tasks(self):
-        """Create CI tasks in Taskcluster.
-
-        Returns:
-            None
-        """
+    def create_tasks(self) -> None:
+        """Create CI tasks in Taskcluster."""
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
         prev_stage = []
         for stage in sorted(set(job.stage for job in self.matrix.jobs)):
@@ -171,14 +175,14 @@ class CIScheduler:
             prev_stage = this_stage
 
     @classmethod
-    def main(cls, args):
+    def main(cls, args: argparse.Namespace) -> int:
         """Decision procedure.
 
         Arguments:
-            args (argparse.Namespace): Arguments as returned by `parse_ci_args()`
+            args: Arguments as returned by `parse_ci_args()`
 
         Returns:
-            int: Shell return code.
+            Shell return code.
         """
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)

@@ -9,16 +9,17 @@ from __future__ import annotations
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import gettempdir
-from unittest.mock import call
+from unittest.mock import Mock, call
 
 import pytest
+from pytest_mock import MockerFixture
 
 from orion_decision.git import GithubEvent, GitRepo
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
 
-def test_cleanup():
+def test_cleanup() -> None:
     """test that repo is checked out in a temp folder and removed by cleanup"""
     repo = GitRepo(FIXTURES / "git01", "main", "FETCH_HEAD")
     try:
@@ -32,7 +33,7 @@ def test_cleanup():
     assert repo.path is None
 
 
-def test_message_1():
+def test_message_1() -> None:
     """test that commit message is read"""
     repo = GitRepo(FIXTURES / "git01", "main", "FETCH_HEAD")
     try:
@@ -41,7 +42,7 @@ def test_message_1():
         repo.cleanup()
 
 
-def test_message_2():
+def test_message_2() -> None:
     """test that commit messages from a range are read"""
     repo = GitRepo(FIXTURES / "git03", "main", "FETCH_HEAD")
     try:
@@ -56,7 +57,7 @@ def test_message_2():
     assert "Initial commit" not in message
 
 
-def test_existing():
+def test_existing() -> None:
     """test that existing repo can be accessed and is not cleaned up"""
     root = FIXTURES / "git01"
     repo = GitRepo.from_existing(root)
@@ -67,7 +68,7 @@ def test_existing():
     assert root.is_dir()  # test fixture wasn't cleaned up :sweat_smile:
 
 
-def test_retry(mocker):
+def test_retry(mocker: MockerFixture) -> None:
     sleep = mocker.patch("orion_decision.git.sleep", autospec=True)
     with pytest.raises(CalledProcessError):
         GitRepo(FIXTURES / "git-noexist", "main", "FETCH_HEAD")
@@ -199,7 +200,13 @@ def test_retry(mocker):
         ),
     ],
 )
-def test_github_tc(mocker, action, event, result, repo_args):
+def test_github_tc(
+    mocker: MockerFixture,
+    action: str,
+    event: dict[str, dict[str, str]],
+    result: dict[str, str | None],
+    repo_args,
+) -> None:
     """test github event parsing from taskcluster"""
     repo = mocker.patch("orion_decision.git.GitRepo")
     repo.return_value.message.return_value = "Test commit message"
@@ -214,7 +221,7 @@ def test_github_tc(mocker, action, event, result, repo_args):
         assert getattr(evt, attr) == value
 
 
-def test_github_changed(mocker):
+def test_github_changed(mocker: MockerFixture) -> None:
     """test github lists changed files in commit range"""
     repo = GitRepo(FIXTURES / "git02", "main", "FETCH_HEAD")
     try:

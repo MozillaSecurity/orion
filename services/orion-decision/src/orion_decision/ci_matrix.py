@@ -130,12 +130,8 @@ class MatrixJob:
         """
         return IMAGES[(self.language, self.platform, self.version)]
 
-    def check(self):
-        """Assert that all attributes are valid.
-
-        Returns:
-            None
-        """
+    def check(self) -> None:
+        """Assert that all attributes are valid."""
         assert isinstance(self.name, str), "`name` must be a string"
         assert self.language in LANGUAGES, f"unknown `language`: {self.language}"
         assert self.platform in PLATFORMS, f"unknown `platform`: {self.platform}"
@@ -228,21 +224,26 @@ class MatrixJob:
         return obj
 
     def matches(
-        self, language=None, version=None, platform=None, env=None, script=None
-    ):
+        self,
+        language: str | None = None,
+        version: str | None = None,
+        platform: str | None = None,
+        env=None,
+        script: list[str] | None = None,
+    ) -> bool:
         """Check if this object matches all given arguments.
 
         Arguments:
-            language (str/None): If not None, check for match on `language` attribute.
-            version (str/None): If not None, check for match on `version` attribute.
-            platform (str/None): If not None, check for match on `platform` attribute.
+            language: If not None, check for match on `language` attribute.
+            version: If not None, check for match on `version` attribute.
+            platform: If not None, check for match on `platform` attribute.
             env (dict/None): If not None, check that all given `env` values match self.
                              `self.env` may have other keys, only the keys passed in
                              `env` are checked.
-            script (list/None): If not None, check for match on `script` attribute.
+            script: If not None, check for match on `script` attribute.
 
         Returns:
-            bool: True if self matches the given arguments.
+            True if self matches the given arguments.
         """
 
         if language is not None and self.language != language:
@@ -275,32 +276,32 @@ class CISecret(ABC):
     secret in Taskcluster, and to fetch/return it.
 
     Attributes:
-        secret (str): Taskcluster namespace where the secret is held.
-                      eg. `project/fuzzing/secret123`
-        key (str/None): Sub-key in the Taskcluster secret that contains the value.
-                        eg. Taskcluster might contain:
+        secret: Taskcluster namespace where the secret is held.
+                eg. `project/fuzzing/secret123`
+        key: Sub-key in the Taskcluster secret that contains the value.
+             eg. Taskcluster might contain:
 
-                            {
-                                "key": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
-                            }
+                 {
+                     "key": "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
+                 }
 
-                        Then passing `key="key"` will extract the value of the key
-                        instead of the dict.
+             Then passing `key="key"` will extract the value of the key
+             instead of the dict.
     """
 
     __slots__ = ("secret", "key")
 
-    def __init__(self, secret, key=None):
+    def __init__(self, secret: str, key: str | None = None) -> None:
         """Initialize CISecret object.
 
         Arguments:
-            secret (str): Taskcluster namespace where the secret is held.
-            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+            secret: Taskcluster namespace where the secret is held.
+            key: Sub-key in the Taskcluster secret that contains the value.
         """
         self.secret = secret
         self.key = key
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if type(self) is not type(other):
             return False
         for cls in type(self).__mro__:
@@ -309,7 +310,7 @@ class CISecret(ABC):
                     return False
         return True
 
-    def is_alias(self, other):
+    def is_alias(self, other) -> bool:
         """True if other aliases self.
 
         This currently means type is equal and type-specific fields
@@ -342,20 +343,16 @@ class CISecret(ABC):
         return json_dumps(self.serialize())
 
     @abstractmethod
-    def serialize(self):
-        """Return a JSON serializable copy of self.
-
-        Returns:
-            dict: JSON serializeable copy of this `CISecret`.
-        """
+    def serialize(self) -> None:
+        """Return a JSON serializable copy of self."""
 
     @staticmethod
-    def from_json(data):
+    def from_json(data: str) -> CISecret:
         """Deserialize and create a CISecret from JSON.
 
         Arguments:
-            data (str): JSON serialized CISecret. (`dict` also accepted if `data` is
-                        already deserialized).
+            data: JSON serialized CISecret. (`dict` also accepted if `data` is
+                  already deserialized).
 
         Returns:
             CISecret: Secret object.
@@ -378,20 +375,20 @@ class CISecretEnv(CISecret):
     """Representation of a Taskcluster secret used by CI jobs as an env variable.
 
     Attributes:
-        name (str): name of the environment variable (eg. `TOKEN`)
+        name: name of the environment variable (eg. `TOKEN`)
 
         (see CISecret for attributes defined there)
     """
 
     __slots__ = ("name",)
 
-    def __init__(self, secret, name, key=None):
+    def __init__(self, secret: str, name: str, key: str | None = None) -> None:
         """Initialize CISecretEnv object.
 
         Arguments:
-            secret (str): Taskcluster namespace where the secret is held.
-            name (str): name of the environment variable (eg. `TOKEN`)
-            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+            secret: Taskcluster namespace where the secret is held.
+            name: name of the environment variable (eg. `TOKEN`)
+            key: Sub-key in the Taskcluster secret that contains the value.
         """
         super().__init__(secret, key)
         self.name = name
@@ -414,20 +411,20 @@ class CISecretFile(CISecret):
     """Representation of a Taskcluster secret used by CI jobs as a file.
 
     Attributes:
-        path (str): Path where secret should be written to.
+        path: Path where secret should be written to.
 
         (see CISecret for attributes defined there)
     """
 
     __slots__ = ("path",)
 
-    def __init__(self, secret, path, key=None):
+    def __init__(self, secret: str, path: str, key: str | None = None) -> None:
         """Initialize CISecretFile object.
 
         Arguments:
-            secret (str): Taskcluster namespace where the secret is held.
-            path (str): Path where secret should be written to.
-            key (str/None): Sub-key in the Taskcluster secret that contains the value.
+            secret: Taskcluster namespace where the secret is held.
+            path: Path where secret should be written to.
+            key: Sub-key in the Taskcluster secret that contains the value.
         """
         super().__init__(secret, key)
         self.path = path
@@ -445,13 +442,10 @@ class CISecretFile(CISecret):
             "path": self.path,
         }
 
-    def write(self):
+    def write(self) -> None:
         """Write the secret to disk.
 
         If the secret contains a complex type (list/dict), it will be JSON serialized.
-
-        Returns:
-            None
         """
         data = self.get_secret_data()
         if not isinstance(data, str):
@@ -463,20 +457,22 @@ class CISecretKey(CISecret):
     """Representation of a Taskcluster secret used by CI jobs as an SSH key.
 
     Attributes:
-        hostname (str/None): Hostname alias to configure for using this key.
+        hostname: Hostname alias to configure for using this key.
 
         (see CISecret for attributes defined there)
     """
 
     __slots__ = ("hostname",)
 
-    def __init__(self, secret, key=None, hostname=None):
+    def __init__(
+        self, secret: str, key: str | None = None, hostname: str | None = None
+    ) -> None:
         """Initialize CISecretKey object.
 
         Arguments:
-            secret (str): Taskcluster namespace where the secret is held.
-            key (str/None): Sub-key in the Taskcluster secret that contains the value.
-            hostname (str/None): Hostname alias to configure for using this key.
+            secret: Taskcluster namespace where the secret is held.
+            key: Sub-key in the Taskcluster secret that contains the value.
+            hostname: Hostname alias to configure for using this key.
         """
         super().__init__(secret, key)
         self.hostname = hostname
@@ -494,15 +490,12 @@ class CISecretKey(CISecret):
             "hostname": self.hostname,
         }
 
-    def write(self):
+    def write(self) -> None:
         """Write the key to `~/.ssh`.
 
         The key is created as `~/.ssh/id_rsa`, unless `hostname` is set, then
         `~/.ssh/id_rsa.{hostname}` is used. In that case the `hostname` alias to
         `github.com` is also created in `~/.ssh/config`.
-
-        Returns:
-            None
         """
         if self.hostname is not None:
             dest = Path.home() / ".ssh" / f"id_rsa.{self.hostname}"
@@ -538,20 +531,20 @@ class CIMatrix:
 
     __slots__ = ("jobs", "secrets")
 
-    def __init__(self, matrix, branch, event_type):
+    def __init__(self, matrix, branch: str, event_type: str) -> None:
         """Initialize a CIMatrix object.
 
         Arguments:
             matrix (dict): Matrix representation matching the CIMatrix jsonschema.
-            branch (str): Git branch name (for matching `when` expressions)
-            event_type (str): Git event type (for `when` expressions)
+            branch: Git branch name (for matching `when` expressions)
+            event_type: Git event type (for `when` expressions)
         """
         # matrix is language/platform/version
         self.jobs = []
         self.secrets = []
         self._parse_matrix(matrix, branch, event_type)
 
-    def _parse_matrix(self, matrix, branch, event_type):
+    def _parse_matrix(self, matrix, branch: str, event_type: str) -> None:
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 
         given = set()
@@ -721,20 +714,20 @@ class CIMatrix:
         for job in self.jobs:
             job.check()
 
-    def _parse_secrets(self, secrets):
+    def _parse_secrets(self, secrets: str):
         for secret in secrets:
             result = CISecret.from_json(secret)
             assert not any(result.is_alias(secret) for secret in self.secrets)
             yield result
 
 
-def _load_schema_cache():
+def _load_schema_cache() -> None:
     for path in (Path(__file__).parent / "schemas").glob("*.yaml"):
         schema = yaml_load(path.read_text())
         SCHEMA_CACHE[schema["$id"]] = schema
 
 
-def _validate_globals():
+def _validate_globals() -> None:
     # validate VERSIONS
     valid_image_keys = []
     for (language, platform), versions in VERSIONS.items():

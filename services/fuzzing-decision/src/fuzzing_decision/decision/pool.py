@@ -58,8 +58,7 @@ class MountArtifactResolver:
     CACHE = {}  # cache of orion service -> taskId
 
     @classmethod
-    def lookup_taskid(cls, namespace):
-        assert isinstance(namespace, str)
+    def lookup_taskid(cls, namespace: str):
         if namespace not in cls.CACHE:
             # need to resolve "image" to a task ID where the mount
             # artifact is
@@ -70,7 +69,7 @@ class MountArtifactResolver:
         return cls.CACHE[namespace]
 
 
-def add_task_image(task, config):
+def add_task_image(task, config) -> None:
     """Add image or mount to task payload, depending on platform."""
     if config.platform == "windows":
         assert isinstance(config.container, dict)
@@ -103,7 +102,7 @@ def add_task_image(task, config):
         task["payload"]["image"] = config.container
 
 
-def add_capabilities_for_scopes(task):
+def add_capabilities_for_scopes(task) -> None:
     """Request capabilities to match the scopes specified by the task"""
     capabilities = task["payload"].setdefault("capabilities", {})
     scopes = set(task["scopes"])
@@ -119,7 +118,7 @@ def add_capabilities_for_scopes(task):
         del task["payload"]["capabilities"]
 
 
-def configure_task(task, config, now, env):
+def configure_task(task, config, now, env) -> None:
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("4 weeks", now)))
     )
@@ -158,7 +157,7 @@ def configure_task(task, config, now, env):
         task["payload"]["env"].update(env)
 
 
-def cancel_tasks(worker_type):
+def cancel_tasks(worker_type) -> None:
     # Avoid cancelling self
     self_task_id = os.getenv("TASK_ID")
 
@@ -199,7 +198,7 @@ def cancel_tasks(worker_type):
                 ]
         except TaskclusterRestFailure as msg:
             if "No such hook" in str(msg):
-                return
+                return None
             raise
 
     tasks_to_cancel = []
@@ -212,7 +211,7 @@ def cancel_tasks(worker_type):
                 # cancel anything. if cycle_time is shorter than max_run_time, we
                 # want prior tasks to remain running
                 LOG.info(f"{self_task_id} is scheduled, not cancelling tasks")
-                return
+                return None
             # avoid cancelling self
             continue
 
@@ -235,7 +234,7 @@ def cancel_tasks(worker_type):
 
 class PoolConfiguration(CommonPoolConfiguration):
     @property
-    def task_id(self):
+    def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
     def get_scopes(self):
@@ -255,7 +254,9 @@ class PoolConfiguration(CommonPoolConfiguration):
             )
         return result
 
-    def build_resources(self, providers, machine_types, env=None):
+    def build_resources(
+        self, providers, machine_types, env=None
+    ) -> list[WorkerPool, Hook, Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -413,10 +414,12 @@ class PoolConfigMap(CommonPoolConfigMap):
     RESULT_TYPE = PoolConfiguration
 
     @property
-    def task_id(self):
+    def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def build_resources(self, providers, machine_types, env=None):
+    def build_resources(
+        self, providers, machine_types, env=None
+    ) -> list[WorkerPool, Hook, Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -526,7 +529,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml):
+    def from_file(pool_yml: Path) -> PoolConfigLoader:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):

@@ -24,7 +24,9 @@ LOG = getLogger(__name__)
 class PoolLauncher(Workflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
-    def __init__(self, command, pool_name, preprocess=False):
+    def __init__(
+        self, command, pool_name: str | None, preprocess: bool = False
+    ) -> None:
         super().__init__()
 
         self.command = command.copy()
@@ -37,14 +39,14 @@ class PoolLauncher(Workflow):
         self.preprocess = preprocess
         self.log_dir = Path("/logs" if sys.platform == "linux" else "logs")
 
-    def clone(self, config):
+    def clone(self, config) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
         # Clone fuzzing & community configuration repos
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
 
-    def load_params(self):
+    def load_params(self) -> None:
         path = self.fuzzing_config_dir / f"{self.pool_name}.yml"
         assert path.exists(), f"Missing pool {self.pool_name}"
 
@@ -61,7 +63,7 @@ class PoolLauncher(Workflow):
             self.command = pool_config.command.copy()
         self.environment.update(pool_config.macros)
 
-    def exec(self):
+    def exec(self) -> None:
         assert self.command
 
         if system() == "Windows" and not Path(self.command[0]).is_file():

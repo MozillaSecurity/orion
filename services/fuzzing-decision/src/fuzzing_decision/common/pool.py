@@ -12,6 +12,7 @@ import logging
 import pathlib
 import re
 import types
+from typing import Iterator
 from datetime import datetime, timedelta, timezone
 
 import dateutil.parser
@@ -67,14 +68,14 @@ PROVIDERS = frozenset(("aws", "gcp"))
 ARCHITECTURES = frozenset(("x64", "arm64"))
 
 
-def parse_size(size):
+def parse_size(size: str) -> float:
     """Parse a human readable size like "4g" into (4 * 1024 * 1024 * 1024)
 
     Args:
-        size (str): size as a string, with si prefixes allowed
+        size: size as a string, with si prefixes allowed
 
     Returns:
-        float: size with si prefix expanded
+        size with si prefix expanded
     """
     match = re.match(r"\s*(\d+\.\d*|\.\d+|\d+)\s*([kmgt]?)b?\s*", size, re.IGNORECASE)
     assert match is not None, "size should be a number followed by optional si prefix"
@@ -89,14 +90,14 @@ def parse_size(size):
     return result * multiplier
 
 
-def parse_time(time):
+def parse_time(time: str) -> int:
     """Parse a human readable time like 1h30m or 30m10s
 
     Args:
-        time (str): time as a string
+        time: time as a string
 
     Returns:
-        int: time in seconds
+        time in seconds
     """
     result = 0
     got_anything = False
@@ -125,7 +126,7 @@ def parse_time(time):
 class MachineTypes:
     """Database of all machine types available, by provider and architecture."""
 
-    def __init__(self, machines_data):
+    def __init__(self, machines_data) -> None:
         for provider, provider_archs in machines_data.items():
             assert provider in PROVIDERS, f"unknown provider: {provider}"
             for arch, machines in provider_archs.items():
@@ -144,30 +145,39 @@ class MachineTypes:
         self._data = machines_data
 
     @classmethod
-    def from_file(cls, machines_yml):
+    def from_file(cls, machines_yml: Path) -> MachineTypes:
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
-    def cpus(self, provider, architecture, machine):
+    def cpus(self, provider: str, architecture: str, machine: str) -> str:
         return self._data[provider][architecture][machine]["cpu"]
 
-    def zone_blacklist(self, provider, architecture, machine):
+    def zone_blacklist(
+        self, provider: str, architecture: str, machine: str
+    ) -> frozenset:
         return frozenset(
             self._data[provider][architecture][machine].get("zone_blacklist", [])
         )
 
-    def filter(self, provider, architecture, min_cpu, min_ram_per_cpu, metal=False):
+    def filter(
+        self,
+        provider: str,
+        architecture: str,
+        min_cpu: int,
+        min_ram_per_cpu: float,
+        metal: bool = False,
+    ) -> Iterator[str]:
         """Generate machine types which fit the given requirements.
 
         Args:
-            provider (str): the cloud provider (aws or google)
-            architecture (str): the cpu architecture (x64 or arm64)
-            min_cpu (int): the least number of acceptable cpu cores
-            min_ram_per_cpu (float): the least amount of memory acceptable per cpu core
-            metal (bool): whether a bare-metal instance is required
+            provider: the cloud provider (aws or google)
+            architecture: the cpu architecture (x64 or arm64)
+            min_cpu: the least number of acceptable cpu cores
+            min_ram_per_cpu: the least amount of memory acceptable per cpu core
+            metal: whether a bare-metal instance is required
 
         Returns:
-            generator of str: machine type names for the given provider/architecture
+            machine type names for the given provider/architecture
         """
         for name, spec in self._data[provider][architecture].items():
             if (
@@ -209,7 +219,9 @@ class CommonPoolConfiguration(abc.ABC):
         tasks (int): number of tasks to run (each with `cores_per_task`)
     """
 
-    def __init__(self, pool_id, data, base_dir=None):
+    def __init__(
+        self, pool_id: str, data, base_dir: pathlib.Path | None = None
+    ) -> None:
         LOG.debug(f"creating pool {pool_id}")
         extra = list(set(data) - set(self.FIELD_TYPES))
         missing = list(set(self.REQUIRED_FIELDS) - set(data))
@@ -349,7 +361,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.cloud = data["cloud"]
 
     @classmethod
-    def from_file(cls, pool_yml, **kwds):
+    def from_file(cls, pool_yml: pathlib.Path, **kwds) -> CommonPoolConfiguration:
         assert pool_yml.is_file()
         return cls(
             pool_yml.stem,
@@ -358,13 +370,13 @@ class CommonPoolConfiguration(abc.ABC):
             **kwds,
         )
 
-    def get_machine_list(self, machine_types):
+    def get_machine_list(self, machine_types: MachineTypes) -> Iterator[str, int, str]:
         """
         Args:
-            machine_types (MachineTypes): database of all machine types
+            machine_types: database of all machine types
 
         Returns:
-            generator of machine (name, capacity): instance type name and task capacity
+            instance type name and task capacity
         """
         yielded = False
         for machine in machine_types.filter(
@@ -380,15 +392,12 @@ class CommonPoolConfiguration(abc.ABC):
             yielded = True
         assert yielded, "No available machines match specified configuration"
 
-    def cycle_crons(self):
+    def cycle_crons(self) -> Iterator[str] | None:
         """Generate cron patterns that correspond to cycle_time (starting from now)
 
-        Args:
-            None
-
         Returns:
-            generator of str: One or more strings in simple cron format. If all patterns
-                              are installed, the result should correspond to cycle_time.
+            One or more strings in simple cron format. If all patterns
+            are installed, the result should correspond to cycle_time.
         """
         if self.schedule_start is not None:
             now = self.schedule_start
@@ -408,7 +417,7 @@ class CommonPoolConfiguration(abc.ABC):
             while now < stop:
                 now += interval
                 yield f"{now.second} {now.minute} {now.hour} * * *"
-            return
+            return None
 
         # special case if the cycle time is a factor of 7 days
         if (7 * 24 * 60 * 60) % self.cycle_time == 0:
@@ -417,7 +426,7 @@ class CommonPoolConfiguration(abc.ABC):
                 now += interval
                 weekday = now.isoweekday() % 7
                 yield f"{now.second} {now.minute} {now.hour} * * {weekday}"
-            return
+            return None
 
         # if the cycle can't be represented as a daily or weekly pattern, then it is
         #   awkward to represent in cron format: resort to generating an annual schedule
@@ -429,13 +438,13 @@ class CommonPoolConfiguration(abc.ABC):
             yield f"{now.second} {now.minute} {now.hour} {now.day} {now.month} *"
 
     @staticmethod
-    def alias_cpu(cpu_name):
+    def alias_cpu(cpu_name: str) -> str:
         """
         Args:
             cpu_name: a cpu string like x86_64 or x64
 
         Returns:
-            str: x64 or arm64
+            x64 or arm64
         """
         return CPU_ALIASES[cpu_name.lower()]
 
@@ -450,7 +459,7 @@ class PoolConfiguration(CommonPoolConfiguration):
     FIELD_TYPES = POOL_CONFIG_FIELD_TYPES
     REQUIRED_FIELDS = COMMON_REQUIRED_FIELDS
 
-    def __init__(self, pool_id, data, base_dir=None, _flattened=None):
+    def __init__(self, pool_id, data, base_dir=None, _flattened=None) -> None:
         super().__init__(pool_id, data, base_dir)
 
         # specific fields defined in pool config
@@ -484,7 +493,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
 
-    def create_preprocess(self):
+    def create_preprocess(self) -> CommonPoolConfiguration:
         """
         Return a new PoolConfiguration based on the value of self.preprocess
         """
@@ -516,7 +525,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         result.name = f"{self.name} ({result.name})"
         return result
 
-    def _flatten(self, flattened):
+    def _flatten(self, flattened) -> None:
         overwriting_fields = (
             "cloud",
             "command",
@@ -603,7 +612,7 @@ class PoolConfigMap(CommonPoolConfiguration):
     REQUIRED_FIELDS = POOL_MAP_REQUIRED_FIELDS
     RESULT_TYPE = PoolConfiguration
 
-    def __init__(self, pool_id, data, base_dir=None):
+    def __init__(self, pool_id, data, base_dir=None) -> None:
         super().__init__(pool_id, data, base_dir)
 
         # specific fields defined in pool config
@@ -636,7 +645,7 @@ class PoolConfigMap(CommonPoolConfiguration):
                 getattr(pool, field) for pool in pools
             ), f"{field} cannot be defined"
 
-    def apply(self, parent):
+    def apply(self, parent: str) -> CommonPoolConfiguration:
         pool_id = f"{parent}/{self.pool_id}"
         data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
         # convert special fields
@@ -658,7 +667,7 @@ class PoolConfigMap(CommonPoolConfiguration):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml):
+    def from_file(pool_yml: pathlib.Path) -> CommonPoolConfiguration:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
@@ -672,7 +681,7 @@ class PoolConfigLoader:
         raise RuntimeError(f"{pool_yml} type could not be identified!")
 
 
-def test_main():
+def test_main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()

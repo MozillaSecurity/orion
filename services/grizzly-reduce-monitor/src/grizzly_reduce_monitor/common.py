@@ -6,6 +6,7 @@
 """
 
 from __future__ import annotations
+import argparse
 
 import json
 import re
@@ -177,50 +178,44 @@ class ReductionWorkflow(ABC):
     """Common framework for reduction scripts."""
 
     @abstractmethod
-    def run(self):
+    def run(self) -> int:
         """Run the actual reduction script.
         Any necessary parameters must be set on the instance in `from_args`/`__init__`.
 
         Returns:
-            int: Return code (0 for success)
+            Return code (0 for success)
         """
 
     @staticmethod
     @abstractmethod
-    def parse_args(args=None):
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         """Parse CLI arguments and return the parsed result.
 
         This should used `CommonArgParser` to ensure the default arguments exist for
         compatibility with `main`.
 
         Arguments:
-            args (list or None): Arguments list from shell (None for sys.argv).
+            Arguments list from shell (None for sys.argv).
 
         Returns:
-            argparse.Namespace: Parsed args.
+            Parsed args.
         """
 
     @classmethod
     @abstractmethod
-    def from_args(cls, args):
+    def from_args(cls, args: argparse.Namespace) -> ReductionWorkflow:
         """Create an instance from parsed args.
 
         Arguments:
-            args (argparse.Namespace): Parsed args.
-
-        Returns:
-            cls: Returns an initialized instance.
+            Parsed args.
         """
 
     @staticmethod
-    def ensure_credentials():
+    def ensure_credentials() -> None:
         """Ensure necessary credentials exist for reduction scripts.
 
         This checks:
             ~/.fuzzmanagerconf  -- fuzzmanager credentials
-
-        Returns:
-            None
         """
         # get fuzzmanager config from taskcluster
         conf_path = Path.home() / ".fuzzmanagerconf"
@@ -230,12 +225,8 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args=None):
-        """Main entrypoint for reduction scripts.
-
-        Returns:
-            int:
-        """
+    def main(cls, args: list[str] | None = None) -> int:
+        """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()
 

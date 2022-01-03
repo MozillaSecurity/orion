@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 class Workflow(CommonWorkflow):
     """Fuzzing decision task workflow"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.fuzzing_config_dir = None
@@ -45,7 +45,7 @@ class Workflow(CommonWorkflow):
         return config
 
     @classmethod
-    async def tc_admin_boot(cls, resources):
+    async def tc_admin_boot(cls, resources) -> None:
         """Setup the workflow to be usable by tc-admin"""
         appconfig = AppConfig.current()
 
@@ -68,7 +68,7 @@ class Workflow(CommonWorkflow):
         # Then generate all our Taskcluster resources
         workflow.generate(resources, config)
 
-    def clone(self, config):
+    def clone(self, config) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
@@ -76,7 +76,7 @@ class Workflow(CommonWorkflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
         self.community_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config):
+    def generate(self, resources, config) -> None:
 
         # Setup resources manager to track only fuzzing instances
         for pattern in self.build_resources_patterns():
@@ -102,7 +102,7 @@ class Workflow(CommonWorkflow):
             pool_config = PoolConfigLoader.from_file(config_file)
             resources.update(pool_config.build_resources(clouds, machines, env))
 
-    def build_resources_patterns(self):
+    def build_resources_patterns(self) -> list[str] | str:
         """Build regex patterns to manage our resources"""
 
         # Load existing workerpools from community config
@@ -143,7 +143,9 @@ class Workflow(CommonWorkflow):
             rf"Role=hook-id:{HOOK_PREFIX}/{role_suffix}",
         ]
 
-    def build_tasks(self, pool_name, task_id, config, dry_run=False):
+    def build_tasks(
+        self, pool_name: str, task_id, config, dry_run: bool = False
+    ) -> None:
         path = self.fuzzing_config_dir / f"{pool_name}.yml"
         assert path.exists(), f"Missing pool {pool_name}"
 
@@ -169,7 +171,7 @@ class Workflow(CommonWorkflow):
                 LOG.info(f"Creating task {task['metadata']['name']} as {task_id}")
                 queue.createTask(task_id, task)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Cleanup temporary folders at end of execution"""
         for folder in (self.community_config_dir, self.fuzzing_config_dir):
             if folder is None or not folder.exists():

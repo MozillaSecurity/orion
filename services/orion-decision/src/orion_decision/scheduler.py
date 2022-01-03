@@ -5,7 +5,9 @@
 """Scheduler for Orion tasks"""
 
 from __future__ import annotations
+import argparse
 
+from datetime import datetime
 import re
 from logging import getLogger
 from pathlib import Path
@@ -43,27 +45,33 @@ class Scheduler:
     """Decision logic for scheduling Orion build/push tasks in Taskcluster.
 
     Attributes:
-        github_event (GithubEvent): The event that triggered this decision.
-        now (datetime): The time to calculate task times from.
-        task_group (str): The taskGroupID to add created tasks to.
-        docker_secret (str): The Taskcluster secret name holding Docker Hub credentials.
-        push_branch (str): The branch name that should trigger a push to Docker Hub.
+        github_event: The event that triggered this decision.
+        now: The time to calculate task times from.
+        task_group: The taskGroupID to add created tasks to.
+        docker_secret: The Taskcluster secret name holding Docker Hub credentials.
+        push_branch: The branch name that should trigger a push to Docker Hub.
         services (Services): The services
-        dry_run (bool): Perform everything *except* actually queuing tasks in TC.
+        dry_run: Perform everything *except* actually queuing tasks in TC.
     """
 
     def __init__(
-        self, github_event, now, task_group, docker_secret, push_branch, dry_run=False
-    ):
+        self,
+        github_event: GithubEvent,
+        now: datetime,
+        task_group: str,
+        docker_secret: str,
+        push_branch: str,
+        dry_run: bool = False,
+    ) -> None:
         """Initialize a Scheduler instance.
 
         Arguments:
-            github_event (GithubEvent): The event that triggered this decision.
-            now (datetime): The time to calculate task times from.
-            task_group (str): The taskGroupID to add created tasks to.
-            docker_secret (str): The Taskcluster secret name holding Docker Hub creds.
-            push_branch (str): The branch name that should trigger a push to Docker Hub.
-            dry_run (bool): Don't actually queue tasks in Taskcluster.
+            github_event: The event that triggered this decision.
+            now: The time to calculate task times from.
+            task_group: The taskGroupID to add created tasks to.
+            docker_secret: The Taskcluster secret name holding Docker Hub creds.
+            push_branch: The branch name that should trigger a push to Docker Hub.
+            dry_run: Don't actually queue tasks in Taskcluster.
         """
         self.github_event = github_event
         self.now = now
@@ -73,12 +81,9 @@ class Scheduler:
         self.dry_run = dry_run
         self.services = Services(self.github_event.repo)
 
-    def mark_services_for_rebuild(self):
+    def mark_services_for_rebuild(self) -> None:
         """Check for services that need to be rebuilt.
         These will have their `dirty` attribute set, which is used to create tasks.
-
-        Returns:
-            None
         """
         forced = set()
         for match in re.finditer(
@@ -95,7 +100,7 @@ class Scheduler:
                 LOG.info("/force-rebuild detected, all services will be marked dirty")
                 for service in self.services.values():
                     service.dirty = True
-                return  # short-cut, no point in continuing
+                return None  # short-cut, no point in continuing
         if forced:
             LOG.info(
                 "/force-rebuild detected for service: %s", ", ".join(sorted(forced))
@@ -172,7 +177,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_push_task(self, service, service_build_tasks):
+    def _create_push_task(self, service, service_build_tasks) -> str:
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self.github_event.http_url,
@@ -203,7 +208,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_svc_test_task(self, service, test, service_build_tasks):
+    def _create_svc_test_task(self, service, test, service_build_tasks) -> str:
         image = test.image
         deps = []
         if image in service_build_tasks:
@@ -256,7 +261,9 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_recipe_test_task(self, recipe, dep_tasks, recipe_test_tasks):
+    def _create_recipe_test_task(
+        self, recipe: Path, dep_tasks, recipe_test_tasks
+    ) -> str:
         service_path = self.services.root / "services" / "test-recipes"
         dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
         if not dockerfile.is_file():
@@ -292,26 +299,22 @@ class Scheduler:
         return task_id
 
     @property
-    def _create_str(self):
+    def _create_str(self) -> str:
         if self.dry_run:
             return "Would create"
         return "Creating"
 
     @property
-    def _created_str(self):
+    def _created_str(self) -> str:
         if self.dry_run:
             return "Would create"
         return "Created"
 
-    def create_tasks(self):
-        """Create test/build/push tasks in Taskcluster.
-
-        Returns:
-            None
-        """
+    def create_tasks(self) -> None:
+        """Create test/build/push tasks in Taskcluster."""
         if self.github_event.event_type == "release":
             LOG.warning("Detected release event. Nothing to do!")
-            return
+            return None
         should_push = (
             self.github_event.event_type == "push"
             and self.github_event.branch == self.push_branch
@@ -414,14 +417,14 @@ class Scheduler:
         )
 
     @classmethod
-    def main(cls, args):
+    def main(cls, args: argparse.Namespace) -> int:
         """Decision procedure.
 
         Arguments:
-            args (argparse.Namespace): Arguments as returned by `parse_ci_args()`
+            args: Arguments as returned by `parse_ci_args()`
 
         Returns:
-            int: Shell return code.
+            Shell return code.
         """
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)

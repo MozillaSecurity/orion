@@ -7,10 +7,10 @@
 
 from __future__ import annotations
 
+import argparse
 import ctypes
 import os
 import sys
-from argparse import REMAINDER
 from logging import getLogger
 from pathlib import Path
 
@@ -22,13 +22,13 @@ LOG = getLogger(__name__)
 class PrivateLogLauncher(ReductionWorkflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
-    def __init__(self, command, log_dir):
+    def __init__(self, command, log_dir) -> None:
         super().__init__()
         self.command = command.copy()
         self.environment = os.environ.copy()
         self.log_dir = log_dir
 
-    def run(self):
+    def run(self) -> None:
         assert self.command
 
         LOG.info("Creating private logs directory '%s/'", self.log_dir)
@@ -51,7 +51,7 @@ class PrivateLogLauncher(ReductionWorkflow):
         os.execvpe(self.command[0], self.command, self.environment)
 
     @staticmethod
-    def parse_args(args=None):
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         parser = CommonArgParser(prog="grizzly-reduce-tc-log-private")
         parser.add_argument(
             "--log-dir",
@@ -60,11 +60,11 @@ class PrivateLogLauncher(ReductionWorkflow):
             help="private log destination (default: /logs)",
             default=Path("/logs"),
         )
-        parser.add_argument("command", help="docker command-line", nargs=REMAINDER)
+        parser.add_argument("command", help="docker command-line", nargs=args.REMAINDER)
         return parser.parse_args(args=args)
 
     @classmethod
-    def from_args(cls, args):
+    def from_args(cls, args: argparse.Namespace) -> PrivateLogLauncher:
         return cls(args.command, args.log_dir)
 
 

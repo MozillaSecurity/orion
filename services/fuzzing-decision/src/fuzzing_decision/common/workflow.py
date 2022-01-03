@@ -10,6 +10,7 @@ import logging
 import os
 import pathlib
 import subprocess
+from sys import path
 import tempfile
 
 import yaml
@@ -20,19 +21,19 @@ LOG = logging.getLogger(__name__)
 
 
 class Workflow:
-    def __init__(self):
+    def __init__(self) -> None:
         taskcluster.auth()
 
     @property
-    def in_taskcluster(self):
+    def in_taskcluster(self) -> bool:
         return "TASK_ID" in os.environ and "TASKCLUSTER_ROOT_URL" in os.environ
 
     def configure(
         self,
-        local_path=None,
-        secret=None,
-        fuzzing_git_repository=None,
-        fuzzing_git_revision=None,
+        local_path: pathlib.Path | None = None,
+        secret: str | None = None,
+        fuzzing_git_repository: str | None = None,
+        fuzzing_git_revision: str | None = None,
     ):
         """Load configuration either from local file or Taskcluster secret"""
 
@@ -67,7 +68,7 @@ class Workflow:
 
         return config
 
-    def clone(self, config):
+    def clone(self, config) -> None:
         """Clone remote repositories according to current setup"""
         assert isinstance(config, dict)
 
@@ -89,7 +90,13 @@ class Workflow:
         with (ssh_path / "known_hosts").open("a") as hosts:
             subprocess.check_call(["ssh-keyscan", "github.com"], stdout=hosts)
 
-    def git_clone(self, url=None, path=None, revision=None, **kwargs):
+    def git_clone(
+        self,
+        url: str | None = None,
+        path: pathlib.Path | None = None,
+        revision: str | None = None,
+        **kwargs,
+    ) -> Path:
         """Clone a configuration repository"""
         local_path = False
 

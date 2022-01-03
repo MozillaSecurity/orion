@@ -305,18 +305,15 @@ class ReductionMonitor(ReductionWorkflow):
             tool_list = Taskcluster.load_secrets(TOOL_LIST_SECRET)["tools"]
         self.tool_list = list(tool_list or [])
 
-    def queue_reduction_task(self, os_name, crash_id):
+    def queue_reduction_task(self, os_name: str, crash_id: int) -> None:
         """Queue a reduction task in Taskcluster.
 
         Arguments:
-            os_name (str): The OS to schedule the task for.
-            crash_id (int): The CrashManager crash ID to reduce.
-
-        Returns:
-            None
+            os_name: The OS to schedule the task for.
+            crash_id: The CrashManager crash ID to reduce.
         """
         if self.dry_run:
-            return
+            return None
         dest_queue = TC_QUEUES[os_name]
         my_task_id = os.environ.get("TASK_ID")
         task_id = slugId()
@@ -343,7 +340,7 @@ class ReductionMonitor(ReductionWorkflow):
             queue.createTask(task_id, task)
         except TaskclusterFailure as exc:
             LOG.error("Error creating task: %s", exc)
-            return
+            return None
         LOG.info("Marking %d Q4 (in progress)", crash_id)
         CrashManager().update_testcase_quality(crash_id, Quality.REDUCING.value)
 

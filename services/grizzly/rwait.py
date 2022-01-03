@@ -87,7 +87,7 @@ class RemoteWait:
             time.sleep(1)
         return data["result"]
 
-    def delete(self):
+    def delete(self) -> None:
         """Remove resources used by the token."""
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
             self._token_file.unlink()
