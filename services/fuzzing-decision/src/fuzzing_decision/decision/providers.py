@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from pathlib import Path
 
 import yaml
 
@@ -14,7 +15,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Provider(object):
-    def __init__(self, base_dir):
+    def __init__(self, base_dir: Path) -> None:
         self.imagesets = yaml.safe_load(
             (base_dir / "config" / "imagesets.yml").read_text()
         )
@@ -70,7 +71,7 @@ class Provider(object):
 class AWS(Provider):
     """Amazon Cloud provider config for Taskcluster"""
 
-    def __init__(self, base_dir):
+    def __init__(self, base_dir) -> None:
         # Load configuration from cloned community config
         super().__init__(base_dir)
         self.regions = self.load_regions(base_dir / "config" / "aws.yml")
@@ -129,7 +130,7 @@ class AWS(Provider):
 class GCP(Provider):
     """Google Cloud provider config for Taskcluster"""
 
-    def __init__(self, base_dir):
+    def __init__(self, base_dir) -> None:
         # Load configuration from cloned community config
         super().__init__(base_dir)
         gcp_config = yaml.safe_load((base_dir / "config" / "gcp.yml").read_text())

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import pathlib
+from typing import Iterator
+from typing_extensions import TypedDict
 from unittest.mock import Mock, patch
 
 import pytest
@@ -34,7 +36,7 @@ def appconfig():
 
 
 @pytest.fixture
-def mock_taskcluster_workflow():
+def mock_taskcluster_workflow() -> Iterator[Workflow]:
     """Mock Taskcluster HTTP services"""
 
     workflow = Workflow()
@@ -55,19 +57,26 @@ def mock_taskcluster_workflow():
         yield workflow
 
 
+class MockClouds(TypedDict):
+    """MockClouds type information"""
+
+    aws: AWS
+    gcp: GCP
+
+
 @pytest.fixture
-def mock_clouds():
+def mock_clouds() -> MockClouds:
     """Mock Cloud providers setup"""
     community = FIXTURES_DIR / "community"
     return {"aws": AWS(community), "gcp": GCP(community)}
 
 
 @pytest.fixture
-def mock_machines():
+def mock_machines() -> MachineTypes:
     """Mock a static list of machines"""
-    path = FIXTURES_DIR / "machines.yml"
-    assert path.exists()
-    return MachineTypes.from_file(path)
+    path_ = FIXTURES_DIR / "machines.yml"
+    assert path_.exists()
+    return MachineTypes.from_file(path_)
 
 
 @pytest.fixture(autouse=True)
