@@ -60,7 +60,7 @@ class CIScheduler:
         github_event: GithubEvent,
         now: datetime,
         task_group: str,
-        matrix: CIMatrix,
+        matrix: str,
         dry_run: bool = False,
     ) -> None:
         """Initialize a CIScheduler object.
