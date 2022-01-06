@@ -12,27 +12,34 @@ from itertools import chain
 from logging import getLogger
 from pathlib import Path
 from platform import machine
+from re import Pattern
+from typing import Iterator
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
 
+from .git import GitRepo
+
 LOG = getLogger(__name__)
 
 
-def file_glob(repo, path, pattern="**/*", relative=False):
+def file_glob(
+    repo: GitRepo, path: Path, pattern: str = "**/*", relative: bool = False
+) -> Iterator[Path]:
     """Run Path.glob for a given pattern, with filters applied.
     Only files are yielded, not directories. Any file that looks like
     it is in a test folder hierarchy (`tests`) will be skipped.
 
     Arguments:
-        repo (GitRepo): Git repository in which to search.
-        path (Path): Root for the glob expression.
-        pattern (str): Glob expression.
-        relative (bool): Result will be relative to `path`.
+        repo: Git repository in which to search.
+        path: Root for the glob expression.
+        pattern: Glob expression.
+        relative: Result will be relative to `path`.
 
     Yields:
-        Path: Result paths.
+        Result paths.
     """
+    assert isinstance(repo.path, Path)
     git_files = [
         repo.path / p
         for p in repo.git(
@@ -56,38 +63,40 @@ class ServiceTest(ABC):
     Tests that operate either on the service definition, or the resulting image.
 
     Attributes:
-        name (str): Test name
+        name: Test name
     """
 
     FIELDS = frozenset(("name", "type"))
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         """Initialize a ServiceTest instance.
 
         Arguments:
-            name (str): Test name
+            name: Test name
         """
         self.name = name
 
     @abstractmethod
-    def update_task(self, task, clone_url, fetch_ref, commit, service_rel_path):
+    def update_task(
+        self, task, clone_url: str, fetch_ref: str, commit: str, service_rel_path: str
+    ) -> None:
         """Update a task definition to run the tests.
 
         Arguments:
             task (dict): Task definition to update.
-            clone_url (str): Git clone URL
-            fetch_ref (str): Git fetch reference
-            commit (str): Git revision
-            service_rel_path (str): Relative path to service definition from repo root
+            clone_url: Git clone URL
+            fetch_ref: Git fetch reference
+            commit: Git revision
+            service_rel_path: Relative path to service definition from repo root
         """
 
     @classmethod
-    def check_fields(cls, defn, check_unknown=True):
+    def check_fields(cls, defn, check_unknown: bool = True) -> None:
         """Check a service test definition fields.
 
         Arguments:
             defn (dict): Test definition from service.yaml
-            check_unknown (bool): Check for unknown fields as well as missing.
+            check_unknown: Check for unknown fields as well as missing.
         """
         LOG.debug("got fields %r", cls.FIELDS)
         given_fields = frozenset(defn)
@@ -100,7 +109,7 @@ class ServiceTest(ABC):
                 raise RuntimeError(f"Unknown test fields: '{extra!r}'")
 
     @staticmethod
-    def from_defn(defn):
+    def from_defn(defn) -> ToxServiceTest:
         """Load a service test from the service.yaml metadata test subsection.
 
         Arguments:
@@ -119,36 +128,38 @@ class ToxServiceTest(ServiceTest):
     Run Tox for python unit-tests in a service definition.
 
     Attributes:
-        name (str): Test name
-        image (str): Docker image to use for test execution. This can be either a
-                     registry name (eg. `python:3.8`) or a service name defined in Orion
-                     (eg. `ci-py-38`). For services, either the task built in this
-                     decision tree, or the latest indexed-image will be used.
-        toxenv (str): tox env to run
+        name: Test name
+        image: Docker image to use for test execution. This can be either a
+               registry name (eg. `python:3.8`) or a service name defined in Orion
+               (eg. `ci-py-38`). For services, either the task built in this
+               decision tree, or the latest indexed-image will be used.
+        toxenv: tox env to run
     """
 
     FIELDS = frozenset({"image", "toxenv"} | ServiceTest.FIELDS)
 
-    def __init__(self, name, image, toxenv):
+    def __init__(self, name: str, image: str, toxenv: str) -> None:
         """
         Arguments:
-            name (str): Test name
-            image (str): Docker image to use for test execution (see class doc)
-            toxenv (str): tox env to run
+            name: Test name
+            image: Docker image to use for test execution (see class doc)
+            toxenv: tox env to run
         """
         super().__init__(name)
         self.image = image
         self.toxenv = toxenv
 
-    def update_task(self, task, clone_url, fetch_ref, commit, service_rel_path):
+    def update_task(
+        self, task, clone_url: str, fetch_ref: str, commit: str, service_rel_path: str
+    ) -> None:
         """Update a task definition to run the tests.
 
         Arguments:
             task (dict): Task definition to update.
-            clone_url (str): Git clone URL
-            fetch_ref (str): Git reference to fetch
-            commit (str): Git revision
-            service_rel_path (str): Relative path to service definition from repo root
+            clone_url: Git clone URL
+            fetch_ref: Git reference to fetch
+            commit: Git revision
+            service_rel_path: Relative path to service definition from repo root
         """
         task["payload"]["command"] = [
             "/bin/bash",
@@ -171,61 +182,69 @@ class Service:
     """Orion service (Docker image)
 
     Attributes:
-        dockerfile (Path): Path to the Dockerfile
-        context (Path): build context
-        name (str): Image name (Docker tag)
-        service_deps (set(str)): Names of images that this one depends on.
-        path_deps (set(Path)): Paths that this image depends on.
-        recipe_deps (set(str)): Names of recipes that this service depends on.
-        weak_deps (set(str)): Names of images that should trigger a rebuild of this one
+        dockerfile: Path to the Dockerfile
+        context: build context
+        name: Image name (Docker tag)
+        service_deps: Names of images that this one depends on.
+        path_deps: Paths that this image depends on.
+        recipe_deps: Names of recipes that this service depends on.
+        weak_deps: Names of images that should trigger a rebuild of this one
                               but are not build deps.
-        dirty (bool): Whether or not this image needs to be rebuilt
-        tests (list[ServiceTest]): Tests to run against this service
-        root (Path): Path where service is defined
+        dirty: Whether or not this image needs to be rebuilt
+        tests: Tests to run against this service
+        root: Path where service is defined
     """
 
-    def __init__(self, dockerfile, context, name, tests, root):
+    def __init__(
+        self,
+        dockerfile: Path | None,
+        context: Path,
+        name: str,
+        tests: list[ServiceTest],
+        root: Path,
+    ) -> None:
         """Initialize a Service instance.
 
         Arguments:
-            dockerfile (Path): Path to the Dockerfile
-            context (Path): build context
-            name (str): Image name (Docker tag)
-            tests (list[ServiceTest]): Tests to run against this service
-            root (Path): Path where service is defined
+            dockerfile: Path to the Dockerfile
+            context: build context
+            name: Image name (Docker tag)
+            tests: Tests to run against this service
+            root: Path where service is defined
         """
         self.dockerfile = dockerfile
         self.context = context
         self.name = name
-        self.service_deps = set()
-        self.path_deps = set()
-        self.recipe_deps = set()
-        self.weak_deps = set()
+        self.service_deps: set[str] = set()
+        self.path_deps: set[Path] = set()
+        self.recipe_deps: set[str] = set()
+        self.weak_deps: set[str] = set()
         self.dirty = False
         self.tests = tests
         self.root = root
 
     @classmethod
-    def from_metadata_yaml(cls, metadata, context):
+    def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> Service:
         """Create a Service instance from a service.yaml metadata path.
 
         Arguments:
-            metadata (Path): Path to a service.yaml file.
-            context (Path): The context from which this service is built.
+            metadata_path: Path to a service.yaml file.
+            context: The context from which this service is built.
 
         Returns:
-            Service: A service instance.
+            A service instance.
         """
-        metadata_path = metadata
         metadata = yaml_load(metadata_path.read_text())
         name = metadata["name"]
         LOG.info("Loading %s from %s", name, metadata_path)
+        tests: list[ServiceTest]
         if "tests" in metadata:
             tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
         else:
             tests = []
         if "type" in metadata:
             assert metadata["type"] in {"docker", "msys"}
+        result: Service
         if metadata.get("type") == "msys":
             base = metadata["base"]
             assert (metadata_path.parent / "setup.sh").is_file()
@@ -251,26 +270,28 @@ class ServiceMsys(Service):
     """Orion service (MSYS tar)
 
     Attributes:
-        base (str): URL to MSYS base tar to use.
-        context (Path): build context
-        name (str): Image name
-        service_deps (set(str)): Names of images that this one depends on.
-        path_deps (set(Path)): Paths that this image depends on.
-        recipe_deps (set(str)): Names of recipes that this service depends on.
-        dirty (bool): Whether or not this image needs to be rebuilt
-        tests (list[ServiceTest]): Tests to run against this service
-        root (Path): Path where service is defined
+        base: URL to MSYS base tar to use.
+        context: build context
+        name: Image name
+        service_deps: Names of images that this one depends on.
+        path_deps: Paths that this image depends on.
+        recipe_deps: Names of recipes that this service depends on.
+        dirty: Whether or not this image needs to be rebuilt
+        tests: Tests to run against this service
+        root: Path where service is defined
     """
 
-    def __init__(self, base, context, name, tests, root):
+    def __init__(
+        self, base: str, context: Path, name: str, tests: list[ServiceTest], root: Path
+    ) -> None:
         """Initialize a ServiceMsys instance.
 
         Arguments:
-            base (str): URL to MSYS base tar to use.
-            context (Path): build context
-            name (str): Image name
-            tests (list[ServiceTest]): Tests to run against this service
-            root (Path): Path where service is defined
+            base: URL to MSYS base tar to use.
+            context: build context
+            name: Image name
+            tests: Tests to run against this service
+            root: Path where service is defined
         """
         super().__init__(None, context, name, tests, root)
         self.base = base
@@ -280,30 +301,30 @@ class Recipe:
     """Installation recipe used by Orion Services.
 
     Attributes:
-        file (Path): Location of the recipe.
-        service_deps (set(str)): Set of services that this recipe depends on.
-        path_deps (set(Path)): Paths that this recipe depends on.
-        recipe_deps (set(str)): Names of other recipes that this recipe depends on.
-        weak_deps (set(str)): Names of images that should trigger a rebuild of this one
+        file: Location of the recipe.
+        service_deps: Set of services that this recipe depends on.
+        path_deps: Paths that this recipe depends on.
+        recipe_deps: Names of other recipes that this recipe depends on.
+        weak_deps: Names of images that should trigger a rebuild of this one
                               but are not build deps.
-        dirty (bool): Whether or not this recipe needs tests run.
+        dirty: Whether or not this recipe needs tests run.
     """
 
-    def __init__(self, file):
+    def __init__(self, file: Path) -> None:
         """Initialize a `Recipe` instance.
 
         Arguments:
-            file (Path): Location of the recipe
+            file: Location of the recipe
         """
         self.file = file
-        self.service_deps = set()
-        self.path_deps = set([file])
-        self.recipe_deps = set()
-        self.weak_deps = set()
+        self.service_deps: set[str] = set()
+        self.path_deps: set[Path] = set([file])
+        self.recipe_deps: set[str] = set()
+        self.weak_deps: set[str] = set()
         self.dirty = False
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.file.name
 
 
@@ -311,35 +332,36 @@ class Services(dict):
     """Collection of Orion Services.
 
     Attributes:
-        services (dict(str -> Service)): Mapping of service name (`service.name`) to
-                                         the `Service` instance.
-        recipes (dict(str -> Recipe)): Mapping of recipe name (`recipe.sh`) to the
-                                       `Recipe` instance.
-        root (Path): The root for loading services and watching recipe scripts.
+        services: Mapping of service name (`service.name`) to the `Service` instance.
+        recipes: Mapping of recipe name (`recipe.sh`) to the `Recipe` instance.
+        root: The root for loading services and watching recipe scripts.
     """
 
-    def __init__(self, repo):
+    def __init__(self, repo: GitRepo) -> None:
         """Initialize a `Services` instances.
 
         Arguments:
-            repo (GitRepo): The git repo to load services and recipe scripts from.
+            The git repo to load services and recipe scripts from.
         """
         super().__init__()
         self.root = repo.path
         # scan files & recipes
-        self.recipes = {}
+        self.recipes: dict[str, Recipe] = {}
         self._file_re = self._scan_files(repo)
         # scan the context recursively to find services
+        assert isinstance(self.root, Path)
         for service_yaml in file_glob(repo, self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
             assert service.name not in self
+            assert isinstance(service.dockerfile, Path)
             service.path_deps |= {service_yaml, service.dockerfile}
             self[service.name] = service
         self._calculate_depends(repo)
 
-    def _scan_files(self, repo):
+    def _scan_files(self, repo: GitRepo) -> Pattern[str]:
         # make a list of all file paths
         file_strs = []
+        assert isinstance(self.root, Path)
         for file in file_glob(repo, self.root, relative=True):
             file_strs.append(str(file))
             # recipes are usually called using only their basename
@@ -350,19 +372,17 @@ class Services(dict):
             LOG.debug("found path: %s", file_strs[-1])
         return re.compile("|".join(re.escape(file) for file in file_strs))
 
-    def _find_path_depends(self, obj, text):
+    def _find_path_depends(self, obj: Recipe | Service, text: str) -> None:
         """Search a file for path references.
 
         Arguments:
-            obj (Recipe/Service): Object the file belongs to
-            text (str): File contents to search
-
-        Returns:
-            None
+            obj: Object the file belongs to
+            text: File contents to search
         """
         # search file for references to other files
-        for match in self._file_re.finditer(text):
-            match = match.group(0)
+        for initial_match in self._file_re.finditer(text):
+            match = initial_match.group(0)
+            assert isinstance(self.root, Path)
             path = self.root / match
             part0 = Path(match).parts[0]
             if (not path.is_file() and match in self.recipes) or part0 == "recipes":
@@ -386,7 +406,7 @@ class Services(dict):
                     path.relative_to(self.root),
                 )
 
-    def _calculate_depends(self, repo):
+    def _calculate_depends(self, repo: GitRepo) -> None:
         """Go through each service and try to determine what dependencies it has.
 
         There are four types of dependencies:
@@ -399,10 +419,7 @@ class Services(dict):
                 not a build dependency.
 
         Arguments:
-            repo (GitRepo): The git repo to load services and recipe scripts from.
-
-        Returns:
-            None
+            The git repo to load services and recipe scripts from.
         """
         for recipe in self.recipes.values():
             try:
@@ -465,6 +482,7 @@ class Services(dict):
                 # add a direct dependency on any file in the service folder
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
+                    assert isinstance(self.root, Path)
                     LOG.info(
                         "Service %s depends on Path %s",
                         service.name,
@@ -479,7 +497,7 @@ class Services(dict):
                 # search file for references to other files
                 self._find_path_depends(service, entry_text)
 
-        def _adjacent(obj):
+        def _adjacent(obj: Service) -> Iterator[Recipe | Service]:
             for rec in obj.recipe_deps:
                 yield self.recipes[rec]
             for svc in obj.service_deps:
@@ -487,12 +505,14 @@ class Services(dict):
             # include service test images
             if hasattr(obj, "tests"):
                 for test in obj.tests:
-                    if hasattr(test, "image") and test.image in self:
-                        yield self[test.image]
+                    if hasattr(test, "image"):
+                        assert isinstance(test, ToxServiceTest)
+                        if test.image in self:
+                            yield self[test.image]
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
-            stk = [_adjacent(start)]
+            stk: list[Iterator[Recipe | Service] | None] = [_adjacent(start)]
             bkt = [start]
             while stk:
                 if stk[-1] is None:
@@ -513,11 +533,11 @@ class Services(dict):
                     stk.append(None)  # sentinel
                     stk.append(_adjacent(here))
 
-    def mark_changed_dirty(self, changed_paths):
+    def mark_changed_dirty(self, changed_paths: Iterator[Path]) -> None:
         """Find changed services and images that depend on them.
 
         Arguments:
-            changed_paths (iterable(Path)): List of paths changed.
+            List of paths changed.
         """
         stk = []
         # find first order dependencies
@@ -528,6 +548,7 @@ class Services(dict):
                     continue
                 # check for path dependencies
                 if path in here.path_deps:
+                    assert isinstance(self.root, Path)
                     LOG.warning(
                         "%s %s is dirty because Path %s is changed",
                         type(here).__name__,
