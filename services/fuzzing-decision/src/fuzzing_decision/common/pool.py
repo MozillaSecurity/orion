@@ -151,7 +151,7 @@ class MachineTypes:
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
-    def cpus(self, provider: str, architecture: str, machine: str) -> str:
+    def cpus(self, provider: str, architecture: str, machine: str) -> int:
         return self._data[provider][architecture][machine]["cpu"]
 
     def zone_blacklist(
@@ -406,7 +406,7 @@ class CommonPoolConfiguration(abc.ABC):
 
     def get_machine_list(
         self, machine_types: MachineTypes
-    ) -> Iterable[tuple[str, int, str]]:
+    ) -> Iterable[tuple[str, int, frozenset[str]]]:
         """
         Args:
             machine_types: database of all machine types
@@ -417,7 +417,9 @@ class CommonPoolConfiguration(abc.ABC):
         yielded = False
         assert self.cloud is not None
         assert self.cpu is not None
-        assert self.cpu is not None
+        assert self.cores_per_task is not None
+        assert self.minimum_memory_per_core is not None
+        assert self.metal is not None
         for machine in machine_types.filter(
             self.cloud,
             self.cpu,
@@ -440,7 +442,7 @@ class CommonPoolConfiguration(abc.ABC):
         """
         if self.schedule_start is not None:
             now = self.schedule_start
-            assert now is not None
+            assert isinstance(now, datetime)
             if now.utcoffset() is None:
                 # no timezone was specified. treat it as UTC
                 now = now.replace(tzinfo=timezone.utc)

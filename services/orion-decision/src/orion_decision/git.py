@@ -29,14 +29,14 @@ class GitRepo:
     """A git repository.
 
     Attributes:
-        path (Path): The location where the repository is cloned.
+        path: The location where the repository is cloned.
     """
 
     __slots__ = ("path", "_cloned")
 
     def __init__(
         self,
-        clone_url: str,
+        clone_url: Path | str,
         clone_ref: str | None,
         commit: str | None,
         _clone: bool = True,
@@ -62,7 +62,7 @@ class GitRepo:
             self.git("show", "--quiet")  # assert that path is valid
 
     @classmethod
-    def from_existing(cls, path: str) -> GitRepo:
+    def from_existing(cls, path: Path) -> GitRepo:
         """Initialize a GitRepo instance to access a local repository directly.
 
         Arguments:
@@ -73,7 +73,7 @@ class GitRepo:
         """
         return cls(path, None, None, _clone=False)
 
-    def git(self, *args: str, tries: int = 1) -> str:
+    def git(self, *args: Path | str, tries: int = 1) -> str:
         """Call a git command in the cloned repository.
 
         If tries is specified, the command will be retried on failure,
@@ -120,7 +120,7 @@ class GitRepo:
             LOG.error("git command returned error:\n%s", exc.stderr)
             raise
 
-    def _clone(self, clone_url: str, clone_ref: str, commit: str) -> None:
+    def _clone(self, clone_url: Path | str, clone_ref: str, commit: str) -> None:
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
         self.git("fetch", "-q", "origin", clone_ref, tries=RETRIES)

@@ -89,6 +89,7 @@ class Workflow(CommonWorkflow):
         }
 
         # Load the machine types
+        assert self.fuzzing_config_dir is not None
         machines = MachineTypes.from_file(self.fuzzing_config_dir / "machines.yml")
 
         # Pass fuzzing-tc-config repository through to decision tasks, if specified
@@ -106,9 +107,10 @@ class Workflow(CommonWorkflow):
         """Build regex patterns to manage our resources"""
 
         # Load existing workerpools from community config
-        path = self.community_config_dir / "config" / "projects" / "fuzzing.yml"
-        assert path.exists(), f"Missing fuzzing community config in {path}"
-        community = yaml.safe_load(path.read_text())
+        assert self.community_config_dir is not None
+        path_ = self.community_config_dir / "config" / "projects" / "fuzzing.yml"
+        assert path_.exists(), f"Missing fuzzing community config in {path_}"
+        community = yaml.safe_load(path_.read_text())
         assert "fuzzing" in community, "Missing fuzzing main key in community config"
 
         def _suffix(data, key):
@@ -146,8 +148,9 @@ class Workflow(CommonWorkflow):
     def build_tasks(
         self, pool_name: str, task_id, config, dry_run: bool = False
     ) -> None:
-        path = self.fuzzing_config_dir / f"{pool_name}.yml"
-        assert path.exists(), f"Missing pool {pool_name}"
+        assert self.fuzzing_config_dir is not None
+        path_ = self.fuzzing_config_dir / f"{pool_name}.yml"
+        assert path_.exists(), f"Missing pool {pool_name}"
 
         # Pass fuzzing-tc-config repository through to tasks, if specified
         env = {}
@@ -156,7 +159,7 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
         # Build tasks needed for a specific pool
-        pool_config = PoolConfigLoader.from_file(path)
+        pool_config = PoolConfigLoader.from_file(path_)
 
         # cancel any previously running tasks
         if not dry_run:
@@ -176,7 +179,7 @@ class Workflow(CommonWorkflow):
         for folder in (self.community_config_dir, self.fuzzing_config_dir):
             if folder is None or not folder.exists():
                 continue
-            folder = str(folder)
-            if folder.startswith(tempfile.gettempdir()):
-                LOG.info(f"Removing tempdir clone {folder}")
-                shutil.rmtree(folder)
+            folder_ = str(folder)
+            if folder_.startswith(tempfile.gettempdir()):
+                LOG.info(f"Removing tempdir clone {folder_}")
+                shutil.rmtree(folder_)

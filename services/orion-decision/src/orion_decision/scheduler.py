@@ -30,7 +30,7 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Service, ServiceMsys, Services
+from .orion import Recipe, Service, ServiceMsys, Services
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
@@ -262,8 +262,9 @@ class Scheduler:
         return task_id
 
     def _create_recipe_test_task(
-        self, recipe: Path, dep_tasks, recipe_test_tasks
+        self, recipe: Recipe, dep_tasks, recipe_test_tasks
     ) -> str:
+        assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"
         dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
         if not dockerfile.is_file():

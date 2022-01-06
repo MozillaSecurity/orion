@@ -24,6 +24,7 @@ def test_cleanup() -> None:
     repo = GitRepo(FIXTURES / "git01", "main", "FETCH_HEAD")
     try:
         repo_path = repo.path
+        assert repo_path is not None
         assert repo_path.is_dir()
         assert (repo_path / ".git").is_dir()
         assert Path(gettempdir()) in repo_path.parents
@@ -229,6 +230,7 @@ def test_github_changed(mocker: MockerFixture) -> None:
         evt.repo = repo
         evt.commit_range = "HEAD^..HEAD"
         changed_paths = set(evt.list_changed_paths())
+        assert repo.path is not None
         assert changed_paths == {repo.path / "a.txt"}
     finally:
         repo.cleanup()
