@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import pathlib
-from typing import Iterator
+from typing import Iterable
 from typing_extensions import TypedDict
 from unittest.mock import Mock, patch
 
@@ -36,7 +36,7 @@ def appconfig():
 
 
 @pytest.fixture
-def mock_taskcluster_workflow() -> Iterator[Workflow]:
+def mock_taskcluster_workflow() -> Iterable[Workflow]:
     """Mock Taskcluster HTTP services"""
 
     workflow = Workflow()

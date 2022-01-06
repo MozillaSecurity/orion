@@ -12,7 +12,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
-from typing import Iterator
+from typing import Iterable
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
@@ -255,7 +255,7 @@ class GithubEvent:
         self.commit_message = self.repo.message(str(self.commit_range or self.commit))
         return self
 
-    def list_changed_paths(self) -> Iterator[Path]:
+    def list_changed_paths(self) -> Iterable[Path]:
         """Calculate paths that were changed in the commit range.
 
         Yields:

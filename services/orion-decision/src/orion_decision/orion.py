@@ -13,7 +13,7 @@ from logging import getLogger
 from pathlib import Path
 from platform import machine
 from re import Pattern
-from typing import Iterator
+from typing import Iterable
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
@@ -25,7 +25,7 @@ LOG = getLogger(__name__)
 
 def file_glob(
     repo: GitRepo, path: Path, pattern: str = "**/*", relative: bool = False
-) -> Iterator[Path]:
+) -> Iterable[Path]:
     """Run Path.glob for a given pattern, with filters applied.
     Only files are yielded, not directories. Any file that looks like
     it is in a test folder hierarchy (`tests`) will be skipped.
@@ -497,7 +497,7 @@ class Services(dict):
                 # search file for references to other files
                 self._find_path_depends(service, entry_text)
 
-        def _adjacent(obj: Service) -> Iterator[Recipe | Service]:
+        def _adjacent(obj: Service) -> Iterable[Recipe | Service]:
             for rec in obj.recipe_deps:
                 yield self.recipes[rec]
             for svc in obj.service_deps:
@@ -512,7 +512,7 @@ class Services(dict):
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
-            stk: list[Iterator[Recipe | Service] | None] = [_adjacent(start)]
+            stk: list[Iterable[Recipe | Service] | None] = [_adjacent(start)]
             bkt = [start]
             while stk:
                 if stk[-1] is None:
@@ -533,7 +533,7 @@ class Services(dict):
                     stk.append(None)  # sentinel
                     stk.append(_adjacent(here))
 
-    def mark_changed_dirty(self, changed_paths: Iterator[Path]) -> None:
+    def mark_changed_dirty(self, changed_paths: Iterable[Path]) -> None:
         """Find changed services and images that depend on them.
 
         Arguments:

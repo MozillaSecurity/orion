@@ -12,7 +12,7 @@ import logging
 import pathlib
 import re
 import types
-from typing import Iterator
+from typing import Iterable
 from typing import cast
 from typing_extensions import TypedDict
 from datetime import datetime, timedelta, timezone
@@ -168,7 +168,7 @@ class MachineTypes:
         min_cpu: int,
         min_ram_per_cpu: float,
         metal: bool = False,
-    ) -> Iterator[str]:
+    ) -> Iterable[str]:
         """Generate machine types which fit the given requirements.
 
         Args:
@@ -406,7 +406,7 @@ class CommonPoolConfiguration(abc.ABC):
 
     def get_machine_list(
         self, machine_types: MachineTypes
-    ) -> Iterator[tuple[str, int, str]]:
+    ) -> Iterable[tuple[str, int, str]]:
         """
         Args:
             machine_types: database of all machine types
@@ -431,7 +431,7 @@ class CommonPoolConfiguration(abc.ABC):
             yielded = True
         assert yielded, "No available machines match specified configuration"
 
-    def cycle_crons(self) -> Iterator[str] | None:
+    def cycle_crons(self) -> Iterable[str] | None:
         """Generate cron patterns that correspond to cycle_time (starting from now)
 
         Returns:
@@ -722,7 +722,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         data["name"] = f"{name} ({self.name})"
         return self.RESULT_TYPE(pool_id, data, self.base_dir)
 
-    def iterpools(self) -> Iterator[CommonPoolConfiguration]:
+    def iterpools(self) -> Iterable[CommonPoolConfiguration]:
         for parent in self.apply_to:
             yield self.apply(parent)
 
