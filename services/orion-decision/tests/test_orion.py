@@ -210,7 +210,7 @@ def test_service_deps(
     assert svcs.recipes["install.sh"].recipe_deps == set()
     assert svcs.recipes["withdep.sh"].recipe_deps == set()
 
-    svcs.mark_changed_dirty([root / path for path in dirty_paths])
+    svcs.mark_changed_dirty(root / path for path in dirty_paths)
     for svc in svcs:
         if svc in expect_services:
             assert svcs[svc].dirty
@@ -262,7 +262,7 @@ def test_services_repo(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.parametrize("fixture", ["services07", "services09"])
-def test_service_circular_deps(mocker: MockerFixture, fixture: list[str]) -> None:
+def test_service_circular_deps(mocker: MockerFixture, fixture: str) -> None:
     """test that circular service dependencies raise an error"""
     root = FIXTURES / fixture
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
