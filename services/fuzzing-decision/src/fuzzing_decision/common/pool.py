@@ -273,7 +273,7 @@ class CommonPoolConfiguration(abc.ABC):
                 )
         if isinstance(data.get("container"), dict):
             value = data["container"]
-            assert isinstance(value, dict)
+            assert value is not None
             assert "type" in value, "'container' missing required key: 'type'"
             assert value["type"] in {
                 "docker-image",
@@ -349,7 +349,7 @@ class CommonPoolConfiguration(abc.ABC):
         # command is an overwriting field, null is allowed
         self.command: list[str] | None
         if data.get("command") is not None:
-            assert isinstance(data["command"], list)
+            assert data["command"] is not None
             self.command = data["command"].copy()
         else:
             self.command = None
@@ -374,16 +374,16 @@ class CommonPoolConfiguration(abc.ABC):
         self.schedule_start: datetime | str | None = None
         if data.get("schedule_start") is not None:
             if isinstance(data["schedule_start"], datetime):
-                assert isinstance(data["schedule_start"], datetime)
+                assert data["schedule_start"] is not None
                 self.schedule_start = data["schedule_start"]
             else:
-                assert isinstance(data["schedule_start"], str)
+                assert data["schedule_start"] is not None
                 self.schedule_start = dateutil.parser.isoparse(data["schedule_start"])
 
         # other special fields
         self.cpu = None
         if data.get("cpu") is not None:
-            assert isinstance(data["cpu"], str)
+            assert data["cpu"] is not None
             cpu = self.alias_cpu(data["cpu"])
             assert cpu in ARCHITECTURES
             self.cpu = cpu
@@ -415,9 +415,9 @@ class CommonPoolConfiguration(abc.ABC):
             instance type name and task capacity
         """
         yielded = False
-        assert isinstance(self.cloud, str)
-        assert isinstance(self.cpu, str)
-        assert isinstance(self.cpu, int)
+        assert self.cloud is not None
+        assert self.cpu is not None
+        assert self.cpu is not None
         for machine in machine_types.filter(
             self.cloud,
             self.cpu,
@@ -440,7 +440,7 @@ class CommonPoolConfiguration(abc.ABC):
         """
         if self.schedule_start is not None:
             now = self.schedule_start
-            assert isinstance(now, datetime)
+            assert now is not None
             if now.utcoffset() is None:
                 # no timezone was specified. treat it as UTC
                 now = now.replace(tzinfo=timezone.utc)
@@ -511,7 +511,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         # specific fields defined in pool config
         parents_data = data.get("parents", [])
-        assert isinstance(parents_data, list)
+        assert parents_data is not None
         self.parents = parents_data.copy()
 
         top_level = False
@@ -604,7 +604,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             field: getattr(self, field).copy() for field in merge_dict_fields
         }
 
-        assert isinstance(flattened, set)
+        assert flattened is not None
         for parent_id in self.parents:
             assert parent_id not in flattened, (
                 f"attempt to resolve cyclic configuration, {parent_id} already "
@@ -709,9 +709,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         for gig_field in ("disk_size", "minimum_memory_per_core"):
             if data[gig_field] is not None:
                 data_gig_field = data[gig_field]
-                assert isinstance(data_gig_field, int) or isinstance(
-                    data_gig_field, float
-                )
+                assert data_gig_field is not None
                 data[gig_field] = data_gig_field * 1024 * 1024 * 1024
         if data["schedule_start"] is not None:
             assert isinstance(data["schedule_start"], datetime)

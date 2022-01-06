@@ -227,7 +227,7 @@ class ReductionWorkflow(ABC):
         if args is None:
             args = cls.parse_args()
 
-        assert isinstance(args, argparse.Namespace)
+        assert args is not None
         # Setup logger
         basicConfig(level=args.log_level)
 

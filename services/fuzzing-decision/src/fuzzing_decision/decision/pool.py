@@ -59,6 +59,7 @@ class MountArtifactResolver:
 
     @classmethod
     def lookup_taskid(cls, namespace: str):
+        assert isinstance(namespace, str)
         if namespace not in cls.CACHE:
             # need to resolve "image" to a task ID where the mount
             # artifact is

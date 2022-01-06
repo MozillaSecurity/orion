@@ -53,8 +53,8 @@ class GitRepo:
         if _clone:
             self.path = Path(mkdtemp(prefix="decision-repo-"))
             LOG.debug("created git repo tmp folder: %s", self.path)
-            assert isinstance(clone_ref, str)
-            assert isinstance(commit, str)
+            assert clone_ref is not None
+            assert commit is not None
             self._clone(clone_url, clone_ref, commit)
         else:
             self.path = Path(clone_url)
@@ -263,12 +263,12 @@ class GithubEvent:
         """
         if self.commit_range is None:
             # no way to know what has changed.. so list all files.
-            assert isinstance(self.repo, GitRepo)
+            assert self.repo is not None
             changed = self.repo.git("ls-files")
         else:
-            assert isinstance(self.repo, GitRepo)
+            assert self.repo is not None
             changed = self.repo.git("diff", "--name-only", self.commit_range)
         for line in set(changed.splitlines()):
             LOG.info("Path changed in %s: %s", self.commit_range, line)
-            assert isinstance(self.repo.path, Path)
+            assert self.repo.path is not None
             yield self.repo.path / line

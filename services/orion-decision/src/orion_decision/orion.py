@@ -39,7 +39,7 @@ def file_glob(
     Yields:
         Result paths.
     """
-    assert isinstance(repo.path, Path)
+    assert repo.path is not None
     git_files = [
         repo.path / p
         for p in repo.git(
@@ -349,11 +349,11 @@ class Services(dict):
         self.recipes: dict[str, Recipe] = {}
         self._file_re = self._scan_files(repo)
         # scan the context recursively to find services
-        assert isinstance(self.root, Path)
+        assert self.root is not None
         for service_yaml in file_glob(repo, self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
             assert service.name not in self
-            assert isinstance(service.dockerfile, Path)
+            assert service.dockerfile is not None
             service.path_deps |= {service_yaml, service.dockerfile}
             self[service.name] = service
         self._calculate_depends(repo)
@@ -361,7 +361,7 @@ class Services(dict):
     def _scan_files(self, repo: GitRepo) -> Pattern[str]:
         # make a list of all file paths
         file_strs = []
-        assert isinstance(self.root, Path)
+        assert self.root is not None
         for file in file_glob(repo, self.root, relative=True):
             file_strs.append(str(file))
             # recipes are usually called using only their basename
@@ -382,7 +382,7 @@ class Services(dict):
         # search file for references to other files
         for initial_match in self._file_re.finditer(text):
             match = initial_match.group(0)
-            assert isinstance(self.root, Path)
+            assert self.root is not None
             path = self.root / match
             part0 = Path(match).parts[0]
             if (not path.is_file() and match in self.recipes) or part0 == "recipes":
@@ -482,7 +482,7 @@ class Services(dict):
                 # add a direct dependency on any file in the service folder
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
-                    assert isinstance(self.root, Path)
+                    assert self.root is not None
                     LOG.info(
                         "Service %s depends on Path %s",
                         service.name,
@@ -548,7 +548,7 @@ class Services(dict):
                     continue
                 # check for path dependencies
                 if path in here.path_deps:
-                    assert isinstance(self.root, Path)
+                    assert self.root is not None
                     LOG.warning(
                         "%s %s is dirty because Path %s is changed",
                         type(here).__name__,
