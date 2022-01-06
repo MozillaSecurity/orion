@@ -13,8 +13,8 @@ from unittest.mock import call
 
 import pytest
 
+from orion_decision.ci_matrix import CISecretEnv
 from orion_decision.cli import (
-    CISecretEnv,
     check,
     ci_check,
     ci_launch,
