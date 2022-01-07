@@ -75,7 +75,7 @@ def test_machine_filters(
 
 
 # Hook & role should be the same across cloud providers
-def _get_expected_hook(platform="linux"):
+def _get_expected_hook(platform: list[str] | str = "linux"):
     return {
         "bindings": [],
         "description": (
@@ -135,7 +135,9 @@ def _get_expected_hook(platform="linux"):
     }
 
 
-def _get_expected_role(platform="linux"):
+def _get_expected_role(
+    platform: list[str] | str = "linux",
+) -> dict[str, list[str] | str]:
     return {
         "description": (
             "*DO NOT EDIT* - This resource is configured automatically.\n\nFuzzing "
@@ -157,7 +159,9 @@ def _get_expected_role(platform="linux"):
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
-def test_aws_resources(env, mock_clouds, mock_machines, platform: list[str]) -> None:
+def test_aws_resources(
+    env: list[dict[str, str] | None], mock_clouds, mock_machines, platform: list[str]
+) -> None:
 
     conf = PoolConfiguration(
         "test",
@@ -494,7 +498,7 @@ def test_tasks(env, scope_caps, platform, run_as_admin, mocker) -> None:
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value: str) -> str:
+    def _get_date(value: str) -> datetime.datetime:
         assert isinstance(value, str)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -620,7 +624,7 @@ def test_preprocess_tasks() -> None:
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value: str) -> str:
+    def _get_date(value: str) -> datetime.datetime:
         assert isinstance(value, str)
         return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -689,9 +693,9 @@ def test_preprocess_tasks() -> None:
 
 
 @pytest.mark.parametrize("pool_path", POOL_FIXTURES.glob("pool*.yml"))
-def test_flatten(pool_path) -> None:
+def test_flatten(pool_path: Path) -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _):
+        def _flatten(self, _: set[str] | None) -> None:
             pass
 
     pool = CommonPoolConfiguration.from_file(pool_path)
@@ -720,7 +724,7 @@ def test_flatten(pool_path) -> None:
 
 def test_pool_map() -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _):
+        def _flatten(self, _: set[str] | None) -> None:
             pass
 
     cfg_map = CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
@@ -820,6 +824,7 @@ def test_cycle_crons() -> None:
 
     # cycle time 3.5 days
     conf.cycle_time = 3600 * 24 * 3.5
+    assert conf.cycle_crons() is not None
     assert list(conf.cycle_crons()) == [
         "0 0 12 * * 0",
         "0 0 0 * * 4",
