@@ -30,7 +30,7 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Recipe, Service, ServiceMsys, Services
+from .orion import Recipe, Service, ServiceMsys, Services, ToxServiceTest
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
@@ -208,20 +208,27 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_svc_test_task(self, service, test, service_build_tasks) -> str:
-        image = test.image
+    def _create_svc_test_task(
+        self,
+        service: Service,
+        test: ToxServiceTest,
+        service_build_tasks: dict[str, str],
+    ) -> str:
+        test_image = test.image
         deps = []
-        if image in service_build_tasks:
-            if self.services[image].dirty:
-                deps.append(service_build_tasks[image])
+        if test_image in service_build_tasks:
+            if self.services[test_image].dirty:
+                deps.append(service_build_tasks[test_image])
                 image = {
                     "type": "task-image",
-                    "taskId": service_build_tasks[image],
+                    "taskId": service_build_tasks[test_image],
                 }
             else:
                 image = {
                     "type": "indexed-image",
-                    "namespace": (f"project.fuzzing.orion.{image}.{self.push_branch}"),
+                    "namespace": (
+                        f"project.fuzzing.orion.{test_image}.{self.push_branch}"
+                    ),
                 }
             image["path"] = f"public/{test.image}.tar.zst"
         test_task = yaml_load(
@@ -241,7 +248,10 @@ class Scheduler:
         )
         test_task["payload"]["image"] = image
         test_task["dependencies"].extend(deps)
+        assert self.services.root is not None
         service_path = str(service.root.relative_to(self.services.root))
+        assert self.github_event.commit is not None
+        assert self.github_event.fetch_ref is not None
         test.update_task(
             test_task,
             self.github_event.http_url,
@@ -262,7 +272,7 @@ class Scheduler:
         return task_id
 
     def _create_recipe_test_task(
-        self, recipe: Recipe, dep_tasks, recipe_test_tasks
+        self, recipe: Recipe, dep_tasks: list[str], recipe_test_tasks
     ) -> str:
         assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"
