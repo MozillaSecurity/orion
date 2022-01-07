@@ -266,6 +266,12 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
+        assert self.imageset is not None
+        assert machines is not None
+        assert self.disk_size is not None
+        assert self.platform is not None
+        assert self.max_run_time is not None
+        assert self.cycle_time is not None
         config = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
@@ -434,6 +440,10 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         # Build the pool configuration for selected machines
         machines = self.get_machine_list(machine_types)
+        assert self.imageset is not None
+        assert machines is not None
+        assert self.disk_size is not None
+        assert self.platform is not None
         config = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
