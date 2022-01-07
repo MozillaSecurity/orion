@@ -238,7 +238,7 @@ class PoolConfiguration(CommonPoolConfiguration):
     def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def get_scopes(self):
+    def get_scopes(self) -> list[str]:
         result = self.scopes.copy()
         if self.platform == "windows" and self.run_as_admin:
             result.extend(
@@ -272,6 +272,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         assert self.platform is not None
         assert self.max_run_time is not None
         assert self.cycle_time is not None
+        assert self.tasks is not None
         config = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
@@ -393,6 +394,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             preprocess_task_id = slugId()
             yield preprocess_task_id, task
 
+        assert self.tasks is not None
         for i in range(1, self.tasks + 1):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
@@ -448,7 +450,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
             ),
-            "maxCapacity": max(sum(pool.tasks for pool in pools) * 2, 3),
+            "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,
         }
         if self.platform == "linux":
@@ -513,6 +515,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         now = datetime.utcnow()
 
         for pool in self.iterpools():
+            assert pool.tasks is not None
             for i in range(1, pool.tasks + 1):
                 task = yaml.safe_load(
                     FUZZING_TASK.substitute(
