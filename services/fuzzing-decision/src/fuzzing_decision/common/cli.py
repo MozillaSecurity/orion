@@ -12,7 +12,7 @@ import os
 import pathlib
 
 
-def build_cli_parser(*args, **kwargs):
+def build_cli_parser(*args, **kwargs) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(*args, **kwargs)
     parser.add_argument(
         "--taskcluster-secret",

@@ -14,7 +14,7 @@ from ..common.cli import build_cli_parser
 from .launcher import PoolLauncher
 
 
-def main(args=None):
+def main(args: list[str] | None = None) -> None:
     parser = build_cli_parser(prog="fuzzing-pool-launch")
     parser.add_argument(
         "--pool-name",
@@ -34,18 +34,20 @@ def main(args=None):
         help="Load the configuration, but exit before executing the command.",
     )
     parser.add_argument("command", help="docker command-line", nargs=argparse.REMAINDER)
-    args = parser.parse_args(args=args)
+    parsed_args = parser.parse_args(args=args)
 
     # Setup logger
-    logging.basicConfig(level=args.log_level)
+    logging.basicConfig(level=parsed_args.log_level)
 
     # Configure workflow using the secret or local configuration
-    launcher = PoolLauncher(args.command, args.pool_name, args.preprocess)
+    launcher = PoolLauncher(
+        parsed_args.command, parsed_args.pool_name, parsed_args.preprocess
+    )
     config = launcher.configure(
-        local_path=args.configuration,
-        secret=args.taskcluster_secret,
-        fuzzing_git_repository=args.git_repository,
-        fuzzing_git_revision=args.git_revision,
+        local_path=parsed_args.configuration,
+        secret=parsed_args.taskcluster_secret,
+        fuzzing_git_repository=parsed_args.git_repository,
+        fuzzing_git_revision=parsed_args.git_revision,
     )
 
     if config is not None:
@@ -53,6 +55,6 @@ def main(args=None):
         launcher.clone(config)
         launcher.load_params()
 
-    if not args.dry_run:
+    if not parsed_args.dry_run:
         # Execute command
         launcher.exec()
