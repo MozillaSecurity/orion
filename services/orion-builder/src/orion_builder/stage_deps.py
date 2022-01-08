@@ -11,6 +11,8 @@ from pathlib import Path
 from shutil import copyfileobj, rmtree
 from subprocess import Popen, check_call
 from tempfile import mkdtemp, mkstemp
+from types import TracebackType
+from typing import Type
 
 import taskcluster
 from taskboot.config import Configuration
@@ -105,12 +107,12 @@ def create_cert(
     finally:
         rmtree(tmpd)
     if ca:
-        store_fd, store_path = mkstemp(
+        store_fd, store_path_str = mkstemp(
             dir="/usr/share/ca-certificates", prefix="localhost-", suffix=".crt"
         )
-        store_path = Path(store_path)
-        with cert_path.open() as cert_fd, open(store_fd, "w") as store_fd:
-            copyfileobj(cert_fd, store_fd)
+        store_path = Path(store_path_str)
+        with cert_path.open() as cert_fd, open(store_fd, "w") as store_fd2:
+            copyfileobj(cert_fd, store_fd2)
         with Path("/etc/ca-certificates.conf").open("a") as ca_cnf:
             print(store_path.name, file=ca_cnf)
         check_call(["update-ca-certificates"])
@@ -134,7 +136,12 @@ class Registry:
     def __enter__(self) -> Registry:
         return self
 
-    def __exit__(self, _exc_type, _exc_value, _exc_traceback) -> None:
+    def __exit__(
+        self,
+        _exc_type: Type[BaseException] | None,
+        _exc_value: BaseException | None,
+        _exc_traceback: TracebackType | None,
+    ) -> None:
         self.proc.kill()
         self.proc.wait()
         rmtree("/var/lib/registry", ignore_errors=True)
@@ -198,7 +205,7 @@ def stage_deps(target: Target, args: argparse.Namespace) -> None:
     patch_dockerfile(target.check_path(args.dockerfile), img_tool.list_images())
 
 
-def registry_main(argv: list[str] = None) -> None:
+def registry_main(argv: list[str] | None = None) -> None:
     """Registry entrypoint. Does not return."""
     args = BaseArgs.parse_args(argv)
     configure_logging(level=args.log_level)

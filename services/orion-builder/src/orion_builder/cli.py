@@ -52,7 +52,7 @@ class BaseArgs:
         )
 
     @classmethod
-    def parse_args(cls, argv: list[str] | None = None) -> BaseArgs:
+    def parse_args(cls, argv: list[str] | None = None) -> argparse.Namespace:
         """Parse command-line arguments.
 
         Arguments:
@@ -66,7 +66,7 @@ class BaseArgs:
         self.sanity_check(result)
         return result
 
-    def sanity_check(self, args):
+    def sanity_check(self, args: argparse.Namespace) -> None:
         pass
 
 

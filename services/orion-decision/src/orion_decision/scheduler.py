@@ -30,7 +30,7 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Recipe, Service, ServiceMsys, Services, ToxServiceTest
+from .orion import Recipe, Service, ServiceMsys, ServiceTest, Services, ToxServiceTest
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
@@ -79,6 +79,7 @@ class Scheduler:
         self.docker_secret = docker_secret
         self.push_branch = push_branch
         self.dry_run = dry_run
+        assert self.github_event.repo is not None
         self.services = Services(self.github_event.repo)
 
     def mark_services_for_rebuild(self) -> None:
@@ -86,6 +87,7 @@ class Scheduler:
         These will have their `dirty` attribute set, which is used to create tasks.
         """
         forced = set()
+        assert self.github_event.commit_message is not None
         for match in re.finditer(
             r"/force-rebuild(=[A-Za-z0-9_.,-]+)?", self.github_event.commit_message
         ):
@@ -272,7 +274,7 @@ class Scheduler:
         return task_id
 
     def _create_recipe_test_task(
-        self, recipe: Recipe, dep_tasks: list[str], recipe_test_tasks
+        self, recipe: Recipe, dep_tasks: list[str], recipe_test_tasks: dict[str, str]
     ) -> str:
         assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"
@@ -397,6 +399,7 @@ class Scheduler:
             if is_svc:
                 test_tasks = []
                 for test in obj.tests:
+                    assert isinstance(obj, Service)
                     task_id = self._create_svc_test_task(obj, test, service_build_tasks)
                     test_tasks_created.add(task_id)
                     test_tasks.append(task_id)

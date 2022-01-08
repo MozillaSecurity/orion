@@ -83,30 +83,30 @@ class MatrixJob:
 
     def __init__(
         self,
-        name,
-        language,
-        version,
-        platform,
-        env,
-        script,
-        stage=1,
-        previous_pass=False,
-    ):
+        name: str | None,
+        language: str,
+        version: str,
+        platform: str,
+        env: dict[str, str],
+        script: list[str],
+        stage: int = 1,
+        previous_pass: bool = False,
+    ) -> None:
         """Initialize a MatrixJob.
 
         Arguments:
-            name (str): The name for this job (or `None` to auto-name based on
-                        `language`/`platform`/`version`).
-            language (str): The programming language under test (must be in `LANGUAGES`)
-            version (str): Version number of `language` to run (must be in
-                           `VERSIONS[(language, platform)]`)
-            platform (str): The operating system to run test (must be in `PLATFORMS`)
-            env (dict(str -> str)): Environment variables to set for `script`.
-            script (list(str)): The command to run (single command).
-            stage (int): The CI stage. Stages are scheduled sequentially in ascending
-                         order, with all jobs in the same stage running in parallel.
-            previous_pass (bool): This job should only run after all jobs
-                                  with a lower `stage` have succeeded.
+            name: The name for this job (or `None` to auto-name based on
+                  `language`/`platform`/`version`).
+            language: The programming language under test (must be in `LANGUAGES`)
+            version: Version number of `language` to run (must be in
+                     `VERSIONS[(language, platform)]`)
+            platform: The operating system to run test (must be in `PLATFORMS`)
+            env: Environment variables to set for `script`.
+            script: The command to run (single command).
+            stage: The CI stage. Stages are scheduled sequentially in ascending
+                   order, with all jobs in the same stage running in parallel.
+            previous_pass: This job should only run after all jobs
+                           with a lower `stage` have succeeded.
         """
         self.language = language
         self.version = version
@@ -122,11 +122,11 @@ class MatrixJob:
         self.secrets = []
 
     @property
-    def image(self):
+    def image(self) -> str:
         """Get the image name to run tests for this `language`/`platform`/`version`.
 
         Returns:
-            str: Orion service name to run job
+            Orion service name to run job
         """
         return IMAGES[(self.language, self.platform, self.version)]
 
@@ -173,15 +173,15 @@ class MatrixJob:
         )
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data: str) -> MatrixJob:
         """Deserialize and create a MatrixJob from JSON.
 
         Arguments:
-            data (str): JSON serialized MatrixJob. (`dict` also accepted if `data` is
-                        already deserialized).
+            data: JSON serialized MatrixJob. (`dict` also accepted if `data` is
+                  already deserialized).
 
         Returns:
-            MatrixJob: Job object.
+            Job object.
         """
         if isinstance(data, dict):
             obj = data
@@ -213,11 +213,11 @@ class MatrixJob:
     def __str__(self):
         return json_dumps(self.serialize())
 
-    def serialize(self):
+    def serialize(self) -> dict[str, str | None]:
         """Return a JSON serializable copy of self.
 
         Returns:
-            dict: JSON serializeable copy of this `MatrixJob`.
+            JSON serializeable copy of this `MatrixJob`.
         """
         obj = {attr: getattr(self, attr) for attr in self.__slots__}
         obj["secrets"] = [secret.serialize() for secret in self.secrets]
@@ -343,7 +343,7 @@ class CISecret(ABC):
         return json_dumps(self.serialize())
 
     @abstractmethod
-    def serialize(self) -> None:
+    def serialize(self) -> dict[str, str | None]:
         """Return a JSON serializable copy of self."""
 
     @staticmethod
@@ -393,7 +393,7 @@ class CISecretEnv(CISecret):
         super().__init__(secret, key)
         self.name = name
 
-    def serialize(self):
+    def serialize(self) -> dict[str, str | None]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -429,11 +429,11 @@ class CISecretFile(CISecret):
         super().__init__(secret, key)
         self.path = path
 
-    def serialize(self):
+    def serialize(self) -> dict[str, str | None]:
         """Return a JSON serializable copy of self.
 
         Returns:
-            dict: JSON serializeable copy of this `CISecretFile`.
+            JSON serializeable copy of this `CISecretFile`.
         """
         return {
             "type": "file",
@@ -477,11 +477,11 @@ class CISecretKey(CISecret):
         super().__init__(secret, key)
         self.hostname = hostname
 
-    def serialize(self):
+    def serialize(self) -> dict[str, str | None]:
         """Return a JSON serializable copy of self.
 
         Returns:
-            dict: JSON serializeable copy of this `CISecretKey`.
+            JSON serializeable copy of this `CISecretKey`.
         """
         return {
             "type": "key",
@@ -525,13 +525,13 @@ class CIMatrix:
      - include jobs using jobs.include
 
      Attributes:
-        jobs (list(MatrixJob)): CI jobs to run.
-        secrets (list(CISecret)): Secrets to be fetched when each job is run.
+        jobs: CI jobs to run.
+        secrets: Secrets to be fetched when each job is run.
     """
 
     __slots__ = ("jobs", "secrets")
 
-    def __init__(self, matrix, branch: str, event_type: str) -> None:
+    def __init__(self, matrix, branch: str | None, event_type: str) -> None:
         """Initialize a CIMatrix object.
 
         Arguments:
@@ -540,8 +540,8 @@ class CIMatrix:
             event_type: Git event type (for `when` expressions)
         """
         # matrix is language/platform/version
-        self.jobs = []
-        self.secrets = []
+        self.jobs: list[MatrixJob] = []
+        self.secrets: list[CISecret] = []
         self._parse_matrix(matrix, branch, event_type)
 
     def _parse_matrix(self, matrix, branch: str, event_type: str) -> None:

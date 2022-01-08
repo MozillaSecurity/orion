@@ -49,7 +49,7 @@ def makedirs(*dirs) -> str:
         if not os.path.isdir(dirs[0]):
             os.mkdir(dirs[0])
         if len(dirs) == 1:
-            return dirs[0]
+            return str(dirs[0])
         dirs = [os.path.join(dirs[0], dirs[1])] + list(dirs[2:])
     return ""
 
@@ -65,27 +65,43 @@ class AndroidSDKRepo(object):
         self.root = xml.etree.ElementTree.fromstring(xml_string)
 
     @staticmethod
-    def read_revision(element: xml.etree.ElementTree.Element) -> tuple[int, int, int]:
+    def read_revision(
+        element: xml.etree.ElementTree.Element,
+    ) -> tuple[int | None, int | None, int | None]:
         rev = element.find("revision")
+        assert rev is not None
         major = rev.find("major")
-        major = int(major.text) if major is not None else None
+        if major is not None:
+            assert major.text is not None
+            final_major = int(major.text)
+        else:
+            final_major = None
         minor = rev.find("minor")
-        minor = int(minor.text) if minor is not None else None
+        if minor is not None:
+            assert minor.text is not None
+            final_minor = int(minor.text)
+        else:
+            final_minor = None
         micro = rev.find("micro")
-        micro = int(micro.text) if micro is not None else None
-        return (major, minor, micro)
+        if micro is not None:
+            assert micro.text is not None
+            final_micro = int(micro.text)
+        else:
+            final_micro = None
+        return (final_major, final_minor, final_micro)
 
     def get_file(
         self,
         package_path: str,
         out_path: str = ".",
-        host: str = "linux",
+        host: str | None = "linux",
         extract_package_path: bool = True,
     ) -> None:
         package = self.root.find(
             ".//remotePackage[@path='%s']/channelRef[@ref='channel-0']/.."
             % (package_path,)
         )
+        assert package is not None
         if host is None:
             url = package.find("./archives/archive/complete/url")
         else:
@@ -128,6 +144,8 @@ class AndroidSDKRepo(object):
         try:
             downloaded = 0
             with open(ziptmp, "wb") as zipf:
+                assert url is not None
+                assert url.text is not None
                 response = requests.get(self.url_base + "/" + url.text, stream=True)
                 total_size = int(response.headers["Content-Length"])
                 start_time = report_time = time.time()
@@ -150,9 +168,9 @@ class AndroidSDKRepo(object):
                 ".. downloaded (%sB/s)",
                 si(float(downloaded) / (time.time() - start_time)),
             )
-            with zipfile.ZipFile(ziptmp) as zipf:
-                for info in zipf.infolist():
-                    zipf.extract(info, out_path)
+            with zipfile.ZipFile(ziptmp) as zipf_chmod:
+                for info in zipf_chmod.infolist():
+                    zipf_chmod.extract(info, out_path)
                     perm = info.external_attr >> 16
                     perm |= (
                         stat.S_IREAD
@@ -178,6 +196,8 @@ class AndroidSDKRepo(object):
             "{http://schemas.android.com/repository/android/common/01}repository"
         )
         license = package.find("uses-license")
+        assert license is not None
+        assert self.root is not None
         manifest.append(self.root.find("./license[@id='%s']" % (license.get("ref"),)))
         local_package = xml.etree.ElementTree.SubElement(manifest, "localPackage")
         local_package.set("path", package_path)
@@ -212,10 +232,10 @@ class AndroidHelper(object):
     def __init__(
         self,
         android_port: int = 5554,
-        avd_name=None,
+        avd_name: str | None = None,
         no_window: bool = False,
         sdcard_size: int = 500,
-        use_snapshot: bool = False,
+        use_snapshot: bool | str = False,
         writable: bool = False,
     ) -> None:
         self.android_port = android_port
@@ -259,6 +279,7 @@ class AndroidHelper(object):
         api_gapi = os.path.join(sdk, "system-images", "android-29", "default")
 
         # create an avd
+        assert self.avd_name is not None
         avd_ini = os.path.join(avd_path, self.avd_name + ".ini")
         assert not os.path.isfile(avd_ini), "File exists %r" % avd_ini
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
@@ -329,12 +350,15 @@ class AndroidHelper(object):
         subprocess.check_output([mksd, "%dM" % (self.sdcard_size,), sdcard])
         shutil.copy(sdcard, sdcard + ".firstboot")
 
-    def emulator_run(self, use_snapshot: str, quiet: bool = True):
+    def emulator_run(
+        self, use_snapshot: bool | str, quiet: bool = True
+    ) -> subprocess.Popen:
         # create folder structure
         android = makedirs(HOME, "Android")
         avd_home = makedirs(HOME, ".android")
         sdk = makedirs(android, "Sdk")
         avd_path = makedirs(avd_home, "avd")
+        assert self.avd_name is not None
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
 
@@ -386,6 +410,7 @@ class AndroidHelper(object):
         sdk = makedirs(android, "Sdk")
         avd_home = makedirs(HOME, ".android")
         avd_path = makedirs(avd_home, "avd")
+        assert self.avd_name is not None
         avd_dir = os.path.join(avd_path, self.avd_name + ".avd")
         sdcard = os.path.join(avd_dir, "sdcard.img")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")

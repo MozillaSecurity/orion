@@ -83,6 +83,7 @@ class Workflow(CommonWorkflow):
             resources.manage(pattern)
 
         # Load the cloud configuration from community config
+        assert self.community_config_dir is not None
         clouds = {
             "aws": AWS(self.community_config_dir),
             "gcp": GCP(self.community_config_dir),

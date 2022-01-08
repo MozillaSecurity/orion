@@ -83,7 +83,9 @@ def _define_github_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _sanity_check_github_args(parser: argparse.ArgumentParser, result) -> None:
+def _sanity_check_github_args(
+    parser: argparse.ArgumentParser, result: argparse.Namespace
+) -> None:
     if result.github_action is None:
         parser.error("--github-action (or GITHUB_ACTION) is required!")
 
@@ -296,6 +298,7 @@ def ci_launch() -> None:
     # clone repo
     LOG.info("Cloning repo: %s @ %s", args.clone_repo, args.fetch_rev)
     repo = GitRepo(args.clone_repo, args.fetch_ref, args.fetch_rev)
+    assert repo.path is not None
     chdir(repo.path)
     # update env
     env.update(args.job.env)

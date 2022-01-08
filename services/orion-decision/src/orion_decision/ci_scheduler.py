@@ -28,7 +28,7 @@ from . import (
     WORKER_TYPE_MSYS,
     Taskcluster,
 )
-from .ci_matrix import CIMatrix, CISecretKey
+from .ci_matrix import CIMatrix, CISecret, CISecretKey
 from .git import GithubEvent
 
 LOG = getLogger(__name__)
@@ -79,6 +79,7 @@ class CIScheduler:
         self.now = now
         self.task_group = task_group
         self.dry_run = dry_run
+        assert github_event.event_type is not None
         self.matrix = CIMatrix(
             matrix,
             github_event.branch,
@@ -88,7 +89,7 @@ class CIScheduler:
     def create_tasks(self) -> None:
         """Create CI tasks in Taskcluster."""
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
-        prev_stage = []
+        prev_stage: list[str] = []
         for stage in sorted(set(job.stage for job in self.matrix.jobs)):
             this_stage = []
             for job in self.matrix.jobs:
@@ -105,6 +106,7 @@ class CIScheduler:
                 else:
                     clone_repo = self.github_event.http_url
                 job_ser = job.serialize()
+                assert isinstance(job_ser["secrets"], list)
                 job_ser["secrets"].extend(
                     secret.serialize() for secret in self.matrix.secrets
                 )
@@ -186,6 +188,7 @@ class CIScheduler:
         """
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
+        assert evt.commit_message is not None
         try:
             if "[skip ci]" in evt.commit_message or "[skip tc]" in evt.commit_message:
                 LOG.warning(
