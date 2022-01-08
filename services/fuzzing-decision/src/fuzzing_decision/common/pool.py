@@ -14,7 +14,7 @@ import re
 import types
 from typing import Iterable
 from typing import cast
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 from datetime import datetime, timedelta, timezone
 
 import dateutil.parser
@@ -193,28 +193,28 @@ class MachineTypes:
 class PoolConfigData(TypedDict):
     """PoolConfigData type specification."""
 
-    artifacts: dict[str, str]
-    apply_to: list[str]
-    cloud: str | None
-    scopes: list[str]
-    disk_size: int | str | None
-    cycle_time: int | str | None
-    max_run_time: int | str | None
-    schedule_start: datetime | str | None
-    cores_per_task: int | None
-    metal: bool | None
-    name: str
-    tasks: int
-    command: list[str] | None
-    container: dict[str, str] | str | None
-    minimum_memory_per_core: float | str | None
-    imageset: str | None
-    parents: list[str] | None
-    cpu: str | None
-    platform: str | None
-    preprocess: str | None
-    macros: dict[str, str]
-    run_as_admin: bool
+    artifacts: NotRequired[dict[str, str]]
+    apply_to: NotRequired[list[str]]
+    cloud: NotRequired[str | None]
+    scopes: NotRequired[list[str]]
+    disk_size: NotRequired[int | str | None]
+    cycle_time: NotRequired[int | str | None]
+    max_run_time: NotRequired[int | str | None]
+    schedule_start: NotRequired[datetime | str | None]
+    cores_per_task: NotRequired[int | None]
+    metal: NotRequired[bool | None]
+    name: NotRequired[str]
+    tasks: NotRequired[int]
+    command: NotRequired[list[str] | None]
+    container: NotRequired[dict[str, str] | str | None]
+    minimum_memory_per_core: NotRequired[float | str | None]
+    imageset: NotRequired[str | None]
+    parents: NotRequired[list[str] | None]
+    cpu: NotRequired[str | None]
+    platform: NotRequired[str | None]
+    preprocess: NotRequired[str | None]
+    macros: NotRequired[dict[str, str]]
+    run_as_admin: NotRequired[bool]
 
 
 class CommonPoolConfiguration(abc.ABC):

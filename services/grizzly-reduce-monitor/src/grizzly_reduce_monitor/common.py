@@ -225,7 +225,7 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args: argparse.Namespace | None = None) -> int:
+    def main(cls, args: argparse.Namespace | None = None) -> None:
         """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()
