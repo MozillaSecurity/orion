@@ -7,8 +7,9 @@
 
 from __future__ import annotations
 
-import sys
+import argparse
 from logging import getLogger
+import sys
 
 from grizzly.common.fuzzmanager import CrashEntry
 
@@ -20,18 +21,20 @@ LOG = getLogger(__name__)
 class ReductionUpdater(ReductionWorkflow):
     """
     Attributes:
-        crash_id (int): CrashManager crash ID to update
-        quality (int): Testcase quality to set for crash
-        only_if_quality (int): Only update the crash if the existing quality matches
+        crash_id: CrashManager crash ID to update
+        quality: Testcase quality to set for crash
+        only_if_quality: Only update the crash if the existing quality matches
     """
 
-    def __init__(self, crash_id, quality, only_if_quality=None):
+    def __init__(
+        self, crash_id: int, quality: int, only_if_quality: int | None = None
+    ) -> None:
         super().__init__()
         self.crash_id = crash_id
         self.quality = quality
         self.only_if_quality = only_if_quality
 
-    def run(self):
+    def run(self) -> int:
         try:
             crash = CrashEntry(self.crash_id)
             if (
@@ -47,7 +50,7 @@ class ReductionUpdater(ReductionWorkflow):
         return 0
 
     @staticmethod
-    def parse_args(args=None):
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         parser = CommonArgParser(prog="grizzly-reduce-tc-update")
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("--crash", type=int, help="Crash ID to update.")
@@ -66,7 +69,7 @@ class ReductionUpdater(ReductionWorkflow):
         return parser.parse_args(args=args)
 
     @classmethod
-    def from_args(cls, args):
+    def from_args(cls, args: argparse.Namespace) -> ReductionUpdater:
         if args.crash_from_reduce_task:
             LOG.info(
                 "Fetching crash ID from reduction task %s", args.crash_from_reduce_task

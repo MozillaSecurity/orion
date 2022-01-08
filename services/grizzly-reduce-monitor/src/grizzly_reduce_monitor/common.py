@@ -99,12 +99,15 @@ class CrashManager(Reporter):
 
     @remote_checks
     def _list_objs(self, endpoint: str, query=None, ordering=None):
-        params = {}
+        params: dict[str, int | str] | None = {}
         if query is not None:
+            assert params is not None
             params["query"] = json.dumps(query)
         if ordering is not None:
+            assert params is not None
             params["ordering"] = ",".join(ordering)
         if endpoint == "crashes":
+            assert params is not None
             params["include_raw"] = "0"
         params["limit"] = 1000
 
