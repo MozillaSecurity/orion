@@ -22,7 +22,7 @@ LOG = getLogger(__name__)
 class PrivateLogLauncher(ReductionWorkflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
-    def __init__(self, command, log_dir) -> None:
+    def __init__(self, command: list[str], log_dir: Path) -> None:
         super().__init__()
         self.command = command.copy()
         self.environment = os.environ.copy()

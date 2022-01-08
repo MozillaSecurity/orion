@@ -178,7 +178,7 @@ class ReductionWorkflow(ABC):
     """Common framework for reduction scripts."""
 
     @abstractmethod
-    def run(self) -> int:
+    def run(self) -> None:
         """Run the actual reduction script.
         Any necessary parameters must be set on the instance in `from_args`/`__init__`.
 

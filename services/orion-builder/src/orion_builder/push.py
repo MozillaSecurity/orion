@@ -37,7 +37,7 @@ class PushArgs(CommonArgs):
             )
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)
