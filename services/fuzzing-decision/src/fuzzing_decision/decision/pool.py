@@ -21,6 +21,7 @@ from taskcluster.utils import fromNow, slugId, stringDate
 from tcadmin.resources import Hook, Role, WorkerPool
 
 from ..common import taskcluster
+from ..common.pool import MachineTypes
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
 from ..common.pool import parse_time
@@ -256,8 +257,8 @@ class PoolConfiguration(CommonPoolConfiguration):
         return result
 
     def build_resources(
-        self, providers, machine_types, env=None
-    ) -> list[WorkerPool, Hook, Role]:
+        self, providers, machine_types: MachineTypes, env=None
+    ) -> list[WorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -314,6 +315,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
+        assert self.cloud is not None
         pool = WorkerPool(
             config=config,
             description=DESCRIPTION,
@@ -323,6 +325,8 @@ class PoolConfiguration(CommonPoolConfiguration):
             workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
         )
 
+        self_cycle_crons = self.cycle_crons()
+        assert self_cycle_crons is not None
         hook = Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -331,7 +335,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
+            schedule=list(self_cycle_crons),
             task=decision_task,
             triggerSchema={},
         )
@@ -370,6 +374,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         preprocess = self.create_preprocess()
         if preprocess is not None:
+            assert preprocess.max_run_time is not None
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
@@ -394,6 +399,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             preprocess_task_id = slugId()
             yield preprocess_task_id, task
 
+        assert self.max_run_time is not None
         assert self.tasks is not None
         for i in range(1, self.tasks + 1):
             task = yaml.safe_load(
@@ -428,7 +434,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
     def build_resources(
         self, providers, machine_types, env=None
-    ) -> list[WorkerPool, Hook, Role]:
+    ) -> list[WorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -479,6 +485,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
+        assert self.cloud is not None
         pool = WorkerPool(
             config=config,
             description=DESCRIPTION.replace("\n", "\\n"),
@@ -488,6 +495,8 @@ class PoolConfigMap(CommonPoolConfigMap):
             workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
         )
 
+        self_cycle_crons = self.cycle_crons()
+        assert self_cycle_crons is not None
         hook = Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -496,7 +505,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
+            schedule=list(self_cycle_crons),
             task=decision_task,
             triggerSchema={},
         )
@@ -515,6 +524,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         now = datetime.utcnow()
 
         for pool in self.iterpools():
+            assert pool.max_run_time is not None
             assert pool.tasks is not None
             for i in range(1, pool.tasks + 1):
                 task = yaml.safe_load(
@@ -547,6 +557,7 @@ class PoolConfigLoader:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
+            assert isinstance(cls, CommonPoolConfiguration)
             if set(cls.FIELD_TYPES) >= set(data) >= cls.REQUIRED_FIELDS:
                 return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
         LOG.error(
