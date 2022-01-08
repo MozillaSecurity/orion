@@ -125,9 +125,11 @@ class AndroidSDKRepo(object):
         if os.path.isfile(manifest_path):
             # compare the remote version with local
             remote_rev = self.read_revision(package)
-            local_rev = self.read_revision(
-                xml.etree.ElementTree.parse(manifest_path).find("localPackage")
-            )
+            parsed_manifest_path_find_local_package = xml.etree.ElementTree.parse(
+                manifest_path
+            ).find("localPackage")
+            assert parsed_manifest_path_find_local_package is not None
+            local_rev = self.read_revision(parsed_manifest_path_find_local_package)
             if remote_rev <= local_rev:
                 fmt_rev = ".".join(
                     "" if ver is None else ("%d" % (ver,)) for ver in local_rev
@@ -198,13 +200,23 @@ class AndroidSDKRepo(object):
         license = package.find("uses-license")
         assert license is not None
         assert self.root is not None
-        manifest.append(self.root.find("./license[@id='%s']" % (license.get("ref"),)))
+        root_found_license = self.root.find(
+            "./license[@id='%s']" % (license.get("ref"),)
+        )
+        assert root_found_license is not None
+        manifest.append(root_found_license)
         local_package = xml.etree.ElementTree.SubElement(manifest, "localPackage")
         local_package.set("path", package_path)
         local_package.set("obsolete", "false")
-        local_package.append(package.find("type-details"))
-        local_package.append(package.find("revision"))
-        local_package.append(package.find("display-name"))
+        package_find_type_details = package.find("type-details")
+        assert package_find_type_details is not None
+        local_package.append(package_find_type_details)
+        package_find_revision = package.find("revision")
+        assert package_find_revision is not None
+        local_package.append(package_find_revision)
+        package_find_display_name = package.find("display-name")
+        assert package_find_display_name is not None
+        local_package.append(package_find_display_name)
         local_package.append(license)
         deps = package.find("dependencies")
         if deps is not None:

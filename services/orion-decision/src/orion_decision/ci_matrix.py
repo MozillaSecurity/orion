@@ -544,7 +544,7 @@ class CIMatrix:
         self.secrets: list[CISecret] = []
         self._parse_matrix(matrix, branch, event_type)
 
-    def _parse_matrix(self, matrix, branch: str, event_type: bool | str) -> None:
+    def _parse_matrix(self, matrix, branch: str | None, event_type: bool | str) -> None:
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 
         given = set()

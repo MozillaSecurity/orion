@@ -872,8 +872,10 @@ def test_cycle_crons() -> None:
         },
     )
 
+    conf_cycle_crons = conf.cycle_crons()
+    assert conf_cycle_crons is not None
     # cycle time 6h
-    assert list(conf.cycle_crons()) == [
+    assert list(conf_cycle_crons) == [
         "0 0 6 * * *",
         "0 0 12 * * *",
         "0 0 18 * * *",
@@ -882,33 +884,33 @@ def test_cycle_crons() -> None:
 
     # cycle time 3.5 days
     conf.cycle_time = 3600 * 24 * 3.5
-    assert conf.cycle_crons() is not None
-    assert list(conf.cycle_crons()) == [
+    assert conf_cycle_crons is not None
+    assert list(conf_cycle_crons) == [
         "0 0 12 * * 0",
         "0 0 0 * * 4",
     ]
 
     # cycle time 17h
     conf.cycle_time = 3600 * 17
-    crons = list(conf.cycle_crons())
+    crons = list(conf_cycle_crons)
     assert len(crons) == (365 * 24 // 17) + 1
     assert crons[:4] == ["0 0 17 1 1 *", "0 0 10 2 1 *", "0 0 3 3 1 *", "0 0 20 3 1 *"]
 
     # cycle time 48h
     conf.cycle_time = 3600 * 48
-    crons = list(conf.cycle_crons())
+    crons = list(conf_cycle_crons)
     assert len(crons) == (365 * 24 // 48) + 1
     assert crons[:4] == ["0 0 0 3 1 *", "0 0 0 5 1 *", "0 0 0 7 1 *", "0 0 0 9 1 *"]
 
     # cycle time 72h
     conf.cycle_time = 3600 * 72
-    crons = list(conf.cycle_crons())
+    crons = list(conf_cycle_crons)
     assert len(crons) == (365 * 24 // 72) + 1
     assert crons[:4] == ["0 0 0 4 1 *", "0 0 0 7 1 *", "0 0 0 10 1 *", "0 0 0 13 1 *"]
 
     # cycle time 17d
     conf.cycle_time = 3600 * 24 * 17
-    crons = list(conf.cycle_crons())
+    crons = list(conf_cycle_crons)
     assert len(crons) == (365 // 17) + 1
     assert crons[:4] == ["0 0 0 18 1 *", "0 0 0 4 2 *", "0 0 0 21 2 *", "0 0 0 10 3 *"]
 
@@ -916,14 +918,14 @@ def test_cycle_crons() -> None:
     conf.schedule_start = None
     conf.cycle_time = 3600 * 12
     start = datetime.datetime.now(datetime.timezone.utc)
-    calc_none = list(conf.cycle_crons())
+    calc_none = list(conf_cycle_crons)
     fin = datetime.datetime.now(datetime.timezone.utc)
     for offset in range(int((fin - start).total_seconds()) + 1):
         conf.schedule_start = start + datetime.timedelta(seconds=offset)
-        if calc_none == list(conf.cycle_crons()):
+        if calc_none == list(conf_cycle_crons):
             break
     else:
-        assert calc_none == list(conf.cycle_crons())
+        assert calc_none == list(conf_cycle_crons)
 
 
 def test_required() -> None:
