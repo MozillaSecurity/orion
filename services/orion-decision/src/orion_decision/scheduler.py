@@ -57,7 +57,7 @@ class Scheduler:
     def __init__(
         self,
         github_event: GithubEvent,
-        now: datetime,
+        now: datetime | None,
         task_group: str,
         docker_secret: str,
         push_branch: str,
@@ -122,6 +122,7 @@ class Scheduler:
                 f"index.project.fuzzing.orion.{service.name}"
                 f".{self.github_event.branch}"
             )
+        assert self.now is not None
         if isinstance(service, ServiceMsys):
             build_task = yaml_load(
                 MSYS_TASK.substitute(
@@ -180,6 +181,7 @@ class Scheduler:
         return task_id
 
     def _create_push_task(self, service, service_build_tasks) -> str:
+        assert self.now is not None
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self.github_event.http_url,
@@ -233,6 +235,7 @@ class Scheduler:
                     ),
                 }
             image["path"] = f"public/{test.image}.tar.zst"
+        assert self.now is not None
         test_task = yaml_load(
             TEST_TASK.substitute(
                 deadline=stringDate(self.now + DEADLINE),
@@ -281,6 +284,7 @@ class Scheduler:
         dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
         if not dockerfile.is_file():
             dockerfile = service_path / "Dockerfile"
+        assert self.now is not None
         test_task = yaml_load(
             RECIPE_TEST_TASK.substitute(
                 clone_url=self.github_event.http_url,

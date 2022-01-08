@@ -71,7 +71,7 @@ def test_matrix_release(case: str, branch: str, event_type: str) -> None:
     assert not mtx.secrets
 
 
-def test_matrix_unused(caplog) -> None:
+def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
     """test that unused CI matrix dimensions trigger a warning"""
     obj = yaml_load((FIXTURES / "matrix06" / "matrix.yaml").read_text())
     mtx = CIMatrix(obj, "master", False)
@@ -110,7 +110,7 @@ def test_matrix_job_serialize(secrets: list[CISecret | None]) -> None:
     job.secrets.extend(secrets)
     job_json = str(job)
     if secrets:
-        assert all(secret.secret in job_json for secret in secrets)
+        assert all(secret.secret in job_json for secret in secrets if secret)
     job2 = MatrixJob.from_json(job_json)
     assert job == job2
 
