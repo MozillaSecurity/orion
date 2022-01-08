@@ -733,6 +733,7 @@ class PoolConfigLoader:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
+            assert isinstance(cls, PoolConfiguration)
             if set(cls.FIELD_TYPES) >= set(data.keys()) >= cls.REQUIRED_FIELDS:
                 return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
         LOG.error(

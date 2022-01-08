@@ -16,7 +16,7 @@ from .pool import cancel_tasks
 LOG = logging.getLogger(__name__)
 
 
-async def cancel_pool_tasks(action, resource):
+async def cancel_pool_tasks(action: list[str], resource: WorkerPool) -> None:
     """Cancel all the tasks on a WorkerPool being updated or deleted"""
     assert isinstance(resource, WorkerPool)
 
@@ -24,7 +24,7 @@ async def cancel_pool_tasks(action, resource):
     cancel_tasks(worker_type)
 
 
-async def trigger_hook(action, resource):
+async def trigger_hook(action: list[str], resource: WorkerPool) -> None:
     """Trigger a Hook after it is created or updated"""
     assert isinstance(resource, Hook)
 
