@@ -6,6 +6,7 @@
 """
 
 from __future__ import annotations
+import argparse
 
 import os
 import sys
@@ -16,6 +17,7 @@ from pathlib import Path
 from random import choice, random
 from string import Template
 from time import time
+from typing import Iterable
 
 from dateutil.parser import isoparse
 from grizzly.common.reporter import Quality
@@ -63,7 +65,7 @@ ReducibleCrash = namedtuple(
 )
 
 
-def _fuzzmanager_get_crashes(tool_list):
+def _fuzzmanager_get_crashes(tool_list: list[str]) -> Iterable[ReducibleCrash]:
     """This function is responsible for getting CrashInfo objects to try to reduce
     from FuzzManager.
 
@@ -81,10 +83,10 @@ def _fuzzmanager_get_crashes(tool_list):
     from, being reduced.
 
     Arguments:
-        tool_list (list): List of tools to monitor for reduction.
+        tool_list: List of tools to monitor for reduction.
 
     Yields:
-        ReducibleCrash: All the info needed to queue a crash for reduction
+        All the info needed to queue a crash for reduction
     """
     assert isinstance(tool_list, list)
     srv = CrashManager()
@@ -194,16 +196,15 @@ def _fuzzmanager_get_crashes(tool_list):
         )
 
 
-def _filter_reducing_unbucketed(tool_list):
+def _filter_reducing_unbucketed(tool_list: list[str]) -> Iterable[ReducibleCrash]:
     """This function calls `_fuzzmanager_get_crashes` and filters unbucketed
     tool/shortSignature crashes if any are reducing already.
 
     Arguments:
-        tool_list (list): List of tools to monitor for reduction.
+        tool_list: List of tools to monitor for reduction.
 
     Yields:
-        ReducibleCrash: Description and all info needed to queue a crash
-                        for reduction
+        Description and all info needed to queue a crash for reduction
     """
     # dict of tag -> min quality where we have a quality < UNREDUCED
     skip = {}
@@ -251,16 +252,15 @@ def _filter_reducing_unbucketed(tool_list):
         yield from crashes
 
 
-def _get_unique_crashes(tool_list):
+def _get_unique_crashes(tool_list: list[str]) -> Iterable[tuple[str, ReducibleCrash]]:
     """This function calls `_filter_reducing_unbucketed` and picks one unique result
     per bucket/shortSignature to reduce.
 
     Arguments:
-        tool_list (list): List of tools to monitor for reduction.
+        tool_list: List of tools to monitor for reduction.
 
     Yields:
-        (str, ReducibleCrash): Description and all info needed to queue a crash
-                               for reduction
+        Description and all info needed to queue a crash for reduction
     """
     # set of all crash signatures processed already
     seen = set()
@@ -295,7 +295,9 @@ class ReductionMonitor(ReductionWorkflow):
         tool_list (list(str)): List of Grizzly tools to look for crashes under.
     """
 
-    def __init__(self, dry_run=False, tool_list=None):
+    def __init__(
+        self, dry_run: bool = False, tool_list: list[str] | None = None
+    ) -> None:
         super().__init__()
         self.dry_run = dry_run
         if self.dry_run:
@@ -344,7 +346,7 @@ class ReductionMonitor(ReductionWorkflow):
         LOG.info("Marking %d Q4 (in progress)", crash_id)
         CrashManager().update_testcase_quality(crash_id, Quality.REDUCING.value)
 
-    def run(self):
+    def run(self) -> int | None:
         start_time = time()
         srv = CrashManager()
 
@@ -403,7 +405,7 @@ class ReductionMonitor(ReductionWorkflow):
         return 0
 
     @staticmethod
-    def parse_args(args=None):
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         parser = CommonArgParser(prog="grizzly-reduce-tc-monitor")
         parser.add_argument(
             "-n",
@@ -418,7 +420,7 @@ class ReductionMonitor(ReductionWorkflow):
         return parser.parse_args(args=args)
 
     @classmethod
-    def from_args(cls, args):
+    def from_args(cls, args: argparse.Namespace) -> ReductionMonitor:
         return cls(dry_run=args.dry_run, tool_list=args.tool_list)
 
 

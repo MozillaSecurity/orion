@@ -34,7 +34,7 @@ class ReductionUpdater(ReductionWorkflow):
         self.quality = quality
         self.only_if_quality = only_if_quality
 
-    def run(self) -> int:
+    def run(self) -> int | None:
         try:
             crash = CrashEntry(self.crash_id)
             if (

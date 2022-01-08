@@ -28,7 +28,7 @@ class PrivateLogLauncher(ReductionWorkflow):
         self.environment = os.environ.copy()
         self.log_dir = log_dir
 
-    def run(self) -> None:
+    def run(self) -> int | None:
         assert self.command
 
         LOG.info("Creating private logs directory '%s/'", self.log_dir)
