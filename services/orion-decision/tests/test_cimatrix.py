@@ -39,7 +39,7 @@ pytestmark = pytest.mark.usefixtures("mock_ci_languages")
         "matrix07",
     ],
 )
-def test_matrix_load(fixture):
+def test_matrix_load(fixture: str) -> None:
     """simple matrix load"""
     obj = yaml_load((FIXTURES / fixture / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / fixture / "expected.yaml").read_text())
@@ -59,7 +59,7 @@ def test_matrix_load(fixture):
         ("off_branch", "dev", "push"),
     ],
 )
-def test_matrix_release(case, branch, event_type):
+def test_matrix_release(case: str, branch: str, event_type: str) -> None:
     """test job `when` conditions"""
     obj = yaml_load((FIXTURES / "matrix04" / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / "matrix04" / f"expected_{case}.yaml").read_text())
@@ -71,7 +71,7 @@ def test_matrix_release(case, branch, event_type):
     assert not mtx.secrets
 
 
-def test_matrix_unused(caplog):
+def test_matrix_unused(caplog) -> None:
     """test that unused CI matrix dimensions trigger a warning"""
     obj = yaml_load((FIXTURES / "matrix06" / "matrix.yaml").read_text())
     mtx = CIMatrix(obj, "master", False)
@@ -95,7 +95,7 @@ def test_matrix_unused(caplog):
         [CISecretKey("project/deploy")],
     ],
 )
-def test_matrix_job_serialize(secrets):
+def test_matrix_job_serialize(secrets: list[CISecret | None]) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(
         "name",
@@ -128,7 +128,7 @@ def test_matrix_job_serialize(secrets):
         CISecretKey("project/secret", hostname="repo", key="obj"),
     ],
 )
-def test_matrix_secret_serialize(secret):
+def test_matrix_secret_serialize(secret: CISecret) -> None:
     """test that CISecret serialize/deserialize is lossless"""
     secret2 = CISecret.from_json(str(secret))
     assert secret == secret2

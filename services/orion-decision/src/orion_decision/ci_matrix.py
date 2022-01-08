@@ -531,7 +531,7 @@ class CIMatrix:
 
     __slots__ = ("jobs", "secrets")
 
-    def __init__(self, matrix, branch: str | None, event_type: str) -> None:
+    def __init__(self, matrix, branch: str | None, event_type: bool | str) -> None:
         """Initialize a CIMatrix object.
 
         Arguments:
@@ -544,7 +544,7 @@ class CIMatrix:
         self.secrets: list[CISecret] = []
         self._parse_matrix(matrix, branch, event_type)
 
-    def _parse_matrix(self, matrix, branch: str, event_type: str) -> None:
+    def _parse_matrix(self, matrix, branch: str, event_type: bool | str) -> None:
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 
         given = set()
@@ -627,6 +627,7 @@ class CIMatrix:
                     name = include.get("name")
 
                     if "when" in include:
+                        assert isinstance(event_type, str)
                         if include["when"].get("release") is (event_type != "release"):
                             continue
 
