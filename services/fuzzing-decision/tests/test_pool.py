@@ -38,9 +38,9 @@ WST_URL = "https://community-websocktunnel.services.mozilla.com"
         ("128t", "1g", 128 * 1024),
     ],
 )
-def test_parse_size(size: str, divisor: str, result: int) -> None:
-    if isinstance(divisor, str):
-        divisor = parse_size(divisor)
+def test_parse_size(size: str, divisor_: str, result: int) -> None:
+    if isinstance(divisor_, str):
+        divisor = parse_size(divisor_)
 
     assert parse_size(size) / divisor == result
 
@@ -82,24 +82,26 @@ def test_machine_filters(
 # Hook & role should be the same across cloud providers
 def _get_expected_hook(
     platform: list[str] | str = "linux",
-) -> dict[
-    str,
-    dict[
-        str,
-        dict[
-            str,
-            dict[str, str] | dict[str, bool] | list[str] | int | str,
-        ]
-        | dict[str, str]
-        | list[str]
-        | int
-        | str,
-    ]
-    | dict[str, str]
-    | list[str]
-    | bool
-    | str,
-]:
+):
+    # Try a return type of:
+    # dict[
+    #     str,
+    #     dict[
+    #         str,
+    #         dict[
+    #             str,
+    #             dict[str, str] | dict[str, bool] | list[str] | int | str,
+    #         ]
+    #         | dict[str, str]
+    #         | list[str]
+    #         | int
+    #         | str,
+    #     ]
+    #     | dict[str, str]
+    #     | list[str]
+    #     | bool
+    #     | str,
+    # ]
     empty_str_list: list[str] = []
     empty_str_dict: dict[str, str] = {}
     return {
@@ -229,19 +231,21 @@ def test_aws_resources(
     pool, hook, role = resources
 
     empty_str_dict: dict[str, str] = {}
-    expected: dict[
-        str,
-        dict[
-            str,
-            list[
-                dict[str, dict[str, dict[str, str] | list[str] | str] | int | str]
-                | dict[str, str]
-            ]
-            | int,
-        ]
-        | bool
-        | str,
-    ] = {
+    # Try a type specification of:
+    # dict[
+    #     str,
+    #     dict[
+    #         str,
+    #         list[
+    #             dict[str, dict[str, dict[str, str] | list[str] | str] | int | str]
+    #             | dict[str, str]
+    #         ]
+    #         | int,
+    #     ]
+    #     | bool
+    #     | str,
+    # ]
+    expected = {
         "config": {
             "launchConfigs": [
                 {
@@ -836,8 +840,8 @@ def test_pool_map() -> None:
 )
 def test_pool_loader(
     loader: CommonPoolConfigLoader,
-    config_cls: CommonPoolConfiguration,
-    map_cls: CommonPoolConfigMap,
+    config_cls: Type[CommonPoolConfiguration],
+    map_cls: Type[CommonPoolConfigMap],
 ) -> None:
     obj = loader.from_file(POOL_FIXTURES / "load-cfg.yml")
     assert isinstance(obj, config_cls)
