@@ -25,15 +25,17 @@ class PoolLauncher(Workflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
     def __init__(
-        self, command, pool_name: str | None, preprocess: bool = False
+        self, command: list[str], pool_name: str | None, preprocess: bool = False
     ) -> None:
         super().__init__()
 
+        self.apply: str | None
         self.command = command.copy()
         self.environment = os.environ.copy()
         if pool_name is not None and "/" in pool_name:
             self.apply, self.pool_name = pool_name.split("/")
         else:
+            assert pool_name is not None
             self.pool_name = pool_name
             self.apply = None
         self.preprocess = preprocess
