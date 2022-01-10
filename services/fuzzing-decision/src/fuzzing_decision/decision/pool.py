@@ -56,10 +56,10 @@ FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
 
 
 class MountArtifactResolver:
-    CACHE = {}  # cache of orion service -> taskId
+    CACHE: dict[str, int] = {}  # cache of orion service -> taskId
 
     @classmethod
-    def lookup_taskid(cls, namespace: str):
+    def lookup_taskid(cls, namespace: str) -> int:
         assert isinstance(namespace, str)
         if namespace not in cls.CACHE:
             # need to resolve "image" to a task ID where the mount
@@ -159,7 +159,7 @@ def configure_task(task, config, now, env) -> None:
         task["payload"]["env"].update(env)
 
 
-def cancel_tasks(worker_type) -> None:
+def cancel_tasks(worker_type: str) -> None:
     # Avoid cancelling self
     self_task_id = os.getenv("TASK_ID")
 
@@ -172,7 +172,7 @@ def cancel_tasks(worker_type) -> None:
     )
 
     # Get tasks by hook
-    def iter_tasks_by_hook(hook_id):
+    def iter_tasks_by_hook(hook_id: str):
         try:
             for fire in hooks.listLastFires(HOOK_PREFIX, hook_id)["lastFires"]:
                 if fire["result"] != "success":
@@ -349,7 +349,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         return [pool, hook, role]
 
-    def artifact_map(self, expires):
+    def artifact_map(self, expires: str):
         result = {}
         for local_path, value in self.artifacts.items():
             assert isinstance(value["url"], str)
@@ -433,7 +433,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         return f"{self.platform}-{self.pool_id}"
 
     def build_resources(
-        self, providers, machine_types, env=None
+        self, providers, machine_types: MachineTypes, env=None
     ) -> list[WorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 

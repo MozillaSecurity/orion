@@ -65,7 +65,7 @@ def test_service_load03() -> None:
     assert svc.tests[0].name == "test-test"
     assert svc.tests[0].image == "test-test-image"
     assert svc.tests[0].toxenv == "toxenvpy3"
-    task = {"payload": {}}
+    task: dict[str, dict[str, str]] = {"payload": {}}
     svc.tests[0].update_task(
         task, "{clone_url}", "{branch}", "{commit}", "/path/to/test"
     )
@@ -79,7 +79,7 @@ def test_service_load03() -> None:
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )
-def test_service_load04(defn: list[str]) -> None:
+def test_service_load04(defn) -> None:
     """test that service test errors are raised"""
     expect = defn.pop("expect")
     if "raises" in expect:

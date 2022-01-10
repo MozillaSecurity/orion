@@ -38,7 +38,7 @@ class Workflow(CommonWorkflow):
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args: str, **kwds):
+    def configure(self, *args, **kwds):
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")
@@ -114,7 +114,7 @@ class Workflow(CommonWorkflow):
         community = yaml.safe_load(path_.read_text())
         assert "fuzzing" in community, "Missing fuzzing main key in community config"
 
-        def _suffix(data, key):
+        def _suffix(data, key) -> str:
             existing = data.get(key, {})
             if not existing:
                 # Manage every resource possible

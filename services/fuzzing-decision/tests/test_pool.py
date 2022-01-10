@@ -319,7 +319,7 @@ def test_aws_resources(
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(
-    env, mock_clouds: MockClouds, mock_machines: MachineTypes
+    env: dict[str, str] | None, mock_clouds: MockClouds, mock_machines: MachineTypes
 ) -> None:
     conf = PoolConfiguration(
         "test",
@@ -490,7 +490,11 @@ def test_gcp_resources(
     ],
 )
 def test_tasks(
-    env, scope_caps, platform: str, run_as_admin: bool, mocker: MockerFixture
+    env: dict[str, str] | None,
+    scope_caps,
+    platform: str,
+    run_as_admin: bool,
+    mocker: MockerFixture,
 ) -> None:
     mocker.patch.dict(
         "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",

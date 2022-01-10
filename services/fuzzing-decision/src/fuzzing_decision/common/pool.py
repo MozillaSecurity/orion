@@ -193,7 +193,7 @@ class MachineTypes:
 class PoolConfigData(TypedDict):
     """PoolConfigData type specification."""
 
-    artifacts: NotRequired[dict[str, str]]
+    artifacts: NotRequired[dict[str, dict[str, str]]]
     apply_to: NotRequired[list[str]]
     cloud: NotRequired[str | None]
     scopes: NotRequired[list[str]]

@@ -180,7 +180,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_push_task(self, service, service_build_tasks) -> str:
+    def _create_push_task(self, service, service_build_tasks):
         assert self.now is not None
         push_task = yaml_load(
             PUSH_TASK.substitute(
@@ -217,7 +217,7 @@ class Scheduler:
         service: Service,
         test: ToxServiceTest,
         service_build_tasks: dict[str, str],
-    ) -> str:
+    ):
         test_image = test.image
         deps = []
         if test_image in service_build_tasks:
