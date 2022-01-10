@@ -107,7 +107,12 @@ then
     (
       cd domino-xpcshell
       npm ci --no-progress
-      nohup node dist/server.js "$XPCRT" &
+      node dist/server.js "$XPCRT" &
+    )
+  else
+    (
+      cd domino-xpcshell
+      node dist/server.js "$XPCRT" &
     )
   fi
 
