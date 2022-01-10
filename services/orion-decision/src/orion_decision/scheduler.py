@@ -30,7 +30,7 @@ from . import (
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Recipe, Service, ServiceMsys, ServiceTest, Services, ToxServiceTest
+from .orion import Recipe, Service, ServiceMsys, Services, ToxServiceTest
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()

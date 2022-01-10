@@ -28,7 +28,7 @@ from . import (
     WORKER_TYPE_MSYS,
     Taskcluster,
 )
-from .ci_matrix import CIMatrix, CISecret, CISecretKey
+from .ci_matrix import CIMatrix, CISecretKey
 from .git import GithubEvent
 
 LOG = getLogger(__name__)
