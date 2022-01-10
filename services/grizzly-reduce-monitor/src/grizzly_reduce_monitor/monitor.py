@@ -126,7 +126,7 @@ def _fuzzmanager_get_crashes(tool_list: list[str]) -> Iterable[ReducibleCrash]:
         len(bucket_tools),
     )
 
-    buckets_by_tool = {}
+    buckets_by_tool: dict[str, list[str]] = {}
     for (bucket, tool) in bucket_tools:
         buckets_by_tool.setdefault(tool, [])
         buckets_by_tool[tool].append(bucket)

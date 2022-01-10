@@ -67,7 +67,7 @@ class Workflow:
 
         return config
 
-    def clone(self, config) -> None:
+    def clone(self, config: dict[str, str]) -> None:
         """Clone remote repositories according to current setup"""
         assert isinstance(config, dict)
 

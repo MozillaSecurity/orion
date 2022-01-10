@@ -12,6 +12,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from logging import getLogger
 from pathlib import Path
+from typing import Iterable
 
 from jsonschema import RefResolver, validate
 from yaml import safe_load as yaml_load
@@ -34,18 +35,18 @@ IMAGES = {
     ("python", "linux", "3.10"): "ci-py-310",
     ("python", "windows", "3.8"): "ci-py-38-win",
 }
-SCHEMA_CACHE = {}
+SCHEMA_CACHE: dict[str, str] = {}
 LOG = getLogger(__name__)
 
 
-def _schema_by_name(name):
+def _schema_by_name(name: str):
     for schema in SCHEMA_CACHE.values():
         if schema["title"] == name:
             return schema
     raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
 
 
-def _validate_schema_by_name(instance, name):
+def _validate_schema_by_name(instance: dict[str, str] | str, name: str):
     schema = _schema_by_name(name)
     resolver = RefResolver(None, referrer=None, store=SCHEMA_CACHE)
     return validate(instance=instance, schema=schema, resolver=resolver)
@@ -55,18 +56,18 @@ class MatrixJob:
     """Representation of a CI job.
 
     Attributes:
-        env (dict(str -> str)): Environment variables to set for `script`.
-        language (str): The programming language under test (must be in `LANGUAGES`)
-        name (str): The name for this job
-        platform (str): The operating system to run test (must be in `PLATFORMS`)
-        require_previous_stage_pass (bool): This job should only run after all jobs
-                                            with a lower `stage` have succeeded.
-        script (list(str)): The command to run (single command).
-        secrets (list(CISecret)): Secrets to be fetched when the job is run.
-        stage (int): The CI stage. Stages are scheduled sequentially in ascending order,
-                     with all jobs in the same stage running in parallel.
-        version (str): Version number of `language` to run (must be in
-                       `VERSIONS[(language, platform)]`)
+        env): Environment variables to set for `script`.
+        language: The programming language under test (must be in `LANGUAGES`)
+        name: The name for this job
+        platform: The operating system to run test (must be in `PLATFORMS`)
+        require_previous_stage_pass: This job should only run after all jobs
+                                     with a lower `stage` have succeeded.
+        script: The command to run (single command).
+        secrets: Secrets to be fetched when the job is run.
+        stage: The CI stage. Stages are scheduled sequentially in ascending order,
+               with all jobs in the same stage running in parallel.
+        version: Version number of `language` to run (must be in
+                 `VERSIONS[(language, platform)]`)
     """
 
     __slots__ = (
@@ -119,7 +120,7 @@ class MatrixJob:
         self.script = script
         self.stage = stage
         self.require_previous_stage_pass = previous_pass
-        self.secrets = []
+        self.secrets: list[CISecret] = []
 
     @property
     def image(self) -> str:
@@ -202,7 +203,7 @@ class MatrixJob:
         result.check()
         return result
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         for attr in self.__slots__:
             if attr == "secrets":
                 continue
@@ -210,7 +211,7 @@ class MatrixJob:
                 return False
         return all(secret in other.secrets for secret in self.secrets)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json_dumps(self.serialize())
 
     def serialize(self) -> dict[str, str | None]:
@@ -228,7 +229,7 @@ class MatrixJob:
         language: str | None = None,
         version: str | None = None,
         platform: str | None = None,
-        env=None,
+        env: dict[str, str] | None = None,
         script: list[str] | None = None,
     ) -> bool:
         """Check if this object matches all given arguments.
@@ -237,9 +238,9 @@ class MatrixJob:
             language: If not None, check for match on `language` attribute.
             version: If not None, check for match on `version` attribute.
             platform: If not None, check for match on `platform` attribute.
-            env (dict/None): If not None, check that all given `env` values match self.
-                             `self.env` may have other keys, only the keys passed in
-                             `env` are checked.
+            env: If not None, check that all given `env` values match self.
+                 `self.env` may have other keys, only the keys passed in
+                 `env` are checked.
             script: If not None, check for match on `script` attribute.
 
         Returns:
@@ -339,7 +340,7 @@ class CISecret(ABC):
             return result["secret"][self.key]
         return result["secret"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return json_dumps(self.serialize())
 
     @abstractmethod
@@ -715,7 +716,7 @@ class CIMatrix:
         for job in self.jobs:
             job.check()
 
-    def _parse_secrets(self, secrets: str):
+    def _parse_secrets(self, secrets: str) -> Iterable[CISecret]:
         for secret in secrets:
             result = CISecret.from_json(secret)
             assert not any(result.is_alias(secret) for secret in self.secrets)
@@ -730,7 +731,7 @@ def _load_schema_cache() -> None:
 
 def _validate_globals() -> None:
     # validate VERSIONS
-    valid_image_keys = []
+    valid_image_keys: list[tuple[str, str, str]] = []
     for (language, platform), versions in VERSIONS.items():
         assert language in LANGUAGES, f"unknown language in VERSIONS: {language}"
         assert platform in PLATFORMS, f"unknown platform in VERSIONS: {platform}"

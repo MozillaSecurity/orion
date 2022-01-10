@@ -5,6 +5,7 @@
 """Checker for CI build matrix"""
 
 from __future__ import annotations
+import argparse
 
 from logging import getLogger
 from pathlib import Path
@@ -21,16 +22,13 @@ LOG = getLogger(__name__)
 EVENTS_PATH = Path(__file__).parent / "github_test_events"
 
 
-def check_matrix(args):
+def check_matrix(args: argparse.Namespace) -> None:
     """Check whether the CI matrix found in .taskcluster.yml can be loaded.
 
     Raises if any error is found.
 
     Arguments:
-        args (argparse.Namespace): Arguments as returned by `parse_ci_check_args()`
-
-    Returns:
-        None
+        args: Arguments as returned by `parse_ci_check_args()`
     """
     for changed in args.changed:
         # is it a taskcluster.yml?

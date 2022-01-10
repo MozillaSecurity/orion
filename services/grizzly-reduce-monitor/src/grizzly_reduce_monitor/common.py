@@ -98,8 +98,8 @@ class CrashManager(Reporter):
     """Class to manage access to CrashManager server."""
 
     @remote_checks
-    def _list_objs(self, endpoint: str, query=None, ordering=None):
-        params: dict[str, int | str] | None = {}
+    def _list_objs(self, endpoint: str, query=None, ordering: list[str] | None = None):
+        params = {}
         if query is not None:
             assert params is not None
             params["query"] = json.dumps(query)
@@ -134,13 +134,13 @@ class CrashManager(Reporter):
             LOG.debug("yielding %d/%d %s", returned, resp_json["count"], endpoint)
             yield from resp_json["results"]
 
-    def list_crashes(self, query=None, ordering=None):
+    def list_crashes(self, query=None, ordering: list[str] | None = None):
         """List all CrashEntry objects.
 
         Arguments:
             query (dict or None): The query definition to use.
                                   (see crashmanager.views.json_to_query)
-            ordering (list or None): Field(s) to order by (eg. `id` or `-id`)
+            ordering: Field(s) to order by (eg. `id` or `-id`)
 
         Yields:
             dict: Dict representation of CrashEntry
@@ -225,7 +225,7 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args: argparse.Namespace | None = None) -> None:
+    def main(cls, args: argparse.Namespace | None = None) -> int | None:
         """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()

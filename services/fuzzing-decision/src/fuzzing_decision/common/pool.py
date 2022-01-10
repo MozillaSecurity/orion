@@ -151,7 +151,7 @@ class MachineTypes:
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
-    def cpus(self, provider: str, architecture: str, machine: str) -> int:
+    def cpus(self, provider: str, architecture: str, machine: str):
         return self._data[provider][architecture][machine]["cpu"]
 
     def zone_blacklist(
@@ -274,6 +274,7 @@ class CommonPoolConfiguration(abc.ABC):
         if isinstance(data.get("container"), dict):
             value = data["container"]
             assert value is not None
+            assert isinstance(value, dict)
             assert "type" in value, "'container' missing required key: 'type'"
             assert value["type"] in {
                 "docker-image",
