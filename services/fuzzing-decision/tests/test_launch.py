@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from _pytest.monkeypatch import MonkeyPatch
 import pytest
 import yaml
 
@@ -134,7 +133,7 @@ def test_load_params(tmp_path: Path) -> None:
     assert launcher.environment == {"STATIC": "value", "PREPROC": "1"}
 
 
-def test_launch_exec(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_launch_exec(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Start with taskcluster detection disabled, even on CI
     monkeypatch.delenv("TASK_ID", raising=False)
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
