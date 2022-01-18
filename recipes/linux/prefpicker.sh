@@ -20,7 +20,6 @@ case "${1-install}" in
       python3
     apt-install-auto \
       ca-certificates \
-      python3-dev \
       python3-pip \
       python3-setuptools \
       python3-wheel
