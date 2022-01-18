@@ -16,10 +16,10 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     sys-embed \
-      ca-certificates \
       git \
       python3
     apt-install-auto \
+      ca-certificates \
       python3-dev \
       python3-pip \
       python3-setuptools \
