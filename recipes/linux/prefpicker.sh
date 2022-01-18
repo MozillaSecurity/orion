@@ -16,17 +16,17 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     sys-embed \
-      ca-certificates \
-      p7zip-full \
+      git \
       python3
     apt-install-auto \
-      gcc \
-      python3-dev \
+      ca-certificates \
       python3-pip \
       python3-setuptools \
       python3-wheel
 
-    retry pip3 install prefpicker
+    git-clone "https://github.com/MozillaSecurity/prefpicker.git"
+    cd prefpicker
+    pip install .
     ;;
   test)
     prefpicker -h
