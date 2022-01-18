@@ -20,6 +20,7 @@ from . import (
     SCHEDULER_ID,
     TASKCLUSTER_ROOT_URL,
     WORKER_TYPE,
+    WORKER_TYPE_BREW,
     WORKER_TYPE_MSYS,
     Taskcluster,
 )
@@ -31,9 +32,11 @@ TEMPLATE_PATH = (Path(__file__).parent / "task_templates").resolve()
 TEMPLATES = {}
 TEMPLATES["linux"] = Template((TEMPLATE_PATH / "ci-linux.yaml").read_text())
 TEMPLATES["windows"] = Template((TEMPLATE_PATH / "ci-windows.yaml").read_text())
+TEMPLATES["macos"] = Template((TEMPLATE_PATH / "ci-macos.yaml").read_text())
 WORKER_TYPES = {}
 WORKER_TYPES["linux"] = WORKER_TYPE
 WORKER_TYPES["windows"] = WORKER_TYPE_MSYS
+WORKER_TYPES["macos"] = WORKER_TYPE_BREW
 
 
 class CIScheduler:
@@ -143,6 +146,12 @@ class CIScheduler:
                     idx = Taskcluster.get_service("index")
                     result = idx.findTask(f"project.fuzzing.orion.{job.image}.master")
                     kwds["msys_task"] = result["taskId"]
+                elif job.platform == "macos":
+                    # need to resolve "image" to a task ID where the Homebrew
+                    # artifact is
+                    idx = Taskcluster.get_service("index")
+                    result = idx.findTask(f"project.fuzzing.orion.{job.image}.master")
+                    kwds["homebrew_task"] = result["taskId"]
                 else:
                     kwds["image"] = job.image
                 task = yaml_load(TEMPLATES[job.platform].substitute(**kwds))

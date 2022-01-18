@@ -222,11 +222,15 @@ class Service:
         else:
             tests = []
         if "type" in metadata:
-            assert metadata["type"] in {"docker", "msys"}
+            assert metadata["type"] in {"docker", "msys", "homebrew"}
         if metadata.get("type") == "msys":
             base = metadata["base"]
             assert (metadata_path.parent / "setup.sh").is_file()
             result = ServiceMsys(base, context, name, tests, metadata_path.parent)
+        elif metadata.get("type") == "homebrew":
+            base = metadata["base"]
+            assert (metadata_path.parent / "setup.sh").is_file()
+            result = ServiceHomebrew(base, context, name, tests, metadata_path.parent)
         else:
             cpu = {"x86_64": "amd64"}.get(machine(), machine())
             if (
@@ -242,6 +246,35 @@ class Service:
         result.service_deps |= set(metadata.get("force_deps", []))
         result.weak_deps |= set(metadata.get("force_dirty", []))
         return result
+
+
+class ServiceHomebrew(Service):
+    """Orion service (Homebrew tar)
+
+    Attributes:
+        base (str): URL to Homebrew base tar to use.
+        context (Path): build context
+        name (str): Image name
+        service_deps (set(str)): Names of images that this one depends on.
+        path_deps (set(Path)): Paths that this image depends on.
+        recipe_deps (set(str)): Names of recipes that this service depends on.
+        dirty (bool): Whether or not this image needs to be rebuilt
+        tests (list[ServiceTest]): Tests to run against this service
+        root (Path): Path where service is defined
+    """
+
+    def __init__(self, base, context, name, tests, root):
+        """Initialize a ServiceHomebrew instance.
+
+        Arguments:
+            base (str): URL to Homebrew base tar to use.
+            context (Path): build context
+            name (str): Image name
+            tests (list[ServiceTest]): Tests to run against this service
+            root (Path): Path where service is defined
+        """
+        super().__init__(None, context, name, tests, root)
+        self.base = base
 
 
 class ServiceMsys(Service):
@@ -439,7 +472,7 @@ class Services(dict):
                     "Service %s is dirty with service %s (forced)", service.name, dep
                 )
 
-            if isinstance(service, ServiceMsys):
+            if isinstance(service, (ServiceMsys, ServiceHomebrew)):
                 search_root = service.root
             else:
                 # calculate image dependencies

@@ -16,10 +16,11 @@ from yaml import safe_load as yaml_load
 from . import Taskcluster
 
 LANGUAGES = ["python"]
-PLATFORMS = ["linux", "windows"]
+PLATFORMS = ["linux", "windows", "macos"]
 VERSIONS = {
     ("python", "linux"): ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10"],
     ("python", "windows"): ["3.8"],
+    ("python", "macos"): ["3.8", "3.9", "3.10"],
 }
 IMAGES = {
     ("python", "linux", "2.7"): "ci-py-27",
@@ -30,6 +31,9 @@ IMAGES = {
     ("python", "linux", "3.9"): "ci-py-39",
     ("python", "linux", "3.10"): "ci-py-310",
     ("python", "windows", "3.8"): "ci-py-38-win",
+    ("python", "macos", "3.8"): "ci-py-38-osx",
+    ("python", "macos", "3.9"): "ci-py-39-osx",
+    ("python", "macos", "3.10"): "ci-py-310-osx",
 }
 SCHEMA_CACHE = {}
 LOG = getLogger(__name__)
