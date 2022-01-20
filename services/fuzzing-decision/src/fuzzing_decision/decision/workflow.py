@@ -19,7 +19,7 @@ from ..common.pool import MachineTypes
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
 from .pool import PoolConfigLoader, cancel_tasks
-from .providers import AWS, GCP
+from .providers import AWS, GCP, Static
 
 LOG = logging.getLogger(__name__)
 
@@ -84,6 +84,7 @@ class Workflow(CommonWorkflow):
         clouds = {
             "aws": AWS(self.community_config_dir),
             "gcp": GCP(self.community_config_dir),
+            "static": Static(),
         }
 
         # Load the machine types

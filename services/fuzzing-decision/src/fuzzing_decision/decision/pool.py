@@ -303,16 +303,17 @@ class PoolConfiguration(CommonPoolConfiguration):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
-        pool = WorkerPool(
-            config=config,
-            description=DESCRIPTION,
-            emailOnError=True,
-            owner=OWNER_EMAIL,
-            providerId=PROVIDER_IDS[self.cloud],
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-        )
+        if self.cloud != "static":
+            yield WorkerPool(
+                config=config,
+                description=DESCRIPTION,
+                emailOnError=True,
+                owner=OWNER_EMAIL,
+                providerId=PROVIDER_IDS[self.cloud],
+                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
+            )
 
-        hook = Hook(
+        yield Hook(
             bindings=(),
             description=DESCRIPTION,
             emailOnError=True,
@@ -325,14 +326,12 @@ class PoolConfiguration(CommonPoolConfiguration):
             triggerSchema={},
         )
 
-        role = Role(
+        yield Role(
             description=DESCRIPTION,
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             scopes=decision_task["scopes"]
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
-
-        return [pool, hook, role]
 
     def artifact_map(self, expires):
         result = {}
@@ -461,16 +460,17 @@ class PoolConfigMap(CommonPoolConfigMap):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
-        pool = WorkerPool(
-            config=config,
-            description=DESCRIPTION.replace("\n", "\\n"),
-            emailOnError=True,
-            owner=OWNER_EMAIL,
-            providerId=PROVIDER_IDS[self.cloud],
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-        )
+        if self.cloud != "static":
+            yield WorkerPool(
+                config=config,
+                description=DESCRIPTION.replace("\n", "\\n"),
+                emailOnError=True,
+                owner=OWNER_EMAIL,
+                providerId=PROVIDER_IDS[self.cloud],
+                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
+            )
 
-        hook = Hook(
+        yield Hook(
             bindings=(),
             description=DESCRIPTION,
             emailOnError=True,
@@ -483,14 +483,12 @@ class PoolConfigMap(CommonPoolConfigMap):
             triggerSchema={},
         )
 
-        role = Role(
+        yield Role(
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             description=DESCRIPTION,
             scopes=decision_task["scopes"]
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
-
-        return [pool, hook, role]
 
     def build_tasks(self, parent_task_id, env=None):
         """Create fuzzing tasks and attach them to a decision task"""
