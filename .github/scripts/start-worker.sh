@@ -5,7 +5,7 @@
 
 set -x
 
-TC_VERSION=v44.2.2
+TC_VERSION=v44.4.0
 TC_PROJECT=fuzzing
 TC_WORKER_TYPE=ci-osx
 TC_IDLE_TIMEOUT=300
@@ -32,7 +32,9 @@ cat > worker.config <<EOF
   "tasksDir": "tasks",
   "workerGroup": "proj-$TC_PROJECT",
   "workerId": "$TC_WORKER_ID",
-  "workerType": "$TC_WORKER_TYPE"
+  "workerType": "$TC_WORKER_TYPE",
+  "wstAudience": "communitytc",
+  "wstServerURL": "https://community-websocktunnel.services.mozilla.com"
 }
 EOF
 set -x
