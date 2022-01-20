@@ -1,0 +1,5 @@
+name: grizzly-macos
+type: homebrew
+base: https://github.com/Homebrew/brew/archive/refs/tags/3.3.11.tar.gz
+force_dirty:
+  - fuzzing-decision
