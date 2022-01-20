@@ -70,7 +70,7 @@ class MountArtifactResolver:
 
 def add_task_image(task, config):
     """Add image or mount to task payload, depending on platform."""
-    if config.platform == "windows":
+    if config.platform in {"macos", "windows"}:
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
         if config.container["type"] == "indexed-image":
@@ -141,16 +141,27 @@ def configure_task(task, config, now, env):
             ),
             "fuzzing-pool-launch",
         ]
+        if config.run_as_admin:
+            task["payload"].setdefault("osGroups", [])
+            task["payload"]["osGroups"].append("Administrators")
+            task["payload"]["features"]["runAsAdministrator"] = True
+    elif config.platform == "macos":
+        task["payload"]["command"] = [
+            [
+                "/bin/bash",
+                "-c",
+                "-x",
+                'eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch',
+            ],
+        ]
+
+    if config.platform in {"macos", "windows"}:
         # translate artifacts from dict to array for generic-worker
         task["payload"]["artifacts"] = [
             # `... or artifact` because dict.update returns None
             artifact.update({"name": name}) or artifact
             for name, artifact in task["payload"]["artifacts"].items()
         ]
-        if config.run_as_admin:
-            task["payload"].setdefault("osGroups", [])
-            task["payload"]["osGroups"].append("Administrators")
-            task["payload"]["features"]["runAsAdministrator"] = True
     if env is not None:
         assert set(task["payload"]["env"]).isdisjoint(set(env))
         task["payload"]["env"].update(env)

@@ -196,7 +196,7 @@ class CommonPoolConfiguration(abc.ABC):
         metal (bool): whether or not the target requires to be run on bare metal
         minimum_memory_per_core (float): minimum RAM to be made available per core in GB
         name (str): descriptive name of the configuration
-        platform (str): operating system of the target (linux, windows)
+        platform (str): operating system of the target (linux, macos, windows)
         pool_id (str): basename of the pool on disk (eg. "pool1" for pool1.yml)
         preprocess (str): name of pool configuration to apply and run before fuzzing
                           tasks
