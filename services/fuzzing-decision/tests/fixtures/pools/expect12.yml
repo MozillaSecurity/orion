@@ -1,0 +1,28 @@
+cloud: aws
+scopes:
+  - scope1
+disk_size: 120g
+cycle_time: 1h
+max_run_time: 1h
+schedule_start: null
+cores_per_task: 10
+metal: false
+name: pool12
+tasks: 3
+command:
+  - cmd1
+  - arg1
+container: MozillaSecurity/fuzzer:latest
+minimum_memory_per_core: 1g
+imageset: generic-worker-A
+parents:
+  - pool1
+  - mixin
+cpu: arm64
+platform: linux
+preprocess: ""
+macros:
+  ENVVAR1: "123456"
+  ENVVAR2: 789abc
+  ENVVAR3: mixin-var
+run_as_admin: false

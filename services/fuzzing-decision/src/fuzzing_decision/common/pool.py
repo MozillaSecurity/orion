@@ -562,7 +562,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                             f"overwriting field {field} in {self.pool_id} from "
                             f"{parent_id}"
                         )
-                    setattr(self, field, getattr(parent_obj, field))
+                        setattr(self, field, getattr(parent_obj, field))
 
             # merged dict fields
             for field in merge_dict_fields:
@@ -570,7 +570,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                     LOG.debug(
                         f"merging dict field {field} in {self.pool_id} from {parent_id}"
                     )
-                getattr(self, field).update(getattr(parent_obj, field))
+                    getattr(self, field).update(getattr(parent_obj, field))
 
             # merged list fields
             for field in merge_list_fields:
@@ -578,11 +578,13 @@ class PoolConfiguration(CommonPoolConfiguration):
                     LOG.debug(
                         f"merging list field {field} in {self.pool_id} from {parent_id}"
                     )
-                setattr(
-                    self,
-                    field,
-                    list(set(getattr(self, field)) | set(getattr(parent_obj, field))),
-                )
+                    setattr(
+                        self,
+                        field,
+                        list(
+                            set(getattr(self, field)) | set(getattr(parent_obj, field))
+                        ),
+                    )
 
         # dict values defined in self take precedence over values defined in parents
         for field, values in my_merge_dict_values.items():

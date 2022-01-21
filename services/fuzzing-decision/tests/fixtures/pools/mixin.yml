@@ -1,0 +1,3 @@
+name: "mixin test"
+macros:
+  ENVVAR3: mixin-var
