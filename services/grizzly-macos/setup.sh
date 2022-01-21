@@ -6,6 +6,7 @@ brew install --force-bottle openssl@1.1 python@3.9
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python@3.9/libexec/bin:${HOMEBREW_PREFIX}/opt/python@3.9/bin:${HOMEBREW_PREFIX}/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/bin:,' homebrew/Library/Homebrew/cmd/shellenv.sh
 PATH="$HOMEBREW_PREFIX/opt/python@3.9/libexec/bin:$HOMEBREW_PREFIX/opt/python@3.9/bin:$HOMEBREW_PREFIX/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/bin:$PATH"
 
+brew install --force-bottle screen
 brew install --force-bottle p7zip zstd
 brew install --force-bottle fluent-bit
 brew install --force-bottle apr-util subversion
