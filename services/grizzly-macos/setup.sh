@@ -54,4 +54,4 @@ cp -r orion/services/fuzzing-decision fuzzing-decision
 python -m pip install ./fuzzing-decision
 
 relocate_homebrew.sh
-tar -jcvf homebrew.tar.bz2 homebrew pip
+tar -jcvf homebrew.tar.bz2 homebrew pip launch.sh
