@@ -19,7 +19,7 @@ sys-update
 cd "${0%/*}"
 ./fluentbit.sh
 ./fuzzfetch.sh
-EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
+SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
 ./nodejs.sh
