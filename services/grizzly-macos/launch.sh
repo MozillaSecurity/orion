@@ -2,6 +2,7 @@
 set -e -x
 
 trap 'jobs -p | xargs -r kill' EXIT
+export HOME="$PWD"
 
 retry () {
   i=0
@@ -29,14 +30,14 @@ set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       Off
-    Log_File     ~/td-agent-bit.log
+    Log_File     $PWD/td-agent-bit.log
     Log_Level    info
     Parsers_File parsers.conf
     Plugins_File plugins.conf
 
 [INPUT]
     Name tail
-    Path ~/logs/live.log,~/grizzly-auto-run/screenlog.*
+    Path $PWD/logs/live.log,$PWD/grizzly-auto-run/screenlog.*
     Path_Key file
     Key message
     Refresh_Interval 5
@@ -61,13 +62,13 @@ cat > td-agent-bit.conf << EOF
 [OUTPUT]
     Name stackdriver
     Match *
-    google_service_credentials ~/google_logging_creds.json
+    google_service_credentials $PWD/google_logging_creds.json
     resource global
 
 [OUTPUT]
     Name file
     Match screen*.log
-    Path ~/logs/
+    Path $PWD/logs/
     Format template
     Template {time} {message}
 EOF
@@ -77,11 +78,12 @@ fluent-bit -c td-agent-bit.conf &
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
+export FM_CONFIG_PATH="$PWD/.fuzzmanagerconf"
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
-sigdir = ~/signatures
+sigdir = $PWD/signatures
 tool = bearspray
 EOF
 
@@ -99,12 +101,13 @@ set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
+export GIT_SSH="ssh -F '$PWD/.ssh/config'"
 cat << EOF >> .ssh/config
 
 Host bearspray
 HostName github.com
 IdentitiesOnly yes
-IdentityFile ~/.ssh/id_ecdsa.bearspray
+IdentityFile $PWD/.ssh/id_ecdsa.bearspray
 EOF
 
 # Checkout bearspray
