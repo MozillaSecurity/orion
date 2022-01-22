@@ -101,7 +101,13 @@ set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
-export GIT_SSH="ssh -F '$PWD/.ssh/config'"
+cat > ssh_wrap.sh << EOF
+#!/bin/sh
+exec ssh -F '$PWD/.ssh/config' "$@"
+EOF
+chmod +x ssh_wrap.sh
+export GIT_SSH="$PWD/ssh_wrap.sh"
+
 cat << EOF >> .ssh/config
 
 Host bearspray
