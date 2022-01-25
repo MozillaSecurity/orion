@@ -103,7 +103,7 @@ set -x
 
 cat > ssh_wrap.sh << EOF
 #!/bin/sh
-exec ssh -F '$PWD/.ssh/config' "$@"
+exec ssh -F '$PWD/.ssh/config' "\$@"
 EOF
 chmod +x ssh_wrap.sh
 export GIT_SSH="$PWD/ssh_wrap.sh"
