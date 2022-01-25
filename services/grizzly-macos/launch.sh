@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -x
 
-trap 'jobs -p | xargs -r kill' EXIT
+trap 'jobs -p | xargs kill && true' EXIT
 export HOME="$PWD"
 
 retry () {
@@ -100,6 +100,7 @@ mkdir -p .ssh
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
+chmod 0600 .ssh/id_ecdsa.bearspray
 
 cat > ssh_wrap.sh << EOF
 #!/bin/sh
