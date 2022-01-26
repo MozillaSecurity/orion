@@ -31,7 +31,7 @@ cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       Off
     Log_File     $PWD/td-agent-bit.log
-    Log_Level    info
+    Log_Level    debug
     Parsers_File parsers.conf
     Plugins_File plugins.conf
 
@@ -127,7 +127,7 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 status "Setup: installing bearspray"
-retry python -m pip install -U -e bearspray
+retry python -m pip install -U bearspray
 
 status "Setup: launching bearspray"
 set +e
