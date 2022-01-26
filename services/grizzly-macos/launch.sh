@@ -64,6 +64,7 @@ cat > td-agent-bit.conf << EOF
     Match *
     google_service_credentials $PWD/google_logging_creds.json
     resource global
+    tls.debug 1
 
 [OUTPUT]
     Name file
@@ -129,15 +130,9 @@ status "Setup: installing bearspray"
 retry python -m pip install -U -e bearspray
 
 status "Setup: launching bearspray"
-wait_token="$(rwait create)"
-
-screen -dmLS grizzly /bin/bash
-sleep 5
-screen -S grizzly -X screen rwait run "$wait_token" python -m bearspray "$ADAPTER" --screen
-
-# need to keep the script running
 set +e
-rwait wait "$wait_token"
+python -m bearspray "$ADAPTER"
+
 exit_code=$?
 echo "returned $exit_code" >&2
 case $exit_code in
