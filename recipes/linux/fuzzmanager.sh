@@ -32,7 +32,7 @@ case "${1-install}" in
     then
       cd "${DESTDIR-/home/worker}"
       git-clone https://github.com/MozillaSecurity/FuzzManager fuzzmanager
-      retry pip3 install -e ./fuzzmanager
+      retry pip3 install --no-build-isolation -e ./fuzzmanager
     else
       retry pip3 install "git+https://github.com/MozillaSecurity/FuzzManager"
     fi
