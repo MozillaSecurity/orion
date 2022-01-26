@@ -22,7 +22,7 @@ cd "${0%/*}"
 
 # this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
 # when run under Taskcluster
-SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
+EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 
 ./fuzzfetch.sh
 ./taskcluster.sh

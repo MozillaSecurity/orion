@@ -30,7 +30,7 @@ case "${1-install}" in
 
     if [ "$EDIT" = "1" ]
     then
-      retry pip3 install -e "$SRCDIR"
+      retry pip3 install --no-build-isolation -e "$SRCDIR"
     else
       retry pip3 install "$SRCDIR"
     fi
