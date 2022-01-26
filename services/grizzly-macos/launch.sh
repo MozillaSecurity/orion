@@ -127,7 +127,7 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 status "Setup: installing bearspray"
-retry python -m pip install -U bearspray
+retry python -m pip install --no-build-isolation -e bearspray
 
 status "Setup: launching bearspray"
 set +e
