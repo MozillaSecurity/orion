@@ -64,6 +64,7 @@ cat > td-agent-bit.conf << EOF
     Match *
     google_service_credentials $PWD/google_logging_creds.json
     resource global
+    tls.ca_file $HOMEBREW_PREFIX/share/ca-certificates/cacert.pem
     tls.debug 1
 
 [OUTPUT]
