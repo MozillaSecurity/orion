@@ -2,15 +2,14 @@
 set -e -x
 
 # base msys packages
-pacman-key --init
-pacman-key --populate msys2
-pacman --noconfirm -Sy \
+pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
   tar
-killall -TERM gpg-agent
-rm -rf /var/cache/pacman/pkg
+pacman --noconfirm -Scc
+killall -q -TERM gpg-agent
+pacman --noconfirm -Rs psmisc
 
 # get nuget
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe

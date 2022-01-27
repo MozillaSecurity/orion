@@ -2,16 +2,15 @@
 set -e -x
 
 # base msys packages
-pacman-key --init
-pacman-key --populate msys2
-pacman --noconfirm -Sy \
+pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
   tar \
   unzip
-killall -TERM gpg-agent
-rm -rf /var/cache/pacman/pkg
+pacman --noconfirm -Scc
+killall -q -TERM gpg-agent
+pacman --noconfirm -Rs psmisc
 
 # get node.js
 VER=14.17.3

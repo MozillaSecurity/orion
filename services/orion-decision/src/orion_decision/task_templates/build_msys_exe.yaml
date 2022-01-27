@@ -19,6 +19,11 @@ payload:
     - del msys2.exe
     - set PATH=%CD%\msys64\MINGW64\bin;%PATH%
     - set PATH=%CD%\msys64\usr\bin;%PATH%
+    - bash -lc ' '
+    # create a wrapper around `pacman -Syu` since it may kill itself!
+    - echo -e '@echo off\r\npacman --noconfirm -Syuu\r\nexit /b 0\r\n' > pacman_upd.bat
+    - .\pacman_upd.bat  # Core update (in case any core packages are outdated)
+    - .\pacman_upd.bat  # Normal update
     - git init orion
     - cd orion
     - git remote add origin "${clone_url}"
