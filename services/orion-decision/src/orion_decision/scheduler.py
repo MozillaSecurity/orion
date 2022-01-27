@@ -32,6 +32,7 @@ LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
+MSYS_EXE_TASK = Template((TEMPLATES / "build_msys_exe.yaml").read_text())
 HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
@@ -115,8 +116,14 @@ class Scheduler:
                 f".{self.github_event.branch}"
             )
         if isinstance(service, ServiceMsys):
+            if service.base.endswith(".exe"):
+                if not service.base.endswith(".sfx.exe"):
+                    LOG.warning("'base' ends with .exe, but not .sfx.exe", service.base)
+                task_template = MSYS_EXE_TASK
+            else:
+                task_template = MSYS_TASK
             build_task = yaml_load(
-                MSYS_TASK.substitute(
+                task_template.substitute(
                     clone_url=self.github_event.http_url,
                     commit=self.github_event.commit,
                     deadline=stringDate(self.now + DEADLINE),

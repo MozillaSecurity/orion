@@ -14,9 +14,9 @@ payload:
   command:
     - set HOME=%CD%
     - set ARTIFACTS=%CD%
-    - C:\cygwin\bin\curl.exe -sSL --retry 5 "${msys_base_url}" -o msys2.tar.xz
-    - C:\cygwin\bin\xzdec.exe msys2.tar.xz | C:\cygwin\bin\tar.exe x
-    - del msys2.tar.xz
+    - C:\cygwin\bin\curl.exe -sSL --retry 5 "${msys_base_url}" -o msys2.exe
+    - .\msys2.exe -y -o%CD%
+    - del msys2.exe
     - set PATH=%CD%\msys64\MINGW64\bin;%PATH%
     - set PATH=%CD%\msys64\usr\bin;%PATH%
     - git init orion
