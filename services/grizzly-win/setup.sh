@@ -91,7 +91,13 @@ python -m pip install \
   virtualenv \
   git+https://github.com/cgoldberg/xvfbwrapper.git
 
-rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
+rm -rf \
+  msys64/mingw64/share/doc/ \
+  msys64/mingw64/share/info/ \
+  msys64/mingw64/share/man/ \
+  msys64/usr/share/doc/ \
+  msys64/usr/share/info/ \
+  msys64/usr/share/man/
 cp orion/services/grizzly-win/launch.sh .
 
 cp -r orion/services/fuzzing-decision fuzzing-decision

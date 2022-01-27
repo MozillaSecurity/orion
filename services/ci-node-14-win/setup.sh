@@ -27,5 +27,11 @@ node -v
 curl -qL https://www.npmjs.com/install.sh | npm_install="7.22.0" sh
 npm -v
 
-rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
+rm -rf \
+  msys64/mingw64/share/doc/ \
+  msys64/mingw64/share/info/ \
+  msys64/mingw64/share/man/ \
+  msys64/usr/share/doc/ \
+  msys64/usr/share/info/ \
+  msys64/usr/share/man/
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64

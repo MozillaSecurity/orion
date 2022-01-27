@@ -46,6 +46,9 @@ python -m pip install \
   virtualenv
 
 rm -rf "$HOMEBREW_PREFIX/docs"
+find "$HOMEBREW_PREFIX" -path '*/share/doc' -exec rm -rf '{}' +
+find "$HOMEBREW_PREFIX" -path '*/share/info' -exec rm -rf '{}' +
+find "$HOMEBREW_PREFIX" -path '*/share/man' -exec rm -rf '{}' +
 
 cp orion/scripts/relocate_homebrew.sh "$HOMEBREW_PREFIX/bin/"
 cp orion/services/grizzly-macos/launch.sh .
