@@ -8,7 +8,7 @@ pacman --noconfirm -S \
   psmisc \
   tar
 pacman --noconfirm -Scc
-killall -q -TERM gpg-agent
+killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget

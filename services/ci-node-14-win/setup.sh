@@ -9,7 +9,7 @@ pacman --noconfirm -S \
   tar \
   unzip
 pacman --noconfirm -Scc
-killall -q -TERM gpg-agent
+killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get node.js

@@ -12,7 +12,7 @@ pacman --noconfirm -S \
   tar \
   zstd
 pacman --noconfirm -Scc
-killall -q -TERM gpg-agent
+killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
