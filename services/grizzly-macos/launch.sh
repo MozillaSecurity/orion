@@ -141,6 +141,17 @@ cd ..
 status "Setup: installing bearspray"
 chmod -R +w "$HOMEBREW_PREFIX"
 retry python -m pip install --no-build-isolation -e bearspray
+python - << EOF
+from configparser import ConfigParser
+
+cfg = ConfigParser()
+with open("$PIP_CONFIG_FILE", "r+") as fp:
+    cfg.read_file(fp)
+    del cfg["install"]["prefix"]
+    fp.truncate(0)
+    fp.seek(0)
+    cfg.write(fp)
+EOF
 
 status "Setup: launching bearspray"
 set +e
