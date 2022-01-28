@@ -23,6 +23,17 @@ status () {
 }
 
 export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
+python - << EOF
+from configparser import ConfigParser
+
+cfg = ConfigParser()
+with open("$PIP_CONFIG_FILE", "r+") as fp:
+    cfg.read_file(fp)
+    cfg["install"]["prefix"] = "$HOMEBREW_PREFIX"
+    fp.truncate(0)
+    fp.seek(0)
+    cfg.write(fp)
+EOF
 
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
