@@ -128,11 +128,12 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 status "Setup: installing bearspray"
+chmod -R +w "$HOMEBREW_PREFIX"
 retry python -m pip install --no-build-isolation -e bearspray
 
 status "Setup: launching bearspray"
 set +e
-python -m bearspray "$ADAPTER"
+bearspray "$ADAPTER"
 
 exit_code=$?
 echo "returned $exit_code" >&2
