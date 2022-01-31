@@ -78,6 +78,7 @@ then
   JS=1
 fi
 
+HARNESS_EXT_ARGS=()
 if [[ -n "$XPCRT" ]]
 then
   TOOLNAME="${TOOLNAME:-domino-xpcshell}"
@@ -101,6 +102,7 @@ then
   set -x
 
   FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
+  HARNESS_EXT_ARGS+=("--transform" "$WORKDIR/dist/bin/transform.js")
   if [[ ! -e ~/domino-xpcshell ]]
   then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
@@ -328,7 +330,8 @@ then
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-    --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
+    --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}" \
+    "${HARNESS_EXT_ARGS[@]}"
 else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
