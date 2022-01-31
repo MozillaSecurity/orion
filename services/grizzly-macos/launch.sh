@@ -42,9 +42,9 @@ cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       Off
     Log_File     $PWD/td-agent-bit.log
-    Log_Level    debug
-    Parsers_File parsers.conf
-    Plugins_File plugins.conf
+    Log_Level    info
+    Parsers_File $HOMEBREW_PREFIX/etc/fluent-bit/parsers.conf
+    Plugins_File $HOMEBREW_PREFIX/etc/fluent-bit/plugins.conf
 
 [INPUT]
     Name tail
@@ -75,8 +75,6 @@ cat > td-agent-bit.conf << EOF
     Match *
     google_service_credentials $PWD/google_logging_creds.json
     resource global
-    tls.ca_file $HOMEBREW_PREFIX/share/ca-certificates/cacert.pem
-    tls.debug 1
 
 [OUTPUT]
     Name file
