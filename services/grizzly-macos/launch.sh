@@ -3,6 +3,7 @@ set -e -x
 
 trap 'jobs -p | xargs kill && true' EXIT
 export HOME="$PWD"
+export NODE_EXTRA_CA_CERTS="$HOMEBREW_PREFIX/share/ca-certificates/cacert.pem"
 
 retry () {
   i=0
