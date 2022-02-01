@@ -29,7 +29,7 @@ cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       Off
     Log_File     $USERPROFILE\\td-agent-bit.log
-    Log_Level    info
+    Log_Level    debug
     Parsers_File $USERPROFILE\\td-agent-bit\\conf\\parsers.conf
     Plugins_File $USERPROFILE\\td-agent-bit\\conf\\plugins.conf
 
