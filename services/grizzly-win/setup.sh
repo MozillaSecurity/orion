@@ -19,7 +19,7 @@ pacman --noconfirm -Rs psmisc
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
-VER=1.6.10
+VER=1.8.12
 curl -sSLO "https://fluentbit.io/releases/${VER%.*}/td-agent-bit-${VER}-win64.zip"
 7z x "td-agent-bit-${VER}-win64.zip"
 mv "td-agent-bit-${VER}-win64" td-agent-bit
