@@ -38,7 +38,7 @@ TC_QUEUES = {
     # "android": "grizzly-reduce-android",
     "linux": "grizzly-reduce-worker",
     # "macosx": "grizzly-reduce-macos",
-    # "windows": "grizzly-reduce-windows",
+    "windows": "grizzly-reduce-worker-windows",
 }
 
 TOOL_LIST_SECRET = "project/fuzzing/grizzly-reduce-tool-list"
