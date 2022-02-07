@@ -96,6 +96,7 @@ class CrashManager(Reporter):
 
     @remote_checks
     def _list_objs(self, endpoint, query=None, ordering=None):
+        """Iterate over results possibly paginated by Django Rest Framework."""
         params = {}
         if query is not None:
             params["query"] = json.dumps(query)
@@ -116,17 +117,24 @@ class CrashManager(Reporter):
 
             resp_json = self.get(next_url, params=params).json()
 
-            if not isinstance(resp_json, dict):
+            if isinstance(resp_json, dict):
+                next_url = resp_json["next"]
+                results = resp_json["results"]
+                total = resp_json["count"]
+            elif isinstance(resp_json, list):
+                next_url = None
+                results = resp_json
+                total = len(results)
+            else:
                 raise RuntimeError(
                     f"Server sent malformed JSON response: {resp_json!r}"
                 )
 
-            next_url = resp_json["next"]
             params = None
 
-            returned += len(resp_json["results"])
-            LOG.debug("yielding %d/%d %s", returned, resp_json["count"], endpoint)
-            yield from resp_json["results"]
+            returned += len(results)
+            LOG.debug("yielding %d/%d %s", returned, total, endpoint)
+            yield from results
 
     def list_crashes(self, query=None, ordering=None):
         """List all CrashEntry objects.
