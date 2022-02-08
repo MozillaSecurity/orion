@@ -1,0 +1,62 @@
+created: "${created}"
+deadline: "${deadline}"
+dependencies:
+  - "${image_task_id}"
+expires: "${expires}"
+metadata:
+  description: "${description}"
+  name: "Reduce fuzzing crash ${crash_id} for ${os_name}"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/grizzly"
+payload:
+  artifacts:
+    - expires: "${expires}"
+      name: "AppData\\Local\\Temp\\grizzly"
+      path: project/fuzzing/grizzly
+      type: directory
+    - expires: "${expires}"
+      name: td-agent-bit.log
+      path: project/fuzzing/fluentbit.log
+      type: file
+    - expires: "${expires}"
+      name: project/fuzzing/private/logs
+      path: logs
+      type: directory
+  command:
+    - set HOME=%CD%
+    - set ARTIFACTS=%CD%
+    - set PATH=%CD%\\msys64\\opt\\python;%CD%\\msys64\\opt\\python\\Scripts;%CD%\\msys64\\MINGW64\\bin;%CD%\\msys64\\usr\\bin;%PATH%
+    - fuzzing-pool-launch bash launch.sh
+  env:
+    ADAPTER: reducer
+    FUZZING_CPU_COUNT: "0"  # force single instance/task
+    IGNORE: "log-limit memory timeout"
+    MEM_LIMIT: "7000"
+    MSYSTEM: MINGW64
+    INPUT: "${crash_id}"
+    TIMEOUT: "60"
+  features:
+    runAsAdministrator: true
+    taskclusterProxy: true
+  maxRunTime: !!int "${max_run_time}"
+  mounts:
+    - format: tar.bz2
+      content:
+        taskId: "${image_task_id}"
+        artifact: public/msys2.tar.bz2
+      directory: .
+  osGroups: [Administrators]
+priority: high
+provisionerId: "${provisioner}"
+retries: 5
+routes: []
+schedulerId: "${scheduler}"
+scopes:
+  - "generic-worker:os-group:${provisioner}/grizzly-reduce-worker-windows/Administrators"
+  - "generic-worker:run-as-administrator:${provisioner}/grizzly-reduce-worker-windows"
+  - "secrets:get:project/fuzzing/deploy-bearspray"
+  - "secrets:get:project/fuzzing/deploy-grizzly-private"
+  - "secrets:get:project/fuzzing/fuzzmanagerconf"
+  - "secrets:get:project/fuzzing/google-logging-creds"
+taskGroupId: "${task_group}"
+workerType: "${worker}"
