@@ -129,6 +129,11 @@ IdentitiesOnly yes
 IdentityFile $PWD/.ssh/id_ecdsa.bearspray
 EOF
 
+if [ "$ADAPTER" = "reducer" ]
+then
+  ssh-keyscan github.com >> .ssh/known_hosts
+fi
+
 # Checkout bearspray
 git init bearspray
 cd bearspray
