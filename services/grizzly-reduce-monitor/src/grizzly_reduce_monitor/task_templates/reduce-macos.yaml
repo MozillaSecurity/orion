@@ -1,0 +1,58 @@
+created: "${created}"
+deadline: "${deadline}"
+dependencies:
+  - "${image_task_id}"
+expires: "${expires}"
+metadata:
+  description: "${description}"
+  name: "Reduce fuzzing crash ${crash_id} for macos"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/grizzly"
+payload:
+  artifacts:
+    - expires: "${expires}"
+      name: project/fuzzing/grizzly
+      path: grizzly-auto-run/grizzly-tmp
+      type: directory
+    - expires: "${expires}"
+      name: project/fuzzing/fluentbit.log
+      path: td-agent-bit.log
+      type: file
+    - expires: "${expires}"
+      name: project/fuzzing/private/logs
+      path: logs
+      type: directory
+  command:
+    - - /bin/bash
+      - "-c"
+      - "-x"
+      - eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch bash launch.sh
+  env:
+    ADAPTER: reducer
+    FUZZING_CPU_COUNT: "0"  # force single instance/task
+    GRZ_TMP: grizzly-tmp
+    IGNORE: "log-limit memory timeout"
+    MEM_LIMIT: "7000"
+    INPUT: "${crash_id}"
+    TIMEOUT: "60"
+  features:
+    taskclusterProxy: true
+  maxRunTime: !!int "${max_run_time}"
+  mounts:
+    - format: tar.bz2
+      content:
+        taskId: "${image_task_id}"
+        artifact: public/homebrew.tar.bz2
+      directory: .
+priority: high
+provisionerId: "${provisioner}"
+retries: 5
+routes: []
+schedulerId: "${scheduler}"
+scopes:
+  - "secrets:get:project/fuzzing/deploy-bearspray"
+  - "secrets:get:project/fuzzing/deploy-grizzly-private"
+  - "secrets:get:project/fuzzing/fuzzmanagerconf"
+  - "secrets:get:project/fuzzing/google-logging-creds"
+taskGroupId: "${task_group}"
+workerType: "${worker}"

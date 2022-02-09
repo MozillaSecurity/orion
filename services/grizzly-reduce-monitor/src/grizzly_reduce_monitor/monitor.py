@@ -37,7 +37,7 @@ GENERIC_PLATFORM = "linux"
 TC_QUEUES = {
     # "android": "grizzly-reduce-android",
     "linux": "grizzly-reduce-worker",
-    # "macosx": "grizzly-reduce-macos",
+    # "macosx": "grizzly-reduce-worker-macos",
     "windows": "grizzly-reduce-worker-windows",
 }
 
@@ -55,6 +55,7 @@ RANDOMIZE_CRASH_SELECT = 0.25  # randomly ignore testcase size & ID when selecti
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 REDUCE_TASKS = {
     "linux": Template((TEMPLATES / "reduce.yaml").read_text()),
+    "macosx": Template((TEMPLATES / "reduce-macos.yaml").read_text()),
     "windows": Template((TEMPLATES / "reduce-windows.yaml").read_text()),
 }
 
@@ -333,6 +334,10 @@ class ReductionMonitor(ReductionWorkflow):
         if os_name == "windows":
             image_task_id = self.image_artifact_task(
                 "project.fuzzing.orion.grizzly-win.master"
+            )
+        elif os_name == "macosx":
+            image_task_id = self.image_artifact_task(
+                "project.fuzzing.orion.grizzly-macos.master"
             )
         else:
             image_task_id = None
