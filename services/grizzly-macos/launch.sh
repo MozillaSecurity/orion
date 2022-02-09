@@ -120,19 +120,18 @@ exec ssh -F '$PWD/.ssh/config' "\$@"
 EOF
 chmod +x ssh_wrap.sh
 export GIT_SSH="$PWD/ssh_wrap.sh"
+ssh-keyscan github.com >> .ssh/known_hosts
 
 cat << EOF >> .ssh/config
+Host *
+UseRoaming no
+UserKnownHostsFile $PWD/.ssh/known_hosts
 
 Host bearspray
 HostName github.com
 IdentitiesOnly yes
 IdentityFile $PWD/.ssh/id_ecdsa.bearspray
 EOF
-
-if [ "$ADAPTER" = "reducer" ]
-then
-  ssh-keyscan github.com >> .ssh/known_hosts
-fi
 
 # Checkout bearspray
 git init bearspray
