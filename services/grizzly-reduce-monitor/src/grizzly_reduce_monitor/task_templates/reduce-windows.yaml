@@ -11,12 +11,12 @@ metadata:
 payload:
   artifacts:
     - expires: "${expires}"
-      name: "AppData\\Local\\Temp\\grizzly"
-      path: project/fuzzing/grizzly
+      name: project/fuzzing/grizzly
+      path: AppData\Local\Temp\grizzly
       type: directory
     - expires: "${expires}"
-      name: td-agent-bit.log
-      path: project/fuzzing/fluentbit.log
+      name: project/fuzzing/fluentbit.log
+      path: td-agent-bit.log
       type: file
     - expires: "${expires}"
       name: project/fuzzing/private/logs
@@ -25,7 +25,7 @@ payload:
   command:
     - set HOME=%CD%
     - set ARTIFACTS=%CD%
-    - set PATH=%CD%\\msys64\\opt\\python;%CD%\\msys64\\opt\\python\\Scripts;%CD%\\msys64\\MINGW64\\bin;%CD%\\msys64\\usr\\bin;%PATH%
+    - set PATH=%CD%\msys64\opt\python;%CD%\msys64\opt\python\Scripts;%CD%\msys64\MINGW64\bin;%CD%\msys64\usr\bin;%PATH%
     - fuzzing-pool-launch bash launch.sh
   env:
     ADAPTER: reducer
