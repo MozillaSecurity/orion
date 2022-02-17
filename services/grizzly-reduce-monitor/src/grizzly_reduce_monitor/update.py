@@ -43,9 +43,9 @@ class ReductionUpdater(ReductionWorkflow):
                 if self.quality is None:
                     # set quality based on OS
                     if self.task_os != GENERIC_PLATFORM:
-                        crash.testcase_quality = Quality.REQUEST_SPECIFIC
+                        crash.testcase_quality = Quality.REQUEST_SPECIFIC.value
                     else:
-                        crash.testcase_quality = Quality.UNREDUCED
+                        crash.testcase_quality = Quality.UNREDUCED.value
                 else:
                     crash.testcase_quality = self.quality
         except RuntimeError as exc:
