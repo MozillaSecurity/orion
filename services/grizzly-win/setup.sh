@@ -26,7 +26,7 @@ mv "td-agent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
 # get minidump_stackwalk
-curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-1.toolchains.v3.win32-minidump-stackwalk.latest/artifacts/public/build/minidump_stackwalk.tar.zst"
+curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win32-minidump-stackwalk.latest/artifacts/public/build/minidump_stackwalk.tar.zst"
 zstdcat minidump_stackwalk.tar.zst | tar xv
 mv minidump_stackwalk/minidump_stackwalk.exe msys64/usr/bin
 rm -rf minidump_stackwalk minidump_stackwalk.tar.zst
