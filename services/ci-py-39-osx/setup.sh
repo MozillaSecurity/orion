@@ -24,6 +24,7 @@ EOF
 # install utils to match linux ci images
 python -m pip install tox
 python -m pip install poetry
+python -m pip install pre-commit
 
 rm -rf homebrew/docs
 cp -r orion/services/orion-decision orion-decision

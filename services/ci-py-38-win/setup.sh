@@ -56,6 +56,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 # install utils to match linux ci images
 python -m pip install tox
 python -m pip install poetry
+python -m pip install pre-commit
 
 rm -rf \
   msys64/mingw64/share/doc/ \
