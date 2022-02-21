@@ -4,7 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI functions for Orion builder"""
 
-from __future__ import annotations
 
 import argparse
 from locale import LC_ALL, setlocale

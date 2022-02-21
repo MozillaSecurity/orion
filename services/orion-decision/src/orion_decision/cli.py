@@ -4,7 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion scheduler"""
 
-from __future__ import annotations
 
 import argparse
 from datetime import datetime

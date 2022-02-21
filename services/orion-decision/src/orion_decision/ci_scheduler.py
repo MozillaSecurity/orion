@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for CI tasks"""
 
-from __future__ import annotations
+
 import argparse
 
 from datetime import datetime

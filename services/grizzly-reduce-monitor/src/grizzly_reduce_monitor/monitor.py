@@ -5,7 +5,7 @@
 """Check CrashManager for reducible crashes, and queue them in Taskcluster.
 """
 
-from __future__ import annotations
+
 import argparse
 
 import os

@@ -5,7 +5,7 @@
 """Common definitions for Grizzly reduction in Taskcluster
 """
 
-from __future__ import annotations
+
 import argparse
 
 import json

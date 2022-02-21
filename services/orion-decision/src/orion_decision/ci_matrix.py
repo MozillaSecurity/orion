@@ -4,7 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Build matrix for CI tasks"""
 
-from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from itertools import product

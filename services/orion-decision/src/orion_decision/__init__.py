@@ -4,7 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Decision module for Orion builds"""
 
-from __future__ import annotations
 
 import os
 from datetime import timedelta

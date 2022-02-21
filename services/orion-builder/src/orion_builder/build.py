@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/build script"""
 
-from __future__ import annotations
+
 import argparse
 
 import logging

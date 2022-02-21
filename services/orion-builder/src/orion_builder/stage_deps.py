@@ -4,7 +4,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Stage build deps Orion builder"""
 
-from __future__ import annotations
 
 import argparse
 from pathlib import Path

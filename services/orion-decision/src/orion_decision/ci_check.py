@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Checker for CI build matrix"""
 
-from __future__ import annotations
+
 import argparse
 
 from logging import getLogger
