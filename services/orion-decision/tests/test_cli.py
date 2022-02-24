@@ -8,6 +8,7 @@
 from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path
+from typing import Dict, Optional
 from unittest.mock import MagicMock
 from unittest.mock import call
 
@@ -205,7 +206,7 @@ def test_ci_check(mocker: MockerFixture) -> None:
     ],
 )
 def test_ci_launch_01(
-    mocker: MockerFixture, platform: str | None, secret: str | None
+    mocker: MockerFixture, platform: Optional[str], secret: Optional[str]
 ) -> None:
     """test CLI entrypoint for CI launch"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
@@ -215,7 +216,7 @@ def test_ci_launch_01(
     run = mocker.patch("orion_decision.cli.run", autospec=True)
     repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value="secret")
-    copy: dict[str, str] = {}
+    copy: Dict[str, str] = {}
     environ.copy.return_value = copy
 
     if platform == "windows":
@@ -273,7 +274,7 @@ def test_ci_launch_02(mocker: MockerFixture) -> None:
     mocker.patch("orion_decision.cli.run", autospec=True)
     mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value={"key": "secret"})
-    copy: dict[str, str] = {}
+    copy: Dict[str, str] = {}
     environ.copy.return_value = copy
 
     sec = CISecretEnv("secret", "name")

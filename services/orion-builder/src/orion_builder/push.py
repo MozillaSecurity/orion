@@ -8,6 +8,7 @@
 import argparse
 
 import sys
+from typing import List, Optional
 
 from taskboot.push import push_artifacts
 
@@ -36,7 +37,7 @@ class PushArgs(CommonArgs):
             )
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: Optional[List[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)

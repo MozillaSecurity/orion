@@ -11,8 +11,7 @@ import logging
 import pathlib
 import re
 import types
-from typing import Iterable
-from typing import cast
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union, cast
 from typing_extensions import NotRequired, TypedDict
 from datetime import datetime, timedelta, timezone
 
@@ -146,7 +145,7 @@ class MachineTypes:
         self._data = machines_data
 
     @classmethod
-    def from_file(cls, machines_yml: pathlib.Path) -> MachineTypes:
+    def from_file(cls, machines_yml: pathlib.Path) -> "MachineTypes":
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
@@ -155,7 +154,7 @@ class MachineTypes:
 
     def zone_blacklist(
         self, provider: str, architecture: str, machine: str
-    ) -> frozenset[str]:
+    ) -> FrozenSet[str]:
         return frozenset(
             self._data[provider][architecture][machine].get("zone_blacklist", [])
         )
@@ -192,27 +191,27 @@ class MachineTypes:
 class PoolConfigData(TypedDict):
     """PoolConfigData type specification."""
 
-    artifacts: NotRequired[dict[str, dict[str, str]]]
-    apply_to: NotRequired[list[str]]
-    cloud: NotRequired[str | None]
-    scopes: NotRequired[list[str]]
-    disk_size: NotRequired[int | str | None]
-    cycle_time: NotRequired[int | str | None]
-    max_run_time: NotRequired[int | str | None]
-    schedule_start: NotRequired[datetime | str | None]
-    cores_per_task: NotRequired[int | None]
-    metal: NotRequired[bool | None]
+    artifacts: NotRequired[Dict[str, Dict[str, str]]]
+    apply_to: NotRequired[List[str]]
+    cloud: NotRequired[Optional[str]]
+    scopes: NotRequired[List[str]]
+    disk_size: NotRequired[Union[int, Optional[str]]]
+    cycle_time: NotRequired[Union[int, Optional[str]]]
+    max_run_time: NotRequired[Union[int, Optional[str]]]
+    schedule_start: NotRequired[Union[datetime, Optional[str]]]
+    cores_per_task: NotRequired[Optional[int]]
+    metal: NotRequired[Optional[bool]]
     name: NotRequired[str]
     tasks: NotRequired[int]
-    command: NotRequired[list[str] | None]
-    container: NotRequired[dict[str, str] | str | None]
-    minimum_memory_per_core: NotRequired[float | str | None]
-    imageset: NotRequired[str | None]
-    parents: NotRequired[list[str] | None]
-    cpu: NotRequired[str | None]
-    platform: NotRequired[str | None]
-    preprocess: NotRequired[str | None]
-    macros: NotRequired[dict[str, str]]
+    command: NotRequired[Optional[List[str]]]
+    container: NotRequired[Union[Dict[str, str], Optional[str]]]
+    minimum_memory_per_core: NotRequired[Union[float, Optional[str]]]
+    imageset: NotRequired[Optional[str]]
+    parents: NotRequired[Optional[List[str]]]
+    cpu: NotRequired[Optional[str]]
+    platform: NotRequired[Optional[str]]
+    preprocess: NotRequired[Optional[str]]
+    macros: NotRequired[Dict[str, str]]
     run_as_admin: NotRequired[bool]
 
 
@@ -247,7 +246,10 @@ class CommonPoolConfiguration(abc.ABC):
     """
 
     def __init__(
-        self, pool_id: str, data: PoolConfigData, base_dir: pathlib.Path | None = None
+        self,
+        pool_id: str,
+        data: PoolConfigData,
+        base_dir: Optional[pathlib.Path] = None,
     ) -> None:
         LOG.debug(f"creating pool {pool_id}")
         extra = list(set(data) - set(self.FIELD_TYPES))
@@ -347,7 +349,7 @@ class CommonPoolConfiguration(abc.ABC):
 
         # list fields
         # command is an overwriting field, null is allowed
-        self.command: list[str] | None
+        self.command: Optional[List[str]]
         if data.get("command") is not None:
             assert data["command"] is not None
             self.command = data["command"].copy()
@@ -371,7 +373,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.max_run_time = None
         if data.get("max_run_time") is not None:
             self.max_run_time = parse_time(str(data["max_run_time"]))
-        self.schedule_start: datetime | str | None = None
+        self.schedule_start: Optional[Union[datetime, str]] = None
         if data.get("schedule_start") is not None:
             if isinstance(data["schedule_start"], datetime):
                 assert data["schedule_start"] is not None
@@ -395,7 +397,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.cloud = data["cloud"]
 
     @classmethod
-    def from_file(cls, pool_yml: pathlib.Path, **kwds) -> CommonPoolConfiguration:
+    def from_file(cls, pool_yml: pathlib.Path, **kwds) -> "CommonPoolConfiguration":
         assert pool_yml.is_file()
         return cls(
             pool_yml.stem,
@@ -406,7 +408,7 @@ class CommonPoolConfiguration(abc.ABC):
 
     def get_machine_list(
         self, machine_types: MachineTypes
-    ) -> Iterable[tuple[str, int, frozenset[str]]]:
+    ) -> Iterable[Tuple[str, int, FrozenSet[str]]]:
         """
         Args:
             machine_types: database of all machine types
@@ -433,7 +435,7 @@ class CommonPoolConfiguration(abc.ABC):
             yielded = True
         assert yielded, "No available machines match specified configuration"
 
-    def cycle_crons(self) -> Iterable[str] | None:
+    def cycle_crons(self) -> Iterable[Optional[str]]:
         """Generate cron patterns that correspond to cycle_time (starting from now)
 
         Returns:
@@ -506,8 +508,8 @@ class PoolConfiguration(CommonPoolConfiguration):
         self,
         pool_id: str,
         data: PoolConfigData,
-        base_dir: pathlib.Path | None = None,
-        _flattened: set[str] | None = None,
+        base_dir: Optional[pathlib.Path] = None,
+        _flattened: Optional[Set[str]] = None,
     ) -> None:
         super().__init__(pool_id, data, base_dir)
 
@@ -544,7 +546,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
 
-    def create_preprocess(self) -> CommonPoolConfiguration | None:
+    def create_preprocess(self) -> Optional[CommonPoolConfiguration]:
         """
         Return a new PoolConfiguration based on the value of self.preprocess
         """
@@ -576,7 +578,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         result.name = f"{self.name} ({result.name})"
         return result
 
-    def _flatten(self, flattened: set[str] | None) -> None:
+    def _flatten(self, flattened: Optional[Set[str]]) -> None:
         overwriting_fields = (
             "cloud",
             "command",
@@ -668,7 +670,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         self,
         pool_id: str,
         data: PoolConfigData,
-        base_dir: pathlib.Path | None = None,
+        base_dir: Optional[pathlib.Path] = None,
     ) -> None:
         super().__init__(pool_id, data, base_dir)
 

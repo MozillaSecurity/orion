@@ -10,6 +10,7 @@ import os
 import pathlib
 import subprocess
 import tempfile
+from typing import Dict, Optional
 
 import yaml
 
@@ -28,10 +29,10 @@ class Workflow:
 
     def configure(
         self,
-        local_path: pathlib.Path | None = None,
-        secret: str | None = None,
-        fuzzing_git_repository: str | None = None,
-        fuzzing_git_revision: str | None = None,
+        local_path: Optional[pathlib.Path] = None,
+        secret: Optional[str] = None,
+        fuzzing_git_repository: Optional[str] = None,
+        fuzzing_git_revision: Optional[str] = None,
     ):
         """Load configuration either from local file or Taskcluster secret"""
 
@@ -66,7 +67,7 @@ class Workflow:
 
         return config
 
-    def clone(self, config: dict[str, str]) -> None:
+    def clone(self, config: Dict[str, str]) -> None:
         """Clone remote repositories according to current setup"""
         assert isinstance(config, dict)
 
@@ -90,9 +91,9 @@ class Workflow:
 
     def git_clone(
         self,
-        url: str | None = None,
-        path: pathlib.Path | None = None,
-        revision: str | None = None,
+        url: Optional[str] = None,
+        path: Optional[pathlib.Path] = None,
+        revision: Optional[str] = None,
         **kwargs,
     ) -> pathlib.Path:
         """Clone a configuration repository"""

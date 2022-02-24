@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
+from typing import Dict, List, Union
 
 import dateutil.parser
 import yaml
@@ -55,7 +56,7 @@ FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
 
 
 class MountArtifactResolver:
-    CACHE: dict[str, int] = {}  # cache of orion service -> taskId
+    CACHE: Dict[str, int] = {}  # cache of orion service -> taskId
 
     @classmethod
     def lookup_taskid(cls, namespace: str) -> int:
@@ -238,7 +239,7 @@ class PoolConfiguration(CommonPoolConfiguration):
     def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def get_scopes(self) -> list[str]:
+    def get_scopes(self) -> List[str]:
         result = self.scopes.copy()
         if self.platform == "windows" and self.run_as_admin:
             result.extend(
@@ -257,7 +258,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
     def build_resources(
         self, providers, machine_types: MachineTypes, env=None
-    ) -> list[WorkerPool | Hook | Role]:
+    ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -433,7 +434,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
     def build_resources(
         self, providers, machine_types: MachineTypes, env=None
-    ) -> list[WorkerPool | Hook | Role]:
+    ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -552,7 +553,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml: Path) -> PoolConfigLoader:
+    def from_file(pool_yml: Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):

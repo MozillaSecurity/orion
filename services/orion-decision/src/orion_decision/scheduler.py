@@ -12,6 +12,7 @@ import re
 from logging import getLogger
 from pathlib import Path
 from string import Template
+from typing import Dict, List, Optional
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -57,7 +58,7 @@ class Scheduler:
     def __init__(
         self,
         github_event: GithubEvent,
-        now: datetime | None,
+        now: Optional[datetime],
         task_group: str,
         docker_secret: str,
         push_branch: str,
@@ -216,7 +217,7 @@ class Scheduler:
         self,
         service: Service,
         test: ToxServiceTest,
-        service_build_tasks: dict[str, str],
+        service_build_tasks: Dict[str, str],
     ):
         test_image = test.image
         deps = []
@@ -277,7 +278,7 @@ class Scheduler:
         return task_id
 
     def _create_recipe_test_task(
-        self, recipe: Recipe, dep_tasks: list[str], recipe_test_tasks: dict[str, str]
+        self, recipe: Recipe, dep_tasks: List[str], recipe_test_tasks: Dict[str, str]
     ) -> str:
         assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"

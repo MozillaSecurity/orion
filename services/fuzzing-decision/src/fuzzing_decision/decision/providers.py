@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Iterable
+from typing import Dict, FrozenSet, Iterable, List, Tuple, Union
 
 import yaml
 
@@ -100,10 +100,12 @@ class AWS(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
-        disk_size: int | str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
         platform: str,
-    ) -> list[dict[str, dict[str, dict[str, str] | list[str] | str] | int | str]]:
+    ) -> List[
+        Dict[str, Union[Dict[str, Union[Dict[str, str], List[str], str]], int, str]]
+    ]:
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)
@@ -150,16 +152,25 @@ class GCP(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
-        disk_size: int | str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
         platform: str,
-    ) -> list[
-        dict[
+    ) -> List[
+        Dict[
             str,
-            dict[str, str]
-            | list[dict[str, list[dict[str, str]] | dict[str, int | str] | bool | str]]
-            | int
-            | str,
+            Union[
+                Dict[str, str],
+                List[
+                    Dict[
+                        str,
+                        Union[
+                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
+                        ],
+                    ]
+                ],
+                int,
+                str,
+            ],
         ]
     ]:
 

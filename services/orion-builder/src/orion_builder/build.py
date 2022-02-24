@@ -13,6 +13,7 @@ import sys
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
+from typing import List, Optional
 
 from taskboot.build import build_image
 from taskboot.target import Target
@@ -133,7 +134,7 @@ class BuildArgs(CommonArgs):
             )
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
     configure_logging(level=args.log_level)

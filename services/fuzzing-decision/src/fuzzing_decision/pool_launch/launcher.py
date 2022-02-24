@@ -13,6 +13,7 @@ from pathlib import Path
 from platform import system
 from shutil import which
 from subprocess import call
+from typing import List, Optional
 
 from ..common.pool import PoolConfigLoader
 from ..common.workflow import Workflow
@@ -24,11 +25,11 @@ class PoolLauncher(Workflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
     def __init__(
-        self, command: list[str], pool_name: str | None, preprocess: bool = False
+        self, command: List[str], pool_name: Optional[str], preprocess: bool = False
     ) -> None:
         super().__init__()
 
-        self.apply: str | None
+        self.apply: Optional[str]
         self.command = command.copy()
         self.environment = os.environ.copy()
         if pool_name is not None and "/" in pool_name:

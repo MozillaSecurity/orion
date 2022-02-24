@@ -3,7 +3,7 @@
 
 import datetime
 from pathlib import Path
-from typing import Type
+from typing import Dict, List, Optional, Set, Type, Union
 from typing_extensions import TypedDict
 
 import pytest
@@ -68,7 +68,7 @@ def test_machine_filters(
     ram: int,
     cores: int,
     metal: bool,
-    result: list[str | None] | Type[KeyError],
+    result: Union[List[Optional[str]], Type[KeyError]],
 ) -> None:
 
     if isinstance(result, list):
@@ -79,30 +79,9 @@ def test_machine_filters(
 
 
 # Hook & role should be the same across cloud providers
-def _get_expected_hook(
-    platform: list[str] | str = "linux",
-):
-    # Try a return type of:
-    # dict[
-    #     str,
-    #     dict[
-    #         str,
-    #         dict[
-    #             str,
-    #             dict[str, str] | dict[str, bool] | list[str] | int | str,
-    #         ]
-    #         | dict[str, str]
-    #         | list[str]
-    #         | int
-    #         | str,
-    #     ]
-    #     | dict[str, str]
-    #     | list[str]
-    #     | bool
-    #     | str,
-    # ]
-    empty_str_list: list[str] = []
-    empty_str_dict: dict[str, str] = {}
+def _get_expected_hook(platform: Union[List[str], str] = "linux"):
+    empty_str_list: List[str] = []
+    empty_str_dict: Dict[str, str] = {}
     return {
         "bindings": empty_str_list,
         "description": (
@@ -163,8 +142,8 @@ def _get_expected_hook(
 
 
 def _get_expected_role(
-    platform: list[str] | str = "linux",
-) -> dict[str, list[str] | str]:
+    platform: Union[List[str], str] = "linux",
+) -> Dict[str, Union[List[str], str]]:
     return {
         "description": (
             "*DO NOT EDIT* - This resource is configured automatically.\n\nFuzzing "
@@ -194,7 +173,7 @@ class MockClouds(TypedDict):
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
 def test_aws_resources(
-    env: list[dict[str, str] | None],
+    env: List[Optional[Dict[str, str]]],
     mock_clouds: MockClouds,
     mock_machines: MachineTypes,
     platform: str,
@@ -229,21 +208,7 @@ def test_aws_resources(
     assert len(resources) == 3
     pool, hook, role = resources
 
-    empty_str_dict: dict[str, str] = {}
-    # Try a type specification of:
-    # dict[
-    #     str,
-    #     dict[
-    #         str,
-    #         list[
-    #             dict[str, dict[str, dict[str, str] | list[str] | str] | int | str]
-    #             | dict[str, str]
-    #         ]
-    #         | int,
-    #     ]
-    #     | bool
-    #     | str,
-    # ]
+    empty_str_dict: Dict[str, str] = {}
     expected = {
         "config": {
             "launchConfigs": [
@@ -318,7 +283,7 @@ def test_aws_resources(
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(
-    env: dict[str, str] | None, mock_clouds: MockClouds, mock_machines: MachineTypes
+    env: Optional[Dict[str, str]], mock_clouds: MockClouds, mock_machines: MachineTypes
 ) -> None:
     conf = PoolConfiguration(
         "test",
@@ -489,7 +454,7 @@ def test_gcp_resources(
     ],
 )
 def test_tasks(
-    env: dict[str, str] | None,
+    env: Optional[Dict[str, str]],
     scope_caps,
     platform: str,
     run_as_admin: bool,
@@ -756,7 +721,7 @@ def test_preprocess_tasks() -> None:
 @pytest.mark.parametrize("pool_path", POOL_FIXTURES.glob("pool*.yml"))
 def test_flatten(pool_path: Path) -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _: set[str] | None) -> None:
+        def _flatten(self, _: Optional[Set[str]]) -> None:
             pass
 
     pool = CommonPoolConfiguration.from_file(pool_path)
@@ -785,7 +750,7 @@ def test_flatten(pool_path: Path) -> None:
 
 def test_pool_map() -> None:
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _: set[str] | None) -> None:
+        def _flatten(self, _: Optional[Set[str]]) -> None:
             pass
 
     cfg_map = CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")

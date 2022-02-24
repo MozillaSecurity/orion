@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 from functools import wraps
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
+from typing import List, Optional
 
 from Reporter.Reporter import Reporter
 from taskcluster.helper import TaskclusterConfig
@@ -98,7 +99,9 @@ class CrashManager(Reporter):
     """Class to manage access to CrashManager server."""
 
     @remote_checks
-    def _list_objs(self, endpoint: str, query=None, ordering: list[str] | None = None):
+    def _list_objs(
+        self, endpoint: str, query=None, ordering: Optional[List[str]] = None
+    ):
         params = {}
         if query is not None:
             assert params is not None
@@ -134,7 +137,7 @@ class CrashManager(Reporter):
             LOG.debug("yielding %d/%d %s", returned, resp_json["count"], endpoint)
             yield from resp_json["results"]
 
-    def list_crashes(self, query=None, ordering: list[str] | None = None):
+    def list_crashes(self, query=None, ordering: Optional[List[str]] = None):
         """List all CrashEntry objects.
 
         Arguments:
@@ -178,7 +181,7 @@ class ReductionWorkflow(ABC):
     """Common framework for reduction scripts."""
 
     @abstractmethod
-    def run(self) -> int | None:
+    def run(self) -> Optional[int]:
         """Run the actual reduction script.
         Any necessary parameters must be set on the instance in `from_args`/`__init__`.
 
@@ -188,7 +191,7 @@ class ReductionWorkflow(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
+    def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
         """Parse CLI arguments and return the parsed result.
 
         This should used `CommonArgParser` to ensure the default arguments exist for
@@ -203,7 +206,7 @@ class ReductionWorkflow(ABC):
 
     @classmethod
     @abstractmethod
-    def from_args(cls, args: argparse.Namespace) -> ReductionWorkflow:
+    def from_args(cls, args: argparse.Namespace) -> "ReductionWorkflow":
         """Create an instance from parsed args.
 
         Arguments:
@@ -225,7 +228,7 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args: argparse.Namespace | None = None) -> int | None:
+    def main(cls, args: Optional[argparse.Namespace] = None) -> Optional[int]:
         """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()

@@ -8,12 +8,13 @@
 import argparse
 import logging
 import os
+from typing import List, Optional
 
 from ..common.cli import build_cli_parser
 from .launcher import PoolLauncher
 
 
-def main(args: list[str] | None = None) -> None:
+def main(args: Optional[List[str]] = None) -> None:
     parser = build_cli_parser(prog="fuzzing-pool-launch")
     parser.add_argument(
         "--pool-name",

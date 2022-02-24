@@ -12,7 +12,7 @@ from logging import getLogger
 from pathlib import Path
 from platform import machine
 from re import Pattern
-from typing import Iterable
+from typing import Dict, Iterable, List, Optional, Set, Union
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
@@ -108,7 +108,7 @@ class ServiceTest(ABC):
                 raise RuntimeError(f"Unknown test fields: '{extra!r}'")
 
     @staticmethod
-    def from_defn(defn) -> ToxServiceTest:
+    def from_defn(defn) -> "ToxServiceTest":
         """Load a service test from the service.yaml metadata test subsection.
 
         Arguments:
@@ -196,10 +196,10 @@ class Service:
 
     def __init__(
         self,
-        dockerfile: Path | None,
+        dockerfile: Optional[Path],
         context: Path,
         name: str,
-        tests: list[ServiceTest],
+        tests: List[ServiceTest],
         root: Path,
     ) -> None:
         """Initialize a Service instance.
@@ -214,16 +214,16 @@ class Service:
         self.dockerfile = dockerfile
         self.context = context
         self.name = name
-        self.service_deps: set[str] = set()
-        self.path_deps: set[Path] = set()
-        self.recipe_deps: set[str] = set()
-        self.weak_deps: set[str] = set()
+        self.service_deps: Set[str] = set()
+        self.path_deps: Set[Path] = set()
+        self.recipe_deps: Set[str] = set()
+        self.weak_deps: Set[str] = set()
         self.dirty = False
         self.tests = tests
         self.root = root
 
     @classmethod
-    def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> Service:
+    def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> "Service":
         """Create a Service instance from a service.yaml metadata path.
 
         Arguments:
@@ -236,7 +236,7 @@ class Service:
         metadata = yaml_load(metadata_path.read_text())
         name = metadata["name"]
         LOG.info("Loading %s from %s", name, metadata_path)
-        tests: list[ServiceTest]
+        tests: List[ServiceTest]
         if "tests" in metadata:
             tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
         else:
@@ -281,7 +281,7 @@ class ServiceMsys(Service):
     """
 
     def __init__(
-        self, base: str, context: Path, name: str, tests: list[ServiceTest], root: Path
+        self, base: str, context: Path, name: str, tests: List[ServiceTest], root: Path
     ) -> None:
         """Initialize a ServiceMsys instance.
 
@@ -316,10 +316,10 @@ class Recipe:
             file: Location of the recipe
         """
         self.file = file
-        self.service_deps: set[str] = set()
-        self.path_deps: set[Path] = set([file])
-        self.recipe_deps: set[str] = set()
-        self.weak_deps: set[str] = set()
+        self.service_deps: Set[str] = set()
+        self.path_deps: Set[Path] = set([file])
+        self.recipe_deps: Set[str] = set()
+        self.weak_deps: Set[str] = set()
         self.dirty = False
 
     @property
@@ -345,7 +345,7 @@ class Services(dict):
         super().__init__()
         self.root = repo.path
         # scan files & recipes
-        self.recipes: dict[str, Recipe] = {}
+        self.recipes: Dict[str, Recipe] = {}
         self._file_re = self._scan_files(repo)
         # scan the context recursively to find services
         assert self.root is not None
@@ -371,7 +371,7 @@ class Services(dict):
             LOG.debug("found path: %s", file_strs[-1])
         return re.compile("|".join(re.escape(file) for file in file_strs))
 
-    def _find_path_depends(self, obj: Recipe | Service, text: str) -> None:
+    def _find_path_depends(self, obj: Union[Recipe, Service], text: str) -> None:
         """Search a file for path references.
 
         Arguments:
@@ -496,7 +496,7 @@ class Services(dict):
                 # search file for references to other files
                 self._find_path_depends(service, entry_text)
 
-        def _adjacent(obj: Service) -> Iterable[Recipe | Service]:
+        def _adjacent(obj: Service) -> Iterable[Union[Recipe, Service]]:
             for rec in obj.recipe_deps:
                 yield self.recipes[rec]
             for svc in obj.service_deps:
@@ -511,7 +511,7 @@ class Services(dict):
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
-            stk: list[Iterable[Recipe | Service] | None] = [_adjacent(start)]
+            stk: List[Optional[Iterable[Union[Recipe, Service]]]] = [_adjacent(start)]
             bkt = [start]
             while stk:
                 if stk[-1] is None:

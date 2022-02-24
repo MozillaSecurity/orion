@@ -11,7 +11,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
-from typing import Iterable
+from typing import Iterable, Optional, Union
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
@@ -35,9 +35,9 @@ class GitRepo:
 
     def __init__(
         self,
-        clone_url: Path | str,
-        clone_ref: str | None,
-        commit: str | None,
+        clone_url: Union[Path, str],
+        clone_ref: Optional[str],
+        commit: Optional[str],
         _clone: bool = True,
     ) -> None:
         """Initialize a GitRepo instance.
@@ -48,7 +48,7 @@ class GitRepo:
             commit: Commit to checkout (must be `FETCH_HEAD` or an ancestor).
         """
         self._cloned = _clone
-        self.path: Path | None
+        self.path: Optional[Path]
         if _clone:
             self.path = Path(mkdtemp(prefix="decision-repo-"))
             LOG.debug("created git repo tmp folder: %s", self.path)
@@ -61,7 +61,7 @@ class GitRepo:
             self.git("show", "--quiet")  # assert that path is valid
 
     @classmethod
-    def from_existing(cls, path: Path) -> GitRepo:
+    def from_existing(cls, path: Path) -> "GitRepo":
         """Initialize a GitRepo instance to access a local repository directly.
 
         Arguments:
@@ -72,7 +72,7 @@ class GitRepo:
         """
         return cls(path, None, None, _clone=False)
 
-    def git(self, *args: Path | str, tries: int = 1) -> str:
+    def git(self, *args: Union[Path, str], tries: int = 1) -> str:
         """Call a git command in the cloned repository.
 
         If tries is specified, the command will be retried on failure,
@@ -119,7 +119,7 @@ class GitRepo:
             LOG.error("git command returned error:\n%s", exc.stderr)
             raise
 
-    def _clone(self, clone_url: Path | str, clone_ref: str, commit: str) -> None:
+    def _clone(self, clone_url: Union[Path, str], clone_ref: str, commit: str) -> None:
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
         self.git("fetch", "-q", "origin", clone_ref, tries=RETRIES)
@@ -164,19 +164,19 @@ class GithubEvent:
 
     def __init__(self) -> None:
         """Create an unpopulated GithubEvent."""
-        self.branch: str | None = None
-        self.commit: str | None = None
-        self.commit_message: str | None = None
-        self.commit_range: str | None = None
-        self.event_type: str | None = None
-        self.pull_request: int | None = None
-        self.pr_branch: str | None = None
-        self.pr_slug: str | None = None
-        self.repo_slug: str | None = None
-        self.tag: str | None = None
-        self.repo: GitRepo | None = None
-        self.fetch_ref: str | None = None
-        self.user: str | None = None
+        self.branch: Optional[str] = None
+        self.commit: Optional[str] = None
+        self.commit_message: Optional[str] = None
+        self.commit_range: Optional[str] = None
+        self.event_type: Optional[str] = None
+        self.pull_request: Optional[int] = None
+        self.pr_branch: Optional[str] = None
+        self.pr_slug: Optional[str] = None
+        self.repo_slug: Optional[str] = None
+        self.tag: Optional[str] = None
+        self.repo: Optional[GitRepo] = None
+        self.fetch_ref: Optional[str] = None
+        self.user: Optional[str] = None
 
     def cleanup(self) -> None:
         """Cleanup resources held by this instance."""
@@ -202,7 +202,7 @@ class GithubEvent:
         return f"https://github.com/{self.repo_slug}"
 
     @classmethod
-    def from_taskcluster(cls, action: str, event) -> GithubEvent:
+    def from_taskcluster(cls, action: str, event) -> "GithubEvent":
         """Initialize the GithubEvent from Taskcluster context variables.
 
         Arguments:

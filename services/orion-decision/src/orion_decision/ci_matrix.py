@@ -11,7 +11,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from logging import getLogger
 from pathlib import Path
-from typing import Iterable
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from jsonschema import RefResolver, validate
 from yaml import safe_load as yaml_load
@@ -34,7 +34,7 @@ IMAGES = {
     ("python", "linux", "3.10"): "ci-py-310",
     ("python", "windows", "3.8"): "ci-py-38-win",
 }
-SCHEMA_CACHE: dict[str, str] = {}
+SCHEMA_CACHE: Dict[str, str] = {}
 LOG = getLogger(__name__)
 
 
@@ -45,7 +45,7 @@ def _schema_by_name(name: str):
     raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
 
 
-def _validate_schema_by_name(instance: dict[str, str] | str, name: str):
+def _validate_schema_by_name(instance: Union[Dict[str, str], str], name: str):
     schema = _schema_by_name(name)
     resolver = RefResolver(None, referrer=None, store=SCHEMA_CACHE)
     return validate(instance=instance, schema=schema, resolver=resolver)
@@ -83,12 +83,12 @@ class MatrixJob:
 
     def __init__(
         self,
-        name: str | None,
+        name: Optional[str],
         language: str,
         version: str,
         platform: str,
-        env: dict[str, str],
-        script: list[str],
+        env: Dict[str, str],
+        script: List[str],
         stage: int = 1,
         previous_pass: bool = False,
     ) -> None:
@@ -119,7 +119,7 @@ class MatrixJob:
         self.script = script
         self.stage = stage
         self.require_previous_stage_pass = previous_pass
-        self.secrets: list[CISecret] = []
+        self.secrets: List[CISecret] = []
 
     @property
     def image(self) -> str:
@@ -173,7 +173,7 @@ class MatrixJob:
         )
 
     @classmethod
-    def from_json(cls, data: str) -> MatrixJob:
+    def from_json(cls, data: str) -> "MatrixJob":
         """Deserialize and create a MatrixJob from JSON.
 
         Arguments:
@@ -213,7 +213,7 @@ class MatrixJob:
     def __str__(self) -> str:
         return json_dumps(self.serialize())
 
-    def serialize(self) -> dict[str, str | None]:
+    def serialize(self) -> Dict[str, Optional[str]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -225,11 +225,11 @@ class MatrixJob:
 
     def matches(
         self,
-        language: str | None = None,
-        version: str | None = None,
-        platform: str | None = None,
-        env: dict[str, str] | None = None,
-        script: list[str] | None = None,
+        language: Optional[str] = None,
+        version: Optional[str] = None,
+        platform: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+        script: Optional[List[str]] = None,
     ) -> bool:
         """Check if this object matches all given arguments.
 
@@ -291,7 +291,7 @@ class CISecret(ABC):
 
     __slots__ = ("secret", "key")
 
-    def __init__(self, secret: str, key: str | None = None) -> None:
+    def __init__(self, secret: str, key: Optional[str] = None) -> None:
         """Initialize CISecret object.
 
         Arguments:
@@ -343,11 +343,11 @@ class CISecret(ABC):
         return json_dumps(self.serialize())
 
     @abstractmethod
-    def serialize(self) -> dict[str, str | None]:
+    def serialize(self) -> Dict[str, Optional[str]]:
         """Return a JSON serializable copy of self."""
 
     @staticmethod
-    def from_json(data: str) -> CISecret:
+    def from_json(data: str) -> "CISecret":
         """Deserialize and create a CISecret from JSON.
 
         Arguments:
@@ -382,7 +382,7 @@ class CISecretEnv(CISecret):
 
     __slots__ = ("name",)
 
-    def __init__(self, secret: str, name: str, key: str | None = None) -> None:
+    def __init__(self, secret: str, name: str, key: Optional[str] = None) -> None:
         """Initialize CISecretEnv object.
 
         Arguments:
@@ -393,7 +393,7 @@ class CISecretEnv(CISecret):
         super().__init__(secret, key)
         self.name = name
 
-    def serialize(self) -> dict[str, str | None]:
+    def serialize(self) -> Dict[str, Optional[str]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -418,7 +418,7 @@ class CISecretFile(CISecret):
 
     __slots__ = ("path",)
 
-    def __init__(self, secret: str, path: str, key: str | None = None) -> None:
+    def __init__(self, secret: str, path: str, key: Optional[str] = None) -> None:
         """Initialize CISecretFile object.
 
         Arguments:
@@ -429,7 +429,7 @@ class CISecretFile(CISecret):
         super().__init__(secret, key)
         self.path = path
 
-    def serialize(self) -> dict[str, str | None]:
+    def serialize(self) -> Dict[str, Optional[str]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -465,7 +465,7 @@ class CISecretKey(CISecret):
     __slots__ = ("hostname",)
 
     def __init__(
-        self, secret: str, key: str | None = None, hostname: str | None = None
+        self, secret: str, key: Optional[str] = None, hostname: Optional[str] = None
     ) -> None:
         """Initialize CISecretKey object.
 
@@ -477,7 +477,7 @@ class CISecretKey(CISecret):
         super().__init__(secret, key)
         self.hostname = hostname
 
-    def serialize(self) -> dict[str, str | None]:
+    def serialize(self) -> Dict[str, Optional[str]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -531,7 +531,9 @@ class CIMatrix:
 
     __slots__ = ("jobs", "secrets")
 
-    def __init__(self, matrix, branch: str | None, event_type: bool | str) -> None:
+    def __init__(
+        self, matrix, branch: Optional[str], event_type: Union[bool, str]
+    ) -> None:
         """Initialize a CIMatrix object.
 
         Arguments:
@@ -540,11 +542,13 @@ class CIMatrix:
             event_type: Git event type (for `when` expressions)
         """
         # matrix is language/platform/version
-        self.jobs: list[MatrixJob] = []
-        self.secrets: list[CISecret] = []
+        self.jobs: List[MatrixJob] = []
+        self.secrets: List[CISecret] = []
         self._parse_matrix(matrix, branch, event_type)
 
-    def _parse_matrix(self, matrix, branch: str | None, event_type: bool | str) -> None:
+    def _parse_matrix(
+        self, matrix, branch: Optional[str], event_type: Union[bool, str]
+    ) -> None:
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 
         given = set()
@@ -730,7 +734,7 @@ def _load_schema_cache() -> None:
 
 def _validate_globals() -> None:
     # validate VERSIONS
-    valid_image_keys: list[tuple[str, str, str]] = []
+    valid_image_keys: List[Tuple[str, str, str]] = []
     for (language, platform), versions in VERSIONS.items():
         assert language in LANGUAGES, f"unknown language in VERSIONS: {language}"
         assert platform in PLATFORMS, f"unknown platform in VERSIONS: {platform}"

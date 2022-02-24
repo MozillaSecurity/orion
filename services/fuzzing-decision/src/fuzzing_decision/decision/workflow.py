@@ -11,6 +11,7 @@ import pathlib
 import re
 import shutil
 import tempfile
+from typing import List, Optional, Union
 
 import yaml
 from tcadmin.appconfig import AppConfig
@@ -31,8 +32,8 @@ class Workflow(CommonWorkflow):
     def __init__(self) -> None:
         super().__init__()
 
-        self.fuzzing_config_dir: pathlib.Path | None = None
-        self.community_config_dir: pathlib.Path | None = None
+        self.fuzzing_config_dir: Optional[pathlib.Path] = None
+        self.community_config_dir: Optional[pathlib.Path] = None
 
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
@@ -103,7 +104,7 @@ class Workflow(CommonWorkflow):
             pool_config = PoolConfigLoader.from_file(config_file)
             resources.update(pool_config.build_resources(clouds, machines, env))
 
-    def build_resources_patterns(self) -> list[str] | str:
+    def build_resources_patterns(self) -> Union[List[str], str]:
         """Build regex patterns to manage our resources"""
 
         # Load existing workerpools from community config

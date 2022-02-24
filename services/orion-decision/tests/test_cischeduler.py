@@ -8,6 +8,7 @@
 from datetime import datetime
 from json import dumps as json_dump
 from pathlib import Path
+from typing import Optional
 
 import pytest
 from pytest_mock import MockerFixture
@@ -30,7 +31,7 @@ pytestmark = pytest.mark.usefixtures("mock_ci_languages")
 
 
 @pytest.mark.parametrize("commit_message", [None, "[skip ci]", "[skip tc]"])
-def test_ci_main(mocker: MockerFixture, commit_message: str | None) -> None:
+def test_ci_main(mocker: MockerFixture, commit_message: Optional[str]) -> None:
     """test CI scheduler main"""
     evt = mocker.patch("orion_decision.ci_scheduler.GithubEvent", autospec=True)
     mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
@@ -80,8 +81,8 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
 def test_ci_create_02(
     mocker: MockerFixture,
     platform: str,
-    matrix_secret: str | None,
-    job_secret: str | None,
+    matrix_secret: Optional[str],
+    job_secret: Optional[str],
 ) -> None:
     """test single stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)

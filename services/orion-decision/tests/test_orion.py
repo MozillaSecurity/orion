@@ -6,6 +6,7 @@
 
 
 from pathlib import Path
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union, cast
 
 import pytest
 from pytest_mock import MockerFixture
@@ -64,7 +65,7 @@ def test_service_load03() -> None:
     assert svc.tests[0].name == "test-test"
     assert svc.tests[0].image == "test-test-image"
     assert svc.tests[0].toxenv == "toxenvpy3"
-    task: dict[str, dict[str, str]] = {"payload": {}}
+    task: Dict[str, Dict[str, str]] = {"payload": {}}
     svc.tests[0].update_task(
         task, "{clone_url}", "{branch}", "{commit}", "/path/to/test"
     )
@@ -123,9 +124,9 @@ def test_service_load04(defn) -> None:
 )
 def test_service_deps(
     mocker: MockerFixture,
-    dirty_paths: list[Path],
-    expect_services: set[str],
-    expect_recipes: set[str | None],
+    dirty_paths: List[Path],
+    expect_services: Set[str],
+    expect_recipes: Set[Optional[str]],
 ) -> None:
     """test that service dependencies are calculated and changes propagated"""
     root = FIXTURES / "services03"

@@ -11,7 +11,7 @@ from shutil import copyfileobj, rmtree
 from subprocess import Popen, check_call
 from tempfile import mkdtemp, mkstemp
 from types import TracebackType
-from typing import Type
+from typing import List, Optional, Type
 
 import taskcluster
 from taskboot.config import Configuration
@@ -31,8 +31,8 @@ def create_cert(
     key_path: Path,
     cert_path: Path,
     ca: bool = False,
-    ca_key: Path | None = None,
-    ca_cert: Path | None = None,
+    ca_key: Optional[Path] = None,
+    ca_cert: Optional[Path] = None,
 ) -> None:
     """Create a self-signed localhost certificate. If a CA certificate is created,
     install in the system ca-certificate store.
@@ -132,14 +132,14 @@ class Registry:
             },
         )
 
-    def __enter__(self) -> Registry:
+    def __enter__(self) -> "Registry":
         return self
 
     def __exit__(
         self,
-        _exc_type: Type[BaseException] | None,
-        _exc_value: BaseException | None,
-        _exc_traceback: TracebackType | None,
+        _exc_type: Optional[Type[BaseException]],
+        _exc_value: Optional[BaseException],
+        _exc_traceback: Optional[TracebackType],
     ) -> None:
         self.proc.kill()
         self.proc.wait()
@@ -204,7 +204,7 @@ def stage_deps(target: Target, args: argparse.Namespace) -> None:
     patch_dockerfile(target.check_path(args.dockerfile), img_tool.list_images())
 
 
-def registry_main(argv: list[str] | None = None) -> None:
+def registry_main(argv: Optional[List[str]] = None) -> None:
     """Registry entrypoint. Does not return."""
     args = BaseArgs.parse_args(argv)
     configure_logging(level=args.log_level)

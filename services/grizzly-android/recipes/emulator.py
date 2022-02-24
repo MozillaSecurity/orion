@@ -15,6 +15,7 @@ import sys
 import telnetlib
 import tempfile
 import time
+from typing import Optional, Tuple, Union
 import xml.etree.ElementTree
 import zipfile
 import requests
@@ -67,7 +68,7 @@ class AndroidSDKRepo(object):
     @staticmethod
     def read_revision(
         element: xml.etree.ElementTree.Element,
-    ) -> tuple[int | None, int | None, int | None]:
+    ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
         rev = element.find("revision")
         assert rev is not None
         major = rev.find("major")
@@ -94,7 +95,7 @@ class AndroidSDKRepo(object):
         self,
         package_path: str,
         out_path: str = ".",
-        host: str | None = "linux",
+        host: Optional[str] = "linux",
         extract_package_path: bool = True,
     ) -> None:
         package = self.root.find(
@@ -244,10 +245,10 @@ class AndroidHelper(object):
     def __init__(
         self,
         android_port: int = 5554,
-        avd_name: str | None = None,
+        avd_name: Optional[str] = None,
         no_window: bool = False,
         sdcard_size: int = 500,
-        use_snapshot: bool | str = False,
+        use_snapshot: Union[bool, str] = False,
         writable: bool = False,
     ) -> None:
         self.android_port = android_port
@@ -363,7 +364,7 @@ class AndroidHelper(object):
         shutil.copy(sdcard, sdcard + ".firstboot")
 
     def emulator_run(
-        self, use_snapshot: bool | str, quiet: bool = True
+        self, use_snapshot: Union[bool, str], quiet: bool = True
     ) -> subprocess.Popen:
         # create folder structure
         android = makedirs(HOME, "Android")

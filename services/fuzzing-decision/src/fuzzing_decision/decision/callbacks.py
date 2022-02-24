@@ -6,6 +6,7 @@
 
 
 import logging
+from typing import List
 
 from tcadmin.resources import Hook, WorkerPool
 
@@ -15,7 +16,7 @@ from .pool import cancel_tasks
 LOG = logging.getLogger(__name__)
 
 
-async def cancel_pool_tasks(action: list[str], resource: WorkerPool) -> None:
+async def cancel_pool_tasks(action: List[str], resource: WorkerPool) -> None:
     """Cancel all the tasks on a WorkerPool being updated or deleted"""
     assert isinstance(resource, WorkerPool)
 
@@ -23,7 +24,7 @@ async def cancel_pool_tasks(action: list[str], resource: WorkerPool) -> None:
     cancel_tasks(worker_type)
 
 
-async def trigger_hook(action: list[str], resource: WorkerPool) -> None:
+async def trigger_hook(action: List[str], resource: WorkerPool) -> None:
     """Trigger a Hook after it is created or updated"""
     assert isinstance(resource, Hook)
 

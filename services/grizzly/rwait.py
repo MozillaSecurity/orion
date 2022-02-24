@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import uuid
+from typing import List, Optional
 
 import fasteners
 
@@ -18,8 +19,8 @@ TOKEN_PATH = pathlib.Path(tempfile.gettempdir()) / "rwait"
 
 
 class RemoteWait:
-    def __init__(self, token: str | None = None) -> None:
-        self._token: str | None = None
+    def __init__(self, token: Optional[str] = None) -> None:
+        self._token: Optional[str] = None
         if token is not None:
             self.token = token
 
@@ -28,12 +29,12 @@ class RemoteWait:
         return TOKEN_PATH / str(self.token)
 
     @property
-    def token(self) -> str | None:
+    def token(self) -> Optional[str]:
         assert self._token is not None, "token has not been created/set"
         return self._token
 
     @token.setter
-    def token(self, value: str | None) -> None:
+    def token(self, value: Optional[str]) -> None:
         assert self._token is None, "token already has a value"
         self._token = value
 
@@ -44,7 +45,7 @@ class RemoteWait:
             assert not self._token_file.is_file()
             self._token_file.write_text(json.dumps({"state": "new"}))
 
-    def run(self, cmd: list[str]) -> int:
+    def run(self, cmd: List[str]) -> int:
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
             data = json.loads(self._token_file.read_text())
             assert data["state"] == "new"
@@ -123,7 +124,7 @@ class RemoteWait:
         return parser
 
     @classmethod
-    def main(cls, input_args: list[str] | None = None) -> None:
+    def main(cls, input_args: Optional[List[str]] = None) -> None:
         parser = cls.arg_parser()
         args = parser.parse_args(input_args)
         rwait = cls(args.token)

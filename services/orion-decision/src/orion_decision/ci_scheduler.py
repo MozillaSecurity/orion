@@ -13,6 +13,7 @@ from json import dumps as json_dump
 from logging import getLogger
 from pathlib import Path
 from string import Template
+from typing import List
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -89,7 +90,7 @@ class CIScheduler:
     def create_tasks(self) -> None:
         """Create CI tasks in Taskcluster."""
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
-        prev_stage: list[str] = []
+        prev_stage: List[str] = []
         for stage in sorted(set(job.stage for job in self.matrix.jobs)):
             this_stage = []
             for job in self.matrix.jobs:

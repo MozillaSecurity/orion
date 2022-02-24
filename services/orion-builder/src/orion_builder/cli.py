@@ -9,6 +9,7 @@ import argparse
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import getenv
+from typing import List, Optional
 
 
 def configure_logging(level: int = INFO) -> None:
@@ -51,7 +52,7 @@ class BaseArgs:
         )
 
     @classmethod
-    def parse_args(cls, argv: list[str] | None = None) -> argparse.Namespace:
+    def parse_args(cls, argv: Optional[List[str]] = None) -> argparse.Namespace:
         """Parse command-line arguments.
 
         Arguments:

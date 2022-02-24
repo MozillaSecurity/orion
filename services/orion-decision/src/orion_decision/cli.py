@@ -16,6 +16,7 @@ from pathlib import Path
 from shutil import which
 from subprocess import run
 import sys
+from typing import List, Optional
 
 from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
@@ -113,7 +114,7 @@ def _define_decision_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments.
 
     Arguments:
@@ -143,7 +144,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return result
 
 
-def parse_check_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for check.
 
     Arguments:
@@ -168,7 +169,7 @@ def parse_check_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def parse_ci_check_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_ci_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI check.
 
     Arguments:
@@ -188,7 +189,7 @@ def parse_ci_check_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def parse_ci_launch_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_ci_launch_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI launch.
 
     Arguments:
@@ -233,7 +234,7 @@ def parse_ci_launch_args(argv: list[str] | None = None) -> argparse.Namespace:
     return result
 
 
-def parse_ci_args(argv: list[str] | None = None) -> argparse.Namespace:
+def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments for CI.
 
     Arguments:

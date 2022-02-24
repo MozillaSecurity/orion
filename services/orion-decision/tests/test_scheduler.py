@@ -7,6 +7,7 @@
 
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
 import pytest
 from pytest_mock import MockerFixture
@@ -401,7 +402,7 @@ def test_create_08(
     ci1_dirty: bool,
     svc1_dirty: bool,
     svc2_dirty: bool,
-    expected_image: dict[str, str],
+    expected_image: Dict[str, str],
 ) -> None:
     """test "test" tasks creation with dirty ci image"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)

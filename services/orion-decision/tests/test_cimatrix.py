@@ -6,6 +6,7 @@
 
 
 from pathlib import Path
+from typing import List, Optional
 
 import pytest
 from yaml import safe_load as yaml_load
@@ -94,7 +95,7 @@ def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
         [CISecretKey("project/deploy")],
     ],
 )
-def test_matrix_job_serialize(secrets: list[CISecret | None]) -> None:
+def test_matrix_job_serialize(secrets: List[Optional[CISecret]]) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(
         "name",
