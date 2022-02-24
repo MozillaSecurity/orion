@@ -10,7 +10,7 @@ import os
 import pathlib
 import subprocess
 import tempfile
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -94,7 +94,7 @@ class Workflow:
         url: Optional[str] = None,
         path: Optional[pathlib.Path] = None,
         revision: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> pathlib.Path:
         """Clone a configuration repository"""
         local_path = False

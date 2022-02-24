@@ -11,7 +11,18 @@ import logging
 import pathlib
 import re
 import types
-from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 from typing_extensions import NotRequired, TypedDict
 from datetime import datetime, timedelta, timezone
 
@@ -397,7 +408,9 @@ class CommonPoolConfiguration(abc.ABC):
             self.cloud = data["cloud"]
 
     @classmethod
-    def from_file(cls, pool_yml: pathlib.Path, **kwds) -> "CommonPoolConfiguration":
+    def from_file(
+        cls, pool_yml: pathlib.Path, **kwds: Any
+    ) -> "CommonPoolConfiguration":
         assert pool_yml.is_file()
         return cls(
             pool_yml.stem,

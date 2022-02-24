@@ -9,9 +9,10 @@ import argparse
 import logging
 import os
 import pathlib
+from typing import Any
 
 
-def build_cli_parser(*args, **kwargs) -> argparse.ArgumentParser:
+def build_cli_parser(*args: Any, **kwargs: Any) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(*args, **kwargs)
     parser.add_argument(
         "--taskcluster-secret",

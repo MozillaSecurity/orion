@@ -7,7 +7,6 @@
 
 
 import argparse
-
 import json
 import re
 from abc import ABC, abstractmethod
@@ -15,7 +14,7 @@ from argparse import ArgumentParser
 from functools import wraps
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from Reporter.Reporter import Reporter
 from taskcluster.helper import TaskclusterConfig
@@ -44,7 +43,7 @@ def remote_checks(wrapped):
     """Decorator to perform error checks before using remote features"""
 
     @wraps(wrapped)
-    def decorator(self, *args, **kwargs):
+    def decorator(self, *args: Any, **kwargs: Any):
         if not self.serverProtocol:
             raise RuntimeError(
                 "Must specify serverProtocol (configuration property: serverproto) to "
@@ -73,7 +72,7 @@ def remote_checks(wrapped):
 class CommonArgParser(ArgumentParser):
     """Argument parser with common arguments used by reduction scripts."""
 
-    def __init__(self, *args, **kwds) -> None:
+    def __init__(self, *args: Any, **kwds: Any) -> None:
         super().__init__(*args, **kwds)
         group = self.add_mutually_exclusive_group()
         group.add_argument(

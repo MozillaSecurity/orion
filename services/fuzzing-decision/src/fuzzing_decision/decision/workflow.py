@@ -11,7 +11,7 @@ import pathlib
 import re
 import shutil
 import tempfile
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import yaml
 from tcadmin.appconfig import AppConfig
@@ -38,7 +38,7 @@ class Workflow(CommonWorkflow):
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args, **kwds):
+    def configure(self, *args: Any, **kwds: Any):
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")
