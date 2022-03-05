@@ -3,7 +3,7 @@
 
 import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Type, Union
+from typing import Any, Dict, List, Optional, Set, Type, Union
 from typing_extensions import TypedDict
 
 import pytest
@@ -79,7 +79,7 @@ def test_machine_filters(
 
 
 # Hook & role should be the same across cloud providers
-def _get_expected_hook(platform: Union[List[str], str] = "linux"):
+def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, Any]:
     empty_str_list: List[str] = []
     empty_str_dict: Dict[str, str] = {}
     return {
@@ -209,7 +209,7 @@ def test_aws_resources(
     pool, hook, role = resources
 
     empty_str_dict: Dict[str, str] = {}
-    expected = {
+    expected: Dict[str, Any] = {
         "config": {
             "launchConfigs": [
                 {

@@ -13,7 +13,7 @@ from pathlib import Path
 from platform import system
 from shutil import which
 from subprocess import call
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from ..common.pool import PoolConfigLoader
 from ..common.workflow import Workflow
@@ -41,7 +41,7 @@ class PoolLauncher(Workflow):
         self.preprocess = preprocess
         self.log_dir = Path("/logs" if sys.platform == "linux" else "logs")
 
-    def clone(self, config) -> None:
+    def clone(self, config: Dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 

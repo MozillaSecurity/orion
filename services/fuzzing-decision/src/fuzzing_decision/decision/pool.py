@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import dateutil.parser
 import yaml
@@ -35,6 +35,7 @@ from . import (
     SCHEDULER_ID,
     WORKER_POOL_PREFIX,
 )
+from .providers import AWS, GCP
 
 LOG = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class MountArtifactResolver:
         return cls.CACHE[namespace]
 
 
-def add_task_image(task, config) -> None:
+def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     """Add image or mount to task payload, depending on platform."""
     if config.platform == "windows":
         assert isinstance(config.container, dict)
@@ -104,7 +105,7 @@ def add_task_image(task, config) -> None:
         task["payload"]["image"] = config.container
 
 
-def add_capabilities_for_scopes(task) -> None:
+def add_capabilities_for_scopes(task: Dict[str, Any]) -> None:
     """Request capabilities to match the scopes specified by the task"""
     capabilities = task["payload"].setdefault("capabilities", {})
     scopes = set(task["scopes"])
@@ -120,7 +121,12 @@ def add_capabilities_for_scopes(task) -> None:
         del task["payload"]["capabilities"]
 
 
-def configure_task(task, config, now, env) -> None:
+def configure_task(
+    task: Dict[str, Any],
+    config: "PoolConfiguration",
+    now: datetime,
+    env: Optional[Dict[str, str]],
+) -> None:
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("4 weeks", now)))
     )
@@ -257,7 +263,10 @@ class PoolConfiguration(CommonPoolConfiguration):
         return result
 
     def build_resources(
-        self, providers, machine_types: MachineTypes, env=None
+        self,
+        providers: Dict[str, Union["AWS", "GCP"]],
+        machine_types: MachineTypes,
+        env: Optional[Dict[str, str]] = None,
     ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
@@ -274,7 +283,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         assert self.max_run_time is not None
         assert self.cycle_time is not None
         assert self.tasks is not None
-        config = {
+        config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
             ),
@@ -349,7 +358,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         return [pool, hook, role]
 
-    def artifact_map(self, expires: str):
+    def artifact_map(self, expires: str) -> Dict[str, Dict[str, str]]:
         result = {}
         for local_path, value in self.artifacts.items():
             assert isinstance(value["url"], str)
@@ -367,7 +376,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         }
         return result
 
-    def build_tasks(self, parent_task_id, env=None):
+    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
         preprocess_task_id = None
@@ -433,7 +442,10 @@ class PoolConfigMap(CommonPoolConfigMap):
         return f"{self.platform}-{self.pool_id}"
 
     def build_resources(
-        self, providers, machine_types: MachineTypes, env=None
+        self,
+        providers: Dict[str, Union["AWS", "GCP"]],
+        machine_types: MachineTypes,
+        env=None,
     ) -> List[Union[WorkerPool, Hook, Role]]:
         """Build the full tc-admin resources to compare and build the pool"""
 
@@ -452,7 +464,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         assert machines is not None
         assert self.disk_size is not None
         assert self.platform is not None
-        config = {
+        config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset, machines, self.disk_size, self.platform
             ),
@@ -519,7 +531,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         return [pool, hook, role]
 
-    def build_tasks(self, parent_task_id, env=None):
+    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
 

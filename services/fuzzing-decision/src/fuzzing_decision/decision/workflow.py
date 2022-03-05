@@ -11,7 +11,7 @@ import pathlib
 import re
 import shutil
 import tempfile
-from typing import Any, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from tcadmin.appconfig import AppConfig
@@ -38,7 +38,7 @@ class Workflow(CommonWorkflow):
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args: Any, **kwds: Any):
+    def configure(self, *args: Any, **kwds: Any) -> Optional[Dict[str, object]]:
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")
@@ -62,13 +62,14 @@ class Workflow(CommonWorkflow):
             fuzzing_git_revision=appconfig.options.get("fuzzing_git_revision"),
         )
 
+        assert config is not None
         # Retrieve remote repositories
         workflow.clone(config)
 
         # Then generate all our Taskcluster resources
         workflow.generate(resources, config)
 
-    def clone(self, config) -> None:
+    def clone(self, config: Dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
@@ -76,7 +77,7 @@ class Workflow(CommonWorkflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
         self.community_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config) -> None:
+    def generate(self, resources, config: Dict[str, Any]) -> None:
 
         # Setup resources manager to track only fuzzing instances
         for pattern in self.build_resources_patterns():
@@ -114,7 +115,7 @@ class Workflow(CommonWorkflow):
         community = yaml.safe_load(path_.read_text())
         assert "fuzzing" in community, "Missing fuzzing main key in community config"
 
-        def _suffix(data, key) -> str:
+        def _suffix(data: Dict[str, Any], key: str) -> str:
             existing = data.get(key, {})
             if not existing:
                 # Manage every resource possible
@@ -147,7 +148,11 @@ class Workflow(CommonWorkflow):
         ]
 
     def build_tasks(
-        self, pool_name: str, task_id, config, dry_run: bool = False
+        self,
+        pool_name: str,
+        task_id: int,
+        config: Dict[str, Any],
+        dry_run: bool = False,
     ) -> None:
         assert self.fuzzing_config_dir is not None
         path_ = self.fuzzing_config_dir / f"{pool_name}.yml"
@@ -171,9 +176,9 @@ class Workflow(CommonWorkflow):
         if not dry_run:
             # Create all the tasks on taskcluster
             queue = taskcluster.get_service("queue")
-            for task_id, task in tasks:
-                LOG.info(f"Creating task {task['metadata']['name']} as {task_id}")
-                queue.createTask(task_id, task)
+            for task_id_, task in tasks:
+                LOG.info(f"Creating task {task['metadata']['name']} as {task_id_}")
+                queue.createTask(task_id_, task)
 
     def cleanup(self) -> None:
         """Cleanup temporary folders at end of execution"""

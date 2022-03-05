@@ -12,7 +12,7 @@ from logging import getLogger
 from pathlib import Path
 from platform import machine
 from re import Pattern
-from typing import Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Union
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
@@ -77,12 +77,17 @@ class ServiceTest(ABC):
 
     @abstractmethod
     def update_task(
-        self, task, clone_url: str, fetch_ref: str, commit: str, service_rel_path: str
+        self,
+        task: Dict[str, Any],
+        clone_url: str,
+        fetch_ref: str,
+        commit: str,
+        service_rel_path: str,
     ) -> None:
         """Update a task definition to run the tests.
 
         Arguments:
-            task (dict): Task definition to update.
+            task: Task definition to update.
             clone_url: Git clone URL
             fetch_ref: Git fetch reference
             commit: Git revision
@@ -90,11 +95,11 @@ class ServiceTest(ABC):
         """
 
     @classmethod
-    def check_fields(cls, defn, check_unknown: bool = True) -> None:
+    def check_fields(cls, defn: Dict[str, str], check_unknown: bool = True) -> None:
         """Check a service test definition fields.
 
         Arguments:
-            defn (dict): Test definition from service.yaml
+            defn: Test definition from service.yaml
             check_unknown: Check for unknown fields as well as missing.
         """
         LOG.debug("got fields %r", cls.FIELDS)
@@ -108,11 +113,11 @@ class ServiceTest(ABC):
                 raise RuntimeError(f"Unknown test fields: '{extra!r}'")
 
     @staticmethod
-    def from_defn(defn) -> "ToxServiceTest":
+    def from_defn(defn: Dict[str, str]) -> "ToxServiceTest":
         """Load a service test from the service.yaml metadata test subsection.
 
         Arguments:
-            defn (dict): Test definition from service.yaml
+            defn: Test definition from service.yaml
         """
         ServiceTest.check_fields(defn, check_unknown=False)
         if defn["type"] == "tox":
@@ -149,12 +154,17 @@ class ToxServiceTest(ServiceTest):
         self.toxenv = toxenv
 
     def update_task(
-        self, task, clone_url: str, fetch_ref: str, commit: str, service_rel_path: str
+        self,
+        task: Dict[str, Any],
+        clone_url: str,
+        fetch_ref: str,
+        commit: str,
+        service_rel_path: str,
     ) -> None:
         """Update a task definition to run the tests.
 
         Arguments:
-            task (dict): Task definition to update.
+            task: Task definition to update.
             clone_url: Git clone URL
             fetch_ref: Git reference to fetch
             commit: Git revision

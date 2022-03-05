@@ -137,7 +137,7 @@ def parse_time(time: str) -> int:
 class MachineTypes:
     """Database of all machine types available, by provider and architecture."""
 
-    def __init__(self, machines_data) -> None:
+    def __init__(self, machines_data: Dict[str, Any]) -> None:
         for provider, provider_archs in machines_data.items():
             assert provider in PROVIDERS, f"unknown provider: {provider}"
             for arch, machines in provider_archs.items():
@@ -559,7 +559,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
 
-    def create_preprocess(self) -> Optional[CommonPoolConfiguration]:
+    def create_preprocess(self) -> Optional["PoolConfiguration"]:
         """
         Return a new PoolConfiguration based on the value of self.preprocess
         """

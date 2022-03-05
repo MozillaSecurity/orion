@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, List, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, List, Tuple, Union
 
 import yaml
 
@@ -20,9 +20,9 @@ class Provider(object):
             (base_dir / "config" / "imagesets.yml").read_text()
         )
 
-    def get_worker_config(self, worker: str, platform: str):
+    def get_worker_config(self, worker: str, platform: str) -> Dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
-        out = self.imagesets[worker].get("workerConfig", {})
+        out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
         if platform == "linux":
             out.setdefault("dockerConfig", {})
@@ -77,7 +77,7 @@ class AWS(Provider):
         self.regions = self.load_regions(base_dir / "config" / "aws.yml")
         LOG.info("Loaded AWS configuration")
 
-    def load_regions(self, path: Path):
+    def load_regions(self, path: Path) -> Dict[str, Any]:
         """Load AWS regions from community tc file"""
         aws = yaml.safe_load(path.read_text())
         assert "subnets" in aws, "Missing subnets in AWS config"
@@ -93,9 +93,9 @@ class AWS(Provider):
             for region, subnets in aws["subnets"].items()
         }
 
-    def get_amis(self, worker: str) -> str:
+    def get_amis(self, worker: str):
         assert worker in self.imagesets, f"Missing worker {worker}"
-        return str(self.imagesets[worker]["aws"]["amis"])
+        return self.imagesets[worker]["aws"]["amis"]
 
     def build_launch_configs(
         self,
@@ -103,9 +103,7 @@ class AWS(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
-    ) -> List[
-        Dict[str, Union[Dict[str, Union[Dict[str, str], List[str], str]], int, str]]
-    ]:
+    ) -> List[Dict[str, object]]:
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)

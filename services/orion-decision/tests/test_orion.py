@@ -6,7 +6,7 @@
 
 
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 import pytest
 from pytest_mock import MockerFixture
@@ -79,7 +79,7 @@ def test_service_load03() -> None:
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )
-def test_service_load04(defn) -> None:
+def test_service_load04(defn: Dict[str, Any]) -> None:
     """test that service test errors are raised"""
     expect = defn.pop("expect")
     if "raises" in expect:

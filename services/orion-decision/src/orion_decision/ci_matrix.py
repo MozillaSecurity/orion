@@ -11,7 +11,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from logging import getLogger
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from jsonschema import RefResolver, validate
 from yaml import safe_load as yaml_load
@@ -301,7 +301,7 @@ class CISecret(ABC):
         self.secret = secret
         self.key = key
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if type(self) is not type(other):
             return False
         for cls in type(self).__mro__:
@@ -310,7 +310,7 @@ class CISecret(ABC):
                     return False
         return True
 
-    def is_alias(self, other) -> bool:
+    def is_alias(self, other: object) -> bool:
         """True if other aliases self.
 
         This currently means type is equal and type-specific fields
@@ -532,12 +532,15 @@ class CIMatrix:
     __slots__ = ("jobs", "secrets")
 
     def __init__(
-        self, matrix, branch: Optional[str], event_type: Union[bool, str]
+        self,
+        matrix: Dict[str, Any],
+        branch: Optional[str],
+        event_type: Union[bool, str],
     ) -> None:
         """Initialize a CIMatrix object.
 
         Arguments:
-            matrix (dict): Matrix representation matching the CIMatrix jsonschema.
+            matrix: Matrix representation matching the CIMatrix jsonschema.
             branch: Git branch name (for matching `when` expressions)
             event_type: Git event type (for `when` expressions)
         """
@@ -547,7 +550,10 @@ class CIMatrix:
         self._parse_matrix(matrix, branch, event_type)
 
     def _parse_matrix(
-        self, matrix, branch: Optional[str], event_type: Union[bool, str]
+        self,
+        matrix: Dict[str, Any],
+        branch: Optional[str],
+        event_type: Union[bool, str],
     ) -> None:
         _validate_schema_by_name(instance=matrix, name="CIMatrix")
 

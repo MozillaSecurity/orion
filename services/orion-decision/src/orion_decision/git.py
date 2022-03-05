@@ -11,7 +11,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
-from typing import Iterable, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Union
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
@@ -202,13 +202,13 @@ class GithubEvent:
         return f"https://github.com/{self.repo_slug}"
 
     @classmethod
-    def from_taskcluster(cls, action: str, event) -> "GithubEvent":
+    def from_taskcluster(cls, action: str, event: Dict[str, Any]) -> "GithubEvent":
         """Initialize the GithubEvent from Taskcluster context variables.
 
         Arguments:
             action: The Github action string from Taskcluster
                 (one of "github-push", "github-pull-request", "github-release").
-            event (dict): The raw Github Webhook event object.
+            event: The raw Github Webhook event object.
                 ref: https://docs.github.com/en/free-pro-team@latest/developers
                      /webhooks-and-events/webhook-events-and-payloads
 

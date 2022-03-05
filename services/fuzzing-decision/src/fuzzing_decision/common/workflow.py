@@ -33,7 +33,7 @@ class Workflow:
         secret: Optional[str] = None,
         fuzzing_git_repository: Optional[str] = None,
         fuzzing_git_revision: Optional[str] = None,
-    ):
+    ) -> Optional[Dict[str, object]]:
         """Load configuration either from local file or Taskcluster secret"""
 
         if local_path is not None:

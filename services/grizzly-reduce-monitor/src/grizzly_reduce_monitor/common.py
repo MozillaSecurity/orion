@@ -14,7 +14,7 @@ from argparse import ArgumentParser
 from functools import wraps
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from Reporter.Reporter import Reporter
 from taskcluster.helper import TaskclusterConfig
@@ -99,8 +99,12 @@ class CrashManager(Reporter):
 
     @remote_checks
     def _list_objs(
-        self, endpoint: str, query=None, ordering: Optional[List[str]] = None
+        self,
+        endpoint: str,
+        query: Optional[Dict[str, Any]] = None,
+        ordering: Optional[List[str]] = None,
     ):
+        params: Optional[Dict[str, object]]
         params = {}
         if query is not None:
             assert params is not None
@@ -136,12 +140,16 @@ class CrashManager(Reporter):
             LOG.debug("yielding %d/%d %s", returned, resp_json["count"], endpoint)
             yield from resp_json["results"]
 
-    def list_crashes(self, query=None, ordering: Optional[List[str]] = None):
+    def list_crashes(
+        self,
+        query: Optional[Dict[str, Any]] = None,
+        ordering: Optional[List[str]] = None,
+    ):
         """List all CrashEntry objects.
 
         Arguments:
-            query (dict or None): The query definition to use.
-                                  (see crashmanager.views.json_to_query)
+            query: The query definition to use.
+                   (see crashmanager.views.json_to_query)
             ordering: Field(s) to order by (eg. `id` or `-id`)
 
         Yields:
@@ -149,12 +157,12 @@ class CrashManager(Reporter):
         """
         yield from self._list_objs("crashes", query=query, ordering=ordering)
 
-    def list_buckets(self, query=None):
+    def list_buckets(self, query: Optional[Dict[str, Any]] = None):
         """List all Bucket objects.
 
         Arguments:
-            query (dict or None): The query definition to use.
-                                  (see crashmanager.views.json_to_query)
+            query: The query definition to use.
+                   (see crashmanager.views.json_to_query)
 
         Yields:
             dict: Dict representation of Bucket
