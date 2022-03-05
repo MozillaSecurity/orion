@@ -77,6 +77,7 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     if config.platform == "windows":
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
+        task_id: Union[str, int]
         if config.container["type"] == "indexed-image":
             # need to resolve "image" to a task ID where the mount artifact is
             task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])

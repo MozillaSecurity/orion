@@ -206,7 +206,7 @@ def test_github_tc(
     action: str,
     event: Dict[str, Dict[str, str]],
     result: Dict[str, Optional[str]],
-    repo_args,
+    repo_args: str,
 ) -> None:
     """test github event parsing from taskcluster"""
     repo = mocker.patch("orion_decision.git.GitRepo")

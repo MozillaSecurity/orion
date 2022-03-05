@@ -83,7 +83,7 @@ def test_configure_local(tmp_path: pathlib.Path) -> None:
     }
 
 
-def test_configure_secret(mock_taskcluster_workflow) -> None:
+def test_configure_secret(mock_taskcluster_workflow: Workflow) -> None:
     workflow = mock_taskcluster_workflow
 
     # Read a remote conf from Taskcluster secret
