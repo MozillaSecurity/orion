@@ -136,10 +136,33 @@ class AWS(Provider):
 class Static(Provider):
     """Fake provider for static machines not provisioned by Taskcluster"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def build_launch_configs(self, imageset, machines, disk_size, platform):
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+    ) -> List[
+        Dict[
+            str,
+            Union[
+                Dict[str, str],
+                List[
+                    Dict[
+                        str,
+                        Union[
+                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
+                        ],
+                    ]
+                ],
+                int,
+                str,
+            ],
+        ]
+    ]:
         return []
 
 
