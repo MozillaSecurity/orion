@@ -2,15 +2,14 @@
 set -e -x
 
 # base msys packages
-pacman-key --init
-pacman-key --populate msys2
-pacman --noconfirm -Sy \
+pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
   tar
-killall -TERM gpg-agent
-rm -rf /var/cache/pacman/pkg
+pacman --noconfirm -Scc
+killall -TERM gpg-agent || true
+pacman --noconfirm -Rs psmisc
 
 # get nuget
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
@@ -57,8 +56,15 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 # install utils to match linux ci images
 python -m pip install tox
 python -m pip install poetry
+python -m pip install pre-commit
 
-rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
+rm -rf \
+  msys64/mingw64/share/doc/ \
+  msys64/mingw64/share/info/ \
+  msys64/mingw64/share/man/ \
+  msys64/usr/share/doc/ \
+  msys64/usr/share/info/ \
+  msys64/usr/share/man/
 cp -r orion/services/orion-decision orion-decision
 python -m pip install ./orion-decision
 cp orion/recipes/linux/py-ci.sh .

@@ -2,7 +2,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-# supports-test /force-dirty=fuzzing-decision
+# supports-test
 
 set -e
 set -x
@@ -11,31 +11,24 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
+#### Install Prefpicker
+
 case "${1-install}" in
   install)
-    # assert that SRCDIR is set
-    [ -n "$SRCDIR" ]
-
     sys-embed \
-      ca-certificates \
       git \
-      openssh-client \
-      python3 \
-      python3-setuptools
+      python3
     apt-install-auto \
-      gcc \
-      python3-dev \
+      ca-certificates \
       python3-pip \
+      python3-setuptools \
       python3-wheel
 
-    if [ "$EDIT" = "1" ]
-    then
-      retry pip3 install --no-build-isolation -e "$SRCDIR"
-    else
-      retry pip3 install "$SRCDIR"
-    fi
+    git-clone "https://github.com/MozillaSecurity/prefpicker.git"
+    cd prefpicker
+    pip install .
     ;;
   test)
-    fuzzing-pool-launch --help
+    prefpicker -h
     ;;
 esac

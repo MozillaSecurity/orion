@@ -1,0 +1,36 @@
+taskGroupId: "${task_group}"
+provisionerId: "${provisioner}"
+workerType: "${worker}"
+created: "${now}"
+deadline: "${deadline}"
+dependencies:
+  - ${homebrew_task}
+schedulerId: "${scheduler}"
+routes: []
+scopes:
+  - "queue:scheduler-id:${scheduler}"
+payload:
+  env:
+    FETCH_REF: ${fetch_ref}
+    FETCH_REV: ${fetch_rev}
+    CLONE_REPO: ${clone_repo}
+    CI_JOB: ${ci_job}
+  mounts:
+    - format: tar.bz2
+      content:
+        taskId: ${homebrew_task}
+        artifact: public/homebrew.tar.bz2
+      directory: .
+  command:
+    - - "/bin/bash"
+      - "-c"
+      - "-x"
+      - >-
+        eval "$$(homebrew/bin/brew shellenv)" &&
+        exec ci-launch
+  maxRunTime: !!int "${max_run_time}"
+metadata:
+  name: "${project} ${name}"
+  description: "${project} ${name}"
+  owner: "${user}@users.noreply.github.com"
+  source: "${http_repo}/raw/${fetch_rev}/.taskcluster.yml"

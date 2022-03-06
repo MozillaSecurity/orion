@@ -1,29 +1,36 @@
 created: "${created}"
 deadline: "${deadline}"
-dependencies: []
+dependencies:
+  - "${image_task_id}"
 expires: "${expires}"
 metadata:
   description: "${description}"
-  name: "Reduce fuzzing crash ${crash_id} for ${os_name}"
+  name: "Reduce fuzzing crash ${crash_id} for macos"
   owner: "${owner_email}"
   source: "https://github.com/MozillaSecurity/grizzly"
 payload:
   artifacts:
-    project/fuzzing/private/logs:
-      expires: "${expires}"
-      path: /logs/
+    - expires: "${expires}"
+      name: project/fuzzing/grizzly
+      path: grizzly-auto-run/grizzly-tmp
       type: directory
-  capabilities:
-    devices:
-      hostSharedMemory: true
-      loopbackAudio: true
-  image:
-    namespace: project.fuzzing.orion.grizzly.master
-    path: public/grizzly.tar.zst
-    type: indexed-image
+    - expires: "${expires}"
+      name: project/fuzzing/fluentbit.log
+      path: td-agent-bit.log
+      type: file
+    - expires: "${expires}"
+      name: project/fuzzing/private/logs
+      path: logs
+      type: directory
+  command:
+    - - /bin/bash
+      - "-c"
+      - "-x"
+      - eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch bash launch.sh
   env:
     ADAPTER: reducer
     FUZZING_CPU_COUNT: "0"  # force single instance/task
+    GRZ_TMP: grizzly-tmp
     IGNORE: "log-limit memory timeout"
     MEM_LIMIT: "7000"
     INPUT: "${crash_id}"
@@ -31,14 +38,18 @@ payload:
   features:
     taskclusterProxy: true
   maxRunTime: !!int "${max_run_time}"
+  mounts:
+    - format: tar.bz2
+      content:
+        taskId: "${image_task_id}"
+        artifact: public/homebrew.tar.bz2
+      directory: .
 priority: high
 provisionerId: "${provisioner}"
 retries: 5
 routes: []
 schedulerId: "${scheduler}"
 scopes:
-  - "docker-worker:capability:device:hostSharedMemory"
-  - "docker-worker:capability:device:loopbackAudio"
   - "secrets:get:project/fuzzing/deploy-bearspray"
   - "secrets:get:project/fuzzing/deploy-grizzly-private"
   - "secrets:get:project/fuzzing/fuzzmanagerconf"

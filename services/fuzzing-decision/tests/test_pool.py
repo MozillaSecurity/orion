@@ -204,7 +204,7 @@ def test_aws_resources(
             "run_as_admin": False,
         },
     )
-    resources = conf.build_resources(mock_clouds, mock_machines, env=env)
+    resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
     assert len(resources) == 3
     pool, hook, role = resources
 
@@ -310,7 +310,7 @@ def test_gcp_resources(
             "run_as_admin": False,
         },
     )
-    resources = conf.build_resources(mock_clouds, mock_machines, env=env)
+    resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
     assert len(resources) == 3
     pool, hook, role = resources
 

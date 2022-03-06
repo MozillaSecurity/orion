@@ -2,9 +2,7 @@
 set -e -x
 
 # base msys packages
-pacman-key --init
-pacman-key --populate msys2
-pacman --noconfirm -Sy \
+pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   openssh \
   p7zip \
@@ -13,21 +11,22 @@ pacman --noconfirm -Sy \
   subversion \
   tar \
   zstd
-killall -TERM gpg-agent
-rm -rf /var/cache/pacman/pkg
+pacman --noconfirm -Scc
+killall -TERM gpg-agent || true
+pacman --noconfirm -Rs psmisc
 
 # get nuget
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
-VER=1.7.3
-curl -sSLO "https://fluentbit.io/releases/1.7/td-agent-bit-${VER}-win64.zip"
+VER=1.8.12
+curl -sSLO "https://fluentbit.io/releases/${VER%.*}/td-agent-bit-${VER}-win64.zip"
 7z x "td-agent-bit-${VER}-win64.zip"
 mv "td-agent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
 # get minidump_stackwalk
-curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-1.toolchains.v3.win32-minidump-stackwalk.latest/artifacts/public/build/minidump_stackwalk.tar.zst"
+curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win32-minidump-stackwalk.latest/artifacts/public/build/minidump_stackwalk.tar.zst"
 zstdcat minidump_stackwalk.tar.zst | tar xv
 mv minidump_stackwalk/minidump_stackwalk.exe msys64/usr/bin
 rm -rf minidump_stackwalk minidump_stackwalk.tar.zst
@@ -91,7 +90,13 @@ python -m pip install \
   virtualenv \
   git+https://github.com/cgoldberg/xvfbwrapper.git
 
-rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
+rm -rf \
+  msys64/mingw64/share/doc/ \
+  msys64/mingw64/share/info/ \
+  msys64/mingw64/share/man/ \
+  msys64/usr/share/doc/ \
+  msys64/usr/share/info/ \
+  msys64/usr/share/man/
 cp orion/services/grizzly-win/launch.sh .
 
 cp -r orion/services/fuzzing-decision fuzzing-decision

@@ -8,8 +8,9 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY services/fuzzing-decision /src/fuzzing-decision
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
-    && retry apk add --no-cache build-base git openssh-client python3 py3-pip py3-requests py3-six py3-wheel python3-dev \
+    && retry apk add --no-cache build-base git openssh-client python3 py3-multidict py3-pip py3-requests py3-six py3-wheel py3-yaml python3-dev \
     && ln -s /usr/bin/python3 /usr/bin/python \
+    && retry pip install --no-cache-dir --disable-pip-version-check --progress-bar off tc-admin \
     && retry pip install --no-cache-dir --disable-pip-version-check --progress-bar off -e "/src/fuzzing-decision[decision]" \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && apk del build-base py3-pip py3-wheel python3-dev \

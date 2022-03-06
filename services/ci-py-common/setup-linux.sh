@@ -34,6 +34,7 @@ sys-embed "${packages[@]}"
 py_packages=(
   mercurial
   poetry
+  pre-commit
   tox
 )
 

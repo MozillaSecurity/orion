@@ -74,7 +74,7 @@ class MountArtifactResolver:
 
 def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     """Add image or mount to task payload, depending on platform."""
-    if config.platform == "windows":
+    if config.platform in {"macos", "windows"}:
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
         task_id: Union[str, int]
@@ -151,16 +151,27 @@ def configure_task(
             ),
             "fuzzing-pool-launch",
         ]
+        if config.run_as_admin:
+            task["payload"].setdefault("osGroups", [])
+            task["payload"]["osGroups"].append("Administrators")
+            task["payload"]["features"]["runAsAdministrator"] = True
+    elif config.platform == "macos":
+        task["payload"]["command"] = [
+            [
+                "/bin/bash",
+                "-c",
+                "-x",
+                'eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch',
+            ],
+        ]
+
+    if config.platform in {"macos", "windows"}:
         # translate artifacts from dict to array for generic-worker
         task["payload"]["artifacts"] = [
             # `... or artifact` because dict.update returns None
             artifact.update({"name": name}) or artifact
             for name, artifact in task["payload"]["artifacts"].items()
         ]
-        if config.run_as_admin:
-            task["payload"].setdefault("osGroups", [])
-            task["payload"]["osGroups"].append("Administrators")
-            task["payload"]["features"]["runAsAdministrator"] = True
     if env is not None:
         assert set(task["payload"]["env"]).isdisjoint(set(env))
         task["payload"]["env"].update(env)
@@ -325,19 +336,17 @@ class PoolConfiguration(CommonPoolConfiguration):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
-        assert self.cloud is not None
-        pool = WorkerPool(
-            config=config,
-            description=DESCRIPTION,
-            emailOnError=True,
-            owner=OWNER_EMAIL,
-            providerId=PROVIDER_IDS[self.cloud],
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-        )
+        if self.cloud != "static":
+            yield WorkerPool(
+                config=config,
+                description=DESCRIPTION,
+                emailOnError=True,
+                owner=OWNER_EMAIL,
+                providerId=PROVIDER_IDS[self.cloud],
+                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
+            )
 
-        self_cycle_crons = self.cycle_crons()
-        assert self_cycle_crons is not None
-        hook = Hook(
+        yield Hook(
             bindings=(),
             description=DESCRIPTION,
             emailOnError=True,
@@ -350,14 +359,12 @@ class PoolConfiguration(CommonPoolConfiguration):
             triggerSchema={},
         )
 
-        role = Role(
+        yield Role(
             description=DESCRIPTION,
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             scopes=decision_task["scopes"]
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
-
-        return [pool, hook, role]
 
     def artifact_map(self, expires: str) -> Dict[str, Dict[str, str]]:
         result = {}
@@ -447,7 +454,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         providers: Dict[str, Union["AWS", "GCP"]],
         machine_types: MachineTypes,
         env=None,
-    ) -> List[Union[WorkerPool, Hook, Role]]:
+    ):
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -498,19 +505,17 @@ class PoolConfigMap(CommonPoolConfigMap):
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
 
-        assert self.cloud is not None
-        pool = WorkerPool(
-            config=config,
-            description=DESCRIPTION.replace("\n", "\\n"),
-            emailOnError=True,
-            owner=OWNER_EMAIL,
-            providerId=PROVIDER_IDS[self.cloud],
-            workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-        )
+        if self.cloud != "static":
+            yield WorkerPool(
+                config=config,
+                description=DESCRIPTION.replace("\n", "\\n"),
+                emailOnError=True,
+                owner=OWNER_EMAIL,
+                providerId=PROVIDER_IDS[self.cloud],
+                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
+            )
 
-        self_cycle_crons = self.cycle_crons()
-        assert self_cycle_crons is not None
-        hook = Hook(
+        yield Hook(
             bindings=(),
             description=DESCRIPTION,
             emailOnError=True,
@@ -523,14 +528,12 @@ class PoolConfigMap(CommonPoolConfigMap):
             triggerSchema={},
         )
 
-        role = Role(
+        yield Role(
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             description=DESCRIPTION,
             scopes=decision_task["scopes"]
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
-
-        return [pool, hook, role]
 
     def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""

@@ -133,6 +133,16 @@ class AWS(Provider):
         ]
 
 
+class Static(Provider):
+    """Fake provider for static machines not provisioned by Taskcluster"""
+
+    def __init__(self):
+        pass
+
+    def build_launch_configs(self, imageset, machines, disk_size, platform):
+        return []
+
+
 class GCP(Provider):
     """Google Cloud provider config for Taskcluster"""
 

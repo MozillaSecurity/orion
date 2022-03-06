@@ -27,16 +27,26 @@ from . import (
     SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_BREW,
     WORKER_TYPE_MSYS,
     Taskcluster,
 )
 from .git import GithubEvent
-from .orion import Recipe, Service, ServiceMsys, Services, ToxServiceTest
+from .orion import (
+    Recipe,
+    Service,
+    ServiceHomebrew,
+    ServiceMsys,
+    Services,
+    ToxServiceTest,
+)
 
 LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
+MSYS_EXE_TASK = Template((TEMPLATES / "build_msys_exe.yaml").read_text())
+HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
@@ -125,8 +135,14 @@ class Scheduler:
             )
         assert self.now is not None
         if isinstance(service, ServiceMsys):
+            if service.base.endswith(".exe"):
+                if not service.base.endswith(".sfx.exe"):
+                    LOG.warning("'base' ends with .exe, but not .sfx.exe", service.base)
+                task_template = MSYS_EXE_TASK
+            else:
+                task_template = MSYS_TASK
             build_task = yaml_load(
-                MSYS_TASK.substitute(
+                task_template.substitute(
                     clone_url=self.github_event.http_url,
                     commit=self.github_event.commit,
                     deadline=stringDate(self.now + DEADLINE),
@@ -145,6 +161,29 @@ class Scheduler:
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
                     worker=WORKER_TYPE_MSYS,
+                )
+            )
+        elif isinstance(service, ServiceHomebrew):
+            build_task = yaml_load(
+                HOMEBREW_TASK.substitute(
+                    clone_url=self.github_event.http_url,
+                    commit=self.github_event.commit,
+                    deadline=stringDate(self.now + DEADLINE),
+                    expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                    max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                    homebrew_base_url=service.base,
+                    now=stringDate(self.now),
+                    owner_email=OWNER_EMAIL,
+                    provisioner=PROVISIONER_ID,
+                    route=build_index,
+                    scheduler=SCHEDULER_ID,
+                    service_name=service.name,
+                    setup_sh_path=str(
+                        (service.root / "setup.sh").relative_to(service.context)
+                    ),
+                    source_url=SOURCE_URL,
+                    task_group=self.task_group,
+                    worker=WORKER_TYPE_BREW,
                 )
             )
         else:
@@ -356,6 +395,7 @@ class Scheduler:
             obj = to_create.pop(0)
             is_svc = isinstance(obj, Service)
             is_msys = isinstance(obj, ServiceMsys)
+            is_brew = isinstance(obj, ServiceHomebrew)
 
             if not obj.dirty:
                 if is_svc:
@@ -415,7 +455,7 @@ class Scheduler:
                         obj, dirty_dep_tasks, test_tasks, service_build_tasks
                     )
                 )
-                if should_push and not is_msys:
+                if should_push and not (is_msys or is_brew):
                     push_tasks_created.add(
                         self._create_push_task(obj, service_build_tasks)
                     )

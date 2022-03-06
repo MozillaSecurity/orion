@@ -2,16 +2,15 @@
 set -e -x
 
 # base msys packages
-pacman-key --init
-pacman-key --populate msys2
-pacman --noconfirm -Sy \
+pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
   tar \
   unzip
-killall -TERM gpg-agent
-rm -rf /var/cache/pacman/pkg
+pacman --noconfirm -Scc
+killall -TERM gpg-agent || true
+pacman --noconfirm -Rs psmisc
 
 # get node.js
 VER=14.17.3
@@ -27,5 +26,11 @@ node -v
 curl -qL https://www.npmjs.com/install.sh | npm_install="7.22.0" sh
 npm -v
 
-rm -rf msys64/mingw64/share/man/ msys64/mingw64/share/doc/ msys64/usr/share/doc/ msys64/usr/share/man/
+rm -rf \
+  msys64/mingw64/share/doc/ \
+  msys64/mingw64/share/info/ \
+  msys64/mingw64/share/man/ \
+  msys64/usr/share/doc/ \
+  msys64/usr/share/info/ \
+  msys64/usr/share/man/
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64

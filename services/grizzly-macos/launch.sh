@@ -1,6 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 set -e -x
-PATH="$PWD/msys64/opt/node:$PATH"
+
+trap 'jobs -p | xargs kill && true' EXIT
+export HOME="$PWD"
+export NODE_EXTRA_CA_CERTS="$HOMEBREW_PREFIX/share/ca-certificates/cacert.pem"
 
 retry () {
   i=0
@@ -20,7 +23,18 @@ status () {
   fi
 }
 
-powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true"
+export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
+python - << EOF
+from configparser import ConfigParser
+
+cfg = ConfigParser()
+with open("$PIP_CONFIG_FILE", "r+") as fp:
+    cfg.read_file(fp)
+    cfg["install"]["prefix"] = "$HOMEBREW_PREFIX"
+    fp.truncate(0)
+    fp.seek(0)
+    cfg.write(fp)
+EOF
 
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
@@ -28,14 +42,14 @@ set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       Off
-    Log_File     $USERPROFILE\\td-agent-bit.log
-    Log_Level    debug
-    Parsers_File $USERPROFILE\\td-agent-bit\\conf\\parsers.conf
-    Plugins_File $USERPROFILE\\td-agent-bit\\conf\\plugins.conf
+    Log_File     $PWD/td-agent-bit.log
+    Log_Level    info
+    Parsers_File $HOMEBREW_PREFIX/etc/fluent-bit/parsers.conf
+    Plugins_File $HOMEBREW_PREFIX/etc/fluent-bit/plugins.conf
 
 [INPUT]
     Name tail
-    Path $USERPROFILE\\logs\\live.log,$USERPROFILE\\grizzly-auto-run\\screenlog.*
+    Path $PWD/logs/live.log,$PWD/grizzly-auto-run/screenlog.*
     Path_Key file
     Key message
     Refresh_Interval 5
@@ -60,27 +74,28 @@ cat > td-agent-bit.conf << EOF
 [OUTPUT]
     Name stackdriver
     Match *
-    google_service_credentials $USERPROFILE\\google_logging_creds.json
+    google_service_credentials $PWD/google_logging_creds.json
     resource global
 
 [OUTPUT]
     Name file
     Match screen*.log
-    Path $USERPROFILE\\logs\\
+    Path $PWD/logs/
     Format template
     Template {time} {message}
 EOF
-./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf &
+fluent-bit -c td-agent-bit.conf &
 
 # Get fuzzmanager configuration from TC
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
+export FM_CONFIG_PATH="$PWD/.fuzzmanagerconf"
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
 cat >> .fuzzmanagerconf << EOF
-sigdir = $USERPROFILE\\signatures
+sigdir = $PWD/signatures
 tool = bearspray
 EOF
 
@@ -97,19 +112,26 @@ mkdir -p .ssh
 set +x
 curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
+chmod 0600 .ssh/id_ecdsa.bearspray
+
+cat > ssh_wrap.sh << EOF
+#!/bin/sh
+exec ssh -F '$PWD/.ssh/config' "\$@"
+EOF
+chmod +x ssh_wrap.sh
+export GIT_SSH="$PWD/ssh_wrap.sh"
+ssh-keyscan github.com >> .ssh/known_hosts
 
 cat << EOF >> .ssh/config
+Host *
+UseRoaming no
+UserKnownHostsFile $PWD/.ssh/known_hosts
 
 Host bearspray
 HostName github.com
 IdentitiesOnly yes
-IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.bearspray
+IdentityFile $PWD/.ssh/id_ecdsa.bearspray
 EOF
-
-if [ "$ADAPTER" = "reducer" ]
-then
-  ssh-keyscan github.com >> .ssh/known_hosts
-fi
 
 # Checkout bearspray
 git init bearspray
@@ -120,7 +142,31 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 status "Setup: installing bearspray"
-retry python -m pip install -e bearspray
+chmod -R +w "$HOMEBREW_PREFIX"
+retry python -m pip install --no-build-isolation -e bearspray
+python - << EOF
+from configparser import ConfigParser
+
+cfg = ConfigParser()
+with open("$PIP_CONFIG_FILE", "r+") as fp:
+    cfg.read_file(fp)
+    del cfg["install"]["prefix"]
+    fp.truncate(0)
+    fp.seek(0)
+    cfg.write(fp)
+EOF
 
 status "Setup: launching bearspray"
-python -m bearspray "$ADAPTER"
+set +e
+bearspray "$ADAPTER"
+
+exit_code=$?
+echo "returned $exit_code" >&2
+case $exit_code in
+  5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
+    exit 0
+    ;;
+  *)
+    exit $exit_code
+    ;;
+esac
