@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-
-
 import os
 from pathlib import Path
+from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest
 import yaml
+from pytest_mock import MockerFixture
 
-from fuzzing_decision.common.pool import PoolConfigData
 from fuzzing_decision.pool_launch import cli
 from fuzzing_decision.pool_launch.launcher import PoolLauncher
 
@@ -39,7 +37,7 @@ def test_main_calls(mock_launcher) -> None:
 @patch("os.environ", {})
 def test_load_params(tmp_path: Path) -> None:
     os.environ["STATIC"] = "value"
-    pool_data: PoolConfigData = {
+    pool_data = {
         "cloud": "aws",
         "scopes": [],
         "disk_size": "120g",
@@ -77,6 +75,7 @@ def test_load_params(tmp_path: Path) -> None:
     }
 
     # test 2: command from pool is used
+    assert isinstance(pool_data["macros"], dict)
     pool_data["macros"].clear()
     pool_data["command"] = ["new-command", "arg1", "arg2"]
     launcher = PoolLauncher([], "test-pool")
@@ -96,7 +95,7 @@ def test_load_params(tmp_path: Path) -> None:
         launcher.load_params()
 
     # test 4: preprocess task is loaded
-    preproc_data: PoolConfigData = {
+    preproc_data: Dict[str, Any] = {
         "cloud": None,
         "scopes": [],
         "disk_size": None,
@@ -132,26 +131,30 @@ def test_load_params(tmp_path: Path) -> None:
     assert launcher.environment == {"STATIC": "value", "PREPROC": "1"}
 
 
-def test_launch_exec(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_launch_exec(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
     # Start with taskcluster detection disabled, even on CI
     monkeypatch.delenv("TASK_ID", raising=False)
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
-    with patch("os.execvpe"), patch("os.dup2"):
-        pool = PoolLauncher(["cmd"], "testpool")
-        assert pool.in_taskcluster is False
-        pool.log_dir = tmp_path / "logs"
-        pool.exec()
-        os.dup2.assert_not_called()
-        os.execvpe.assert_called_once_with("cmd", ["cmd"], pool.environment)
-        assert not pool.log_dir.is_dir()
+    exec_mock = mocker.patch("os.execvpe")
+    dup2_mock = mocker.patch("os.dup2")
 
-        # Then enable taskcluster detection
-        monkeypatch.setenv("TASK_ID", "someTask")
-        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "http://fakeTaskcluster")
-        assert pool.in_taskcluster is True
+    pool = PoolLauncher(["cmd"], "testpool")
+    assert pool.in_taskcluster is False
+    pool.log_dir = tmp_path / "logs"
+    pool.exec()
+    dup2_mock.assert_not_called()
+    exec_mock.assert_called_once_with("cmd", ["cmd"], pool.environment)
+    assert not pool.log_dir.is_dir()
 
-        os.execvpe.reset_mock()
-        pool.exec()
-        assert os.dup2.call_count == 2
-        os.execvpe.assert_called_once_with("cmd", ["cmd"], pool.environment)
-        assert pool.log_dir.is_dir()
+    # Then enable taskcluster detection
+    monkeypatch.setenv("TASK_ID", "someTask")
+    monkeypatch.setenv("TASKCLUSTER_ROOT_URL", "http://fakeTaskcluster")
+    assert pool.in_taskcluster is True
+
+    exec_mock.reset_mock()
+    pool.exec()
+    assert dup2_mock.call_count == 2
+    exec_mock.assert_called_once_with("cmd", ["cmd"], pool.environment)
+    assert pool.log_dir.is_dir()

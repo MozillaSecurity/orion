@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
@@ -12,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional, Union, cast
 
 import dateutil.parser
 import yaml
@@ -35,7 +33,7 @@ from . import (
     SCHEDULER_ID,
     WORKER_POOL_PREFIX,
 )
-from .providers import AWS, GCP
+from .providers import Provider
 
 LOG = logging.getLogger(__name__)
 
@@ -276,10 +274,10 @@ class PoolConfiguration(CommonPoolConfiguration):
 
     def build_resources(
         self,
-        providers: Dict[str, Union["AWS", "GCP"]],
+        providers: Dict[str, Provider],
         machine_types: MachineTypes,
         env: Optional[Dict[str, str]] = None,
-    ) -> List[Union[WorkerPool, Hook, Role]]:
+    ) -> Generator[Union[WorkerPool, Hook, Role], None, None]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -357,7 +355,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self_cycle_crons),
+            schedule=list(self.cycle_crons()),
             task=decision_task,
             triggerSchema={},
         )
@@ -387,12 +385,12 @@ class PoolConfiguration(CommonPoolConfiguration):
         }
         return result
 
-    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
+    def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
         preprocess_task_id = None
 
-        preprocess = self.create_preprocess()
+        preprocess = cast(PoolConfiguration, self.create_preprocess())
         if preprocess is not None:
             assert preprocess.max_run_time is not None
             task = yaml.safe_load(
@@ -454,10 +452,10 @@ class PoolConfigMap(CommonPoolConfigMap):
 
     def build_resources(
         self,
-        providers: Dict[str, Union["AWS", "GCP"]],
+        providers: Dict[str, Provider],
         machine_types: MachineTypes,
         env=None,
-    ) -> List[Union[WorkerPool, Hook, Role]]:
+    ) -> Generator[Union[WorkerPool, Hook, Role], None, None]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -466,7 +464,11 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         pools = list(self.iterpools())
         all_scopes = tuple(
-            set(chain.from_iterable(pool.get_scopes() for pool in pools))
+            set(
+                chain.from_iterable(
+                    cast(PoolConfiguration, pool).get_scopes() for pool in pools
+                )
+            )
         )
 
         # Build the pool configuration for selected machines
@@ -529,7 +531,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             hookId=self.task_id,
             name=self.task_id,
             owner=OWNER_EMAIL,
-            schedule=list(self_cycle_crons),
+            schedule=list(self.cycle_crons()),
             task=decision_task,
             triggerSchema={},
         )
@@ -541,7 +543,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             + ["queue:create-task:highest:proj-fuzzing/ci"],
         )
 
-    def build_tasks(self, parent_task_id: int, env: Optional[Dict[str, str]] = None):
+    def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
 
@@ -569,18 +571,21 @@ class PoolConfigMap(CommonPoolConfigMap):
                         task_id=self.task_id,
                     )
                 )
-                configure_task(task, pool, now, env)
+                configure_task(task, cast(PoolConfiguration, pool), now, env)
                 yield slugId(), task
 
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml: Path):
+    def from_file(pool_yml: Path) -> Union[PoolConfiguration, PoolConfigMap]:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
-            assert isinstance(cls, CommonPoolConfiguration)
-            if set(cls.FIELD_TYPES) >= set(data) >= cls.REQUIRED_FIELDS:
+            if (
+                set(cls.FIELD_TYPES)  # type: ignore
+                >= set(data)
+                >= cls.REQUIRED_FIELDS  # type: ignore
+            ):
                 return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
         LOG.error(
             f"{pool_yml} has keys {data.keys()} and expected all of either "
