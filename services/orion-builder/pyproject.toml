@@ -16,6 +16,14 @@ omit = [
 known_first_party = "orion_builder"
 profile = "black"
 
+[[tool.mypy.overrides]]
+module = [
+    "setuptools",
+    "taskboot.*",
+    "taskcluster.*",
+]
+ignore_missing_imports = true
+
 [tool.pylint.format]
 max-line-length = 88
 
