@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,7 +5,6 @@
 
 
 import argparse
-
 import logging
 import subprocess
 import sys
@@ -26,12 +24,12 @@ logger = logging.getLogger(__name__)
 
 class PatchedTarget(Target):
     def clone(self, repository: str, revision: str) -> None:
-        logger.info("Cloning {} @ {}".format(repository, revision))
+        logger.info(f"Cloning {repository} @ {revision}")
 
         # Clone
         cmd = ["git", "clone", "--quiet", repository, self.dir]
         subprocess.check_output(cmd)
-        logger.info("Cloned into {}".format(self.dir))
+        logger.info(f"Cloned into {self.dir}")
 
         # Explicitly fetch revision if it isn't present
         # This is necessary when revision is from a fork and repository
@@ -51,7 +49,7 @@ class PatchedTarget(Target):
         # Checkout revision to pull modifications
         cmd = ["git", "checkout", revision, "-b", "taskboot"]
         subprocess.check_output(cmd, cwd=self.dir)
-        logger.info("Checked out revision {}".format(revision))
+        logger.info(f"Checked out revision {revision}")
 
 
 class BuildArgs(CommonArgs):
