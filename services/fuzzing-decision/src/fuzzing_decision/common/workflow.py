@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
@@ -33,7 +31,7 @@ class Workflow:
         secret: Optional[str] = None,
         fuzzing_git_repository: Optional[str] = None,
         fuzzing_git_revision: Optional[str] = None,
-    ) -> Optional[Dict[str, object]]:
+    ) -> Optional[Dict[str, Any]]:
         """Load configuration either from local file or Taskcluster secret"""
 
         if local_path is not None:

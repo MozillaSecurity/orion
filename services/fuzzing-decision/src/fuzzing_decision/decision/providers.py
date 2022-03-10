@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
 import hashlib
 import json
 import logging
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, Iterable, List, Tuple, Union
 
@@ -14,11 +12,21 @@ from ..common.pool import parse_time
 LOG = logging.getLogger(__name__)
 
 
-class Provider(object):
+class Provider(ABC):
     def __init__(self, base_dir: Path) -> None:
         self.imagesets = yaml.safe_load(
             (base_dir / "config" / "imagesets.yml").read_text()
         )
+
+    @abstractmethod
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+    ) -> List[Dict[str, Any]]:
+        raise NotImplementedError()
 
     def get_worker_config(self, worker: str, platform: str) -> Dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
@@ -103,7 +111,7 @@ class AWS(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
-    ) -> List[Dict[str, object]]:
+    ) -> List[Dict[str, Any]]:
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)
@@ -145,24 +153,7 @@ class Static(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
-    ) -> List[
-        Dict[
-            str,
-            Union[
-                Dict[str, str],
-                List[
-                    Dict[
-                        str,
-                        Union[
-                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
-                        ],
-                    ]
-                ],
-                int,
-                str,
-            ],
-        ]
-    ]:
+    ) -> List[Dict[str, Any]]:
         return []
 
 
@@ -186,24 +177,7 @@ class GCP(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
-    ) -> List[
-        Dict[
-            str,
-            Union[
-                Dict[str, str],
-                List[
-                    Dict[
-                        str,
-                        Union[
-                            List[Dict[str, str]], Dict[str, Union[int, str]], bool, str
-                        ],
-                    ]
-                ],
-                int,
-                str,
-            ],
-        ]
-    ]:
+    ) -> List[Dict[str, Any]]:
 
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
@@ -11,20 +9,19 @@ import logging
 import pathlib
 import re
 import types
+from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
     Dict,
     FrozenSet,
+    Generator,
     Iterable,
     List,
     Optional,
     Set,
     Tuple,
     Union,
-    cast,
 )
-from typing_extensions import NotRequired, TypedDict
-from datetime import datetime, timedelta, timezone
 
 import dateutil.parser
 import yaml
@@ -199,33 +196,6 @@ class MachineTypes:
                     yield name
 
 
-class PoolConfigData(TypedDict):
-    """PoolConfigData type specification."""
-
-    artifacts: NotRequired[Dict[str, Dict[str, str]]]
-    apply_to: NotRequired[List[str]]
-    cloud: NotRequired[Optional[str]]
-    scopes: NotRequired[List[str]]
-    disk_size: NotRequired[Union[int, Optional[str]]]
-    cycle_time: NotRequired[Union[int, Optional[str]]]
-    max_run_time: NotRequired[Union[int, Optional[str]]]
-    schedule_start: NotRequired[Union[datetime, Optional[str]]]
-    cores_per_task: NotRequired[Optional[int]]
-    metal: NotRequired[Optional[bool]]
-    name: NotRequired[str]
-    tasks: NotRequired[int]
-    command: NotRequired[Optional[List[str]]]
-    container: NotRequired[Union[Dict[str, str], Optional[str]]]
-    minimum_memory_per_core: NotRequired[Union[float, Optional[str]]]
-    imageset: NotRequired[Optional[str]]
-    parents: NotRequired[Optional[List[str]]]
-    cpu: NotRequired[Optional[str]]
-    platform: NotRequired[Optional[str]]
-    preprocess: NotRequired[Optional[str]]
-    macros: NotRequired[Dict[str, str]]
-    run_as_admin: NotRequired[bool]
-
-
 class CommonPoolConfiguration(abc.ABC):
     """Fuzzing Pool Configuration
 
@@ -259,7 +229,7 @@ class CommonPoolConfiguration(abc.ABC):
     def __init__(
         self,
         pool_id: str,
-        data: PoolConfigData,
+        data: Dict[str, Any],
         base_dir: Optional[pathlib.Path] = None,
     ) -> None:
         LOG.debug(f"creating pool {pool_id}")
@@ -408,6 +378,18 @@ class CommonPoolConfiguration(abc.ABC):
             self.cloud = data["cloud"]
 
     @classmethod
+    @property
+    @abc.abstractmethod
+    def FIELD_TYPES(cls) -> types.MappingProxyType:
+        raise NotImplementedError()
+
+    @classmethod
+    @property
+    @abc.abstractmethod
+    def REQUIRED_FIELDS(cls) -> FrozenSet:
+        raise NotImplementedError()
+
+    @classmethod
     def from_file(
         cls, pool_yml: pathlib.Path, **kwds: Any
     ) -> "CommonPoolConfiguration":
@@ -448,7 +430,7 @@ class CommonPoolConfiguration(abc.ABC):
             yielded = True
         assert yielded, "No available machines match specified configuration"
 
-    def cycle_crons(self) -> Iterable[Optional[str]]:
+    def cycle_crons(self) -> Iterable[str]:
         """Generate cron patterns that correspond to cycle_time (starting from now)
 
         Returns:
@@ -475,7 +457,7 @@ class CommonPoolConfiguration(abc.ABC):
             while now < stop:
                 now += interval
                 yield f"{now.second} {now.minute} {now.hour} * * *"
-            return None
+            return
 
         # special case if the cycle time is a factor of 7 days
         if (7 * 24 * 60 * 60) % self.cycle_time == 0:
@@ -484,7 +466,7 @@ class CommonPoolConfiguration(abc.ABC):
                 now += interval
                 weekday = now.isoweekday() % 7
                 yield f"{now.second} {now.minute} {now.hour} * * {weekday}"
-            return None
+            return
 
         # if the cycle can't be represented as a daily or weekly pattern, then it is
         #   awkward to represent in cron format: resort to generating an annual schedule
@@ -520,7 +502,7 @@ class PoolConfiguration(CommonPoolConfiguration):
     def __init__(
         self,
         pool_id: str,
-        data: PoolConfigData,
+        data: Dict[str, Any],
         base_dir: Optional[pathlib.Path] = None,
         _flattened: Optional[Set[str]] = None,
     ) -> None:
@@ -684,7 +666,7 @@ class PoolConfigMap(CommonPoolConfiguration):
     def __init__(
         self,
         pool_id: str,
-        data: PoolConfigData,
+        data: Dict[str, Any],
         base_dir: Optional[pathlib.Path] = None,
     ) -> None:
         super().__init__(pool_id, data, base_dir)
@@ -721,15 +703,13 @@ class PoolConfigMap(CommonPoolConfiguration):
 
     def apply(self, parent: str) -> CommonPoolConfiguration:
         pool_id = f"{parent}/{self.pool_id}"
-        data = cast(
-            PoolConfigData, {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
-        )
+        data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
         # convert special fields
         for gig_field in ("disk_size", "minimum_memory_per_core"):
             if data[gig_field] is not None:
-                data_gig_field = data[gig_field]
-                assert data_gig_field is not None
-                data[gig_field] = data_gig_field * 1024 * 1024 * 1024
+                value = data[gig_field]
+                assert value is not None
+                data[gig_field] = value * 1024 * 1024 * 1024
         if data["schedule_start"] is not None:
             assert isinstance(data["schedule_start"], datetime)
             data["schedule_start"] = data["schedule_start"].isoformat()
@@ -739,7 +719,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         data["name"] = f"{name} ({self.name})"
         return self.RESULT_TYPE(pool_id, data, self.base_dir)
 
-    def iterpools(self) -> Iterable[CommonPoolConfiguration]:
+    def iterpools(self) -> Generator[CommonPoolConfiguration, None, None]:
         for parent in self.apply_to:
             yield self.apply(parent)
 
@@ -750,8 +730,11 @@ class PoolConfigLoader:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
-            assert isinstance(cls, PoolConfiguration)
-            if set(cls.FIELD_TYPES) >= set(data.keys()) >= cls.REQUIRED_FIELDS:
+            if (
+                set(cls.FIELD_TYPES)  # type: ignore
+                >= set(data.keys())
+                >= cls.REQUIRED_FIELDS  # type: ignore
+            ):
                 return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
         LOG.error(
             f"{pool_yml} has keys {data.keys()} and expected all of either "

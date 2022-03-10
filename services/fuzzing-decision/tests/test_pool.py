@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-
-
 import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Type, Union
-from typing_extensions import TypedDict
+from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
 import pytest
-from pytest_mock import MockerFixture
 import slugid
+from pytest_mock import MockerFixture
 
 from fuzzing_decision.common.pool import MachineTypes
 from fuzzing_decision.common.pool import PoolConfigLoader as CommonPoolConfigLoader
@@ -21,7 +17,7 @@ from fuzzing_decision.decision.pool import (
     PoolConfigMap,
     PoolConfiguration,
 )
-from fuzzing_decision.decision.providers import AWS, GCP
+from fuzzing_decision.decision.providers import Provider
 
 POOL_FIXTURES = Path(__file__).parent / "fixtures" / "pools"
 
@@ -37,9 +33,9 @@ WST_URL = "https://community-websocktunnel.services.mozilla.com"
         ("128t", "1g", 128 * 1024),
     ],
 )
-def test_parse_size(size: str, divisor_: str, result: int) -> None:
-    if isinstance(divisor_, str):
-        divisor = parse_size(divisor_)
+def test_parse_size(size: str, divisor: Union[float, str], result: int) -> None:
+    if isinstance(divisor, str):
+        divisor = parse_size(divisor)
 
     assert parse_size(size) / divisor == result
 
@@ -162,19 +158,12 @@ def _get_expected_role(
     }
 
 
-class MockClouds(TypedDict):
-    """MockClouds type information"""
-
-    aws: AWS
-    gcp: GCP
-
-
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
 def test_aws_resources(
-    env: List[Optional[Dict[str, str]]],
-    mock_clouds: MockClouds,
+    env: Optional[Dict[str, str]],
+    mock_clouds: Dict[str, Provider],
     mock_machines: MachineTypes,
     platform: str,
 ) -> None:
@@ -283,7 +272,9 @@ def test_aws_resources(
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(
-    env: Optional[Dict[str, str]], mock_clouds: MockClouds, mock_machines: MachineTypes
+    env: Optional[Dict[str, str]],
+    mock_clouds: Dict[str, Provider],
+    mock_machines: MachineTypes,
 ) -> None:
     conf = PoolConfiguration(
         "test",
@@ -638,7 +629,9 @@ def test_tasks(
 
 
 def test_preprocess_tasks() -> None:
-    conf = PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
+    conf = cast(
+        PoolConfiguration, PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
+    )
 
     task_ids, tasks = zip(*conf.build_tasks("someTaskId"))
 
@@ -676,7 +669,7 @@ def test_preprocess_tasks() -> None:
         assert expires == _get_date(
             task["payload"]["artifacts"]["project/fuzzing/private/logs"].pop("expires")
         )
-        assert set(task["scopes"]) == set(["secrets:get:project/fuzzing/decision"])
+        assert set(task["scopes"]) == {"secrets:get:project/fuzzing/decision"}
         # scopes are already asserted above
         # - read the value for comparison instead of deleting the key, so the object is
         #   printed in full on failure
@@ -724,9 +717,9 @@ def test_flatten(pool_path: Path) -> None:
         def _flatten(self, _: Optional[Set[str]]) -> None:
             pass
 
-    pool = CommonPoolConfiguration.from_file(pool_path)
+    pool = cast(CommonPoolConfiguration, CommonPoolConfiguration.from_file(pool_path))
     expect_path = pool_path.with_name(pool_path.name.replace("pool", "expect"))
-    expect = PoolConfigNoFlatten.from_file(expect_path)
+    expect = cast(PoolConfigNoFlatten, PoolConfigNoFlatten.from_file(expect_path))
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
@@ -753,8 +746,13 @@ def test_pool_map() -> None:
         def _flatten(self, _: Optional[Set[str]]) -> None:
             pass
 
-    cfg_map = CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
-    expect = PoolConfigNoFlatten.from_file(POOL_FIXTURES / "expect1.yml")
+    cfg_map = cast(
+        CommonPoolConfigMap, CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
+    )
+    expect = cast(
+        PoolConfigNoFlatten,
+        PoolConfigNoFlatten.from_file(POOL_FIXTURES / "expect1.yml"),
+    )
     assert cfg_map.apply_to == ["pool1"]
     assert cfg_map.cloud == expect.cloud
     assert cfg_map.command is None
@@ -777,7 +775,9 @@ def test_pool_map() -> None:
 
     pools = list(cfg_map.iterpools())
     assert len(pools) == 1
+    # pool = cast(CommonPoolConfiguration, pools[0])
     pool = pools[0]
+    assert isinstance(pool, CommonPoolConfiguration)
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
@@ -844,10 +844,8 @@ def test_cycle_crons() -> None:
         },
     )
 
-    conf_cycle_crons = conf.cycle_crons()
-    assert conf_cycle_crons is not None
     # cycle time 6h
-    assert list(conf_cycle_crons) == [
+    assert list(conf.cycle_crons()) == [
         "0 0 6 * * *",
         "0 0 12 * * *",
         "0 0 18 * * *",
@@ -855,34 +853,33 @@ def test_cycle_crons() -> None:
     ]
 
     # cycle time 3.5 days
-    conf.cycle_time = 3600 * 24 * 3.5
-    assert conf_cycle_crons is not None
-    assert list(conf_cycle_crons) == [
+    conf.cycle_time = int(3600 * 24 * 3.5)
+    assert list(conf.cycle_crons()) == [
         "0 0 12 * * 0",
         "0 0 0 * * 4",
     ]
 
     # cycle time 17h
     conf.cycle_time = 3600 * 17
-    crons = list(conf_cycle_crons)
+    crons = list(conf.cycle_crons())
     assert len(crons) == (365 * 24 // 17) + 1
     assert crons[:4] == ["0 0 17 1 1 *", "0 0 10 2 1 *", "0 0 3 3 1 *", "0 0 20 3 1 *"]
 
     # cycle time 48h
     conf.cycle_time = 3600 * 48
-    crons = list(conf_cycle_crons)
+    crons = list(conf.cycle_crons())
     assert len(crons) == (365 * 24 // 48) + 1
     assert crons[:4] == ["0 0 0 3 1 *", "0 0 0 5 1 *", "0 0 0 7 1 *", "0 0 0 9 1 *"]
 
     # cycle time 72h
     conf.cycle_time = 3600 * 72
-    crons = list(conf_cycle_crons)
+    crons = list(conf.cycle_crons())
     assert len(crons) == (365 * 24 // 72) + 1
     assert crons[:4] == ["0 0 0 4 1 *", "0 0 0 7 1 *", "0 0 0 10 1 *", "0 0 0 13 1 *"]
 
     # cycle time 17d
     conf.cycle_time = 3600 * 24 * 17
-    crons = list(conf_cycle_crons)
+    crons = list(conf.cycle_crons())
     assert len(crons) == (365 // 17) + 1
     assert crons[:4] == ["0 0 0 18 1 *", "0 0 0 4 2 *", "0 0 0 21 2 *", "0 0 0 10 3 *"]
 
@@ -890,17 +887,17 @@ def test_cycle_crons() -> None:
     conf.schedule_start = None
     conf.cycle_time = 3600 * 12
     start = datetime.datetime.now(datetime.timezone.utc)
-    calc_none = list(conf_cycle_crons)
+    calc_none = list(conf.cycle_crons())
     fin = datetime.datetime.now(datetime.timezone.utc)
     for offset in range(int((fin - start).total_seconds()) + 1):
         conf.schedule_start = start + datetime.timedelta(seconds=offset)
-        if calc_none == list(conf_cycle_crons):
+        if calc_none == list(conf.cycle_crons()):
             break
     else:
-        assert calc_none == list(conf_cycle_crons)
+        assert calc_none == list(conf.cycle_crons())
 
 
 def test_required() -> None:
-    CommonPoolConfiguration("test", {"name": "test pool"}, _flattened={})
+    CommonPoolConfiguration("test", {"name": "test pool"}, _flattened=set())
     with pytest.raises(AssertionError):
-        CommonPoolConfiguration("test", {}, _flattened={})
+        CommonPoolConfiguration("test", {}, _flattened=set())

@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
-
 import json
 import pathlib
-from typing import Iterable
-from typing_extensions import TypedDict
+from typing import Dict, Iterable
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,7 +8,7 @@ import responses
 
 from fuzzing_decision.common import taskcluster
 from fuzzing_decision.common.pool import MachineTypes
-from fuzzing_decision.decision.providers import AWS, GCP
+from fuzzing_decision.decision.providers import AWS, GCP, Provider
 from fuzzing_decision.decision.workflow import Workflow
 
 FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
@@ -56,15 +52,8 @@ def mock_taskcluster_workflow() -> Iterable[Workflow]:
         yield workflow
 
 
-class MockClouds(TypedDict):
-    """MockClouds type information"""
-
-    aws: AWS
-    gcp: GCP
-
-
 @pytest.fixture
-def mock_clouds() -> MockClouds:
+def mock_clouds() -> Dict[str, Provider]:
     """Mock Cloud providers setup"""
     community = FIXTURES_DIR / "community"
     return {"aws": AWS(community), "gcp": GCP(community)}
@@ -81,4 +70,4 @@ def mock_machines() -> MachineTypes:
 @pytest.fixture(autouse=True)
 def disable_cleanup() -> None:
     """Disable workflow cleanup in unit tests as tmpdir is automatically removed"""
-    Workflow.cleanup = Mock()
+    Workflow.cleanup = Mock()  # type: ignore
