@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,14 +5,13 @@
 
 
 import argparse
-
 from datetime import datetime
 from itertools import chain
 from json import dumps as json_dump
 from logging import getLogger
 from pathlib import Path
 from string import Template
-from typing import List
+from typing import Any, Dict, List
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -64,7 +62,7 @@ class CIScheduler:
         github_event: GithubEvent,
         now: datetime,
         task_group: str,
-        matrix: str,
+        matrix: Dict[str, Any],
         dry_run: bool = False,
     ) -> None:
         """Initialize a CIScheduler object.
@@ -94,7 +92,7 @@ class CIScheduler:
         """Create CI tasks in Taskcluster."""
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
         prev_stage: List[str] = []
-        for stage in sorted(set(job.stage for job in self.matrix.jobs)):
+        for stage in sorted({job.stage for job in self.matrix.jobs}):
             this_stage = []
             for job in self.matrix.jobs:
                 if job.stage != stage:

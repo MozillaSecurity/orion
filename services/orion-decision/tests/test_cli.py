@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -9,8 +8,7 @@ from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path
 from typing import Dict, Optional
-from unittest.mock import MagicMock
-from unittest.mock import call
+from unittest.mock import MagicMock, call
 
 import pytest
 from pytest_mock import MockerFixture
@@ -38,7 +36,7 @@ def test_args(mocker: MockerFixture) -> None:
         parse_args([])
     with pytest.raises(SystemExit):
         parse_args(["--github-action", "github-push", "--github-event", "{}"])
-    parse_args(["--github-action", "github-push", "--github-event", "{blah}"])
+    parse_args(["--github-action", "github-push", "--github-event", "{'abc':123}"])
 
 
 def test_check_args() -> None:
@@ -58,14 +56,16 @@ def test_ci_args(mocker: MockerFixture) -> None:
     with pytest.raises(SystemExit):
         parse_ci_args([])
     with pytest.raises(SystemExit):
-        parse_ci_args(["--github-action", "github-push", "--github-event", "{blah}"])
+        parse_ci_args(
+            ["--github-action", "github-push", "--github-event", "{'abc':123}"]
+        )
     with pytest.raises(SystemExit):
         parse_ci_args(
             [
                 "--github-action",
                 "github-push",
                 "--github-event",
-                "{blah}",
+                "{'abc':123}",
                 "--matrix",
                 json_dump(test_matrix),
             ]
@@ -79,7 +79,7 @@ def test_ci_args(mocker: MockerFixture) -> None:
             "--github-action",
             "github-push",
             "--github-event",
-            "{blah}",
+            "{'abc':123}",
             "--matrix",
             json_dump(test_matrix),
             "--project-name",
@@ -255,6 +255,7 @@ def test_ci_launch_01(
 
     # check that env secret is put in env
     if secret == "env":
+        assert isinstance(sec.get_secret_data, MagicMock)
         assert sec.get_secret_data.call_count == 1
         assert copy[sec.name] == sec.get_secret_data.return_value
 

@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -11,8 +10,7 @@ from itertools import chain
 from logging import getLogger
 from pathlib import Path
 from platform import machine
-from re import Pattern
-from typing import Any, Dict, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Generator, Iterable, List, Optional, Pattern, Set, Union
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
@@ -24,7 +22,7 @@ LOG = getLogger(__name__)
 
 def file_glob(
     repo: GitRepo, path: Path, pattern: str = "**/*", relative: bool = False
-) -> Iterable[Path]:
+) -> Generator[Path, None, None]:
     """Run Path.glob for a given pattern, with filters applied.
     Only files are yielded, not directories. Any file that looks like
     it is in a test folder hierarchy (`tests`) will be skipped.
@@ -360,7 +358,7 @@ class Recipe:
         """
         self.file = file
         self.service_deps: Set[str] = set()
-        self.path_deps: Set[Path] = set([file])
+        self.path_deps: Set[Path] = {file}
         self.recipe_deps: Set[str] = set()
         self.weak_deps: Set[str] = set()
         self.dirty = False
@@ -394,9 +392,10 @@ class Services(dict):
         assert self.root is not None
         for service_yaml in file_glob(repo, self.root, "**/service.yaml"):
             service = Service.from_metadata_yaml(service_yaml, self.root)
-            assert service.name not in self
-            assert service.dockerfile is not None
-            service.path_deps |= {service_yaml, service.dockerfile}
+            assert service.name not in self, f"{service_yaml} missing name"
+            service.path_deps.add(service_yaml)
+            if service.dockerfile is not None:
+                service.path_deps.add(service.dockerfile)
             self[service.name] = service
         self._calculate_depends(repo)
 
@@ -539,13 +538,16 @@ class Services(dict):
                 # search file for references to other files
                 self._find_path_depends(service, entry_text)
 
-        def _adjacent(obj: Service) -> Iterable[Union[Recipe, Service]]:
+        def _adjacent(
+            obj: Union[Recipe, Service]
+        ) -> Generator[Union[Recipe, Service], None, None]:
             for rec in obj.recipe_deps:
                 yield self.recipes[rec]
             for svc in obj.service_deps:
                 yield self[svc]
             # include service test images
             if hasattr(obj, "tests"):
+                assert isinstance(obj, Service)
                 for test in obj.tests:
                     if hasattr(test, "image"):
                         assert isinstance(test, ToxServiceTest)
@@ -554,7 +556,9 @@ class Services(dict):
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
-            stk: List[Optional[Iterable[Union[Recipe, Service]]]] = [_adjacent(start)]
+            stk: List[Optional[Generator[Union[Recipe, Service], None, None]]] = [
+                _adjacent(start)
+            ]
             bkt = [start]
             while stk:
                 if stk[-1] is None:

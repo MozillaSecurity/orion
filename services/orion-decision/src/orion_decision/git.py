@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -11,7 +10,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Dict, Generator, Optional, Union
 
 LOG = getLogger(__name__)
 RETRY_SLEEP = 30
@@ -254,7 +253,7 @@ class GithubEvent:
         self.commit_message = self.repo.message(str(self.commit_range or self.commit))
         return self
 
-    def list_changed_paths(self) -> Iterable[Path]:
+    def list_changed_paths(self) -> Generator[Path, None, None]:
         """Calculate paths that were changed in the commit range.
 
         Yields:

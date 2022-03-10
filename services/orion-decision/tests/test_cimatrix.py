@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,7 +5,7 @@
 
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pytest
 from yaml import safe_load as yaml_load
@@ -45,10 +44,10 @@ def test_matrix_load(fixture: str) -> None:
     exp = yaml_load((FIXTURES / fixture / "expected.yaml").read_text())
     assert set(exp) == {"jobs", "secrets"}
     mtx = CIMatrix(obj, "master", False)
-    jobs = set(str(MatrixJob.from_json(data)) for data in exp["jobs"])
-    assert set(str(job) for job in mtx.jobs) == jobs
-    secrets = set(str(CISecret.from_json(data)) for data in exp["secrets"])
-    assert set(str(sec) for sec in mtx.secrets) == secrets
+    jobs = {str(MatrixJob.from_json(data)) for data in exp["jobs"]}
+    assert {str(job) for job in mtx.jobs} == jobs
+    secrets = {str(CISecret.from_json(data)) for data in exp["secrets"]}
+    assert {str(sec) for sec in mtx.secrets} == secrets
 
 
 @pytest.mark.parametrize(
@@ -65,8 +64,8 @@ def test_matrix_release(case: str, branch: str, event_type: str) -> None:
     exp = yaml_load((FIXTURES / "matrix04" / f"expected_{case}.yaml").read_text())
     assert set(exp) == {"jobs", "secrets"}
     mtx = CIMatrix(obj, branch, event_type)
-    jobs = set(str(MatrixJob.from_json(data)) for data in exp["jobs"])
-    assert set(str(job) for job in mtx.jobs) == jobs
+    jobs = {str(MatrixJob.from_json(data)) for data in exp["jobs"]}
+    assert {str(job) for job in mtx.jobs} == jobs
     assert not exp["secrets"]
     assert not mtx.secrets
 
@@ -95,7 +94,7 @@ def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
         [CISecretKey("project/deploy")],
     ],
 )
-def test_matrix_job_serialize(secrets: List[Optional[CISecret]]) -> None:
+def test_matrix_job_serialize(secrets: List[CISecret]) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(
         "name",
