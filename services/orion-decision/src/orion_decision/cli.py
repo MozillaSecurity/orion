@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,6 +5,7 @@
 
 
 import argparse
+import sys
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
@@ -15,7 +15,6 @@ from os import getenv
 from pathlib import Path
 from shutil import which
 from subprocess import run
-import sys
 from typing import List, Optional
 
 from dateutil.parser import isoparse
@@ -91,6 +90,8 @@ def _sanity_check_github_args(
 
     if not result.github_event:
         parser.error("--github-event (or GITHUB_EVENT) is required!")
+    assert isinstance(result.github_event, dict)
+    assert all(isinstance(key, str) for key in result.github_event)
 
 
 def _define_decision_args(parser: argparse.ArgumentParser) -> None:
@@ -265,6 +266,9 @@ def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     if not result.matrix:
         parser.error("--matrix (or CI_MATRIX) is required!")
+    assert isinstance(result.matrix, dict)
+    assert all(isinstance(key, str) for key in result.matrix)
+
     if not result.project_name:
         parser.error("--project-name (or PROJECT_NAME) is required!")
 

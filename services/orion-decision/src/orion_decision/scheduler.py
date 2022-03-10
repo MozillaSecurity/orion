@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -6,13 +5,12 @@
 
 
 import argparse
-
-from datetime import datetime
 import re
+from datetime import datetime
 from logging import getLogger
 from pathlib import Path
 from string import Template
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set, Union
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -258,21 +256,20 @@ class Scheduler:
         test: ToxServiceTest,
         service_build_tasks: Dict[str, str],
     ):
-        test_image = test.image
+        image: Union[str, Dict[str, str]] = test.image
         deps = []
-        if test_image in service_build_tasks:
-            if self.services[test_image].dirty:
-                deps.append(service_build_tasks[test_image])
+        if image in service_build_tasks:
+            if self.services[image].dirty:
+                assert isinstance(image, str)
+                deps.append(service_build_tasks[image])
                 image = {
                     "type": "task-image",
-                    "taskId": service_build_tasks[test_image],
+                    "taskId": service_build_tasks[image],
                 }
             else:
                 image = {
                     "type": "indexed-image",
-                    "namespace": (
-                        f"project.fuzzing.orion.{test_image}.{self.push_branch}"
-                    ),
+                    "namespace": (f"project.fuzzing.orion.{image}.{self.push_branch}"),
                 }
             image["path"] = f"public/{test.image}.tar.zst"
         assert self.now is not None
@@ -378,9 +375,9 @@ class Scheduler:
         )
         service_build_tasks = {service: slugId() for service in self.services}
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
-        test_tasks_created = set()
-        build_tasks_created = set()
-        push_tasks_created = set()
+        test_tasks_created: Set[str] = set()
+        build_tasks_created: Set[str] = set()
+        push_tasks_created: Set[str] = set()
         if not should_push:
             LOG.info(
                 "Not pushing to Docker Hub (event is %s, branch is %s, only push %s)",
@@ -407,12 +404,15 @@ class Scheduler:
                 if self.services[dep].dirty
             ]
             if is_svc:
-                dirty_test_dep_tasks = [
-                    service_build_tasks[test.image]
-                    for test in obj.tests
-                    if test.image in service_build_tasks
-                    and self.services[test.image].dirty
-                ]
+                assert isinstance(obj, Service)
+                dirty_test_dep_tasks = []
+                for test in obj.tests:
+                    assert isinstance(test, ToxServiceTest)
+                    if (
+                        test.image in service_build_tasks
+                        and self.services[test.image].dirty
+                    ):
+                        dirty_test_dep_tasks.append(service_build_tasks[test.image])
             else:
                 dirty_test_dep_tasks = []
             dirty_recipe_test_tasks = [
@@ -443,8 +443,9 @@ class Scheduler:
 
             if is_svc:
                 test_tasks = []
+                assert isinstance(obj, Service)
                 for test in obj.tests:
-                    assert isinstance(obj, Service)
+                    assert isinstance(test, ToxServiceTest)
                     task_id = self._create_svc_test_task(obj, test, service_build_tasks)
                     test_tasks_created.add(task_id)
                     test_tasks.append(task_id)

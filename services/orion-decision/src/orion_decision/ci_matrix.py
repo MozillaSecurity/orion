@@ -1,4 +1,3 @@
-# coding: utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -11,7 +10,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from jsonschema import RefResolver, validate
 from yaml import safe_load as yaml_load
@@ -43,7 +42,7 @@ IMAGES = {
     ("python", "macos", "3.9"): "ci-py-39-osx",
     ("python", "macos", "3.10"): "ci-py-310-osx",
 }
-SCHEMA_CACHE: Dict[str, str] = {}
+SCHEMA_CACHE: Dict[str, Any] = {}
 LOG = getLogger(__name__)
 
 
@@ -734,7 +733,7 @@ class CIMatrix:
         for job in self.jobs:
             job.check()
 
-    def _parse_secrets(self, secrets: str) -> Iterable[CISecret]:
+    def _parse_secrets(self, secrets: str) -> Generator[CISecret, None, None]:
         for secret in secrets:
             result = CISecret.from_json(secret)
             assert not any(result.is_alias(secret) for secret in self.secrets)
