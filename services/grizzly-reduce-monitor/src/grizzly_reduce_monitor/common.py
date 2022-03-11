@@ -1,4 +1,3 @@
-# coding=utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -115,11 +114,12 @@ class CrashManager(Reporter):
         if endpoint == "crashes":
             assert params is not None
             params["include_raw"] = "0"
+        assert params is not None
         params["limit"] = 1000
 
         returned = 0
 
-        next_url = (
+        next_url: Optional[str] = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"
             f"/crashmanager/rest/{endpoint}/"
         )

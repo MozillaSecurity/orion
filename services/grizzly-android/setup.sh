@@ -32,8 +32,8 @@ apt-install-auto zstd
   rm -rf clang
 )
 
-pip3 install -r /tmp/recipes/requirements.txt
-#python3 /tmp/recipes/emulator.py install
+pip3 install /src
+# emulator-install install
 
 ~worker/.local/bin/cleanup.sh
 

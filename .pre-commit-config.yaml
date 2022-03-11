@@ -40,6 +40,20 @@ repos:
         always_run: true
         require_serial: true
         verbose: true
+      - id: grizzly-lint
+        name: Run linters for grizzly
+        entry: bash -c 'cd services/grizzly && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
+      - id: grizzly-android-lint
+        name: Run linters for grizzly-android
+        entry: bash -c 'cd services/grizzly-android && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
       - id: grizzly-reduce-monitor-lint
         name: Run linters for grizzly_reduce_monitor
         entry: bash -c 'cd services/grizzly-reduce-monitor && exec tox -e lint'

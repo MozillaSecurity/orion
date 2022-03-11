@@ -1,4 +1,3 @@
-# _coding=utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,8 +6,8 @@
 
 
 import argparse
-from logging import getLogger
 import sys
+from logging import getLogger
 from typing import List, Optional
 
 from grizzly.common.fuzzmanager import CrashEntry
@@ -30,7 +29,11 @@ class ReductionUpdater(ReductionWorkflow):
     """
 
     def __init__(
-        self, crash_id: int, quality: int, only_if_quality: Optional[int] = None, task_os: Optional[str]=None
+        self,
+        crash_id: int,
+        quality: int,
+        only_if_quality: Optional[int] = None,
+        task_os: Optional[str] = None,
     ) -> None:
         super().__init__()
         self.crash_id = crash_id
@@ -83,7 +86,7 @@ class ReductionUpdater(ReductionWorkflow):
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "ReductionUpdater":
-        task_os: str | None = None
+        task_os: Optional[str] = None
         if args.crash_from_reduce_task:
             LOG.info(
                 "Fetching crash ID from reduction task %s", args.crash_from_reduce_task

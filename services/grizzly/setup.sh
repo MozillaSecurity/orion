@@ -106,6 +106,7 @@ apt-get remove -y gvfs  # see https://bugzilla.mozilla.org/show_bug.cgi?id=16829
 sys-embed-dbgsym "${dbgsym_packages[@]}"
 
 retry pip3 install \
+  /src/rwait \
   psutil \
   virtualenv \
   git+https://github.com/cgoldberg/xvfbwrapper.git
