@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import argparse
 import json
 import os
@@ -13,7 +12,6 @@ import uuid
 from typing import List, Optional
 
 import fasteners
-
 
 TOKEN_PATH = pathlib.Path(tempfile.gettempdir()) / "rwait"
 
@@ -144,5 +142,9 @@ class RemoteWait:
         parser.error(f"unknown subcommand: {args.subcommand}")
 
 
+def main(args: Optional[List[str]] = None):
+    RemoteWait.main(args)
+
+
 if __name__ == "__main__":
-    RemoteWait.main()
+    main()

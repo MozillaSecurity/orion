@@ -1,4 +1,3 @@
-# _coding=utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public License,
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
@@ -10,9 +9,9 @@ import argparse
 import ctypes
 import os
 import sys
-from typing import List, Optional
 from logging import getLogger
 from pathlib import Path
+from typing import List, Optional
 
 from .common import CommonArgParser, ReductionWorkflow
 
@@ -60,7 +59,9 @@ class PrivateLogLauncher(ReductionWorkflow):
             help="private log destination (default: /logs)",
             default=Path("/logs"),
         )
-        parser.add_argument("command", help="docker command-line", nargs=args.REMAINDER)
+        parser.add_argument(
+            "command", help="docker command-line", nargs=argparse.REMAINDER
+        )
         return parser.parse_args(args=args)
 
     @classmethod

@@ -13,11 +13,16 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN useradd -d /home/worker -s /bin/bash -m worker
 
 COPY recipes/linux/ /src/recipes/
+COPY \
+    services/grizzly/pyproject.toml \
+    services/grizzly/rwait.py \
+    services/grizzly/setup.cfg \
+    services/grizzly/setup.py \
+    /src/rwait/
 COPY services/fuzzing-decision /src/fuzzing-tc
 COPY services/grizzly/setup.sh /src/recipes/setup-grizzly.sh
 COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /src/recipes/setup-grizzly.sh
-COPY services/grizzly/rwait.py /usr/local/bin/rwait
 COPY services/grizzly/launch-grizzly.sh services/grizzly/launch-grizzly-worker.sh /home/worker/
 
 ENV LANG   en_US.UTF-8

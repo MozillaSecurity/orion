@@ -3,28 +3,24 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-
-from __future__ import print_function
 import argparse
 import logging
 import os
 import platform
 import shutil
 import stat
-import sys
+import subprocess
 import telnetlib
 import tempfile
 import time
-from typing import Optional, Tuple, Union
 import xml.etree.ElementTree
 import zipfile
-import requests
-from six.moves.urllib.parse import urlparse
+from itertools import chain
+from typing import Optional, Tuple, Union
+from urllib.parse import urlparse
 
-if sys.version_info.major == 2:
-    import subprocess32 as subprocess  # pylint: disable=import-error
-else:
-    import subprocess
+import requests
+
 if platform.system() == "Linux":
     import xvfbwrapper
 
@@ -42,7 +38,7 @@ def si(number: float) -> str:
     while number > 1024:
         number /= 1024.0
         suffixes.pop(0)
-    return "%0.2f%s" % (number, suffixes.pop(0))
+    return f"{number:0.2f}{suffixes.pop(0)}"
 
 
 def makedirs(*dirs) -> str:
@@ -51,11 +47,11 @@ def makedirs(*dirs) -> str:
             os.mkdir(dirs[0])
         if len(dirs) == 1:
             return str(dirs[0])
-        dirs = [os.path.join(dirs[0], dirs[1])] + list(dirs[2:])
+        dirs = tuple(chain([os.path.join(dirs[0], dirs[1])], dirs[2:]))
     return ""
 
 
-class AndroidSDKRepo(object):
+class AndroidSDKRepo:
     def __init__(self, url: str) -> None:
         parts = urlparse(url)
         self.url_base = (
@@ -106,9 +102,7 @@ class AndroidSDKRepo(object):
         if host is None:
             url = package.find("./archives/archive/complete/url")
         else:
-            url = package.find(
-                "./archives/archive/[host-os='%s']/complete/url" % (host,)
-            )
+            url = package.find(f"./archives/archive/[host-os='{host}']/complete/url")
 
         # figure out where to extract package to
         path_parts = package_path.split(";")
@@ -202,7 +196,7 @@ class AndroidSDKRepo(object):
         assert license is not None
         assert self.root is not None
         root_found_license = self.root.find(
-            "./license[@id='%s']" % (license.get("ref"),)
+            "./license[@id='{}']".format(license.get("ref"))
         )
         assert root_found_license is not None
         manifest.append(root_found_license)
@@ -230,18 +224,24 @@ class AndroidSDKRepo(object):
         if b"xmlns:generic=" not in manifest_bytes and b'"generic:' in manifest_bytes:
             manifest_bytes = manifest_bytes.replace(
                 b"<common:repository ",
-                b'<common:repository xmlns:generic="http://schemas.android.com/repository/android/generic/01" ',
+                (
+                    b'<common:repository xmlns:generic="http://schemas.android.com/'
+                    b'repository/android/generic/01" '
+                ),
             )
         if b"xmlns:sys-img=" not in manifest_bytes and b'"sys-img:' in manifest_bytes:
             manifest_bytes = manifest_bytes.replace(
                 b"<common:repository ",
-                b'<common:repository xmlns:sys-img="http://schemas.android.com/sdk/android/repo/sys-img2/01" ',
+                (
+                    b'<common:repository xmlns:sys-img="http://schemas.android.com/sdk/'
+                    b'android/repo/sys-img2/01" '
+                ),
             )
         with open(manifest_path, "wb") as manifest_fp:
             manifest_fp.write(manifest_bytes)
 
 
-class AndroidHelper(object):
+class AndroidHelper:
     def __init__(
         self,
         android_port: int = 5554,
@@ -428,8 +428,8 @@ class AndroidHelper(object):
         sdcard = os.path.join(avd_dir, "sdcard.img")
         emulator_bin = os.path.join(sdk, "emulator", "emulator")
 
-        # below does not work in docker build because it requires --privileged to launch an x86 emulator,
-        # since kvm is required.
+        # below does not work in docker build because it requires --privileged to launch
+        # an x86 emulator, since kvm is required.
         LOG.info("Initial boot to save snapshot")
 
         proc = self.emulator_run("never")
@@ -451,21 +451,21 @@ class AndroidHelper(object):
     def kill(self) -> None:
         ctl = telnetlib.Telnet("localhost", self.android_port)
 
-        lines = ctl.read_until("OK\r\n", 10).rstrip().splitlines()
+        lines = ctl.read_until(b"OK\r\n", 10).rstrip().splitlines()
         try:
             auth_token_idx = lines.index(
-                "Android Console: you can find your <auth_token> in "
+                b"Android Console: you can find your <auth_token> in "
             )
         except IndexError:
             pass
         else:
-            auth_token_path = lines[auth_token_idx + 1].strip("'")
+            auth_token_path = lines[auth_token_idx + 1].strip(b"'")
             with open(auth_token_path) as auth_token_fp:
                 auth_token = auth_token_fp.read()
-            ctl.write("auth %s\n" % (auth_token,))
-            ctl.read_until("OK\r\n", 10)
+            ctl.write(f"auth {auth_token}\n".encode("ascii"))
+            ctl.read_until(b"OK\r\n", 10)
 
-        ctl.write("kill\n")
+        ctl.write(b"kill\n")
         ctl.close()
 
     def wait_for_boot_completed(self) -> None:

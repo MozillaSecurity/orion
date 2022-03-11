@@ -1,4 +1,3 @@
-# _coding=utf-8
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,7 +6,6 @@
 
 
 import argparse
-
 import os
 import sys
 from collections import namedtuple
@@ -17,7 +15,7 @@ from pathlib import Path
 from random import choice, random
 from string import Template
 from time import time
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 from dateutil.parser import isoparse
 from grizzly.common.reporter import Quality
@@ -69,7 +67,9 @@ ReducibleCrash = namedtuple(
 )
 
 
-def _fuzzmanager_get_crashes(tool_list: List[str]) -> Iterable[ReducibleCrash]:
+def _fuzzmanager_get_crashes(
+    tool_list: List[str],
+) -> Generator[ReducibleCrash, None, None]:
     """This function is responsible for getting CrashInfo objects to try to reduce
     from FuzzManager.
 
@@ -200,7 +200,9 @@ def _fuzzmanager_get_crashes(tool_list: List[str]) -> Iterable[ReducibleCrash]:
         )
 
 
-def _filter_reducing_unbucketed(tool_list: List[str]) -> Iterable[ReducibleCrash]:
+def _filter_reducing_unbucketed(
+    tool_list: List[str],
+) -> Generator[ReducibleCrash, None, None]:
     """This function calls `_fuzzmanager_get_crashes` and filters unbucketed
     tool/shortSignature crashes if any are reducing already.
 
@@ -211,10 +213,10 @@ def _filter_reducing_unbucketed(tool_list: List[str]) -> Iterable[ReducibleCrash
         Description and all info needed to queue a crash for reduction
     """
     # dict of tag -> min quality where we have a quality < UNREDUCED
-    skip = {}
+    skip: Dict[Tuple[Optional[int], str, str], int] = {}
     # dict of tag -> list of crashes, for crashes where a reducing crash has not been
     # seen yet
-    queue = {}
+    queue: Dict[Tuple[Optional[int], str, str], List[ReducibleCrash]] = {}
 
     for crash in _fuzzmanager_get_crashes(tool_list):
         tag = (crash.bucket, crash.tool, crash.description)
@@ -256,7 +258,9 @@ def _filter_reducing_unbucketed(tool_list: List[str]) -> Iterable[ReducibleCrash
         yield from crashes
 
 
-def _get_unique_crashes(tool_list: List[str]) -> Iterable[Tuple[str, ReducibleCrash]]:
+def _get_unique_crashes(
+    tool_list: List[str],
+) -> Generator[Tuple[str, ReducibleCrash], None, None]:
     """This function calls `_filter_reducing_unbucketed` and picks one unique result
     per bucket/shortSignature to reduce.
 
@@ -304,7 +308,7 @@ class ReductionMonitor(ReductionWorkflow):
     ) -> None:
         super().__init__()
         self.dry_run = dry_run
-        self._gw_image_artifact_tasks = {}
+        self._gw_image_artifact_tasks: Dict[str, str] = {}
         if self.dry_run:
             LOG.warning("*** DRY RUN -- SIMULATION ONLY ***")
         if not tool_list:

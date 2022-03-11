@@ -8,10 +8,15 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 USER root
 
-COPY services/grizzly-android/recipes/ /tmp/recipes/
-RUN /tmp/recipes/setup.sh \
-    && rm -rf /tmp/recipes
-COPY services/grizzly-android/recipes/kvm.sh /home/worker/
+COPY \
+    services/grizzly-android/emulator_install.py \
+    services/grizzly-android/pyproject.toml \
+    services/grizzly-android/setup.cfg \
+    services/grizzly-android/setup.py \
+    services/grizzly-android/setup.sh \
+    /src/
+RUN /src/setup.sh && rm -rf /src
+COPY services/grizzly-android/kvm.sh /home/worker/
 
 COPY services/grizzly-android/android-x86_64-llvm-symbolizer \
     /home/worker/android-ndk/prebuilt/android-x86_64/llvm-symbolizer/llvm-symbolizer

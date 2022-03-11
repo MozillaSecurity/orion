@@ -2,6 +2,9 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.black]
+target-version = ["py36"]
+
 [tool.coverage.run]
 omit = [
     "*/setup.py",
@@ -15,6 +18,15 @@ omit = [
 [tool.isort]
 known_first_party = "grizzly_reduce_monitor"
 profile = "black"
+
+[[tool.mypy.overrides]]
+module = [
+    "Reporter.*",
+    "grizzly.*",
+    "setuptools",
+    "taskcluster.*",
+]
+ignore_missing_imports = true
 
 [tool.pylint.format]
 max-line-length = 88
