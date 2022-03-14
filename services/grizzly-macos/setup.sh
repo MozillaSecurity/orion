@@ -34,7 +34,7 @@ EOF
 export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
 
 # get minidump_stackwalk
-curl -sSL "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.macosx64-minidump-stackwalk.latest/artifacts/public%2Fbuild%2Fminidump_stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "$HOMEBREW_PREFIX/bin"
+curl -sSL "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.macosx64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "$HOMEBREW_PREFIX/bin"
 
 python -V
 node -v
