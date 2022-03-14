@@ -1,4 +1,5 @@
 **/node_modules
+**/.mypy_cache
 **/.tox
 **/.coverage
 **/*.egg-info
