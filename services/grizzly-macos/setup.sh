@@ -15,7 +15,7 @@ brew install --force-bottle node@14
 # shellcheck disable=SC2016
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/node@14/bin:,' "$HOMEBREW_PREFIX/Library/Homebrew/cmd/shellenv.sh"
 PATH="$HOMEBREW_PREFIX/opt/node@14/bin:$PATH"
-curl -qL https://www.npmjs.com/install.sh | npm_install="7.22.0" sh
+curl -qL https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 
 # configure pip
 mkdir -p pip

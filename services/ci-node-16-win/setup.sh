@@ -13,7 +13,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get node.js
-VER=14.19.0
+VER=16.14.0
 curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 unzip node.zip
 rm node.zip
@@ -23,7 +23,6 @@ mv "node-v${VER}-win-x64" msys64/opt/node
 PATH="$PWD/msys64/opt/node:$PATH"
 which node
 node -v
-curl -qL https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 npm -v
 
 rm -rf \

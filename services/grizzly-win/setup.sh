@@ -71,7 +71,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # get node.js
-VER=14.17.3
+VER=14.19.0
 curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip
@@ -81,7 +81,7 @@ mv "node-v${VER}-win-x64" msys64/opt/node
 PATH="$PWD/msys64/opt/node:$PATH"
 which node
 node -v
-curl -qL https://www.npmjs.com/install.sh | npm_install="7.22.0" sh
+curl -qL https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 npm -v
 
 # install utils to match linux ci images
