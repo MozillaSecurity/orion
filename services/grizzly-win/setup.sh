@@ -19,10 +19,10 @@ pacman --noconfirm -Rs psmisc
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
-VER=1.8.12
-curl -sSLO "https://fluentbit.io/releases/${VER%.*}/td-agent-bit-${VER}-win64.zip"
-7z x "td-agent-bit-${VER}-win64.zip"
-mv "td-agent-bit-${VER}-win64" td-agent-bit
+VER=1.8.13
+curl -sSLO "https://github.com/fluent/fluent-bit/releases/download/v${VER}/fluent-bit-${VER}-win64.zip"
+7z x "fluent-bit-${VER}-win64.zip"
+mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
 # get minidump_stackwalk
