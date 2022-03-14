@@ -8,6 +8,7 @@ LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+COPY services/orion-decision /src/orion-decision
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
@@ -17,6 +18,25 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         jshon \
         locales \
         openssh-client \
+        python3 \
+        python3-setuptools \
+    && savedAptMark="$(apt-mark showmanual)" \
+    && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
+        gcc \
+        python3-dev \
+        python3-pip \
+        python3-wheel \
+    && retry python3 -m pip install --no-build-isolation -e /src/orion-decision \
+    && apt-mark auto '.*' > /dev/null \
+    && for p in $savedAptMark; do apt-mark manual "$p"; done \
+    && find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec ldd '{}' ';' \
+        | awk '/=>/ { print $(NF-1) }' \
+        | sort -u \
+        | xargs -r dpkg-query --search \
+        | cut -d: -f1 \
+        | sort -u \
+        | xargs -r apt-mark manual \
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -d /home/worker -s /bin/bash -m worker \
     && echo "LANGUAGE=en" >> /etc/environment \
