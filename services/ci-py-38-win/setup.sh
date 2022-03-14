@@ -15,7 +15,7 @@ pacman --noconfirm -Rs psmisc
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get python
-VER=3.8.9
+VER=3.8.10
 nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
