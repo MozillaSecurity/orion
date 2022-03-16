@@ -14,8 +14,8 @@ COPY \
     services/grizzly-android/setup.cfg \
     services/grizzly-android/setup.py \
     services/grizzly-android/setup.sh \
-    /src/
-RUN /src/setup.sh && rm -rf /src
+    /src/emulator_install/
+RUN /src/emulator_install/setup.sh
 COPY services/grizzly-android/kvm.sh /home/worker/
 
 COPY services/grizzly-android/android-x86_64-llvm-symbolizer \

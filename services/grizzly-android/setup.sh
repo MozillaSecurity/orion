@@ -32,8 +32,8 @@ apt-install-auto zstd
   rm -rf clang
 )
 
-pip3 install /src
-# emulator-install install
+pip3 install /src/emulator_install
+su worker -c "emulator-install --no-launch"
 
 ~worker/.local/bin/cleanup.sh
 

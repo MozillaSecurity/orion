@@ -47,6 +47,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/grizzly/.*
       - id: grizzly-android-lint
         name: Run linters for grizzly-android
         entry: bash -c 'cd services/grizzly-android && exec tox -e lint'
@@ -54,6 +55,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/grizzly-android/.*
       - id: grizzly-reduce-monitor-lint
         name: Run linters for grizzly_reduce_monitor
         entry: bash -c 'cd services/grizzly-reduce-monitor && exec tox -e lint'
@@ -61,6 +63,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/grizzly-reduce-monitor/.*
       - id: hadolint
         name: Lint dockerfiles
         language: system
@@ -74,6 +77,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/fuzzing-decision/.*
       - id: orion-decision-lint
         name: Run linters for orion_decision
         entry: bash -c 'cd services/orion-decision && exec tox -e lint'
@@ -81,6 +85,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/orion-decision/.*
       - id: orion-builder-lint
         name: Run linters for orion_builder
         entry: bash -c 'cd services/orion-builder && exec tox -e lint'
@@ -88,6 +93,7 @@ repos:
         require_serial: true
         pass_filenames: false
         types: [python]
+        files: ^services/orion-builder/.*
 
 default_language_version:
   python: python3
