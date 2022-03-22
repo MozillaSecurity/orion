@@ -30,10 +30,10 @@ class PoolLauncher(Workflow):
         self.apply: Optional[str]
         self.command = command.copy()
         self.environment = os.environ.copy()
+        self.pool_name: Optional[str]
         if pool_name is not None and "/" in pool_name:
             self.apply, self.pool_name = pool_name.split("/")
         else:
-            assert pool_name is not None
             self.pool_name = pool_name
             self.apply = None
         self.preprocess = preprocess
@@ -47,6 +47,7 @@ class PoolLauncher(Workflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
 
     def load_params(self) -> None:
+        assert self.pool_name is not None
         path = self.fuzzing_config_dir / f"{self.pool_name}.yml"
         assert path.exists(), f"Missing pool {self.pool_name}"
 
