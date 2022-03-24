@@ -32,7 +32,7 @@ LOG = logging.getLogger("emulator_install")
 REPO_URL = "https://dl.google.com/android/repository/repository2-1.xml"
 RETRIES = 4  # retry any failed operation this many times
 RETRY_DELAY = range(15, 45)  # delay in seconds between retries
-SYS_IMG = "android-29"
+SYS_IMG = "android-30"
 
 
 def init_logging(debug: bool = False) -> None:
@@ -341,6 +341,13 @@ class AndroidSDKRepo:
             )
             if url is not None:
                 break
+            # check for the same thing without host-os
+            # can't do this purely in xpath
+            archive = package.find("./archives/archive/complete/url/../..")
+            if archive is not None and archive.find("./host-os") is None:
+                url = archive.find("./complete/url")
+                if url is not None:
+                    break
         else:
             raise RuntimeError(f"Package {package_path} not found!")
 
