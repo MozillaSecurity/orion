@@ -1,0 +1,50 @@
+created: "${created}"
+deadline: "${deadline}"
+dependencies: []
+expires: "${expires}"
+metadata:
+  description: "${description}"
+  name: "Reduce fuzzing crash ${crash_id} for ${os_name}"
+  owner: "${owner_email}"
+  source: "https://github.com/MozillaSecurity/grizzly"
+payload:
+  artifacts:
+    project/fuzzing/private/logs:
+      expires: "${expires}"
+      path: /logs/
+      type: directory
+  capabilities:
+    devices:
+      hostSharedMemory: true
+      loopbackAudio: true
+    privileged: true
+  image:
+    namespace: project.fuzzing.orion.grizzly-android.master
+    path: public/grizzly-android.tar.zst
+    type: indexed-image
+  env:
+    ANDROID_EMULATOR: "1"
+    ADAPTER: reducer
+    FUZZING_CPU_COUNT: "0"  # force single instance/task
+    GRIZZLY_BRANCH: android-rebase
+    IGNORE: "log-limit memory timeout"
+    MEM_LIMIT: "7000"
+    INPUT: "${crash_id}"
+    TIMEOUT: "60"
+  features:
+    taskclusterProxy: true
+  maxRunTime: !!int "${max_run_time}"
+priority: high
+provisionerId: "${provisioner}"
+retries: 5
+routes: []
+schedulerId: "${scheduler}"
+scopes:
+  - "docker-worker:capability:device:hostSharedMemory"
+  - "docker-worker:capability:device:loopbackAudio"
+  - "secrets:get:project/fuzzing/deploy-bearspray"
+  - "secrets:get:project/fuzzing/deploy-grizzly-private"
+  - "secrets:get:project/fuzzing/fuzzmanagerconf"
+  - "secrets:get:project/fuzzing/google-logging-creds"
+taskGroupId: "${task_group}"
+workerType: "${worker}"
