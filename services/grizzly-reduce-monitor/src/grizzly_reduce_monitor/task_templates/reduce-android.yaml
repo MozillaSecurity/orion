@@ -42,6 +42,7 @@ schedulerId: "${scheduler}"
 scopes:
   - "docker-worker:capability:device:hostSharedMemory"
   - "docker-worker:capability:device:loopbackAudio"
+  - "docker-worker:capability:privileged"
   - "secrets:get:project/fuzzing/deploy-bearspray"
   - "secrets:get:project/fuzzing/deploy-grizzly-private"
   - "secrets:get:project/fuzzing/fuzzmanagerconf"
