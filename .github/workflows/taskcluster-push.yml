@@ -8,4 +8,9 @@ jobs:
       TC_WORKER_ID: "gh-orion-push-${{ github.run_id }}-${{ github.run_attempt }}"
     steps:
       - uses: actions/checkout@v2
+        name: clone
       - run: .github/scripts/start-worker.sh
+        continue-on-error: true
+        name: taskcluster worker
+      - run: true
+        name: allow failures
