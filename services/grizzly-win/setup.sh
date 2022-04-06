@@ -25,11 +25,14 @@ curl -sSLO "https://github.com/fluent/fluent-bit/releases/download/v${VER}/fluen
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
-# get minidump_stackwalk
+# get new minidump-stackwalk
 curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win32-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
 zstdcat minidump-stackwalk.tar.zst | tar xv
 mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
 rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
+
+# old minidump_stackwalk (remove when support for new is added to ffpuppet)
+curl -sSL "https://tooltool.mozilla-releng.net/sha512/2bc729f9cedfba59b5c7a088f00d00fc078af3bd08e88ee41bbb1ea092038466f46589cef036e0d928249f6037fb22828f62e6d82a32d018f66ca92a834393c8" -o msys64/usr/bin/minidump_stackwalk.exe
 
 # get python
 VER=3.8.10
