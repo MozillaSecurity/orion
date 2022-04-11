@@ -71,6 +71,8 @@ def retry(*args, **kwds) -> Callable[..., Any]:
                              raised as normal. (default: [Exception])
         on_error (callable/None): A callback to be called if any exception is raised,
                                   eg. to cleanup between retries.
+        delay (iterable[int]): Retry values to choose from in case of failure.
+                               (default: RETRY_DELAY)
 
     Returns:
         callable: The wrapped function.
@@ -79,6 +81,7 @@ def retry(*args, **kwds) -> Callable[..., Any]:
     retries = RETRIES
     errors: Tuple[Type[BaseException], ...] = (Exception,)
     on_error = None
+    delay_range = RETRY_DELAY
 
     def _decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
@@ -91,7 +94,7 @@ def retry(*args, **kwds) -> Callable[..., Any]:
                         on_error()
 
                     if remaining > 0:
-                        delay = random.choice(RETRY_DELAY)
+                        delay = random.choice(delay_range)
                         LOG.error(
                             "%s, retrying in %d seconds ('%s')", msg, delay, str(exc)
                         )
@@ -110,7 +113,7 @@ def retry(*args, **kwds) -> Callable[..., Any]:
         return _decorator(args[0])
 
     assert not args
-    assert set(kwds.keys()) <= {"msg", "retries", "errors", "on_error"}
+    assert set(kwds.keys()) <= {"msg", "retries", "errors", "on_error", "delay"}
 
     msg_arg = kwds.get("msg", msg)
     assert isinstance(
@@ -141,6 +144,12 @@ def retry(*args, **kwds) -> Callable[..., Any]:
         assert callable(
             on_error
         ), f"Expected `on_error` to be callable, but got {err_t!r}"
+
+    delay_range = kwds.get("delay", delay_range)
+    assert list(delay_range), "`delay` is empty"
+    assert all(
+        isinstance(d, (int, float)) for d in delay_range
+    ), "All items in `delay` must be int/float"
 
     return _decorator
 
@@ -473,7 +482,11 @@ class AndroidEmulator:
 
     DESC = "Android emulator"
 
-    @retry(msg="Android emulator launch failed", errors=(AndroidEmulatorError,))
+    @retry(
+        msg="Android emulator launch failed",
+        errors=(AndroidEmulatorError,),
+        delay=range(2, 10),
+    )
     def __init__(
         self,
         avd_name: str = "x86",
@@ -484,6 +497,7 @@ class AndroidEmulator:
         target: Optional[str] = None,
         verbose: bool = False,
         avd_home: Optional[Path] = None,
+        boot_timeout: Optional[float] = 120,
     ) -> None:
         """Create an AndroidEmulator object.
 
@@ -497,6 +511,7 @@ class AndroidEmulator:
             target (str): The target name (from builds.json).
             verbose (bool): Enable verbose logging.
             avd_home: Where AVDs should be created.
+            boot_timeout: Time to wait for Android to boot in the emulator.
         """
         self.avd_name = avd_name
         self.emu = None
@@ -593,7 +608,7 @@ class AndroidEmulator:
                             "done"
                         ),
                     ],
-                    timeout=60,
+                    timeout=boot_timeout,
                     env={"ANDROID_SERIAL": f"emulator-{self.port:d}"},
                 )
             except subprocess.TimeoutExpired:
@@ -916,6 +931,16 @@ def main(args: Optional[List[str]] = None) -> None:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
     aparser.add_argument(
+        "--boot-timeout",
+        "-t",
+        default=60,
+        type=float,
+        help=(
+            "Time to wait for Android to boot before retrying emulator launch "
+            "(default: %(default)ss)"
+        ),
+    )
+    aparser.add_argument(
         "--skip-dl",
         "-s",
         action="store_true",
@@ -933,6 +958,11 @@ def main(args: Optional[List[str]] = None) -> None:
         help="Change path where AVDs are created.",
     )
     argv = aparser.parse_args(args)
+
+    if argv.boot_timeout < 0:
+        aparser.error("--boot-timeout must be positive")
+    if argv.boot_timeout == 0:
+        argv.boot_timeout = None
 
     debug_value = os.getenv("DEBUG", "0")
     if debug_value not in {"0", "1"}:
@@ -959,6 +989,7 @@ def main(args: Optional[List[str]] = None) -> None:
                 avd_name=avd_name,
                 verbose=argv.verbose,
                 avd_home=argv.avd_path,
+                boot_timeout=argv.boot_timeout,
             )
             LOG.info("Android emulator is running on port %d", port)
             try:
