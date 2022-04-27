@@ -324,12 +324,15 @@ class ReductionMonitor(ReductionWorkflow):
             self._gw_image_artifact_tasks[namespace] = result["taskId"]
         return self._gw_image_artifact_tasks[namespace]
 
-    def queue_reduction_task(self, os_name: str, crash_id: int) -> None:
+    def queue_reduction_task(
+        self, os_name: str, crash_id: int, no_repro_quality: Optional[int]
+    ) -> None:
         """Queue a reduction task in Taskcluster.
 
         Arguments:
             os_name: The OS to schedule the task for.
             crash_id: The CrashManager crash ID to reduce.
+            no_repro_quality: testcase Quality to set in FM if crash doesn't repro
         """
         if self.dry_run:
             return None
@@ -364,6 +367,8 @@ class ReductionMonitor(ReductionWorkflow):
                 worker=dest_queue,
             )
         )
+        if no_repro_quality is not None:
+            task["payload"]["env"]["NO_REPRO_QUALITY"] = str(no_repro_quality)
         queue = Taskcluster.get_service("queue")
         LOG.info("Creating task %s: %s", task_id, task["metadata"]["name"])
         try:
@@ -405,9 +410,12 @@ class ReductionMonitor(ReductionWorkflow):
         queued = 0
         for sig, reduction in _get_unique_crashes(self.tool_list):
             LOG.info("queuing %d for %s", reduction.crash, sig)
+            no_repro_quality = None
             if reduction.quality == Quality.UNREDUCED.value:
                 # perform first pass with generic platform reducer on Q5
                 os_name = GENERIC_PLATFORM
+                if reduction.os in TC_QUEUES and reduction.os != GENERIC_PLATFORM:
+                    no_repro_quality = Quality.REQUEST_SPECIFIC.value
             elif reduction.os in TC_QUEUES and reduction.os != GENERIC_PLATFORM:
                 # move Q6 to platform specific queue if it exists
                 os_name = reduction.os
@@ -424,7 +432,7 @@ class ReductionMonitor(ReductionWorkflow):
                     )
                 continue
             queued += 1
-            self.queue_reduction_task(os_name, reduction.crash)
+            self.queue_reduction_task(os_name, reduction.crash, no_repro_quality)
         LOG.info(
             "finished polling FuzzManager (%s elapsed, %d tasks queued)",
             format_seconds(time() - start_time),
