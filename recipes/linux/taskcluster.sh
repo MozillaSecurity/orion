@@ -19,7 +19,7 @@ case "${1-install}" in
         ca-certificates \
         curl
 
-    TC_VERSION="$(curl --retry 5 -s "https://github.com/taskcluster/taskcluster/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/')"
+    TC_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
     curl --retry 5 -sSL "https://github.com/taskcluster/taskcluster/releases/download/${TC_VERSION}/taskcluster-linux-amd64" -o /usr/local/bin/taskcluster
     chmod +x /usr/local/bin/taskcluster
     ;;
