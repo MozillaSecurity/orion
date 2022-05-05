@@ -80,7 +80,7 @@ function get-latest-github-release () {
     return 1
   fi
   # Bypass GitHub API RateLimit. Note that we do not follow the redirect.
-  curl --retry 5 -s "https://github.com/$1/releases/latest" | sed 's/.\+\/tag\/\(.\+\)".\+/\1/'
+  curl --retry 5 -sI "https://github.com/$1/releases/latest" | grep ^location | sed 's/.\+\/tag\/\(.\+\)[[:space:]]\+/\1/'
 }
 
 # Shallow git-clone of the default branch only
