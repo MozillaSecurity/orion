@@ -165,5 +165,7 @@ You can then run `tc-admin apply` with those credentials:
 export TASKCLUSTER_CLIENT_ID="<your_client_id>"
 export TASKCLUSTER_ACCESS_TOKEN="<your_acess_token>"
 
+tc-admin apply --fuzzing-configuration=path/to/config.yml --grep Role
+tc-admin apply --fuzzing-configuration=path/to/config.yml --grep WorkerPool
 tc-admin apply --fuzzing-configuration=path/to/config.yml
 ```
