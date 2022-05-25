@@ -14,6 +14,11 @@ from fuzzing_decision.decision.workflow import Workflow
 FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def mock_email(mocker):
+    mocker.patch("fuzzing_decision.decision.pool.OWNER_EMAIL", "fuzzing@allizom.org")
+
+
 @pytest.fixture(scope="module")
 def appconfig():
     # this is copied from:

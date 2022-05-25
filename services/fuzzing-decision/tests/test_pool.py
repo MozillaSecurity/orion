@@ -90,7 +90,7 @@ def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, A
         "hookId": f"{platform}-test",
         "kind": "Hook",
         "name": f"{platform}-test",
-        "owner": "fuzzing+taskcluster@mozilla.com",
+        "owner": "fuzzing@allizom.org",
         "schedule": ["0 0 12 * * *", "0 0 0 * * *"],
         "task": {
             "created": {"$fromNow": "0 seconds"},
@@ -104,7 +104,7 @@ def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, A
                     "/orion/tree/master/services/fuzzing-decision"
                 ),
                 "name": f"Fuzzing decision {platform}-test",
-                "owner": "fuzzing+taskcluster@mozilla.com",
+                "owner": "fuzzing@allizom.org",
                 "source": "https://github.com/MozillaSecurity/orion",
             },
             "payload": {
@@ -225,7 +225,7 @@ def test_aws_resources(
         ),
         "emailOnError": True,
         "kind": "WorkerPool",
-        "owner": "fuzzing+taskcluster@mozilla.com",
+        "owner": "fuzzing@allizom.org",
         "providerId": "community-tc-workers-aws",
         "workerPoolId": f"proj-fuzzing/{platform}-test",
     }
@@ -404,7 +404,7 @@ def test_gcp_resources(
         ),
         "emailOnError": True,
         "kind": "WorkerPool",
-        "owner": "fuzzing+taskcluster@mozilla.com",
+        "owner": "fuzzing@allizom.org",
         "providerId": "community-tc-workers-google",
         "workerPoolId": "proj-fuzzing/linux-test",
     }
@@ -566,7 +566,7 @@ def test_tasks(
                     "/orion/tree/master/services/fuzzing-decision"
                 ),
                 "name": f"Fuzzing task {platform}-test - {i+1}/2",
-                "owner": "fuzzing+taskcluster@mozilla.com",
+                "owner": "fuzzing@allizom.org",
                 "source": "https://github.com/MozillaSecurity/orion",
             },
             "payload": {
@@ -684,7 +684,7 @@ def test_preprocess_tasks() -> None:
                     "/orion/tree/master/services/fuzzing-decision"
                 ),
                 "name": f"Fuzzing task linux-pre-pool - {expect['name']}",
-                "owner": "fuzzing+taskcluster@mozilla.com",
+                "owner": "fuzzing@allizom.org",
                 "source": "https://github.com/MozillaSecurity/orion",
             },
             "payload": {
