@@ -102,7 +102,7 @@ then
   set -x
 
   FUZZER="$WORKDIR/domino-xpcshell/res/client.js"
-  HARNESS_EXT_ARGS+=("--transform" "$WORKDIR/dist/bin/transform.js")
+  HARNESS_EXT_ARGS+=("--transform" "$WORKDIR/domino-xpcshell/dist/bin/transform.js")
   if [[ ! -e ~/domino-xpcshell ]]
   then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
