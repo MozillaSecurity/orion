@@ -21,7 +21,7 @@ export COVERAGE=1
 REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 
-TOOLNAME="libFuzzer-$FUZZER"
+TOOLNAME="${TOOLNAME:-libFuzzer-$FUZZER}"
 if [[ -n "$XPCRT" ]]
 then
   TOOLNAME="libFuzzer-xpcrt-$XPCRT"
