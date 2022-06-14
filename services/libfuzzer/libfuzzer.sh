@@ -81,7 +81,7 @@ fi
 HARNESS_EXT_ARGS=()
 if [[ -n "$XPCRT" ]]
 then
-  TOOLNAME="${TOOLNAME:-domino-xpcshell}"
+  TOOLNAME="${TOOLNAME:-libFuzzer-xpcrt-$XPCRT}"
   if [[ ! -e ~/.ssh/id_rsa.domino ]] || [[ ! -e ~/.ssh/id_rsa.domino-xpcshell ]]
   then
     targets=( "domino" "domino-xpcshell" )
