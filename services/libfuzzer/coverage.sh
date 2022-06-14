@@ -21,6 +21,12 @@ export COVERAGE=1
 REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 
+TOOLNAME="libFuzzer-$FUZZER"
+if [[ -n "$XPCRT" ]]
+then
+  TOOLNAME="libFuzzer-xpcrt-$XPCRT"
+fi
+
 # Allow overriding some args with coverage specific versions
 if [[ -n "$COV_LIBFUZZER_ARGS" ]]
 then
@@ -68,5 +74,5 @@ RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
 python3 -m CovReporter \
     --repository mozilla-central \
     --description "libFuzzer ($FUZZER,rt=$COVRUNTIME)" \
-    --tool "libFuzzer-$FUZZER" \
+    --tool "$TOOLNAME" \
     --submit "$WORKDIR/coverage.json"
