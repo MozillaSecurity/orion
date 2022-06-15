@@ -97,6 +97,7 @@ dbgsym_packages=(
   libwayland-egl1
   mesa-va-drivers
   mesa-vdpau-drivers
+  mesa-vulkan-drivers
 )
 
 sys-embed "${packages_with_recommends[@]}"
