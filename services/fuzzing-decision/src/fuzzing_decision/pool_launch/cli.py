@@ -6,6 +6,7 @@
 import argparse
 import logging
 import os
+import shutil
 from typing import List, Optional
 
 from ..common.cli import build_cli_parser
@@ -52,7 +53,25 @@ def main(args: Optional[List[str]] = None) -> None:
         # Retrieve remote repository
         launcher.clone(config)
         launcher.load_params()
+        if "path" not in config["fuzzing_config"]:
+            # we cloned fuzzing-tc-config, clean it up
+            shutil.rmtree(launcher.fuzzing_config_dir)
 
     if not parsed_args.dry_run:
         # Execute command
         launcher.exec()
+    else:
+
+        def _quo_space(part):
+            if " " in part:
+                return f'"{part}"'
+            return part
+
+        # Print what would have been executed
+        for key, env in launcher.environment.items():
+            if os.environ.get(key) != env:
+                logging.info("Env: %s=%s", key, _quo_space(env))
+        logging.info(
+            "Command: %s",
+            " ".join(_quo_space(arg) for arg in launcher.command),
+        )
