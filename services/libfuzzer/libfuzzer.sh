@@ -330,8 +330,8 @@ then
     --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
-    --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}" \
-    "${HARNESS_EXT_ARGS[@]}"
+    "${HARNESS_EXT_ARGS[@]}" \
+    --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
 else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
