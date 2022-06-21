@@ -2,7 +2,6 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
-
 import argparse
 import logging
 import os
@@ -10,6 +9,7 @@ import shutil
 from typing import List, Optional
 
 from ..common.cli import build_cli_parser
+from ..common.util import onerror
 from .launcher import PoolLauncher
 
 
@@ -55,7 +55,7 @@ def main(args: Optional[List[str]] = None) -> None:
         launcher.load_params()
         if "path" not in config["fuzzing_config"]:
             # we cloned fuzzing-tc-config, clean it up
-            shutil.rmtree(launcher.fuzzing_config_dir)
+            shutil.rmtree(launcher.fuzzing_config_dir, onerror=onerror)
 
     if not parsed_args.dry_run:
         # Execute command

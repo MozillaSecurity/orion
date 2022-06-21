@@ -16,6 +16,7 @@ from tcadmin.appconfig import AppConfig
 
 from ..common import taskcluster
 from ..common.pool import MachineTypes
+from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
 from .pool import PoolConfigLoader, cancel_tasks
@@ -187,4 +188,4 @@ class Workflow(CommonWorkflow):
             folder_ = str(folder)
             if folder_.startswith(tempfile.gettempdir()):
                 LOG.info(f"Removing tempdir clone {folder_}")
-                shutil.rmtree(folder_)
+                shutil.rmtree(folder_, onerror=onerror)
