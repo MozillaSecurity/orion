@@ -25,7 +25,9 @@ def test_main_calls(mock_launcher) -> None:
     # if configure returns something, clone/load_params should be called
     mock_launcher.reset_mock(return_value=True)
     mock_launcher.return_value = Mock(spec=PoolLauncher)
-    mock_launcher.return_value.configure.return_value = {}
+    mock_launcher.return_value.configure.return_value = {
+        "fuzzing_config": {"path": None}
+    }
     cli.main([])
     mock_launcher.assert_called_once()
     mock_launcher.return_value.configure.assert_called_once()
