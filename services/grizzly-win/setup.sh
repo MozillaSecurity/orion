@@ -90,8 +90,7 @@ npm -v
 # install utils to match linux ci images
 python -m pip install \
   psutil \
-  virtualenv \
-  git+https://github.com/cgoldberg/xvfbwrapper.git
+  virtualenv
 
 rm -rf \
   msys64/mingw64/share/doc/ \
