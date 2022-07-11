@@ -6,7 +6,7 @@ self=$$
 
 DST="${DST-/coverage-revision.txt}"
 
-{ fuzzfetch --coverage --dry-run 2>&1 || kill $self; } | { tee /dev/stderr || kill $self; } | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
+{ fuzzfetch --coverage --fuzzing -a --dry-run 2>&1 || kill $self; } | { tee /dev/stderr || kill $self; } | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
 
 # Validate that we got a proper revision
 
