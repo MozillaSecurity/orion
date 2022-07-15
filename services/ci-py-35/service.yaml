@@ -1,3 +1,0 @@
-name: ci-py-35
-force_dirty:
-  - orion-decision

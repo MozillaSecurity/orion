@@ -21,15 +21,13 @@ LANGUAGES = ["node", "python"]
 PLATFORMS = ["linux", "windows", "macos"]
 VERSIONS = {
     ("node", "linux"): ["14", "16"],
-    ("python", "linux"): ["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10"],
+    ("python", "linux"): ["3.6", "3.7", "3.8", "3.9", "3.10"],
     ("python", "windows"): ["3.8", "3.9", "3.10"],
     ("python", "macos"): ["3.8", "3.9", "3.10"],
 }
 IMAGES = {
     ("node", "linux", "14"): "ci-node-14",
     ("node", "linux", "16"): "ci-node-16",
-    ("python", "linux", "2.7"): "ci-py-27",
-    ("python", "linux", "3.5"): "ci-py-35",
     ("python", "linux", "3.6"): "ci-py-36",
     ("python", "linux", "3.7"): "ci-py-37",
     ("python", "linux", "3.8"): "ci-py-38",
