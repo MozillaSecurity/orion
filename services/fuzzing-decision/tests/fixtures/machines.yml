@@ -14,7 +14,7 @@ gcp:
     metal:
       cpu: 1
       ram: 1
-      metal: True
+      metal: true
 aws:
   arm64:
     a1:
@@ -28,3 +28,8 @@ aws:
     a3:
       cpu: 25
       ram: 1000
+
+    a4:
+      cpu: 1
+      ram: 2
+      gpu: true

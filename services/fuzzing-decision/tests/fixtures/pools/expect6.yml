@@ -30,3 +30,4 @@ macros:
   ENVVAR4: "456"
   ENVVAR5: "xyz"
 run_as_admin: false
+gpu: false

@@ -27,3 +27,4 @@ macros:
   ENVVAR3: defghi
   ENVVAR4: "456"
 run_as_admin: false
+gpu: false

@@ -41,20 +41,22 @@ def test_parse_size(size: str, divisor: Union[float, str], result: int) -> None:
 
 
 @pytest.mark.parametrize(
-    "provider, cpu, cores, ram, metal, result",
+    "provider, cpu, cores, ram, metal, gpu, result",
     [
-        ("gcp", "x64", 1, 1, False, ["base", "metal"]),
-        ("gcp", "x64", 2, 1, False, ["2-cpus", "more-ram"]),
-        ("gcp", "x64", 2, 5, False, ["more-ram"]),
-        ("gcp", "x64", 1, 1, True, ["metal"]),
-        ("aws", "arm64", 1, 1, False, ["a1"]),
-        ("aws", "arm64", 2, 1, False, ["a2"]),
-        ("aws", "arm64", 12, 32, False, []),
-        ("aws", "arm64", 1, 1, True, []),
+        ("gcp", "x64", 1, 1, False, False, ["base", "metal"]),
+        ("gcp", "x64", 2, 1, False, False, ["2-cpus", "more-ram"]),
+        ("gcp", "x64", 2, 5, False, False, ["more-ram"]),
+        ("gcp", "x64", 1, 1, True, False, ["metal"]),
+        ("gcp", "x64", 1, 1, False, True, []),
+        ("aws", "arm64", 1, 1, False, False, ["a1"]),
+        ("aws", "arm64", 2, 1, False, False, ["a2"]),
+        ("aws", "arm64", 12, 32, False, False, []),
+        ("aws", "arm64", 1, 1, True, False, []),
+        ("aws", "arm64", 1, 1, False, True, ["a4"]),
         # x64 is not present in aws
-        ("aws", "x64", 1, 1, False, KeyError),
+        ("aws", "x64", 1, 1, False, False, KeyError),
         # invalid provider raises too
-        ("dummy", "x64", 1, 1, False, KeyError),
+        ("dummy", "x64", 1, 1, False, False, KeyError),
     ],
 )
 def test_machine_filters(
@@ -64,14 +66,17 @@ def test_machine_filters(
     ram: int,
     cores: int,
     metal: bool,
+    gpu: bool,
     result: Union[List[Optional[str]], Type[KeyError]],
 ) -> None:
 
     if isinstance(result, list):
-        assert list(mock_machines.filter(provider, cpu, cores, ram, metal)) == result
+        assert (
+            list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu)) == result
+        )
     else:
         with pytest.raises(result):
-            list(mock_machines.filter(provider, cpu, cores, ram, metal))
+            list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu))
 
 
 # Hook & role should be the same across cloud providers
@@ -178,6 +183,7 @@ def test_aws_resources(
             "cpu": "arm64",
             "cycle_time": "12h",
             "disk_size": "120g",
+            "gpu": False,
             "imageset": "generic-worker-A",
             "macros": {},
             "max_run_time": "12h",
@@ -286,6 +292,7 @@ def test_gcp_resources(
             "cpu": "x64",
             "cycle_time": "12h",
             "disk_size": "120g",
+            "gpu": False,
             "imageset": "docker-worker",
             "macros": {},
             "max_run_time": "12h",
@@ -489,6 +496,7 @@ def test_tasks(
             "cpu": "x64",
             "cycle_time": "1h",
             "disk_size": "10g",
+            "gpu": False,
             "imageset": "anything",
             "macros": {},
             "max_run_time": "30s",
@@ -727,6 +735,7 @@ def test_flatten(pool_path: Path) -> None:
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
     assert pool.disk_size == expect.disk_size
+    assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
     assert pool.macros == expect.macros
     assert pool.max_run_time == expect.max_run_time
@@ -761,6 +770,7 @@ def test_pool_map() -> None:
     assert cfg_map.cpu == expect.cpu
     assert cfg_map.cycle_time == expect.cycle_time
     assert cfg_map.disk_size == expect.disk_size
+    assert cfg_map.gpu == expect.gpu
     assert cfg_map.imageset == expect.imageset
     assert cfg_map.macros == {}
     assert cfg_map.max_run_time is None
@@ -785,6 +795,7 @@ def test_pool_map() -> None:
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
     assert pool.disk_size == expect.disk_size
+    assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
     assert pool.macros == expect.macros
     assert pool.max_run_time == expect.max_run_time
@@ -828,6 +839,7 @@ def test_cycle_crons() -> None:
             "cpu": "x64",
             "cycle_time": "6h",
             "disk_size": "10g",
+            "gpu": False,
             "imageset": "anything",
             "macros": {},
             "max_run_time": "6h",

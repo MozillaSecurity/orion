@@ -39,6 +39,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "cpu": str,
         "cycle_time": (int, str),
         "disk_size": (int, str),
+        "gpu": bool,
         "imageset": str,
         "macros": dict,
         "max_run_time": (int, str),
@@ -141,7 +142,9 @@ class MachineTypes:
                 assert arch in ARCHITECTURES, f"unknown architecture: {provider}.{arch}"
                 for machine, spec in machines.items():
                     missing = list({"cpu", "ram"} - set(spec))
-                    extra = list(set(spec) - {"cpu", "ram", "metal", "zone_blacklist"})
+                    extra = list(
+                        set(spec) - {"cpu", "gpu", "metal", "ram", "zone_blacklist"}
+                    )
                     assert not missing, (
                         f"machine {provider}.{arch}.{machine} missing required keys: "
                         f"{missing!r}"
@@ -174,6 +177,7 @@ class MachineTypes:
         min_cpu: int,
         min_ram_per_cpu: float,
         metal: bool = False,
+        gpu: bool = False,
     ) -> Iterable[str]:
         """Generate machine types which fit the given requirements.
 
@@ -183,6 +187,8 @@ class MachineTypes:
             min_cpu: the least number of acceptable cpu cores
             min_ram_per_cpu: the least amount of memory acceptable per cpu core
             metal: whether a bare-metal instance is required
+                   (metal instances may be selected even if false)
+            gpu: whether a GPU instance is required
 
         Returns:
             machine type names for the given provider/architecture
@@ -192,8 +198,12 @@ class MachineTypes:
                 spec["cpu"] == min_cpu
                 and (spec["ram"] / spec["cpu"]) >= min_ram_per_cpu
             ):
+                # metal: false only means metal is not *required*
+                #   but it will still be allowed in results
                 if not metal or (metal and spec.get("metal", False)):
-                    yield name
+                    # gpu: must be an exact match
+                    if gpu == spec.get("gpu", False):
+                        yield name
 
 
 class CommonPoolConfiguration(abc.ABC):
@@ -210,6 +220,7 @@ class CommonPoolConfiguration(abc.ABC):
         cpu: cpu architecture (eg. x64/arm64)
         cycle_time: schedule for running this pool in seconds
         disk_size: disk size in GB
+        gpu: whether or not the target requires to be run with a GPU
         imageset: imageset name in community-tc-config/config/imagesets.yml
         macros: dictionary of environment variables passed to the target
         max_run_time: maximum run time of this pool in seconds
@@ -316,6 +327,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.container = data.get("container")
         self.cores_per_task = data.get("cores_per_task")
         self.imageset = data.get("imageset")
+        self.gpu = data.get("gpu")
         self.metal = data.get("metal")
         self.name = data["name"]
         assert self.name is not None, "name is required for every configuration"
@@ -415,6 +427,7 @@ class CommonPoolConfiguration(abc.ABC):
         assert self.cloud is not None
         assert self.cpu is not None
         assert self.cores_per_task is not None
+        assert self.gpu is not None
         assert self.minimum_memory_per_core is not None
         assert self.metal is not None
         for machine in machine_types.filter(
@@ -423,6 +436,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.cores_per_task,
             self.minimum_memory_per_core,
             self.metal,
+            self.gpu,
         ):
             cpus = machine_types.cpus(self.cloud, self.cpu, machine)
             zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
@@ -558,6 +572,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "cpu",
             "cloud",
             "cycle_time",
+            "gpu",
             "imageset",
             "metal",
             "minimum_memory_per_core",
@@ -582,6 +597,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "cpu",
             "cycle_time",
             "disk_size",
+            "gpu",
             "imageset",
             "max_run_time",
             "metal",
@@ -682,6 +698,7 @@ class PoolConfigMap(CommonPoolConfiguration):
             "cpu",
             "cycle_time",
             "disk_size",
+            "gpu",
             "imageset",
             "metal",
             "minimum_memory_per_core",
@@ -762,12 +779,13 @@ def test_main() -> None:
         "--ram", help="minimum amount of ram per core, eg. 4gb", required=True
     )
     parser.add_argument("--metal", help="bare metal machines", action="store_true")
+    parser.add_argument("--gpu", help="GPU machines", action="store_true")
     args = parser.parse_args()
 
     ram = parse_size(args.ram) / parse_size("1g")
     type_list = MachineTypes.from_file(args.input)
     for machine in type_list.filter(
-        args.provider, args.cpu, args.cores, ram, args.metal
+        args.provider, args.cpu, args.cores, ram, args.metal, args.gpu
     ):
         print(machine)
 
