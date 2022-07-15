@@ -1,5 +1,5 @@
 name: ci-py-39-osx
 type: homebrew
-base: https://github.com/Homebrew/brew/archive/refs/tags/3.3.11.tar.gz
+base: https://github.com/Homebrew/brew/archive/refs/tags/3.5.4.tar.gz
 force_dirty:
   - orion-decision
