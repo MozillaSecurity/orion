@@ -2,7 +2,7 @@
 set -e -x
 
 # base msys packages
-pacman --noconfirm -S \
+pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
