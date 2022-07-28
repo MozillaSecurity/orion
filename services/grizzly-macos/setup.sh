@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e -x
 
+sed -E -i '' 's/^( *HOMEBREW_MACOS_VERSION=)".*"$/\1"10.15.7"/' "$HOMEBREW_PREFIX/Library/Homebrew/brew.sh"
+
 brew install --force-bottle openssl@1.1 python@3.9
 chmod +w "$HOMEBREW_PREFIX/lib/python3.9/site-packages"
 # shellcheck disable=SC2016
@@ -60,5 +62,6 @@ cp orion/services/grizzly-macos/launch.sh .
 cp -r orion/services/fuzzing-decision fuzzing-decision
 python -m pip install ./fuzzing-decision
 
+rm -rf "$(brew --cache)"
 relocate_homebrew.sh
 tar -jcvf homebrew.tar.bz2 homebrew pip launch.sh
