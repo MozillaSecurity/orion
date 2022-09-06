@@ -9,7 +9,7 @@ set -x
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
-CLANG_SRC="clang/lib64/clang/*"
+CLANG_SRC="clang/lib/clang/*"
 
 sys-update
 sys-embed qemu-kvm
@@ -17,7 +17,7 @@ apt-install-auto zstd
 
 (
   cd /tmp
-  curl --retry 5 -L https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-11-android-cross.latest/artifacts/public/build/clang.tar.zst -o /tmp/clang.tar.zst
+  curl --retry 5 -L https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-14.latest/artifacts/public/build/clang.tar.zst -o /tmp/clang.tar.zst
   zstdcat /tmp/clang.tar.zst | tar --wildcards -x "${CLANG_SRC}/lib/linux/"
   rm /tmp/clang.tar.zst
 
