@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 set -e
 set -o pipefail
 
@@ -34,6 +34,7 @@ poetry install
 # Initialize the grizzly directory to avoid TC errors
 mkdir -p /tmp/grizzly
 
+set +x
 case "$BUG_ACTION" in
   monitor | report)
     BZ_API_KEY="$(tc-get-secret bz-api-key | jshon -e secret -e key -u)"
