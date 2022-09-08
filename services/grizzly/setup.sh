@@ -154,6 +154,7 @@ retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/k
 
 # get new minidump-stackwalk
 curl -sSL "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "/usr/local/bin"
+/usr/local/bin/minidump-stackwalk --version
 
 # old minidump_stackwalk (remove when support for new is added to ffpuppet)
 curl -sSL "https://tooltool.mozilla-releng.net/sha512/15f8ae94bd1ab6baa6a853c47fcc2f7ffb1fc1004f6316b81b9b1f22a705d017ef28b8a397575965223c7f4d68becad5ba981ae2647963588fc771accca61795" -o /usr/local/bin/minidump_stackwalk
