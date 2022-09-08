@@ -35,6 +35,6 @@ case "${1-install}" in
     rm -rf "$TMPD"
     ;;
   test)
-    rr help
+    rr --version
     ;;
 esac
