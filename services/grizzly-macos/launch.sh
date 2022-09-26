@@ -162,6 +162,8 @@ bearspray "$ADAPTER"
 
 exit_code=$?
 echo "returned $exit_code" >&2
+echo "sleeping so logs can flush" >&2
+sleep 15
 case $exit_code in
   5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
     exit 0
