@@ -123,4 +123,16 @@ status "Setup: installing bearspray"
 retry python -m pip install -e bearspray
 
 status "Setup: launching bearspray"
+set +e
 python -m bearspray "$ADAPTER"
+
+exit_code=$?
+echo "returned $exit_code" >&2
+case $exit_code in
+  5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
+    exit 0
+    ;;
+  *)
+    exit $exit_code
+    ;;
+esac
