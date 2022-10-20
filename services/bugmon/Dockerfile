@@ -12,13 +12,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 COPY services/bugmon/setup.sh /src/recipes/setup-bugmon.sh
 
-USER root
-
 RUN /src/recipes/setup-bugmon.sh
 
-COPY services/bugmon/launch.sh /home/worker
+COPY services/bugmon/launch.sh services/bugmon/launch-bugmon.sh /home/worker/
 
-USER worker
 WORKDIR /home/worker
 ENTRYPOINT ["/usr/bin/env"]
 CMD ["/home/worker/launch.sh"]
