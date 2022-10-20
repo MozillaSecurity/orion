@@ -13,6 +13,7 @@ source "${0%/*}/common.sh"
 # Install 32-bit binaries
 cd "${0%/*}"
 ./js32_deps.sh
+./pernosco_submit.sh
 sys-embed libc6-dbg:i386
 ./cleanup.sh
 
