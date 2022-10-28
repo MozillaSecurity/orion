@@ -1,9 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-cd
 set -e
 set -x
 set -o pipefail
@@ -13,9 +12,7 @@ source .local/bin/common.sh
 
 if [[ ! -e .fuzzmanagerconf ]]; then
   # Get fuzzmanager configuration from TC
-  set +x
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
-  set -x
 
   # Update fuzzmanager config for this instance
   mkdir -p signatures
