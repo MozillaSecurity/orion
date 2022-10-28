@@ -1,0 +1,14 @@
+{
+"../../../../../pr/src/md/unix/unix_errors.c": "nspr/pr/src/md/unix/unix_errors.c",
+"../../../../../pr/src/md/unix/linux.c": "nspr/pr/src/md/unix/linux.c",
+"../../../../../pr/src/md/unix/unix.c": "nspr/pr/src/md/unix/unix.c",
+"../../../../../pr/src/md/unix/uxrng.c": "nspr/pr/src/md/unix/uxrng.c",
+"../../../../../pr/src/md/unix/uxshm.c": "nspr/pr/src/md/unix/uxshm.c",
+"../../../../../pr/src/md/unix/uxproces.c": "nspr/pr/src/md/unix/uxproces.c",
+"../../../pr/src/prvrsion.c": "nspr/pr/src/prvrsion.c",
+"../../../lib/ds/plhash.c": "nspr/lib/ds/plhash.c",
+"../../../lib/ds/plarena.c": "nspr/lib/ds/plarena.c",
+"../../config/nsinstall.c": "nspr/config/nsinstall.c",
+"../../config/now.c": "nspr/config/now.c",
+"../../../lib/ds/plvrsion.c": "nspr/lib/ds/plvrsion.c"
+}
