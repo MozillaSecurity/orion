@@ -91,7 +91,7 @@ for p in ../nss/fuzz/options/*; do
     curl --retry 5 -LO "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$fuzzer/public.zip"
     mkdir "$fuzzer"
     cd "$fuzzer"
-    7z x ../public.zip
+    unzip ../public.zip
     cd ..
     rm public.zip
   fi
