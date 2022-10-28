@@ -18,14 +18,31 @@ sys-update
 
 cd "${0%/*}"
 ./fluentbit.sh
-./fuzzfetch.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
 ./taskcluster.sh
 
 packages=(
-  binutils curl gyp jshon libgcc-9-dev libssl-dev libstdc++-9-dev libxml2 locales make mercurial ninja-build python-is-python3 python3 python3-yaml zlib1g-dev zstd
+  binutils
+  curl
+  gyp
+  jshon
+  libgcc-9-dev
+  libssl-dev
+  libstdc++-9-dev
+  libxml2
+  locales
+  make
+  mercurial
+  ninja-build
+  psmisc
+  python-is-python3
+  python3
+  python3-yaml
+  unzip
+  zlib1g-dev
+  zstd
 )
 
 sys-embed "${packages[@]}"
