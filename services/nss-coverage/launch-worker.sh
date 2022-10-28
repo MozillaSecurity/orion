@@ -10,7 +10,7 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source .local/bin/common.sh
 
-if [[ ! -e .fuzzmanagerconf ]]; then
+if [[ ! -e .fuzzmanagerconf ]] && [[ "$NO_REPORT" != "1" ]]; then
   # Get fuzzmanager configuration from TC
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 
@@ -67,8 +67,12 @@ export LDFLAGS
 
 # clone nss/nspr
 update-ec2-status "[$(date -Iseconds)] setup: cloning nss"
-retry hg clone -r "$NSPR_TAG" https://hg.mozilla.org/projects/nspr
-retry hg clone -r "$NSS_TAG" https://hg.mozilla.org/projects/nss
+if [[ ! -d nspr ]]; then
+  retry hg clone -r "$NSPR_TAG" https://hg.mozilla.org/projects/nspr
+fi
+if [[ ! -d nss ]]; then
+  retry hg clone -r "$NSS_TAG" https://hg.mozilla.org/projects/nss
+fi
 
 # download corpus
 update-ec2-status "[$(date -Iseconds)] setup: downloading corpus"
@@ -125,12 +129,14 @@ function run-target {
   python merge-coverage.py coverage-nss.json coverage-nspr.json > "coverage-$corpus.json"
   rm coverage-nss.json coverage-nspr.json
 
-  # Submit coverage data.
-  python3 -m CovReporter \
-    --repository mozilla-central \
-    --description "libFuzzer (nss-$corpus,rt=$COVRUNTIME)" \
-    --tool "nss-$corpus" \
-    --submit "coverage-$corpus.json"
+  if [[ "$NO_REPORT" != "1" ]]; then
+    # Submit coverage data.
+    python3 -m CovReporter \
+      --repository mozilla-central \
+      --description "libFuzzer (nss-$corpus,rt=$COVRUNTIME)" \
+      --tool "nss-$corpus" \
+      --submit "coverage-$corpus.json"
+  fi
 }
 
 n_tls_targets="${#tls_targets[@]}"
@@ -142,7 +148,7 @@ cur_target=1
 update-ec2-status "[$(date -Iseconds)] building tls-mode targets (0/$n_targets have run)"
 rm -rf dist nss/out nspr/Debug
 cd nss
-./build.sh -c -v --fuzz --fuzz=tls --disable-tests
+time ./build.sh -c -v --fuzz --fuzz=tls --disable-tests
 cd ..
 
 # run each tls-mode target
@@ -156,7 +162,7 @@ done
 update-ec2-status "[$(date -Iseconds)] building non-tls-mode targets ($n_tls_targets/$n_targets have run)"
 rm -rf dist nss/out nspr/Debug
 cd nss
-./build.sh -c -v --fuzz --disable-tests
+time ./build.sh -c -v --fuzz --disable-tests
 cd ..
 
 # run each non-tls-mode target
