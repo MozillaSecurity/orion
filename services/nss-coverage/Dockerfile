@@ -15,17 +15,17 @@ RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY recipes/linux/ /src/recipes/
 COPY services/fuzzing-decision /src/fuzzing-tc
 COPY services/nss-coverage/setup.sh /src/recipes/setup-nss-coverage.sh
-RUN /src/recipes/setup-nss-coverage.sh
 COPY \
     services/nss-coverage/merge-coverage.py \
     services/nss-coverage/nspr_map.json \
-    services/nss-coverage/launch.sh \
+    services/nss-coverage/launch-worker.sh \
+    services/nss-coverage/launch-root.sh \
     /home/worker/
+RUN /src/recipes/setup-nss-coverage.sh
 
 ENV LANG   en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-USER worker
 WORKDIR /home/worker
 ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
-CMD ["/home/worker/launch.sh"]
+CMD ["/home/worker/launch-root.sh"]
