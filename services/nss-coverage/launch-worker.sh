@@ -24,12 +24,14 @@ if [[ ! -e .fuzzmanagerconf ]]; then
   chmod 0600 .fuzzmanagerconf
 fi
 
+update-ec2-status "[$(date -Iseconds)] setup: getting revisions"
 REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 NSS_TAG="$(curl --retry 5 -sSL "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/security/nss/TAG-INFO")"
 NSPR_TAG="$(curl --retry 5 -sSL "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/nsprpub/TAG-INFO")"
 
 if [[ ! -d clang ]]; then
+  update-ec2-status "[$(date -Iseconds)] setup: installing clang"
   # resolve current clang toolchain
   curl --retry 5 -sSLO "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/taskcluster/ci/toolchain/clang.yml"
   python3 <<- "EOF" > clang.txt
@@ -64,10 +66,12 @@ export CXXFLAGS
 export LDFLAGS
 
 # clone nss/nspr
+update-ec2-status "[$(date -Iseconds)] setup: cloning nss"
 retry hg clone -r "$NSPR_TAG" https://hg.mozilla.org/projects/nspr
 retry hg clone -r "$NSS_TAG" https://hg.mozilla.org/projects/nss
 
 # download corpus
+update-ec2-status "[$(date -Iseconds)] setup: downloading corpus"
 mkdir -p corpus
 cd corpus
 tls_targets=()
@@ -129,7 +133,13 @@ function run-target {
     --submit "coverage-$corpus.json"
 }
 
+n_tls_targets="${#tls_targets[@]}"
+n_non_tls_targets="${#non_tls_targets[@]}"
+n_targets=$((n_tls_targets + n_non_tls_targets))
+cur_target=1
+
 # build tls-mode targets
+update-ec2-status "[$(date -Iseconds)] building tls-mode targets (0/$n_targets have run)"
 rm -rf dist nss/out nspr/Debug
 cd nss
 ./build.sh -c -v --fuzz --fuzz=tls --disable-tests
@@ -137,10 +147,13 @@ cd ..
 
 # run each tls-mode target
 for target in "${tls_targets[@]}"; do
+  update-ec2-status "[$(date -Iseconds)] running target $target ($cur_target/$n_targets)"
   run-target "$target" "$target"
+  ((cur_target++))
 done
 
 # build non-tls-mode targets
+update-ec2-status "[$(date -Iseconds)] building non-tls-mode targets ($n_tls_targets/$n_targets have run)"
 rm -rf dist nss/out nspr/Debug
 cd nss
 ./build.sh -c -v --fuzz --disable-tests
@@ -148,5 +161,9 @@ cd ..
 
 # run each non-tls-mode target
 for target in "${non_tls_targets[@]}"; do
+  update-ec2-status "[$(date -Iseconds)] running target $target-no_fuzzer_mode ($cur_target/$n_targets)"
   run-target "$target" "$target-no_fuzzer_mode"
+  ((cur_target++))
 done
+
+update-ec2-status "[$(date -Iseconds)] done"
