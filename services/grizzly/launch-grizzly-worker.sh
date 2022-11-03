@@ -56,4 +56,5 @@ export GCOV=/usr/local/bin/gcov-9
 
 screen -dmLS grizzly /bin/bash
 sleep 5
-screen -S grizzly -X screen rwait run "$wait_token" python3 -m bearspray "$ADAPTER" --screen --xvfb
+# shellcheck disable=SC2086
+screen -S grizzly -X screen rwait run "$wait_token" python3 -m bearspray "$ADAPTER" --screen --headless $HEADLESS
