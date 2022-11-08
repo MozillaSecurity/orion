@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Checker for CI build matrix"""
 
-
 import argparse
 from logging import getLogger
 from pathlib import Path

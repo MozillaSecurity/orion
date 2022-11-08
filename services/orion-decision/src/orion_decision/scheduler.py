@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for Orion tasks"""
 
-
 import argparse
 import re
 from datetime import datetime
@@ -269,7 +268,7 @@ class Scheduler:
             else:
                 image = {
                     "type": "indexed-image",
-                    "namespace": (f"project.fuzzing.orion.{image}.{self.push_branch}"),
+                    "namespace": f"project.fuzzing.orion.{image}.{self.push_branch}",
                 }
             image["path"] = f"public/{test.image}.tar.zst"
         assert self.now is not None
@@ -481,7 +480,7 @@ class Scheduler:
         """Decision procedure.
 
         Arguments:
-            args: Arguments as returned by `parse_ci_args()`
+            args: Arguments as returned by `parse_args()`
 
         Returns:
             Shell return code.

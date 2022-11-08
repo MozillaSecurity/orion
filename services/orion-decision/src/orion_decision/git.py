@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Git/Github utilities for Orion tasks"""
 
-
 from logging import getLogger
 from pathlib import Path
 from shutil import rmtree
