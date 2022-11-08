@@ -90,6 +90,52 @@ class Scheduler:
         assert self.github_event.repo is not None
         self.services = Services(self.github_event.repo)
 
+    def _build_index(self, svc_name: str) -> str:
+        if self.github_event.pull_request is not None:
+            build_index = (
+                f"index.project.fuzzing.orion.{svc_name}"
+                f".pull_request.{self.github_event.pull_request}"
+            )
+        else:
+            build_index = (
+                f"index.project.fuzzing.orion.{svc_name}.{self.github_event.branch}"
+            )
+        return build_index
+
+    def _clone_url(self) -> str:
+        return self.github_event.http_url
+
+    def _commit(self) -> str:
+        assert self.github_event.commit is not None
+        return self.github_event.commit
+
+    def _fetch_ref(self) -> str:
+        assert self.github_event.fetch_ref is not None
+        return self.github_event.fetch_ref
+
+    def _push_branch(self) -> str:
+        return self.push_branch
+
+    def _should_push(self) -> bool:
+        should_push = (
+            self.github_event.event_type == "push"
+            and self.github_event.branch == self._push_branch()
+        )
+        if not should_push:
+            LOG.info(
+                "Not pushing to Docker Hub (event is %s, branch is %s, only push %s)",
+                self.github_event.event_type,
+                self.github_event.branch,
+                self.push_branch,
+            )
+        return should_push
+
+    def _skip_tasks(self) -> bool:
+        if self.github_event.event_type == "release":
+            LOG.warning("Detected release event. Nothing to do!")
+            return True
+        return False
+
     def mark_services_for_rebuild(self) -> None:
         """Check for services that need to be rebuilt.
         These will have their `dirty` attribute set, which is used to create tasks.
@@ -120,16 +166,7 @@ class Scheduler:
     def _create_build_task(
         self, service, dirty_dep_tasks, test_tasks, service_build_tasks
     ):
-        if self.github_event.pull_request is not None:
-            build_index = (
-                f"index.project.fuzzing.orion.{service.name}"
-                f".pull_request.{self.github_event.pull_request}"
-            )
-        else:
-            build_index = (
-                f"index.project.fuzzing.orion.{service.name}"
-                f".{self.github_event.branch}"
-            )
+        build_index = self._build_index(service.name)
         assert self.now is not None
         if isinstance(service, ServiceMsys):
             if service.base.endswith(".exe"):
@@ -140,8 +177,8 @@ class Scheduler:
                 task_template = MSYS_TASK
             build_task = yaml_load(
                 task_template.substitute(
-                    clone_url=self.github_event.http_url,
-                    commit=self.github_event.commit,
+                    clone_url=self._clone_url(),
+                    commit=self._commit(),
                     deadline=stringDate(self.now + DEADLINE),
                     expires=stringDate(self.now + ARTIFACTS_EXPIRE),
                     max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -163,8 +200,8 @@ class Scheduler:
         elif isinstance(service, ServiceHomebrew):
             build_task = yaml_load(
                 HOMEBREW_TASK.substitute(
-                    clone_url=self.github_event.http_url,
-                    commit=self.github_event.commit,
+                    clone_url=self._clone_url(),
+                    commit=self._commit(),
                     deadline=stringDate(self.now + DEADLINE),
                     expires=stringDate(self.now + ARTIFACTS_EXPIRE),
                     max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -186,8 +223,8 @@ class Scheduler:
         else:
             build_task = yaml_load(
                 BUILD_TASK.substitute(
-                    clone_url=self.github_event.http_url,
-                    commit=self.github_event.commit,
+                    clone_url=self._clone_url(),
+                    commit=self._commit(),
                     deadline=stringDate(self.now + DEADLINE),
                     dockerfile=str(service.dockerfile.relative_to(service.context)),
                     expires=stringDate(self.now + ARTIFACTS_EXPIRE),
@@ -221,8 +258,8 @@ class Scheduler:
         assert self.now is not None
         push_task = yaml_load(
             PUSH_TASK.substitute(
-                clone_url=self.github_event.http_url,
-                commit=self.github_event.commit,
+                clone_url=self._clone_url(),
+                commit=self._commit(),
                 deadline=stringDate(self.now + DEADLINE),
                 docker_secret=self.docker_secret,
                 max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -268,7 +305,7 @@ class Scheduler:
             else:
                 image = {
                     "type": "indexed-image",
-                    "namespace": f"project.fuzzing.orion.{image}.{self.push_branch}",
+                    "namespace": f"project.fuzzing.orion.{image}.{self._push_branch()}",
                 }
             image["path"] = f"public/{test.image}.tar.zst"
         assert self.now is not None
@@ -291,13 +328,11 @@ class Scheduler:
         test_task["dependencies"].extend(deps)
         assert self.services.root is not None
         service_path = str(service.root.relative_to(self.services.root))
-        assert self.github_event.commit is not None
-        assert self.github_event.fetch_ref is not None
         test.update_task(
             test_task,
-            self.github_event.http_url,
-            self.github_event.fetch_ref,
-            self.github_event.commit,
+            self._clone_url(),
+            self._fetch_ref(),
+            self._commit(),
             service_path,
         )
         task_id = slugId()
@@ -323,8 +358,8 @@ class Scheduler:
         assert self.now is not None
         test_task = yaml_load(
             RECIPE_TEST_TASK.substitute(
-                clone_url=self.github_event.http_url,
-                commit=self.github_event.commit,
+                clone_url=self._clone_url(),
+                commit=self._commit(),
                 deadline=stringDate(self.now + DEADLINE),
                 dockerfile=str(dockerfile.relative_to(self.services.root)),
                 max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -365,25 +400,14 @@ class Scheduler:
 
     def create_tasks(self) -> None:
         """Create test/build/push tasks in Taskcluster."""
-        if self.github_event.event_type == "release":
-            LOG.warning("Detected release event. Nothing to do!")
+        if self._skip_tasks():
             return None
-        should_push = (
-            self.github_event.event_type == "push"
-            and self.github_event.branch == self.push_branch
-        )
+        should_push = self._should_push()
         service_build_tasks = {service: slugId() for service in self.services}
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
         build_tasks_created: Set[str] = set()
         push_tasks_created: Set[str] = set()
-        if not should_push:
-            LOG.info(
-                "Not pushing to Docker Hub (event is %s, branch is %s, only push %s)",
-                self.github_event.event_type,
-                self.github_event.branch,
-                self.push_branch,
-            )
         to_create = sorted(
             self.services.recipes.values(), key=lambda x: x.name
         ) + sorted(self.services.values(), key=lambda x: x.name)

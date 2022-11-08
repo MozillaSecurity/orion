@@ -58,6 +58,14 @@ class GitRepo:
             LOG.debug("using existing git repo: %s", self.path)
             self.git("show", "--quiet")  # assert that path is valid
 
+    def head(self) -> str:
+        """Get the commit ref of HEAD.
+
+        Returns:
+            commit ref of HEAD as str
+        """
+        return self.git("show-ref", "HEAD").split()[0]
+
     @classmethod
     def from_existing(cls, path: Path) -> "GitRepo":
         """Initialize a GitRepo instance to access a local repository directly.
