@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Build matrix for CI tasks"""
 
-
 from abc import ABC, abstractmethod
 from itertools import product
 from json import dumps as json_dumps

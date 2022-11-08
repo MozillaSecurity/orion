@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Decision module for Orion builds"""
 
-
 import os
 from datetime import timedelta
 

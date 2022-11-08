@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion CI matrix loading"""
 
-
 from pathlib import Path
 from typing import List
 

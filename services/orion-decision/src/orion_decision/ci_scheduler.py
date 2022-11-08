@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for CI tasks"""
 
-
 import argparse
 from datetime import datetime
 from itertools import chain

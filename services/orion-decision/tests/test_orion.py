@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion service classes"""
 
-
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
