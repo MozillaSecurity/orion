@@ -603,7 +603,10 @@ class Services(dict):
                     here.dirty = True
                     stk.append(here)
                     continue
+        self.propagate_dirty(stk)
 
+    def propagate_dirty(self, dirty_svcs: Iterable[Service]) -> None:
+        stk = list(dirty_svcs)
         # propagate dirty bit
         while stk:
             here = stk.pop()

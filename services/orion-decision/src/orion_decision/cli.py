@@ -22,6 +22,7 @@ from yaml import safe_load as yaml_load
 from .ci_check import check_matrix
 from .ci_matrix import CISecretEnv, MatrixJob
 from .ci_scheduler import CIScheduler
+from .cron import CronScheduler
 from .git import GitRepo
 from .orion import Services
 from .scheduler import Scheduler
@@ -274,6 +275,38 @@ def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return result
 
 
+def parse_cron_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse command-line arguments for cron decision.
+
+    Arguments:
+        argv: Argument list, or sys.argv if None.
+
+    Returns:
+        parsed result
+    """
+    parser = argparse.ArgumentParser(prog="cron-decision")
+    _define_logging_args(parser)
+    _define_decision_args(parser)
+
+    parser.add_argument(
+        "--clone-repo",
+        default=getenv("CLONE_REPO"),
+        help="Git repository to clone",
+    )
+    parser.add_argument(
+        "--push-branch",
+        default=getenv("PUSH_BRANCH", "master"),
+        help="Push to Docker Hub if push event is on this branch " "(default: master).",
+    )
+    parser.add_argument(
+        "--docker-hub-secret",
+        default=getenv("DOCKER_HUB_SECRET"),
+        help="Taskcluster secret holding Docker Hub credentials for push.",
+    )
+
+    return parser.parse_args(argv)
+
+
 def ci_main() -> None:
     """CI decision entrypoint."""
     args = parse_ci_args()
@@ -331,6 +364,13 @@ def check() -> None:
     svcs = Services(GitRepo.from_existing(args.repo))
     svcs.mark_changed_dirty([args.repo / file for file in args.changed])
     sys.exit(0)
+
+
+def cron_main() -> None:
+    """Cron decision entrypoint. Does not return."""
+    args = parse_args()
+    configure_logging(level=args.log_level)
+    sys.exit(CronScheduler.main(args))
 
 
 def main() -> None:
