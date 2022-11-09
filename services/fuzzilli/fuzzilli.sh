@@ -39,7 +39,12 @@ else
 fi
 
 # Get the deploy key for fuzzilli from Taskcluster
-get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
+if [[ $DIFFERENTIAL ]]
+  get-tc-secret deploy-fuzzilli-differential $HOME/.ssh/id_rsa.fuzzilli
+then
+else
+  get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
+fi
 
 # Setup Key Identities
 cat << EOF > $HOME/.ssh/config
@@ -55,8 +60,13 @@ cd $HOME
 
 git-clone https://github.com/MozillaSecurity/FuzzManager/
 
-# Checkout the configuration with bootstrap script
-git-clone git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
+# Download our build
+if [[ $DIFFERENTIAL ]]
+then
+  git-clone git@fuzzilli:MozillaSecurity/fuzzilli-differential.git fuzzilli
+else
+  git-clone git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
+fi
 
 # Copy over the S3Manager, we need it for the fuzzilli daemon
 cp FuzzManager/misc/afl-libfuzzer/S3Manager.py fuzzilli/mozilla/
