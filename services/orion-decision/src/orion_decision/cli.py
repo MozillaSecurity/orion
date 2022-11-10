@@ -368,7 +368,7 @@ def check() -> None:
 
 def cron_main() -> None:
     """Cron decision entrypoint. Does not return."""
-    args = parse_args()
+    args = parse_cron_args()
     configure_logging(level=args.log_level)
     sys.exit(CronScheduler.main(args))
 
