@@ -62,7 +62,7 @@ class CronScheduler(Scheduler):
         self.services = Services(self.repo)
 
     def _build_index(self, svc_name: str) -> str:
-        return f"index.project.fuzzing.orion.{svc_name}.{self.main_branch}"
+        return f"project.fuzzing.orion.{svc_name}.{self.main_branch}"
 
     def _clone_url(self) -> str:
         return self.clone_url

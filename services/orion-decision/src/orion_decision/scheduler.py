@@ -93,13 +93,11 @@ class Scheduler:
     def _build_index(self, svc_name: str) -> str:
         if self.github_event.pull_request is not None:
             build_index = (
-                f"index.project.fuzzing.orion.{svc_name}"
+                f"project.fuzzing.orion.{svc_name}"
                 f".pull_request.{self.github_event.pull_request}"
             )
         else:
-            build_index = (
-                f"index.project.fuzzing.orion.{svc_name}.{self.github_event.branch}"
-            )
+            build_index = f"project.fuzzing.orion.{svc_name}.{self.github_event.branch}"
         return build_index
 
     def _clone_url(self) -> str:
