@@ -95,37 +95,30 @@ class Workflow:
         **kwargs: Any,
     ) -> pathlib.Path:
         """Clone a configuration repository"""
-        local_path = False
 
         if path is not None:
             path = pathlib.Path(path)
             # Use local path when available
             assert path.is_dir(), f"Invalid repo dir {path}"
             LOG.info(f"Using local configuration in {path}")
-            local_path = True
         elif url is not None:
             # Clone from remote repository
             path = pathlib.Path(tempfile.mkdtemp(suffix=url[url.rindex("/") + 1 :]))
 
             # Clone the configuration repository
-            LOG.info(f"Cloning {url}")
-            cmd = ["git", "clone", "--quiet", url, str(path)]
+            if revision is None:
+                revision = "master"
+            LOG.info(f"Cloning {url} @ {revision}")
+            cmd = ["git", "init", str(path)]
             subprocess.check_output(cmd)
+            cmd = ["git", "remote", "add", "origin", url]
+            subprocess.check_output(cmd, cwd=str(path))
+            cmd = ["git", "fetch", "-q", "origin", revision]
+            subprocess.check_output(cmd, cwd=str(path))
+            cmd = ["git", "-c", "advice.detachedHead=false", "checkout", revision]
+            subprocess.check_output(cmd, cwd=str(path))
             LOG.info(f"Using cloned config files in {path}")
         else:
             raise Exception("You need to specify a repo url or local path")
-
-        # Update to specified revision
-        # Fallback to pulling remote references
-        if not local_path and revision is not None:
-            LOG.info(f"Updating repo to {revision}")
-            try:
-                cmd = ["git", "checkout", revision, "-q"]
-                subprocess.check_output(cmd, cwd=str(path))
-
-            except subprocess.CalledProcessError:
-                LOG.info("Updating failed, trying to pull")
-                cmd = ["git", "pull", "origin", revision, "-q"]
-                subprocess.check_output(cmd, cwd=str(path))
 
         return path
