@@ -40,8 +40,8 @@ fi
 
 # Get the deploy key for fuzzilli from Taskcluster
 if [[ $DIFFERENTIAL ]]
-  get-tc-secret deploy-fuzzilli-differential $HOME/.ssh/id_rsa.fuzzilli
 then
+  get-tc-secret deploy-fuzzilli-differential $HOME/.ssh/id_rsa.fuzzilli
 else
   get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
 fi
