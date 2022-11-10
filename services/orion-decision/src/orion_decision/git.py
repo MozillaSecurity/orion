@@ -64,7 +64,7 @@ class GitRepo:
         Returns:
             commit ref of HEAD as str
         """
-        return self.git("show-ref", "HEAD").split()[0]
+        return self.git("show-ref", "--head", "HEAD").split()[0]
 
     @classmethod
     def from_existing(cls, path: Path) -> "GitRepo":
