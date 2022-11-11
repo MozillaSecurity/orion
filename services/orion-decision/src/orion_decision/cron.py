@@ -94,7 +94,7 @@ class CronScheduler(Scheduler):
         for svc in self.services.values():
             if svc.dirty:
                 continue
-            index_path = f"index.project.fuzzing.orion.{svc.name}.{self.main_branch}"
+            index_path = f"project.fuzzing.orion.{svc.name}.{self.main_branch}"
             rebuild = False
             try:
                 result = idx.findTask(index_path)
