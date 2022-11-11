@@ -138,7 +138,6 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            route="project.fuzzing.orion.test1.push",
             scheduler=SCHEDULER_ID,
             service_name="test1",
             source_url=SOURCE_URL,
@@ -159,8 +158,10 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             provisioner=PROVISIONER_ID,
             scheduler=SCHEDULER_ID,
             service_name="test1",
+            skip_docker="0",
             source_url=SOURCE_URL,
             task_group="group",
+            task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
         )
     )
@@ -196,7 +197,6 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            route="project.fuzzing.orion.test1.push",
             scheduler=SCHEDULER_ID,
             service_name="test1",
             source_url=SOURCE_URL,
@@ -217,8 +217,10 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             provisioner=PROVISIONER_ID,
             scheduler=SCHEDULER_ID,
             service_name="test1",
+            skip_docker="0",
             source_url=SOURCE_URL,
             task_group="group",
+            task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
         )
     )
@@ -237,7 +239,6 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            route="project.fuzzing.orion.test2.push",
             scheduler=SCHEDULER_ID,
             service_name="test2",
             source_url=SOURCE_URL,
