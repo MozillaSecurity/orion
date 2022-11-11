@@ -29,9 +29,7 @@ payload:
   maxRunTime: !!int "${max_run_time}"
 routes:
   - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
-  - "index.${route}"
 scopes:
-  - "queue:route:index.project.fuzzing.orion.*"
   - "queue:scheduler-id:${scheduler}"
 metadata:
   description: "Build the Homebrew tar for ${service_name} tasks"

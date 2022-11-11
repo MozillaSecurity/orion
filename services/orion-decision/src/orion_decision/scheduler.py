@@ -164,7 +164,6 @@ class Scheduler:
     def _create_build_task(
         self, service, dirty_dep_tasks, test_tasks, service_build_tasks
     ):
-        build_index = self._build_index(service.name)
         assert self.now is not None
         if isinstance(service, ServiceMsys):
             if service.base.endswith(".exe"):
@@ -184,7 +183,6 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    route=build_index,
                     scheduler=SCHEDULER_ID,
                     service_name=service.name,
                     setup_sh_path=str(
@@ -207,7 +205,6 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    route=build_index,
                     scheduler=SCHEDULER_ID,
                     service_name=service.name,
                     setup_sh_path=str(
@@ -231,7 +228,6 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    route=build_index,
                     scheduler=SCHEDULER_ID,
                     service_name=service.name,
                     source_url=SOURCE_URL,
@@ -266,8 +262,10 @@ class Scheduler:
                 provisioner=PROVISIONER_ID,
                 scheduler=SCHEDULER_ID,
                 service_name=service.name,
+                skip_docker=f"{isinstance(service, (ServiceHomebrew, ServiceMsys)):d}",
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
+                task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
             )
         )
@@ -412,8 +410,6 @@ class Scheduler:
         while to_create:
             obj = to_create.pop(0)
             is_svc = isinstance(obj, Service)
-            is_msys = isinstance(obj, ServiceMsys)
-            is_brew = isinstance(obj, ServiceHomebrew)
 
             if not obj.dirty:
                 if is_svc:
@@ -477,7 +473,7 @@ class Scheduler:
                         obj, dirty_dep_tasks, test_tasks, service_build_tasks
                     )
                 )
-                if should_push and not (is_msys or is_brew):
+                if should_push:
                     push_tasks_created.add(
                         self._create_push_task(obj, service_build_tasks)
                     )
