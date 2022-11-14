@@ -23,6 +23,7 @@ tasks:
           - -v
       scopes:
         - docker-worker:capability:privileged
+        - index:insert-task:project.fuzzing.orion.*
         - queue:create-task:highest:proj-fuzzing/ci
         - queue:create-task:highest:proj-fuzzing/ci-*
         - queue:route:index.project.fuzzing.orion.*
