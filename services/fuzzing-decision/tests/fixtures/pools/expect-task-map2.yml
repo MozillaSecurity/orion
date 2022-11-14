@@ -1,0 +1,47 @@
+dependencies:
+  - someTaskId
+  - task-mount-abc
+extra: {}
+metadata:
+  name: Fuzzing task windows-pool4/map2 - 1/4
+  owner: fuzzing@allizom.org
+  source: https://github.com/MozillaSecurity/orion
+payload:
+  artifacts:
+    - name: project/fuzzing/private/logs
+      path: logs
+      type: directory
+  command:
+    - 'set HOME=%CD%'
+    - 'set ARTIFACTS=%CD%'
+    - 'set PATH=%CD%\msys64\opt\python;%CD%\msys64\opt\python\Scripts;%CD%\msys64\MINGW64\bin;%CD%\msys64\usr\bin;%PATH%'
+    - fuzzing-pool-launch
+  env:
+    MSYSTEM: MINGW64
+    TASKCLUSTER_FUZZING_POOL: pool4/map2
+    TASKCLUSTER_SECRET: project/fuzzing/decision
+  features:
+    runAsAdministrator: true
+    taskclusterProxy: true
+  maxRunTime: 14400
+  mounts:
+    - content:
+        artifact: img.tar.zst
+        taskId: task-mount-abc
+      directory: .
+      format: tar.zst
+  osGroups:
+    - Administrators
+priority: high
+provisionerId: proj-fuzzing
+retries: 5
+routes: []
+schedulerId: "-"
+scopes:
+  - generic-worker:os-group:proj-fuzzing/windows-map2/Administrators
+  - generic-worker:run-as-administrator:proj-fuzzing/windows-map2
+  - scope4
+  - secrets:get:project/fuzzing/decision
+tags: {}
+taskGroupId: someTaskId
+workerType: windows-map2

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
 import pytest
 import slugid
+import yaml
 from pytest_mock import MockerFixture
 
 from fuzzing_decision.common.pool import MachineTypes
@@ -803,6 +804,34 @@ def test_pool_map() -> None:
     assert pool.schedule_start == expect.schedule_start
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
+
+
+def test_pool_map_admin(mocker: MockerFixture) -> None:
+    mocker.patch.dict(
+        "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
+        {"orion.fuzzer.main": "task-mount-abc"},
+    )
+
+    cfg_map = cast(PoolConfigMap, PoolConfigMap.from_file(POOL_FIXTURES / "map2.yml"))
+    cfg_map.run_as_admin = True
+    with (POOL_FIXTURES / "expect-task-map2.yml").open() as expect_fd:
+        expect = yaml.safe_load(expect_fd)
+    _task_ids, tasks = zip(*cfg_map.build_tasks("someTaskId"))
+    assert len(tasks) == 4
+    task = tasks[0]
+    # remove timestamps. these are tested elsewhere
+    task.pop("created")
+    task.pop("deadline")
+    task.pop("expires")
+    task["metadata"].pop("description")
+    for artifact in task["payload"]["artifacts"]:
+        artifact.pop("expires")
+    # ensure lists are comparable
+    task["dependencies"] = sorted(task["dependencies"])
+    expect["dependencies"] = sorted(expect["dependencies"])
+    task["scopes"] = sorted(task["scopes"])
+    expect["scopes"] = sorted(expect["scopes"])
+    assert task == expect
 
 
 @pytest.mark.parametrize(
