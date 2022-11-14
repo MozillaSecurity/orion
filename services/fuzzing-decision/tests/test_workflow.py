@@ -65,7 +65,10 @@ def test_configure_local(tmp_path: pathlib.Path) -> None:
     conf = tmp_path / "conf.yml"
     conf.write_text(YAML_CONF)
     assert workflow.configure(local_path=conf) == {
-        "community_config": {"url": "git@github.com:mozilla/community-tc-config.git"},
+        "community_config": {
+            "url": "git@github.com:mozilla/community-tc-config.git",
+            "revision": "main",
+        },
         "fuzzing_config": {"path": "/path/to/secret_conf"},
     }
 
@@ -75,7 +78,10 @@ def test_configure_local(tmp_path: pathlib.Path) -> None:
         fuzzing_git_repository="git@server:repo.git",
         fuzzing_git_revision="deadbeef",
     ) == {
-        "community_config": {"url": "git@github.com:mozilla/community-tc-config.git"},
+        "community_config": {
+            "url": "git@github.com:mozilla/community-tc-config.git",
+            "revision": "main",
+        },
         "fuzzing_config": {"revision": "deadbeef", "url": "git@server:repo.git"},
     }
 
