@@ -329,7 +329,6 @@ class PoolConfiguration(CommonPoolConfiguration):
         decision_task["scopes"] = sorted(
             chain(decision_task["scopes"], self.get_scopes())
         )
-        add_capabilities_for_scopes(decision_task)
         if env is not None:
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
@@ -347,6 +346,10 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
+
+        scopes = decision_task["scopes"] + ["queue:create-task:highest:proj-fuzzing/ci"]
+        decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
+
         yield Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -363,8 +366,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         yield Role(
             description=DESCRIPTION,
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
-            scopes=decision_task["scopes"]
-            + ["queue:create-task:highest:proj-fuzzing/ci"],
+            scopes=scopes,
         )
 
     def artifact_map(self, expires: str) -> Dict[str, Dict[str, str]]:
@@ -505,7 +507,6 @@ class PoolConfigMap(CommonPoolConfigMap):
             )
         )
         decision_task["scopes"] = sorted(chain(decision_task["scopes"], all_scopes))
-        add_capabilities_for_scopes(decision_task)
         if env is not None:
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
@@ -523,6 +524,10 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
+
+        scopes = decision_task["scopes"] + ["queue:create-task:highest:proj-fuzzing/ci"]
+        decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
+
         yield Hook(
             bindings=(),
             description=DESCRIPTION,
@@ -539,8 +544,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         yield Role(
             roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
             description=DESCRIPTION,
-            scopes=decision_task["scopes"]
-            + ["queue:create-task:highest:proj-fuzzing/ci"],
+            scopes=scopes,
         )
 
     def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):

@@ -129,12 +129,7 @@ def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, A
             "retries": 5,
             "routes": empty_str_list,
             "schedulerId": "-",
-            "scopes": [
-                "queue:cancel-task:-/*",
-                f"queue:create-task:highest:proj-fuzzing/{platform}-test",
-                "queue:scheduler-id:-",
-                "secrets:get:project/fuzzing/decision",
-            ],
+            "scopes": [f"assume:hook-id:project-fuzzing/{platform}-test"],
             "tags": empty_str_dict,
             "workerType": "ci",
         },
