@@ -1,0 +1,8 @@
+apply_to:
+  - pool4
+container:
+  type: indexed-image
+  namespace: orion.fuzzer.main
+  path: img.tar.zst
+name: map2
+run_as_admin: true

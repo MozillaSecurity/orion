@@ -257,16 +257,24 @@ class PoolConfiguration(CommonPoolConfiguration):
 
     def get_scopes(self) -> List[str]:
         result = self.scopes.copy()
+
+        # for scope calculations, the real worker pool name must be used
+        if "/" in self.pool_id:
+            _apply, pool_id = self.pool_id.split("/", 1)
+            task_id = f"{self.platform}-{pool_id}"
+        else:
+            task_id = self.task_id
+
         if self.platform == "windows" and self.run_as_admin:
             result.extend(
                 (
                     (
                         "generic-worker:"
-                        f"os-group:{PROVISIONER_ID}/{self.task_id}/Administrators"
+                        f"os-group:{PROVISIONER_ID}/{task_id}/Administrators"
                     ),
                     (
                         "generic-worker:"
-                        f"run-as-administrator:{PROVISIONER_ID}/{self.task_id}"
+                        f"run-as-administrator:{PROVISIONER_ID}/{task_id}"
                     ),
                 )
             )
