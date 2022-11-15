@@ -12,6 +12,7 @@ from typing import List, Optional
 import taskcluster
 from taskboot.config import Configuration
 from taskboot.push import push_artifacts
+from taskboot.utils import load_artifacts
 
 from .cli import CommonArgs, configure_logging
 
@@ -61,13 +62,15 @@ def main(argv: Optional[List[str]] = None) -> None:
         config = Configuration(argparse.Namespace(secret=None, config=None))
         queue = taskcluster.Queue(config.get_taskcluster_options())
         index = taskcluster.Index(config.get_taskcluster_options())
+        tasks = load_artifacts(args.task_id, queue, "public/**.tar.*")
+        assert len(tasks) == 1
         index.insertTask(
             args.index,
             {
                 "data": {},
                 "expires": queue.task(args.task_id)["expires"],
                 "rank": 0,
-                "taskId": args.task_id,
+                "taskId": tasks[0][0],
             },
         )
 
