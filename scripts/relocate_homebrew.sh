@@ -14,8 +14,8 @@ relative_to () {
 }
 
 # Rewrite she-bang scripts that reference an interpreter in HOMEBREW_PREFIX to use /usr/bin/env
-# shellcheck disable=SC2046
-find $(find . -name bin -type d) -type f -exec file -h \{\} \+ | grep "$HOMEBREW_PREFIX" | cut -d: -f1 | while read -r inp
+# shellcheck disable=SC2039,SC2046
+find $(find . -name bin -type d) -type f -exec awk "FNR>1 {nextfile} /${HOMEBREW_PREFIX//\//\\/}/ { print FILENAME ; nextfile }" \{\} \+ | while read -r inp
 do
   sed -E -i '' '1s,^#!(/[^/]+)*/([^/]+)$,#!/usr/bin/env \2,' "$inp"
 done
