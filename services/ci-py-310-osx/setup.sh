@@ -20,6 +20,7 @@ format = columns
 upgrade-strategy = only-if-needed
 progress-bar = off
 EOF
+export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
 
 # install utils to match linux ci images
 python -m pip install tox
