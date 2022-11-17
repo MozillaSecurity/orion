@@ -13,7 +13,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get node.js
-VER=16.14.0
+VER=16.18.1
 curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 unzip node.zip
 rm node.zip
