@@ -19,8 +19,8 @@ pacman --noconfirm -Rs psmisc
 curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
-VER=1.8.14
-curl -sSLO "https://github.com/fluent/fluent-bit/releases/download/v${VER}/fluent-bit-${VER}-win64.zip"
+VER=2.0.5
+curl -sSLO "https://fluentbit.io/releases/2.0/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
@@ -32,11 +32,8 @@ mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
 rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
 ./msys64/usr/bin/minidump-stackwalk.exe --version
 
-# old minidump_stackwalk (remove when support for new is added to ffpuppet)
-curl -sSL "https://tooltool.mozilla-releng.net/sha512/2bc729f9cedfba59b5c7a088f00d00fc078af3bd08e88ee41bbb1ea092038466f46589cef036e0d928249f6037fb22828f62e6d82a32d018f66ca92a834393c8" -o msys64/usr/bin/minidump_stackwalk.exe
-
 # get python
-VER=3.8.10
+VER=3.10.8
 nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
@@ -75,7 +72,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # get node.js
-VER=14.19.0
+VER=16.18.1
 curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip
@@ -85,7 +82,6 @@ mv "node-v${VER}-win-x64" msys64/opt/node
 PATH="$PWD/msys64/opt/node:$PATH"
 which node
 node -v
-curl -qL https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 npm -v
 
 # install utils to match linux ci images
