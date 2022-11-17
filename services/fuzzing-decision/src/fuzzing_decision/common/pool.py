@@ -237,6 +237,9 @@ class CommonPoolConfiguration(abc.ABC):
         tasks: number of tasks to run (each with `cores_per_task`)
     """
 
+    FIELD_TYPES: types.MappingProxyType
+    REQUIRED_FIELDS: FrozenSet
+
     def __init__(
         self,
         pool_id: str,
@@ -388,18 +391,6 @@ class CommonPoolConfiguration(abc.ABC):
                 ",".join(PROVIDERS)
             )
             self.cloud = data["cloud"]
-
-    @classmethod
-    @property
-    @abc.abstractmethod
-    def FIELD_TYPES(cls) -> types.MappingProxyType:
-        raise NotImplementedError()
-
-    @classmethod
-    @property
-    @abc.abstractmethod
-    def REQUIRED_FIELDS(cls) -> FrozenSet:
-        raise NotImplementedError()
 
     @classmethod
     def from_file(
