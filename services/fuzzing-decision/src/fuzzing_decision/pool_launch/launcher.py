@@ -63,6 +63,7 @@ class PoolLauncher(Workflow):
             assert not self.command, "Specify command-line args XOR pool.command"
             self.command = pool_config.command.copy()
         self.environment.update(pool_config.macros)
+        self.environment["FUZZING_POOL_NAME"] = pool_config.name
 
     def exec(self) -> None:
         assert self.command
