@@ -17,7 +17,7 @@ case "${1-install}" in
   install)
     sys-embed \
       ca-certificates \
-      p7zip-full \
+      lbzip2 \
       python3
     apt-install-auto \
       gcc \
