@@ -16,7 +16,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+curl --connect-timeout 25 --retry 5 -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
 VER=2.0.5
@@ -26,7 +26,7 @@ mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
 # get new minidump-stackwalk
-curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
+curl --connect-timeout 25 --retry 5 -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
 zstdcat minidump-stackwalk.tar.zst | tar xv
 mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
 rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
@@ -73,7 +73,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 
 # get node.js
 VER=16.18.1
-curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
+curl --connect-timeout 25 --retry 5 -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip
 rm -rf msys64/opt/node
