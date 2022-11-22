@@ -84,6 +84,11 @@ which node
 node -v
 npm -v
 
+# get grcov
+curl -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-grcov.latest/artifacts/public/build/grcov.tar.zst"
+zstdcat grcov.tar.zst | tar xv
+mv grcov.exe msys64/usr/bin/
+
 # install utils to match linux ci images
 python -m pip install \
   psutil \
