@@ -65,7 +65,6 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && cd / \
     && rm -rf /img /root/.cache /root/go \
     # install orion-builder
-    && ln -s /usr/bin/python3 /usr/bin/python \
     && retry pip --no-cache-dir --disable-pip-version-check install https://github.com/mozilla/task-boot/archive/0.3.2.tar.gz \
     && retry pip --no-cache-dir --disable-pip-version-check install -e /src/orion-builder \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
