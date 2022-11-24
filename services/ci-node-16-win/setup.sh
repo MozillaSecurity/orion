@@ -1,8 +1,10 @@
 #!/bin/sh
 set -e -x
 
+retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+
 # base msys packages
-pacman --noconfirm -Sy \
+retry pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
@@ -14,7 +16,7 @@ pacman --noconfirm -Rs psmisc
 
 # get node.js
 VER=16.18.1
-curl -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
+curl --connect-timeout 25 --retry 5 -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 unzip node.zip
 rm node.zip
 rm -rf msys64/opt/node

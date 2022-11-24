@@ -1,8 +1,10 @@
 #!/bin/sh
 set -e -x
 
+retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+
 # base msys packages
-pacman --noconfirm -S \
+retry pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
@@ -12,11 +14,11 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-curl -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+curl --connect-timeout 25 --retry 5 -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get python
 VER=3.10.8
-nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
+retry nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
 mv python/tools msys64/opt/python
@@ -47,16 +49,16 @@ EOF
 # force-upgrade pip to include the above patch
 # have to use `python -m pip` until PATH is updated externally
 # otherwise /usr/bin/env will select the old `pip` in mozbuild
-python -m pip install --upgrade --force-reinstall pip
+retry python -m pip install --upgrade --force-reinstall pip
 
 # patch new pip to workaround https://github.com/pypa/pip/issues/4368
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # install utils to match linux ci images
-python -m pip install tox
-python -m pip install poetry
-python -m pip install pre-commit
+retry python -m pip install tox
+retry python -m pip install poetry
+retry python -m pip install pre-commit
 
 rm -rf \
   msys64/mingw64/share/doc/ \
@@ -66,6 +68,6 @@ rm -rf \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
 cp -r orion/services/orion-decision orion-decision
-python -m pip install ./orion-decision
+retry python -m pip install ./orion-decision
 cp orion/recipes/linux/py-ci.sh .
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64 py-ci.sh pip
