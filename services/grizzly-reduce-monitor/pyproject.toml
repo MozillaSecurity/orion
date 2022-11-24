@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
-target-version = ["py36"]
+target-version = ["py37"]
 
 [tool.coverage.run]
 omit = [
@@ -33,9 +33,6 @@ max-line-length = 88
 
 [tool.pylint.messages_control]
 disable = [
-    "C0330",
-    "C0326",
-    "bad-continuation",
     "fixme",
     "import-error",
     "subprocess-run-check",
