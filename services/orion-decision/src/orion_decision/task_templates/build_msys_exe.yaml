@@ -14,20 +14,20 @@ payload:
   command:
     - set HOME=%CD%
     - set ARTIFACTS=%CD%
-    - C:\cygwin\bin\curl.exe -sSL --retry 5 "${msys_base_url}" -o msys2.exe
+    - C:\cygwin\bin\curl.exe -sSL --connect-timeout 25 --retry 5 "${msys_base_url}" -o msys2.exe
     - .\msys2.exe -y -o%CD%
     - del msys2.exe
     - set PATH=%CD%\msys64\MINGW64\bin;%PATH%
     - set PATH=%CD%\msys64\usr\bin;%PATH%
     - bash -lc ' '
     # create a wrapper around `pacman -Syu` since it may kill itself!
-    - printf '@echo off\r\npacman --noconfirm -Syuu\r\nexit /b 0\r\n' > pacman_upd.bat
+    - printf "@echo off\r\nbash -c -x -e 'retry () { i=0; while [ $$i -lt 9 ]; do if \"$$@\"; then return; else sleep 30; fi; i=\"$${i+1}\"; done; \"$$@\"; }; retry pacman --noconfirm -Syuu'\r\nexit /b 0\r\n" > pacman_upd.bat
     - .\pacman_upd.bat  # Core update (in case any core packages are outdated)
     - .\pacman_upd.bat  # Normal update
     - git init orion
     - cd orion
     - git remote add origin "${clone_url}"
-    - git fetch -q --depth=1 origin "${commit}"
+    - bash -c -x -e "retry () { i=0; while [ $$i -lt 9 ]; do if \"$$@\"; then return; else sleep 30; fi; i=\"$${i+1}\"; done; \"$$@\"; }; retry git fetch -q --depth=1 origin \"${commit}\""
     - git -c advice.detachedHead=false checkout "${commit}"
     - cd ..
     - bash -c -x -e "./orion/${setup_sh_path}"

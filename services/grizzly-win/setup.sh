@@ -1,8 +1,10 @@
 #!/bin/sh
 set -e -x
 
+retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+
 # base msys packages
-pacman --noconfirm -S \
+retry pacman --noconfirm -S \
   mingw-w64-x86_64-curl \
   openssh \
   p7zip \
@@ -20,7 +22,7 @@ curl --connect-timeout 25 --retry 5 -sSL "https://aka.ms/nugetclidl" -o msys64/u
 
 # get fluentbit
 VER=2.0.5
-curl -sSLO "https://fluentbit.io/releases/2.0/fluent-bit-${VER}-win64.zip"
+curl --connect-timeout 25 --retry 5 -sSLO "https://fluentbit.io/releases/2.0/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
@@ -34,7 +36,7 @@ rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
 
 # get python
 VER=3.10.8
-nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
+retry nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
 mv python/tools msys64/opt/python
@@ -65,7 +67,7 @@ EOF
 # force-upgrade pip to include the above patch
 # have to use `python -m pip` until PATH is updated externally
 # otherwise /usr/bin/env will select the old `pip` in mozbuild
-python -m pip install --upgrade --force-reinstall pip
+retry python -m pip install --upgrade --force-reinstall pip
 
 # patch new pip to workaround https://github.com/pypa/pip/issues/4368
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
@@ -91,7 +93,7 @@ mv grcov.exe msys64/usr/bin/
 ./msys64/usr/bin/grcov.exe --version
 
 # install utils to match linux ci images
-python -m pip install \
+retry python -m pip install \
   psutil \
   virtualenv
 
@@ -105,5 +107,5 @@ rm -rf \
 cp orion/services/grizzly-win/launch.sh .
 
 cp -r orion/services/fuzzing-decision fuzzing-decision
-python -m pip install ./fuzzing-decision
+retry python -m pip install ./fuzzing-decision
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip td-agent-bit
