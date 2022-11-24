@@ -74,6 +74,7 @@ def test_load_params(tmp_path: Path) -> None:
     assert launcher.environment == {
         "ENVVAR1": "123456",
         "ENVVAR2": "789abc",
+        "FUZZING_POOL_NAME": "Amazing fuzzing pool",
         "STATIC": "value",
     }
 
@@ -88,7 +89,10 @@ def test_load_params(tmp_path: Path) -> None:
 
     launcher.load_params()
     assert launcher.command == ["new-command", "arg1", "arg2"]
-    assert launcher.environment == {"STATIC": "value"}
+    assert launcher.environment == {
+        "FUZZING_POOL_NAME": "Amazing fuzzing pool",
+        "STATIC": "value",
+    }
 
     # test 3: command from init and pool is error
     launcher = PoolLauncher(["command", "arg"], "test-pool")
@@ -132,7 +136,11 @@ def test_load_params(tmp_path: Path) -> None:
 
     launcher.load_params()
     assert launcher.command == ["new-command", "arg1", "arg2"]
-    assert launcher.environment == {"STATIC": "value", "PREPROC": "1"}
+    assert launcher.environment == {
+        "FUZZING_POOL_NAME": "Amazing fuzzing pool (preproc)",
+        "PREPROC": "1",
+        "STATIC": "value",
+    }
 
 
 def test_launch_exec(
