@@ -40,10 +40,6 @@ cp -r "$BASE_PY_PATH/pernoscoshared" "$POETRY_PY_PATH"
 mkdir -p /tmp/grizzly
 
 set +x
-TRACE_ARGS=()
-if [ -v TRACE_ARTIFACT ]; then
-  TRACE_ARGS+=("--trace-artifact" "$ARTIFACT_DEST/$TRACE_ARTIFACT")
-fi
 
 case "$BUG_ACTION" in
   monitor | report)
@@ -57,10 +53,20 @@ case "$BUG_ACTION" in
       PERNOSCO_GROUP="$(tc-get-secret pernosco-group | jshon -e secret -e key -u)"
       PERNOSCO_USER_SECRET_KEY="$(tc-get-secret pernosco-secret | jshon -e secret -e key -u)"
       export PERNOSCO_USER PERNOSCO_GROUP PERNOSCO_USER_SECRET_KEY
+
+      TRACE_ARGS=()
+      if [ -v TRACE_ARTIFACT ]; then
+        TRACE_ARGS+=("--trace-artifact" "$TC_ARTIFACT_ROOT/$TRACE_ARTIFACT")
+      fi
       poetry run bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT" "${TRACE_ARGS[@]}"
     fi
     ;;
   process)
+    TRACE_ARGS=()
+    if [ -v TRACE_ARTIFACT ]; then
+      TRACE_ARGS+=("--trace-artifact" "$TC_ARTIFACT_ROOT/$TRACE_ARTIFACT")
+    fi
+
     poetry run bugmon-process \
       "$TC_ARTIFACT_ROOT/$MONITOR_ARTIFACT" \
       "$ARTIFACT_DEST/$PROCESSOR_ARTIFACT" \
