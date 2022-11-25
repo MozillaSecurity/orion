@@ -84,8 +84,6 @@ def create_cert(
             "1",
             "-in",
             str(csr),
-            "-signkey",
-            str(key_path),
             "-out",
             str(cert_path),
             "-extfile",
@@ -99,6 +97,13 @@ def create_cert(
                     "-CAkey",
                     str(ca_key),
                     "-CAcreateserial",
+                ]
+            )
+        else:
+            cmd.extend(
+                [
+                    "-signkey",
+                    str(key_path),
                 ]
             )
         check_call(cmd)

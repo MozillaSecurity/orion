@@ -6,12 +6,14 @@ FROM alpine:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ARG REGISTRY_VER="b804bcd6a44de56fcf8ff3f0ababae7479ad608e"
-ARG IMG_VER="3667c6a05b1a2c2c6b680e2323fbcc9ed76947a8"
-ARG FUSE_OVERLAYFS_VER="refs/tags/v1.4.0"
+ARG REGISTRY_VER="2.8.1"
+ARG REGISTRY_REV="0be0d08b29d56bb1ef0fab93c751ca92d6976a19"
+ARG IMG_VER="16d3b6cad7e72f4cd9c8dad0e159902eeee00898"
+ARG FUSE_OVERLAYFS_VER="refs/tags/v1.9"
+ARG TASKBOOT_VER="0.3.5"
 
 COPY services/orion-builder /src/orion-builder
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
+RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; } \
     && retry apk add --no-cache \
         # base packages
         git \
@@ -65,7 +67,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && cd / \
     && rm -rf /img /root/.cache /root/go \
     # install orion-builder
-    && retry pip --no-cache-dir --disable-pip-version-check install https://github.com/mozilla/task-boot/archive/0.3.2.tar.gz \
+    && retry pip --no-cache-dir --disable-pip-version-check install "https://github.com/mozilla/task-boot/archive/$TASKBOOT_VER.tar.gz" \
     && retry pip --no-cache-dir --disable-pip-version-check install -e /src/orion-builder \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && rm -rf /root/.cache /usr/bin/__pycache__ \
@@ -74,9 +76,10 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1
     && find /usr/lib -name \*.py -delete \
     && find /usr/lib -name __pycache__ -exec rm -rf "{}" + \
     # install docker registry
-    && retry wget -q -O /bin/registry https://github.com/docker/distribution-library-image/raw/$REGISTRY_VER/amd64/registry \
-    && retry wget -q -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/$REGISTRY_VER/amd64/config-example.yml \
-    && chmod +x /bin/registry \
+    && retry wget -q -O registry.tar.gz "https://github.com/distribution/distribution/releases/download/v$REGISTRY_VER/registry_${REGISTRY_VER}_linux_amd64.tar.gz" \
+    && tar --extract --verbose --file registry.tar.gz --directory /bin/ registry \
+    && rm registry.tar.gz \
+    && retry wget -q -O /root/registry.yml https://github.com/docker/distribution-library-image/raw/$REGISTRY_REV/config-example.yml \
     # cleanup
     && apk del \
         autoconf \
