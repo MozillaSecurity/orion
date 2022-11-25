@@ -8,6 +8,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import Optional
 
+from dateutil.parser import isoparse
 from taskcluster.exceptions import TaskclusterRestFailure
 
 from . import CRON_PERIOD, Taskcluster
@@ -107,7 +108,7 @@ class CronScheduler(Scheduler):
                 )
                 rebuild = True
             else:
-                if result["expires"] < next_run:
+                if isoparse(result["expires"]) < next_run:
                     LOG.warning(
                         "%s %s is dirty because %s expires %s",
                         type(svc).__name__,
