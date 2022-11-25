@@ -75,7 +75,7 @@ def test_cron_mark_rebuild(
             if f".{svc}." in path:
                 LOG.debug("%s is expired", path)
                 return {
-                    "expires": now,
+                    "expires": now.isoformat(),
                 }
         for svc in missing_svcs:
             if f".{svc}." in path:
@@ -83,7 +83,7 @@ def test_cron_mark_rebuild(
                 raise TaskclusterRestFailure("404", None)
         LOG.debug("%s is not expired", path)
         return {
-            "expires": now + CRON_PERIOD * 2,
+            "expires": (now + CRON_PERIOD * 2).isoformat(),
         }
 
     index.findTask.side_effect = _find_task
