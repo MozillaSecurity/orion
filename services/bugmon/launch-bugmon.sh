@@ -64,7 +64,7 @@ case "$BUG_ACTION" in
   process)
     TRACE_ARGS=()
     if [ -v TRACE_ARTIFACT ]; then
-      TRACE_ARGS+=("--trace-artifact" "$TC_ARTIFACT_ROOT/$TRACE_ARTIFACT")
+      TRACE_ARGS+=("--trace-artifact" "$ARTIFACT_DEST/$TRACE_ARTIFACT")
     fi
 
     poetry run bugmon-process \
