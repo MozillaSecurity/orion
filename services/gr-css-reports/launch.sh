@@ -29,7 +29,7 @@ git init gr.css.reports
   git remote add origin "${GIT_REPO-git@gr-css-reports:MozillaSecurity/gr.css.reports}"
   retry git fetch -q --depth=10 origin main
   git -c advice.detachedHead=false checkout origin/main
-  retry npm i --no-progress
+  retry npm i --no-package-lock --no-progress --no-save
   retry npm i --no-save --no-progress @mozillasecurity/gr.css@latest
   npx gr.css ~/nightly/firefox src/grammar.json &&
   npm test &&
