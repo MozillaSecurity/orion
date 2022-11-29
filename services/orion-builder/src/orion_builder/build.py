@@ -6,7 +6,6 @@
 
 import argparse
 import logging
-import subprocess
 import sys
 from os import getenv
 from pathlib import Path
@@ -20,36 +19,6 @@ from .cli import CommonArgs, configure_logging
 from .stage_deps import stage_deps
 
 logger = logging.getLogger(__name__)
-
-
-class PatchedTarget(Target):
-    def clone(self, repository: str, revision: str) -> None:
-        logger.info(f"Cloning {repository} @ {revision}")
-
-        # Clone
-        cmd = ["git", "clone", "--quiet", repository, self.dir]
-        subprocess.check_output(cmd)
-        logger.info(f"Cloned into {self.dir}")
-
-        # Explicitly fetch revision if it isn't present
-        # This is necessary when revision is from a fork and repository
-        # is the base repo (eg. private repo).
-        if (
-            subprocess.run(
-                ["git", "show", revision],
-                cwd=self.dir,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            ).returncode
-            != 0
-        ):
-            cmd = ["git", "fetch", "--quiet", "origin", revision]
-            subprocess.check_output(cmd, cwd=self.dir)
-
-        # Checkout revision to pull modifications
-        cmd = ["git", "checkout", revision, "-b", "taskboot"]
-        subprocess.check_output(cmd, cwd=self.dir)
-        logger.info(f"Checked out revision {revision}")
 
 
 class BuildArgs(CommonArgs):
@@ -136,9 +105,9 @@ def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
     configure_logging(level=args.log_level)
-    target = PatchedTarget(args)
+    target = Target(args)
     if args.load_deps:
-        stage_deps(target, args)
+        stage_deps(args)
     try:
         build_image(target, args)
     finally:

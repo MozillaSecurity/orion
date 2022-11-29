@@ -1,0 +1,242 @@
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+index fa71af7..2d292a1 100644
+--- a/.pre-commit-config.yaml
++++ b/.pre-commit-config.yaml
+@@ -1,27 +1,23 @@
+ repos:
+-  - repo: https://github.com/asottile/seed-isort-config
+-    rev: v2.2.0
+-    hooks:
+-      - id: seed-isort-config
+-  - repo: https://github.com/timothycrosley/isort
+-    rev: 5.5.2
++  - repo: https://github.com/PyCQA/isort
++    rev: 5.10.1
+     hooks:
+       - id: isort
+-  - repo: https://github.com/ambv/black
+-    rev: stable
++  - repo: https://github.com/psf/black
++    rev: 22.3.0
+     hooks:
+     - id: black
+-  - repo: https://gitlab.com/pycqa/flake8
++  - repo: https://github.com/pycqa/flake8
+     rev: 3.8.3
+     hooks:
+       - id: flake8
+         additional_dependencies:
+-          - 'flake8-coding==1.3.1'
+-          - 'flake8-copyright==0.2.2'
+-          - 'flake8-debugger==3.1.0'
++          - 'flake8-coding==1.3.2'
++          - 'flake8-copyright==0.2.3'
++          - 'flake8-debugger==4.1.2'
+           - 'flake8-mypy==17.8.0'
+   - repo: https://github.com/pre-commit/pre-commit-hooks
+-    rev: v3.2.0
++    rev: v4.2.0
+     hooks:
+       - id: check-ast
+       - id: check-docstring-first
+@@ -42,17 +38,20 @@ repos:
+     hooks:
+       - id: codespell
+   - repo: https://github.com/marco-c/taskcluster_yml_validator
+-    rev: v0.0.7
++    rev: v0.0.9
+     hooks:
+       - id: taskcluster_yml
+   - repo: https://github.com/asottile/yesqa
+-    rev: v1.2.2
++    rev: v1.3.0
+     hooks:
+       - id: yesqa
+   - repo: https://github.com/pre-commit/mirrors-mypy
+-    rev: v0.782
++    rev: v0.950
+     hooks:
+       - id: mypy
++        additional_dependencies:
++          - types-requests==0.1.11
++          - types-PyYAML==5.4.0
+   - repo: meta
+     hooks:
+       - id: check-useless-excludes
+diff --git a/Dockerfile b/Dockerfile
+index f10d7fd..81c0aa0 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -5,7 +5,8 @@ FROM python:3.10-alpine
+ RUN apk add --no-cache img --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing
+ 
+ # Setup other deps
+-RUN apk add --no-cache git skopeo docker cargo
++RUN apk add --no-cache git skopeo docker cargo podman cni-plugins \
++    && sed -i 's/^#mount_program =/mount_program =/' /etc/containers/storage.conf
+ 
+ # Define the working directory
+ WORKDIR taskboot
+@@ -13,9 +14,6 @@ WORKDIR taskboot
+ # Copy taskboot source directory on the image
+ COPY . /src/taskboot
+ 
+-# Use a dedicated build dir to avoid building in bind mount
+-RUN mkdir -p /build && \
+-    pip install --no-cache-dir --build /build /src/taskboot && \
+-    rm -rf /build
++RUN pip install --no-cache-dir /src/taskboot
+ 
+ CMD ["taskboot", "--help"]
+diff --git a/requirements-tests.txt b/requirements-tests.txt
+index 5e7003f..4eb65d0 100644
+--- a/requirements-tests.txt
++++ b/requirements-tests.txt
+@@ -1,2 +1,2 @@
+-pre-commit==2.16.0
+-pytest==6.2.5
++pre-commit==2.20.0
++pytest==7.2.0
+diff --git a/requirements.txt b/requirements.txt
+index 4bb2b88..c87745d 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,11 +1,11 @@
+ boto3>=1.9
+ https://github.com/docker/docker-py/archive/1.10.6.tar.gz#egg=docker-py
+ dockerfile-parse==1.2.0
+-multidict==5.2.0
+-PyGithub==1.54.1
++multidict==6.0.2
++PyGithub==1.57
+ pyyaml==6.0
+-taskcluster==44.2.2
++taskcluster==44.23.4
+ taskcluster-urls==13.0.1
+-twine==2.0.0
+-yarl<1.8.0
+-zstandard==0.16.0
++twine==4.0.1
++yarl==1.8.0
++zstandard==0.19.0
+diff --git a/taskboot/build.py b/taskboot/build.py
+index bb8910c..81811d1 100644
+--- a/taskboot/build.py
++++ b/taskboot/build.py
+@@ -16,6 +16,7 @@ from taskboot.config import Configuration
+ from taskboot.docker import DinD
+ from taskboot.docker import Docker
+ from taskboot.docker import Img
++from taskboot.docker import Podman
+ from taskboot.docker import patch_dockerfile
+ from taskboot.utils import retry
+ from taskboot.utils import zstd_compress
+@@ -55,6 +56,8 @@ def build_image(target, args):
+         build_tool = Img(cache=args.cache)
+     elif args.build_tool == "docker":
+         build_tool = Docker()
++    elif args.build_tool == "podman":
++        build_tool = Podman()
+     elif args.build_tool == "dind":
+         build_tool = DinD()
+     else:
+diff --git a/taskboot/cli.py b/taskboot/cli.py
+index 858f382..9338ab4 100644
+--- a/taskboot/cli.py
++++ b/taskboot/cli.py
+@@ -100,7 +100,7 @@ def main() -> None:
+     build.add_argument(
+         "--build-tool",
+         dest="build_tool",
+-        choices=["img", "docker", "dind"],
++        choices=["img", "docker", "dind", "podman"],
+         default=os.environ.get("BUILD_TOOL") or "img",
+         help="Tool to build docker images.",
+     )
+@@ -205,7 +205,7 @@ def main() -> None:
+     artifacts.add_argument(
+         "--push-tool",
+         dest="push_tool",
+-        choices=["skopeo", "docker"],
++        choices=["skopeo", "docker", "podman"],
+         default=os.environ.get("PUSH_TOOL") or "skopeo",
+         help="Tool to push docker images.",
+     )
+diff --git a/taskboot/docker.py b/taskboot/docker.py
+index 1f4e805..05b73d8 100644
+--- a/taskboot/docker.py
++++ b/taskboot/docker.py
+@@ -397,6 +397,26 @@ class DinD(Tool):
+         raise NotImplementedError("Cannot push using dind")
+ 
+ 
++class Podman(Docker):
++    """
++    Interface to the podman tool, replacing docker daemon
++    """
++
++    def __init__(self):
++        Tool.__init__(self, "podman")
++
++    def list_images(self):
++        """
++        List images stored in current state
++        Parses the text output into usable dicts
++        """
++        result = super().list_images()
++        for image in result:
++            if image["digest"].startswith("sha256:"):
++                image["digest"] = image["digest"][7:]
++        return result
++
++
+ class Skopeo(Tool):
+     """
+     Interface to the skopeo tool, used to copy local images to remote repositories
+diff --git a/taskboot/push.py b/taskboot/push.py
+index 77ec2ec..6d82a50 100644
+--- a/taskboot/push.py
++++ b/taskboot/push.py
+@@ -11,6 +11,7 @@ import taskcluster
+ 
+ from taskboot.config import Configuration
+ from taskboot.docker import Docker
++from taskboot.docker import Podman
+ from taskboot.docker import Skopeo
+ from taskboot.docker import docker_id_archive
+ from taskboot.utils import download_artifact
+@@ -37,6 +38,8 @@ def push_artifacts(target, args):
+         push_tool = Skopeo()
+     elif args.push_tool == "docker":
+         push_tool = Docker()
++    elif args.push_tool == "podman":
++        push_tool = Podman()
+     else:
+         raise ValueError("Not  supported push tool: {}".format(args.push_tool))
+ 
+diff --git a/taskboot/target.py b/taskboot/target.py
+index 468927e..dfc0d3d 100644
+--- a/taskboot/target.py
++++ b/taskboot/target.py
+@@ -40,6 +40,21 @@ class Target(object):
+         subprocess.check_output(cmd)
+         logger.info("Cloned into {}".format(self.dir))
+ 
++        # Explicitly fetch revision if it isn't present
++        # This is necessary when revision is from a fork
++        # and repository is the base repo.
++        if (
++            subprocess.run(
++                ["git", "show", revision],
++                cwd=self.dir,
++                stdout=subprocess.DEVNULL,
++                stderr=subprocess.DEVNULL,
++            ).returncode
++            != 0
++        ):
++            cmd = ["git", "fetch", "--quiet", "origin", revision]
++            subprocess.check_output(cmd, cwd=self.dir)
++
+         # Checkout revision to pull modifications
+         cmd = ["git", "checkout", revision, "-b", "taskboot"]
+         subprocess.check_output(cmd, cwd=self.dir)

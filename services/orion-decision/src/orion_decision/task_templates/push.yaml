@@ -8,7 +8,7 @@ workerType: "${worker}"
 payload:
   command: [push]
   env:
-    BUILD_TOOL: img
+    BUILD_TOOL: podman
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"

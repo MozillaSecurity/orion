@@ -17,7 +17,7 @@ payload:
     - "uname -a && exec build"
   env:
     ARCHIVE_PATH: /image.tar
-    BUILD_TOOL: img
+    BUILD_TOOL: podman
     DOCKERFILE: "${dockerfile}"
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
