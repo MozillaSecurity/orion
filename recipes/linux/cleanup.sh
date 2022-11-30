@@ -9,12 +9,13 @@ set -o pipefail
 
 #### Cleanup Artifacts
 
-rm -rf /usr/share/man/ /usr/share/info/
+rm -rf /usr/share/man/ || echo "'rm -rf /usr/share/man' failed"
+rm -rf /usr/share/info/ || echo "'rm -rf /usr/share/info' failed"
 find /usr/share/doc -depth -type f ! -name copyright -exec rm {} +
 find /usr/share/doc -empty -exec rmdir {} +
 apt-get clean -y
 apt-get autoremove --purge -y
-rm -rf /var/lib/apt/lists/*
-rm -rf /var/log/*
-rm -rf /root/.cache/*
-rm -rf /tmp/*
+rm -rf /var/lib/apt/lists/* || echo "'rm -rf /var/lib/apt/lists/*' failed"
+rm -rf /var/log/* || echo "'rm -rf /var/log/*' failed"
+rm -rf /root/.cache/* || echo "'rm -rf /root/.cache/*' failed"
+rm -rf /tmp/* || echo "'rm -rf /tmp/*' failed"
