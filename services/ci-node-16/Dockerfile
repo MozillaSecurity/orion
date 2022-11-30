@@ -26,7 +26,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         python3-dev \
         python3-pip \
         python3-wheel \
-    && retry python3 -m pip install --no-build-isolation -e /src/orion-decision \
+    && retry python3 -m pip install /src/orion-decision \
     && apt-mark auto '.*' > /dev/null \
     && for p in $savedAptMark; do apt-mark manual "$p"; done \
     && find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec ldd '{}' ';' \
