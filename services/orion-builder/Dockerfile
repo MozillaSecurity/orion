@@ -13,9 +13,10 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
     && retry apk add --no-cache \
         # base packages
         cni-plugins \
+        fuse-overlayfs \
         git \
         podman \
-        fuse-overlayfs \
+        skopeo \
         # orion-builder deps
         build-base \
         py3-pip \
