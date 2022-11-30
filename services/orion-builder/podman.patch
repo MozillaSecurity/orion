@@ -163,7 +163,7 @@ index 858f382..9338ab4 100644
          help="Tool to push docker images.",
      )
 diff --git a/taskboot/docker.py b/taskboot/docker.py
-index 1f4e805..05b73d8 100644
+index 1f4e805..6892354 100644
 --- a/taskboot/docker.py
 +++ b/taskboot/docker.py
 @@ -397,6 +397,26 @@ class DinD(Tool):
@@ -193,6 +193,15 @@ index 1f4e805..05b73d8 100644
  class Skopeo(Tool):
      """
      Interface to the skopeo tool, used to copy local images to remote repositories
+@@ -442,7 +462,7 @@ class Skopeo(Tool):
+                 "copy",
+                 "--authfile",
+                 self.auth_file,
+-                "oci-archive:{}".format(path),
++                "docker-archive:{}".format(path),
+                 "docker://{}".format(tag),
+             ]
+             self.run(cmd)
 diff --git a/taskboot/push.py b/taskboot/push.py
 index 77ec2ec..6d82a50 100644
 --- a/taskboot/push.py

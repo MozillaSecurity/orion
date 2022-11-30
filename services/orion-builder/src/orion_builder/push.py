@@ -25,7 +25,7 @@ class PushArgs(CommonArgs):
         self.parser.set_defaults(
             artifact_filter="public/**.tar.zst",
             exclude_filter=None,
-            push_tool="podman",
+            push_tool="skopeo",
         )
         self.parser.add_argument(
             "--index",
