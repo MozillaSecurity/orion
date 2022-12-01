@@ -34,7 +34,7 @@ fi
 function sys-embed-dbgsym () {
   dbgsym_installs=()
   for pkg in "$@"; do
-    if ver="$(dpkg-query -W "$pkg" 2>/dev/null | cut -f2)"; then
+    if ver="$(dpkg-query -W "$pkg" 2>/dev/null | head -n1 | cut -f2)"; then
       dbgsym_installs+=("$pkg-dbgsym=$ver")
     else
       echo "WARNING: $pkg not installed, but we checked for dbgsyms?" 1>&2
