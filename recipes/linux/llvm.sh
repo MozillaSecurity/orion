@@ -15,7 +15,7 @@ source "${0%/*}/common.sh"
 
 VERSION=12
 
-if [ "$1" = "auto" ]; then
+if [[ "$1" = "auto" ]]; then
   function install-auto-arg () {
     apt-install-auto "$@"
   }
@@ -31,14 +31,16 @@ case "${1-install}" in
     apt-install-auto \
       ca-certificates \
       curl \
-      software-properties-common \
       gpg \
-      gpg-agent
+      gpg-agent \
+      lsb-release
 
-    if ! grep -q "llvm-toolchain-$(lsb_release -cs)-$VERSION" /etc/apt/sources.list; then
-      curl -sL --retry 5 https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-      apt-add-repository "deb https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-$VERSION main"
-      rm -f /etc/apt/sources.list.save
+    if [[ ! -f /etc/apt/sources.list.d/llvm.list ]]; then
+      keypath="$(install-apt-key https://apt.llvm.org/llvm-snapshot.gpg.key)"
+      cat > /etc/apt/sources.list.d/llvm.list <<- EOF
+	deb [signed-by=${keypath}] https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-$VERSION main
+	EOF
+
       sys-update
     fi
 

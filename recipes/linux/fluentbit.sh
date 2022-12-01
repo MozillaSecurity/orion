@@ -22,12 +22,15 @@ case "${1-install}" in
       gpg-agent \
       lsb-release
 
-    curl --retry 5 -sS "https://packages.fluentbit.io/fluentbit.key" | apt-key add -
-    cat > /etc/apt/sources.list.d/fluentbit.list <<- EOF
-	deb https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
+    if [[ ! -f /etc/apt/sources.list.d/fluentbit.list ]]; then
+      keypath="$(install-apt-key https://packages.fluentbit.io/fluentbit.key)"
+      cat > /etc/apt/sources.list.d/fluentbit.list <<- EOF
+	deb [signed-by=${keypath}] https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
 	EOF
 
-    sys-update
+      sys-update
+    fi
+
     sys-embed td-agent-bit
     ;;
   test)
