@@ -31,6 +31,7 @@ function retry () {
 }
 
 # `apt-get update` command with retry functionality.
+# shellcheck disable=SC2120
 function sys-update () {
   if [[ $# -gt 0 ]]
   then
@@ -107,6 +108,7 @@ function git-clone () {
 }
 
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
+# shellcheck disable=SC2120
 function is-64-bit () {
   if [[ $# -gt 0 ]]
   then
@@ -121,6 +123,7 @@ function is-64-bit () {
   fi
 }
 
+# shellcheck disable=SC2120
 function is-arm64 () {
   if [[ $# -gt 0 ]]
   then
@@ -135,6 +138,7 @@ function is-arm64 () {
   fi
 }
 
+# shellcheck disable=SC2120
 function is-amd64 () {
   if [[ $# -gt 0 ]]
   then
@@ -155,6 +159,7 @@ function curl-gce () {
 }
 
 # Determine the relative hostname based on the outside environment.
+# shellcheck disable=SC2120
 function relative-hostname () {
   if [[ $# -gt 0 ]]
   then
@@ -240,6 +245,7 @@ function get-tc-secret () {
 }
 
 # Add AWS credentials based on the given provider
+# shellcheck disable=SC2120
 function setup-aws-credentials () {
   if [[ $# -gt 0 ]]
   then
@@ -271,6 +277,7 @@ function setup-aws-credentials () {
 }
 
 # Determine the provider environment we're running in
+# shellcheck disable=SC2120
 function get-provider () {
   if [[ $# -gt 0 ]]
   then
@@ -299,6 +306,7 @@ function get-provider () {
 }
 
 # Add relative hostname to the FuzzManager configuration.
+# shellcheck disable=SC2120
 function setup-fuzzmanager-hostname () {
   if [[ $# -gt 0 ]]
   then
@@ -317,6 +325,7 @@ function setup-fuzzmanager-hostname () {
 }
 
 # Disable AWS EC2 pool; suitable as trap function.
+# shellcheck disable=SC2120
 function disable-ec2-pool () {
   if [[ $# -gt 0 ]]
   then
@@ -343,4 +352,26 @@ function update-ec2-status () {
 # Show sorted list of largest files and folders.
 function size () {
   du -cha "$@" 2>/dev/null | sort -rh | head -n 100
+}
+
+function install-apt-key () {
+  local keyurl
+  if [[ $# -ne 1 ]]
+  then
+    echo "usage: $0 keyurl" >&2
+    return 1
+  fi
+  keyurl="$1"
+
+  fn="${keyurl##*/}"
+  base="${fn%%.*}"
+  output="/etc/apt/keyrings/${base}.gpg"
+
+  mkdir -p /etc/apt/keyrings ~/.gnupg
+  TMPD="$(mktemp -d -p. aptkey.XXXXXXXXXX)"
+  curl --retry 5 -sSL "$keyurl" -o "$TMPD/aptkey.key"
+  gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --import "$TMPD/aptkey.key"
+  gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --export --output "$output"
+  rm -rf "$TMPD"
+  echo "$output"
 }

@@ -15,18 +15,18 @@ source "${0%/*}/common.sh"
 apt-install-auto \
   ca-certificates \
   curl \
-  software-properties-common \
   gpg \
-  gpg-agent
+  gpg-agent \
+  lsb-release
 
-if [ ! -f /etc/apt/sources.list.d/ddebs.list ]; then
+if [[ ! -f /etc/apt/sources.list.d/ddebs.list ]]; then
+  keypath="$(install-apt-key http://ddebs.ubuntu.com/dbgsym-release-key.asc)"
   cat <<- EOF > /etc/apt/sources.list.d/ddebs.list
-	deb http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
-	deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
-	deb http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
+	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
+	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
+	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
 	EOF
 
-  curl --retry 5 -sL http://ddebs.ubuntu.com/dbgsym-release-key.asc | apt-key add -
   sys-update
 fi
 
@@ -40,7 +40,7 @@ function sys-embed-dbgsym () {
       echo "WARNING: $pkg not installed, but we checked for dbgsyms?" 1>&2
     fi
   done
-  if [ ${#dbgsym_installs[@]} -ne 0 ]; then
+  if [[ ${#dbgsym_installs[@]} -ne 0 ]]; then
     sys-embed "${dbgsym_installs[@]}"
   fi
 }
