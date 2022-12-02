@@ -36,6 +36,7 @@ packages=(
   make
   mercurial
   ninja-build
+  patch
   psmisc
   python-is-python3
   python3
