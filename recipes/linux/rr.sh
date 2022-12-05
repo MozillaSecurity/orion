@@ -13,7 +13,7 @@ source "${0%/*}/common.sh"
 
 #### Install rr
 
-REVISION=026cef968a34ae2b3e272e7ac7b6c9c9f98261a0
+REVISION=0512e1844f87bd88c1c68c331fc8846ac51b3cb3
 
 if is-arm64; then
   echo "[INFO] rr is currently not supported on any ARM architecture."
