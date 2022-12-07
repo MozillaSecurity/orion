@@ -25,7 +25,6 @@ payload:
     ADAPTER: reducer
     FUZZING_CPU_COUNT: "0"  # force single instance/task
     IGNORE: "log-limit memory timeout"
-    MEM_LIMIT: "7000"
     INPUT: "${crash_id}"
     TIMEOUT: "60"
   features:
