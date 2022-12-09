@@ -20,6 +20,7 @@ status () {
   fi
 }
 
+powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true"
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true"
 
 set +x
