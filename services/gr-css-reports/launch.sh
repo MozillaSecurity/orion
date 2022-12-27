@@ -33,7 +33,7 @@ git init gr.css.reports
   retry git fetch -q --depth=10 origin v2
   git -c advice.detachedHead=false checkout origin/v2
   retry npm i --no-package-lock --no-progress --no-save
-  retry npm i --no-progress @mozillasecurity/gr.css@next
+  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css@next
   python3 -m prefpicker browser-fuzzing.yml prefs.js
   npx gr.css ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
