@@ -59,12 +59,13 @@ def test_load_params(tmp_path: Path) -> None:
         "cpu": "arm64",
         "platform": "linux",
         "preprocess": "",
-        "macros": {"ENVVAR1": "123456", "ENVVAR2": "789abc"},
+        "macros": {"ENVVAR1": "123456", "ENVVAR2": "789abc", "ENVVAR3": "failed!"},
         "run_as_admin": False,
     }
 
     # test 1: environment from pool is merged
     launcher = PoolLauncher(["command", "arg"], "test-pool")
+    launcher.environment["ENVVAR3"] = "NO_MOD"
     launcher.fuzzing_config_dir = tmp_path
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:
         yaml.dump(pool_data, stream=test_cfg)
@@ -74,6 +75,7 @@ def test_load_params(tmp_path: Path) -> None:
     assert launcher.environment == {
         "ENVVAR1": "123456",
         "ENVVAR2": "789abc",
+        "ENVVAR3": "NO_MOD",
         "FUZZING_POOL_NAME": "Amazing fuzzing pool",
         "STATIC": "value",
     }
