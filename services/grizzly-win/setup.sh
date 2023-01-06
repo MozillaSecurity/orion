@@ -88,7 +88,7 @@ npm -v
 
 # get grcov
 curl --connect-timeout 25 --retry 5 -sSLO "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-grcov.latest/artifacts/public/build/grcov.tar.zst"
-zstdcat grcov.tar.zst | tar xv
+zstdcat grcov.tar.zst | tar --strip-components=1 -xv
 mv grcov.exe msys64/usr/bin/
 ./msys64/usr/bin/grcov.exe --version
 
