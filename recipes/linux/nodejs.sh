@@ -20,7 +20,7 @@ case "${1-install}" in
       ca-certificates \
       curl
 
-    curl --retry 5 -sL https://deb.nodesource.com/setup_16.x | bash -
+    retry-curl https://deb.nodesource.com/setup_16.x | bash -
     sys-embed nodejs
     strip --strip-unneeded /usr/bin/node
     ;;

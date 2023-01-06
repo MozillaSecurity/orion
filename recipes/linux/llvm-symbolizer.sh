@@ -23,7 +23,7 @@ case "${1-install}" in
       curl \
       zstd
 
-    curl -L "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-${VERSION}.latest/artifacts/public%2Fbuild%2Fclang.tar.zst" | zstdcat | tar -x -C /usr/local/bin --strip-components=2 clang/bin/llvm-symbolizer
+    retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-clang-${VERSION}.latest/artifacts/public/build/clang.tar.zst" | zstdcat | tar -x -C /usr/local/bin --strip-components=2 clang/bin/llvm-symbolizer
     strip --strip-unneeded /usr/local/bin/llvm-symbolizer
     ;;
   test)

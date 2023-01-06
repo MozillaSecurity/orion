@@ -18,7 +18,7 @@ source ~/.local/bin/common.sh
 # Setup required coverage environment variables.
 export COVERAGE=1
 
-REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
 
 TOOLNAME="${TOOLNAME:-libFuzzer-$FUZZER}"

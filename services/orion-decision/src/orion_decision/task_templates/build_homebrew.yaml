@@ -16,13 +16,14 @@ payload:
       - "-c"
       - "-x"
       - >-
+        retry () { i=0; while [ $$i -lt 9 ]; do if "$$@"; then return; else sleep 30; fi; i="$${i+1}"; done; "$$@"; } &&
         mkdir homebrew &&
-        curl -sSL --retry 5 "${homebrew_base_url}" | tar x --strip 1 -C homebrew &&
+        curl -sSL --connect-timeout 25 --fail --retry 5 "${homebrew_base_url}" | tar x --strip 1 -C homebrew &&
         eval "$$(homebrew/bin/brew shellenv)" &&
         git init orion &&
         cd orion &&
         git remote add origin "${clone_url}" &&
-        git fetch -q --depth=1 origin "${commit}" &&
+        retry git fetch -q --depth=1 origin "${commit}" &&
         git -c advice.detachedHead=false checkout "${commit}" &&
         cd .. &&
         exec "./orion/${setup_sh_path}"

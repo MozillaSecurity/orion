@@ -31,7 +31,7 @@ case "${1-install}" in
     TMPD="$(mktemp -d -p. tc.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
       LATEST_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
-      curl --retry 5 -sLO "https://github.com/taskcluster/taskcluster/releases/download/$LATEST_VERSION/taskcluster-$PLATFORM.tar.gz"
+      retry-curl -O "https://github.com/taskcluster/taskcluster/releases/download/$LATEST_VERSION/taskcluster-$PLATFORM.tar.gz"
       tar -xzf taskcluster-$PLATFORM.tar.gz
       install taskcluster /usr/local/bin/taskcluster
     popd >/dev/null

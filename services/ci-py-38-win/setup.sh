@@ -2,9 +2,10 @@
 set -e -x
 
 retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
 
 # base msys packages
-retry pacman --noconfirm -S \
+retry pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
   patch \
   psmisc \
@@ -14,7 +15,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-curl --connect-timeout 25 --retry 5 -sSL "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+retry_curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get python
 VER=3.8.10

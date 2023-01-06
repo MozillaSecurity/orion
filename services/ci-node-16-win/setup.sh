@@ -2,6 +2,7 @@
 set -e -x
 
 retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -Sy \
@@ -16,7 +17,7 @@ pacman --noconfirm -Rs psmisc
 
 # get node.js
 VER=16.18.1
-curl --connect-timeout 25 --retry 5 -sSL "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
+retry_curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 unzip node.zip
 rm node.zip
 rm -rf msys64/opt/node

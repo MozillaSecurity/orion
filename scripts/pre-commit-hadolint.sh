@@ -9,17 +9,21 @@ function checksum () {
   python3 -c "import hashlib;print(hashlib.sha256(open('$HADOLINT','rb').read()).hexdigest())"
 }
 
+function retry-curl () {
+  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent "$@"
+}
+
 mkdir -p "$(dirname "$HADOLINT")"
 if [[ -e "$HADOLINT" ]]
 then
   if [[ "$(checksum)" != "$CHECKSUM" ]]
   then
-    curl -sSL -z "$HADOLINT" -o "$HADOLINT" "$URL"
+    retry-curl -z "$HADOLINT" -o "$HADOLINT" "$URL"
     [[ "$(checksum)" == "$CHECKSUM" ]]  # assert that checksum matches
     chmod +x "$HADOLINT"
   fi
 else
-  curl -sSL -o "$HADOLINT" "$URL"
+  retry-curl -o "$HADOLINT" "$URL"
   [[ "$(checksum)" == "$CHECKSUM" ]]  # assert that checksum matches
   chmod +x "$HADOLINT"
 fi

@@ -19,7 +19,7 @@ apt-install-auto python3-yaml zstd
   cd /tmp
 
   # resolve current clang toolchain
-  curl --retry 5 -sSLO "https://hg.mozilla.org/mozilla-central/raw-file/tip/taskcluster/ci/toolchain/clang.yml"
+  retry-curl -O "https://hg.mozilla.org/mozilla-central/raw-file/tip/taskcluster/ci/toolchain/clang.yml"
   python3 <<- "EOF" > clang.txt
 	import yaml
 	with open("clang.yml") as fd:
@@ -35,7 +35,7 @@ apt-install-auto python3-yaml zstd
   rm clang.txt clang.yml
 
   # install clang
-  curl --retry 5 -L "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" -o /tmp/clang.tar.zst
+  retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" -o /tmp/clang.tar.zst
   zstdcat /tmp/clang.tar.zst | tar --wildcards -x "${CLANG_SRC}/lib/linux/"
   rm /tmp/clang.tar.zst
 

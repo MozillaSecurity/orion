@@ -80,7 +80,7 @@ EOF
 if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
     echo "clientid = task-${TASK_ID}-run-${RUN_ID}"
 elif [ -n "$EC2SPOTMANAGER_POOLID" ]; then
-    echo "clientid = $(curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname)"
+    echo "clientid = $(retry-curl http://169.254.169.254/latest/meta-data/public-hostname)"
 else
     echo "clientid = ${CLIENT_ID-$(uname -n)}"
 fi >> "$HOME/.fuzzmanagerconf"

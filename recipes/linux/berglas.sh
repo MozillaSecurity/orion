@@ -25,7 +25,7 @@ case "${1-install}" in
     AMD64_DOWNLOAD_URL="https://storage.googleapis.com/berglas/main/linux_amd64/berglas"
 
     if is-amd64; then
-      curl -sL --retry 5 "$AMD64_DOWNLOAD_URL" -o /usr/local/bin/berglas
+      retry-curl "$AMD64_DOWNLOAD_URL" -o /usr/local/bin/berglas
       chmod +x /usr/local/bin/berglas
     else
       echo "unknown platform" >&2

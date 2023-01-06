@@ -31,7 +31,7 @@ case "${1-install}" in
     TMPD="$(mktemp -d -p. grcov.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
       LATEST_VERSION=$(get-latest-github-release "mozilla/grcov")
-      curl --retry 5 -sLO "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-$PLATFORM.tar.bz2"
+      retry-curl -O "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-$PLATFORM.tar.bz2"
       tar xf grcov-$PLATFORM.tar.bz2
       install grcov /usr/local/bin/grcov
       rm grcov grcov-$PLATFORM.tar.bz2
