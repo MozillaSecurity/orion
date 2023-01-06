@@ -15,7 +15,9 @@ source "${0%/*}/common.sh"
 
 case "${1-install}" in
   install)
-    apt-install-auto ca-certificates curl
+    apt-install-auto \
+      ca-certificates \
+      curl
 
     # A tool for managing secrets on Google Cloud.
     # https://github.com/GoogleCloudPlatform/berglas
@@ -25,6 +27,9 @@ case "${1-install}" in
     if is-amd64; then
       curl -sL --retry 5 "$AMD64_DOWNLOAD_URL" -o /usr/local/bin/berglas
       chmod +x /usr/local/bin/berglas
+    else
+      echo "unknown platform" >&2
+      exit 1
     fi
     ;;
   test)
