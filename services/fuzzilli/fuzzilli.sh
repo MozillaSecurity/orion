@@ -9,7 +9,7 @@ set -o pipefail
 
 
 # shellcheck source=recipes/linux/common.sh
-source $HOME/.local/bin/common.sh
+source "$HOME/.local/bin/common.sh"
 
 if [[ -z "$NO_SECRETS" ]]
 then
@@ -41,22 +41,22 @@ fi
 # Get the deploy key for fuzzilli from Taskcluster
 if [[ $DIFFERENTIAL ]]
 then
-  get-tc-secret deploy-fuzzilli-differential $HOME/.ssh/id_rsa.fuzzilli
+  get-tc-secret deploy-fuzzilli-differential "$HOME/.ssh/id_rsa.fuzzilli"
 else
-  get-tc-secret deploy-fuzzilli $HOME/.ssh/id_rsa.fuzzilli
+  get-tc-secret deploy-fuzzilli "$HOME/.ssh/id_rsa.fuzzilli"
 fi
 
 # Setup Key Identities
-cat << EOF > $HOME/.ssh/config
+cat << EOF > "$HOME/.ssh/config"
 
 Host fuzzilli
 Hostname github.com
-IdentityFile $HOME/.ssh/id_rsa.fuzzilli
+IdentityFile "$HOME/.ssh/id_rsa.fuzzilli"
 EOF
 
 # -----------------------------------------------------------------------------
 
-cd $HOME
+cd "$HOME"
 
 git-clone https://github.com/MozillaSecurity/FuzzManager/
 
@@ -71,8 +71,8 @@ fi
 # Copy over the S3Manager, we need it for the fuzzilli daemon
 cp FuzzManager/misc/afl-libfuzzer/S3Manager.py fuzzilli/mozilla/
 
-get-tc-secret fuzzmanagerconf $HOME/.fuzzmanagerconf
-cat >> $HOME/.fuzzmanagerconf << EOF
+get-tc-secret fuzzmanagerconf "$HOME/.fuzzmanagerconf"
+cat >> "$HOME/.fuzzmanagerconf" << EOF
 sigdir = $HOME/signatures
 tool = ${TOOLNAME-Fuzzilli}
 EOF
@@ -83,7 +83,7 @@ elif [ -n "$EC2SPOTMANAGER_POOLID" ]; then
     echo "clientid = $(curl --retry 5 -s http://169.254.169.254/latest/meta-data/public-hostname)"
 else
     echo "clientid = ${CLIENT_ID-$(uname -n)}"
-fi >> $HOME/.fuzzmanagerconf
+fi >> "$HOME/.fuzzmanagerconf"
 
 # Download our build
 if [[ $COVERAGE ]]
@@ -96,22 +96,22 @@ fi
 cd fuzzilli
 chmod +x mozilla/*.sh
 
-source $HOME/.bashrc
+source "$HOME/.bashrc"
 
-echo $PATH
+echo "$PATH"
 ls -al /opt/swift5
 
 export PATH=/opt/swift5/usr/bin:$PATH
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
-  timeout -s 2 ${TARGET_TIME} mozilla/merge.sh $HOME/build/dist/bin/js
+  timeout -s 2 ${TARGET_TIME} mozilla/merge.sh "$HOME/build/dist/bin/js"
 elif [[ $COVERAGE ]]
 then
   mozilla/bootstrap.sh
-  timeout -s 2 ${TARGET_TIME} mozilla/coverage.sh $HOME/build/dist/bin/js $HOME/build/
+  timeout -s 2 ${TARGET_TIME} mozilla/coverage.sh "$HOME/build/dist/bin/js" "$HOME/build/"
 else
   mozilla/bootstrap.sh
-  screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh $HOME/build/dist/bin/js
-  timeout -s 2 ${TARGET_TIME} mozilla/monitor.sh $HOME/build/dist/bin/js || [[ $? -eq 124 ]]
+  screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh "$HOME/build/dist/bin/js"
+  timeout -s 2 ${TARGET_TIME} mozilla/monitor.sh "$HOME/build/dist/bin/js" || [[ $? -eq 124 ]]
 fi
