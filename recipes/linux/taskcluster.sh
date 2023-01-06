@@ -19,9 +19,23 @@ case "${1-install}" in
         ca-certificates \
         curl
 
-    TC_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
-    curl --retry 5 -sSL "https://github.com/taskcluster/taskcluster/releases/download/${TC_VERSION}/taskcluster-linux-amd64" -o /usr/local/bin/taskcluster
-    chmod +x /usr/local/bin/taskcluster
+    if is-arm64; then
+      PLATFORM="linux-arm64"
+    elif is-amd64; then
+      PLATFORM="linux-amd64"
+    else
+      echo "unknown platform" >&2
+      exit 1
+    fi
+
+    TMPD="$(mktemp -d -p. tc.XXXXXXXXXX)"
+    pushd "$TMPD" >/dev/null
+      LATEST_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
+      curl --retry 5 -sLO "https://github.com/taskcluster/taskcluster/releases/download/$LATEST_VERSION/taskcluster-$PLATFORM.tar.gz"
+      tar -xzf taskcluster-$PLATFORM.tar.gz
+      install taskcluster /usr/local/bin/taskcluster
+    popd >/dev/null
+    rm -rf "$TMPD"
     ;;
   test)
     taskcluster version
