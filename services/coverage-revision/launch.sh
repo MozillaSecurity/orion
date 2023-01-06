@@ -14,4 +14,5 @@ DST="${DST-/coverage-revision.txt}"
 [ -s "$DST" ]
 
 ## Check that the revision exists on mozilla-central
-curl -sSIf "https://hg.mozilla.org/mozilla-central/rev/$(cat "$DST")" > /dev/null
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+retry_curl --head "https://hg.mozilla.org/mozilla-central/rev/$(cat "$DST")" > /dev/null

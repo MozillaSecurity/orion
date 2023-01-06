@@ -11,6 +11,7 @@ ARG PYTHON_VER=3.9.10
 
 COPY services/orion-decision /src/orion-decision
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+    && retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; } \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         ca-certificates \
@@ -39,7 +40,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         wget \
         xz-utils \
         zlib1g-dev \
-    && retry curl -LO https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tgz \
+    && retry_curl -O https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tgz \
     && tar xzf Python-${PYTHON_VER}.tgz \
     && rm Python-${PYTHON_VER}.tgz \
     && cd Python-${PYTHON_VER} \
@@ -74,7 +75,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         | xargs -r apt-mark manual \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/* \
-    && retry curl -LO https://github.com/pypa/get-pip/raw/38e54e5de07c66e875c11a1ebbdb938854625dd8/public/get-pip.py \
+    && retry_curl -O https://github.com/pypa/get-pip/raw/38e54e5de07c66e875c11a1ebbdb938854625dd8/public/get-pip.py \
     && export PYTHONDONTWRITEBYTECODE=1 \
     && python3 get-pip.py \
         --disable-pip-version-check \

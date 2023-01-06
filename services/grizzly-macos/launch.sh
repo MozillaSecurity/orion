@@ -16,6 +16,8 @@ retry () {
   "$@"
 }
 
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+
 status () {
   if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
   then
@@ -37,7 +39,7 @@ with open("$PIP_CONFIG_FILE", "r+") as fp:
 EOF
 
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
@@ -88,7 +90,7 @@ fluent-bit -c td-agent-bit.conf &
 
 # Get fuzzmanager configuration from TC
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 export FM_CONFIG_PATH="$PWD/.fuzzmanagerconf"
 
@@ -110,7 +112,7 @@ status "Setup: cloning bearspray"
 # Get deployment key from TC
 mkdir -p .ssh
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 chmod 0600 .ssh/id_ecdsa.bearspray
 

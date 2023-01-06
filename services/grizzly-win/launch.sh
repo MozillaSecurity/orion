@@ -12,6 +12,7 @@ retry () {
   done
   "$@"
 }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
 
 status () {
   if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
@@ -24,7 +25,7 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -Disabl
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true"
 
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
@@ -75,7 +76,7 @@ EOF
 
 # Get fuzzmanager configuration from TC
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 # Update fuzzmanager config for this instance
@@ -96,7 +97,7 @@ status "Setup: cloning bearspray"
 # Get deployment key from TC
 mkdir -p .ssh
 set +x
-curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 cat << EOF >> .ssh/config

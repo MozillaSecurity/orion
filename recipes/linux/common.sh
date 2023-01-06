@@ -74,6 +74,11 @@ function apt-install-auto () {
   fi
 }
 
+# wrap curl with sane defaults
+function retry-curl () {
+  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent "$@"
+}
+
 function get-latest-github-release () {
   if [[ $# -ne 1 ]]
   then
@@ -81,7 +86,7 @@ function get-latest-github-release () {
     return 1
   fi
   # Bypass GitHub API RateLimit. Note that we do not follow the redirect.
-  curl --retry 5 -sI "https://github.com/$1/releases/latest" | grep ^location | sed 's/.\+\/tag\/\(.\+\)[[:space:]]\+/\1/'
+  retry-curl --head --no-location "https://github.com/$1/releases/latest" | grep ^location | sed 's/.\+\/tag\/\(.\+\)[[:space:]]\+/\1/'
 }
 
 # Shallow git-clone of the default branch only
@@ -155,7 +160,7 @@ function is-amd64 () {
 
 # Curl with headers set for accessing GCE metadata service
 function curl-gce () {
-  curl --retry 5 -H "Metadata-Flavor: Google" -s --connect-timeout 25 "$@"
+  retry-curl -H "Metadata-Flavor: Google" "$@"
 }
 
 # Determine the relative hostname based on the outside environment.
@@ -168,7 +173,7 @@ function relative-hostname () {
   fi
   case "$(echo "${SHIP-$(get-provider)}" | tr "[:upper:]" "[:lower:]")" in
     ec2 | ec2spot)
-      curl -s --retry 5 --connect-timeout 25 "$EC2_METADATA_URL/public-hostname" || :
+      retry-curl "$EC2_METADATA_URL/public-hostname" || :
       ;;
     gce)
       local IFS='.'
@@ -228,7 +233,7 @@ function get-tc-secret () {
     TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$secret"
   elif [[ -n "$TASKCLUSTER_PROXY_URL" ]]
   then
-    curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/$secret"
+    retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/$secret"
   else
     echo "error: either taskcluster client binary must be installed or TASKCLUSTER_PROXY_URL must be set" >&2
     return 1
@@ -268,7 +273,7 @@ function setup-aws-credentials () {
         then
           TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/${CREDSTASH_SECRET}"
         else
-          curl --retry 5 -L "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/${CREDSTASH_SECRET}"
+          retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/${CREDSTASH_SECRET}"
         fi | jshon -e secret -e key -u >"$HOME/.aws/credentials"
         chmod 0600 "$HOME/.aws/credentials"
         ;;
@@ -369,7 +374,7 @@ function install-apt-key () {
 
   mkdir -p /etc/apt/keyrings ~/.gnupg
   TMPD="$(mktemp -d -p. aptkey.XXXXXXXXXX)"
-  curl --retry 5 -sSL "$keyurl" -o "$TMPD/aptkey.key"
+  retry-curl "$keyurl" -o "$TMPD/aptkey.key"
   gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --import "$TMPD/aptkey.key"
   gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --export --output "$output"
   rm -rf "$TMPD"

@@ -14,7 +14,7 @@ payload:
   command:
     - set HOME=%CD%
     - set ARTIFACTS=%CD%
-    - C:\cygwin\bin\curl.exe -sSL --connect-timeout 25 --retry 5 "${msys_base_url}" -o msys2.tar.xz
+    - C:\cygwin\bin\curl.exe -sSL --connect-timeout 25 --fail --retry 5 "${msys_base_url}" -o msys2.tar.xz
     - C:\cygwin\bin\tar.exe -I /bin/xz -xf msys2.tar.xz
     - del msys2.tar.xz
     - set PATH=%CD%\msys64\MINGW64\bin;%PATH%

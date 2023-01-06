@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e -x
 
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+
 brew install --force-bottle openssl@1.1 python@3.9
 chmod +w "$HOMEBREW_PREFIX/lib/python3.9/site-packages"
 # shellcheck disable=SC2016
@@ -15,7 +17,7 @@ brew install --force-bottle node@14
 # shellcheck disable=SC2016
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/node@14/bin:,' "$HOMEBREW_PREFIX/Library/Homebrew/cmd/shellenv.sh"
 PATH="$HOMEBREW_PREFIX/opt/node@14/bin:$PATH"
-curl -qL https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
+retry_curl https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 
 # configure pip
 mkdir -p pip
@@ -34,11 +36,11 @@ EOF
 export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
 
 # get new minidump-stackwalk
-curl -sSL "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.macosx64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "$HOMEBREW_PREFIX/bin"
+retry_curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.macosx64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "$HOMEBREW_PREFIX/bin"
 "$HOMEBREW_PREFIX/bin/minidump-stackwalk" --version
 
 # old minidump_stackwalk (remove when support for new is added to ffpuppet)
-curl -sSL "https://tooltool.mozilla-releng.net/sha512/2105e384ffbf3459d91701207e879a676ab8e49ca1dc2b7bf1e7d695fb6245ba719285c9841429bbc6605ae4e710107621f788a7204ed681148115ccf64ac087" -o "$HOMEBREW_PREFIX/bin/minidump_stackwalk"
+retry_curl "https://tooltool.mozilla-releng.net/sha512/2105e384ffbf3459d91701207e879a676ab8e49ca1dc2b7bf1e7d695fb6245ba719285c9841429bbc6605ae4e710107621f788a7204ed681148115ccf64ac087" -o "$HOMEBREW_PREFIX/bin/minidump_stackwalk"
 chmod +x "$HOMEBREW_PREFIX/bin/minidump_stackwalk"
 
 python -V

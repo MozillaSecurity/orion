@@ -25,15 +25,15 @@ if [[ ! -e .fuzzmanagerconf ]] && [[ "$NO_REPORT" != "1" ]]; then
 fi
 
 update-ec2-status "[$(date -Iseconds)] setup: getting revisions"
-REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 export REVISION
-NSS_TAG="$(curl --retry 5 -sSL "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/security/nss/TAG-INFO")"
-NSPR_TAG="$(curl --retry 5 -sSL "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/nsprpub/TAG-INFO")"
+NSS_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/security/nss/TAG-INFO")"
+NSPR_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/nsprpub/TAG-INFO")"
 
 if [[ ! -d clang ]]; then
   update-ec2-status "[$(date -Iseconds)] setup: installing clang"
   # resolve current clang toolchain
-  curl --retry 5 -sSLO "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/taskcluster/ci/toolchain/clang.yml"
+  retry-curl -O "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/taskcluster/ci/toolchain/clang.yml"
   python3 <<- "EOF" > clang.txt
 	import yaml
 	with open("clang.yml") as fd:
@@ -49,8 +49,8 @@ if [[ ! -d clang ]]; then
   rm clang.txt clang.yml
 
   # install clang
-  curl --retry 5 -L "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" | zstdcat | tar -x
-  curl --retry 5 -L "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.${CLANG_INDEX/clang/x64-compiler-rt}.latest/artifacts/public/build/compiler-rt-x86_64-unknown-linux-gnu.tar.zst" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
+  retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" | zstdcat | tar -x
+  retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.${CLANG_INDEX/clang/x64-compiler-rt}.latest/artifacts/public/build/compiler-rt-x86_64-unknown-linux-gnu.tar.zst" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
 fi
 CC="$PWD/clang/bin/clang"
 CXX="$PWD/clang/bin/clang++"
@@ -102,7 +102,7 @@ for p in ../nss/fuzz/options/*; do
     non_tls_targets+=("${fuzzer%-no_fuzzer_mode}")
   fi
   if [[ ! -d "$fuzzer" ]]; then
-    curl --retry 5 -LO "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$fuzzer/public.zip"
+    retry-curl -O "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$fuzzer/public.zip"
     mkdir "$fuzzer"
     cd "$fuzzer"
     unzip ../public.zip

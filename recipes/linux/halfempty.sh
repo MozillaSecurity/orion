@@ -31,7 +31,7 @@ case "${1-install}" in
 
     TMPD="$(mktemp -d -p. halfempty.build.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      curl --retry 5 -sL "$DOWNLOAD_URL" | tar -xzv
+      retry-curl "$DOWNLOAD_URL" | tar -xzv
       cd "halfempty-$VERSION"
       make
       mv halfempty /usr/local/bin/

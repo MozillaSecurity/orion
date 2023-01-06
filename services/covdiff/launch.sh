@@ -14,7 +14,7 @@ export EMAIL=nobody@community-tc.services.mozilla.com
 get-tc-secret moz-ci-coverage-key "$HOME/moz-ci-coverage-key.json" raw
 get-tc-secret fuzzmanagerconf "$HOME/.fuzzmanagerconf"
 
-REVISION="$(curl --retry 5 --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 
 TEST_SUITE=(
   mochitest-plain
