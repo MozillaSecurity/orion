@@ -130,7 +130,7 @@ function is-arm64 () {
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ "$(uname -i)" = "aarch64" ]]
+  if [[ "$(uname -m)" = "aarch64" ]]
   then
     true
   else
@@ -145,7 +145,7 @@ function is-amd64 () {
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ "$(uname -i)" = "x86_64" ]]
+  if [[ "$(uname -m)" = "x86_64" ]]
   then
     true
   else
