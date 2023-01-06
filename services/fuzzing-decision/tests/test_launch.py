@@ -36,10 +36,9 @@ def test_main_calls(mock_launcher) -> None:
     mock_launcher.return_value.exec.assert_called_once()
 
 
-@patch("os.environ", {})
-def test_load_params(tmp_path: Path) -> None:
-    os.environ["STATIC"] = "value"
-    pool_data = {
+@pytest.fixture
+def pool_data() -> dict:
+    return {
         "cloud": "aws",
         "scopes": [],
         "disk_size": "120g",
@@ -59,9 +58,17 @@ def test_load_params(tmp_path: Path) -> None:
         "cpu": "arm64",
         "platform": "linux",
         "preprocess": "",
-        "macros": {"ENVVAR1": "123456", "ENVVAR2": "789abc", "ENVVAR3": "failed!"},
+        "macros": {},
         "run_as_admin": False,
     }
+
+
+@patch("os.environ", {})
+def test_load_params_1(tmp_path: Path, pool_data: dict) -> None:
+    os.environ["STATIC"] = "value"
+    pool_data["macros"]["ENVVAR1"] = "123456"
+    pool_data["macros"]["ENVVAR2"] = "789abc"
+    pool_data["macros"]["ENVVAR3"] = "failed!"
 
     # test 1: environment from pool is merged
     launcher = PoolLauncher(["command", "arg"], "test-pool")
@@ -80,10 +87,13 @@ def test_load_params(tmp_path: Path) -> None:
         "STATIC": "value",
     }
 
-    # test 2: command from pool is used
-    assert isinstance(pool_data["macros"], dict)
-    pool_data["macros"].clear()
+
+@patch("os.environ", {})
+def test_load_params_2(tmp_path: Path, pool_data: dict) -> None:
+    os.environ["STATIC"] = "value"
     pool_data["command"] = ["new-command", "arg1", "arg2"]
+
+    # test 2: command from pool is used
     launcher = PoolLauncher([], "test-pool")
     launcher.fuzzing_config_dir = tmp_path
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:
@@ -96,12 +106,26 @@ def test_load_params(tmp_path: Path) -> None:
         "STATIC": "value",
     }
 
+
+@patch("os.environ", {})
+def test_load_params_3(tmp_path: Path, pool_data: dict) -> None:
+    pool_data["command"] = ["new-command", "arg1", "arg2"]
+
     # test 3: command from init and pool is error
     launcher = PoolLauncher(["command", "arg"], "test-pool")
     launcher.fuzzing_config_dir = tmp_path
+    with (tmp_path / "test-pool.yml").open("w") as test_cfg:
+        yaml.dump(pool_data, stream=test_cfg)
 
     with pytest.raises(AssertionError):
         launcher.load_params()
+
+
+@patch("os.environ", {})
+def test_load_params_4(tmp_path: Path, pool_data: dict) -> None:
+    os.environ["STATIC"] = "value"
+    pool_data["command"] = ["new-command", "arg1", "arg2"]
+    pool_data["preprocess"] = "preproc"
 
     # test 4: preprocess task is loaded
     preproc_data: Dict[str, Any] = {
@@ -127,7 +151,6 @@ def test_load_params(tmp_path: Path) -> None:
         "macros": {"PREPROC": "1"},
         "run_as_admin": False,
     }
-    pool_data["preprocess"] = "preproc"
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:
         yaml.dump(pool_data, stream=test_cfg)
     with (tmp_path / "preproc.yml").open("w") as test_cfg:
