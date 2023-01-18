@@ -21,7 +21,7 @@ cd "${0%/*}"
 ./fluentbit.sh
 ./fuzzfetch.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
-./fuzzmanager.sh
+EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 ./nodejs.sh
 ./radamsa.sh

@@ -109,6 +109,9 @@ chmod 0600 .fuzzmanagerconf
 
 status "Setup: cloning bearspray"
 
+# ensure we use the latest FM
+retry pip install git+https://github.com/MozillaSecurity/FuzzManager
+
 # Get deployment key from TC
 mkdir -p .ssh
 set +x
