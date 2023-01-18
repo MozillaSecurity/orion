@@ -16,6 +16,11 @@ source ~/.local/bin/common.sh
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
+pushd /src/fuzzmanager >/dev/null
+  retry git fetch -q --depth 1 --no-tags origin master
+  git reset --hard origin/master
+popd >/dev/null
+
 # Get fuzzmanager configuration from TC
 get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 

@@ -74,6 +74,9 @@ cat > td-agent-bit.conf << EOF
 EOF
 ./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf &
 
+# ensure we use the latest FM
+retry pip install git+https://github.com/MozillaSecurity/FuzzManager
+
 # Get fuzzmanager configuration from TC
 set +x
 retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
