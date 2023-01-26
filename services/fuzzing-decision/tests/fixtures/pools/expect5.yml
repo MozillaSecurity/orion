@@ -31,3 +31,4 @@ macros:
   ENVVAR5: "xyz"
 run_as_admin: false
 gpu: false
+demand: false

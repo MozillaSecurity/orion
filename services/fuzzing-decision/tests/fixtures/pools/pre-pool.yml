@@ -1,5 +1,6 @@
 cloud: gcp
 scopes: []
+demand: false
 disk_size: 10g
 cycle_time: 1h
 max_run_time: 1h

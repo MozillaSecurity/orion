@@ -38,6 +38,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "cores_per_task": int,
         "cpu": str,
         "cycle_time": (int, str),
+        "demand": bool,
         "disk_size": (int, str),
         "gpu": bool,
         "imageset": str,
@@ -197,13 +198,13 @@ class MachineTypes:
             if (
                 spec["cpu"] == min_cpu
                 and (spec["ram"] / spec["cpu"]) >= min_ram_per_cpu
-            ):
                 # metal: false only means metal is not *required*
                 #   but it will still be allowed in results
-                if not metal or (metal and spec.get("metal", False)):
-                    # gpu: must be an exact match
-                    if gpu == spec.get("gpu", False):
-                        yield name
+                and (not metal or (metal and spec.get("metal", False)))
+                # gpu: must be an exact match
+                and gpu == spec.get("gpu", False)
+            ):
+                yield name
 
 
 class CommonPoolConfiguration(abc.ABC):
@@ -219,6 +220,7 @@ class CommonPoolConfiguration(abc.ABC):
         cores_per_task: number of cores to be allocated per task
         cpu: cpu architecture (eg. x64/arm64)
         cycle_time: schedule for running this pool in seconds
+        demand: whether an on-demand instance is required (vs. spot/preemptible)
         disk_size: disk size in GB
         gpu: whether or not the target requires to be run with a GPU
         imageset: imageset name in community-tc-config/config/imagesets.yml
@@ -329,6 +331,7 @@ class CommonPoolConfiguration(abc.ABC):
 
         self.container = data.get("container")
         self.cores_per_task = data.get("cores_per_task")
+        self.demand = data.get("demand")
         self.imageset = data.get("imageset")
         self.gpu = data.get("gpu")
         self.metal = data.get("metal")
@@ -563,6 +566,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "cpu",
             "cloud",
             "cycle_time",
+            "demand",
             "gpu",
             "imageset",
             "metal",
@@ -587,6 +591,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "cores_per_task",
             "cpu",
             "cycle_time",
+            "demand",
             "disk_size",
             "gpu",
             "imageset",
@@ -688,6 +693,7 @@ class PoolConfigMap(CommonPoolConfiguration):
             "cores_per_task",
             "cpu",
             "cycle_time",
+            "demand",
             "disk_size",
             "gpu",
             "imageset",

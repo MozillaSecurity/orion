@@ -27,3 +27,4 @@ macros:
   ENVVAR3: mixin-var
 run_as_admin: false
 gpu: false
+demand: false

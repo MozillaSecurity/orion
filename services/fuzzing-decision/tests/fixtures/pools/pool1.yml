@@ -24,3 +24,4 @@ macros:
   ENVVAR2: 789abc
 run_as_admin: false
 gpu: false
+demand: false
