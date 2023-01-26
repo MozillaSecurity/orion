@@ -25,6 +25,7 @@ class Provider(ABC):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
+        demand: bool,
     ) -> List[Dict[str, Any]]:
         raise NotImplementedError()
 
@@ -111,12 +112,13 @@ class AWS(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
+        demand: bool,
     ) -> List[Dict[str, Any]]:
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)
 
-        return [
+        result: List[Dict[str, Any]] = [
             {
                 "capacityPerInstance": capacity,
                 "region": region_name,
@@ -129,8 +131,6 @@ class AWS(Provider):
                         region["security_groups"]["no-inbound"]
                     ],
                     "InstanceType": instance,
-                    # Always use spot instances
-                    "InstanceMarketOptions": {"MarketType": "spot"},
                 },
                 "workerConfig": worker_config,
             }
@@ -139,6 +139,10 @@ class AWS(Provider):
             for az, subnet in region["subnets"].items()
             if region_name in amis and az not in az_blacklist
         ]
+        if not demand:
+            for config in result:
+                config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
+        return result
 
 
 class Static(Provider):
@@ -153,6 +157,7 @@ class Static(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
+        demand: bool,
     ) -> List[Dict[str, Any]]:
         return []
 
@@ -177,6 +182,7 @@ class GCP(Provider):
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
         disk_size: Union[int, str],
         platform: str,
+        demand: bool,
     ) -> List[Dict[str, Any]]:
 
         # Load source image
@@ -187,7 +193,7 @@ class GCP(Provider):
         source_image = self.imagesets[imageset]["gcp"]["image"]
         worker_config = self.get_worker_config(imageset, platform)
 
-        return [
+        result = [
             {
                 "capacityPerInstance": capacity,
                 "machineType": f"zones/{zone}/machineTypes/{instance}",
@@ -213,3 +219,12 @@ class GCP(Provider):
             for zone in zones
             if zone not in zone_blacklist
         ]
+        if not demand:
+            for config in result:
+                config["scheduling"].update(
+                    {
+                        "provisioningModel": "SPOT",
+                        "instanceTerminationAction": "DELETE",
+                    }
+                )
+        return result

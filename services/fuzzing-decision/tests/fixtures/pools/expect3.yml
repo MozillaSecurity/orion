@@ -28,3 +28,4 @@ macros:
   ENVVAR4: "456"
 run_as_admin: false
 gpu: false
+demand: false

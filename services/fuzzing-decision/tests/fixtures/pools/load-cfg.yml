@@ -14,3 +14,4 @@ container: test
 platform: test
 run_as_admin: false
 gpu: false
+demand: false

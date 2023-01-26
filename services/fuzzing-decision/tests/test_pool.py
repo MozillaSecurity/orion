@@ -162,11 +162,13 @@ def _get_expected_role(
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
+@pytest.mark.parametrize("demand", [True, False])
 def test_aws_resources(
     env: Optional[Dict[str, str]],
     mock_clouds: Dict[str, Provider],
     mock_machines: MachineTypes,
     platform: str,
+    demand: bool,
 ) -> None:
 
     conf = PoolConfiguration(
@@ -178,6 +180,7 @@ def test_aws_resources(
             "cores_per_task": 2,
             "cpu": "arm64",
             "cycle_time": "12h",
+            "demand": demand,
             "disk_size": "120g",
             "gpu": False,
             "imageset": "generic-worker-A",
@@ -207,7 +210,6 @@ def test_aws_resources(
                     "capacityPerInstance": 1,
                     "launchConfig": {
                         "ImageId": "ami-1234",
-                        "InstanceMarketOptions": {"MarketType": "spot"},
                         "InstanceType": "a2",
                         "Placement": {"AvailabilityZone": "us-west-1a"},
                         "SecurityGroupIds": ["sg-A"],
@@ -231,6 +233,9 @@ def test_aws_resources(
         "providerId": "community-tc-workers-aws",
         "workerPoolId": f"proj-fuzzing/{platform}-test",
     }
+    if not demand:
+        for config in expected["config"]["launchConfigs"]:
+            config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
     if platform == "linux":
         expected["config"]["lifecycle"] = {
             "registrationTimeout": 900,
@@ -272,11 +277,13 @@ def test_aws_resources(
 
 
 @pytest.mark.usefixtures("appconfig")
+@pytest.mark.parametrize("demand", [True, False])
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(
     env: Optional[Dict[str, str]],
     mock_clouds: Dict[str, Provider],
     mock_machines: MachineTypes,
+    demand: bool,
 ) -> None:
     conf = PoolConfiguration(
         "test",
@@ -287,6 +294,7 @@ def test_gcp_resources(
             "cores_per_task": 2,
             "cpu": "x64",
             "cycle_time": "12h",
+            "demand": demand,
             "disk_size": "120g",
             "gpu": False,
             "imageset": "docker-worker",
@@ -308,7 +316,7 @@ def test_gcp_resources(
     assert len(resources) == 3
     pool, hook, role = resources
 
-    assert pool.to_json() == {
+    expected: Dict[str, Any] = {
         "config": {
             "launchConfigs": [
                 {
@@ -411,6 +419,15 @@ def test_gcp_resources(
         "providerId": "community-tc-workers-google",
         "workerPoolId": "proj-fuzzing/linux-test",
     }
+    if not demand:
+        for config in expected["config"]["launchConfigs"]:
+            config["scheduling"].update(
+                {
+                    "provisioningModel": "SPOT",
+                    "instanceTerminationAction": "DELETE",
+                }
+            )
+    assert pool.to_json() == expected
 
     # Update env in valid hook
     valid_hook = _get_expected_hook()
@@ -491,6 +508,7 @@ def test_tasks(
             "cores_per_task": 1,
             "cpu": "x64",
             "cycle_time": "1h",
+            "demand": False,
             "disk_size": "10g",
             "gpu": False,
             "imageset": "anything",
@@ -730,6 +748,7 @@ def test_flatten(pool_path: Path) -> None:
     assert pool.cores_per_task == expect.cores_per_task
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
+    assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
     assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
@@ -765,6 +784,7 @@ def test_pool_map() -> None:
     assert cfg_map.cores_per_task == expect.cores_per_task
     assert cfg_map.cpu == expect.cpu
     assert cfg_map.cycle_time == expect.cycle_time
+    assert cfg_map.demand == expect.demand
     assert cfg_map.disk_size == expect.disk_size
     assert cfg_map.gpu == expect.gpu
     assert cfg_map.imageset == expect.imageset
@@ -790,6 +810,7 @@ def test_pool_map() -> None:
     assert pool.cores_per_task == expect.cores_per_task
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
+    assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
     assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
@@ -862,6 +883,7 @@ def test_cycle_crons() -> None:
             "cores_per_task": 1,
             "cpu": "x64",
             "cycle_time": "6h",
+            "demand": False,
             "disk_size": "10g",
             "gpu": False,
             "imageset": "anything",
