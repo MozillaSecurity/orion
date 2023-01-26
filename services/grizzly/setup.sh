@@ -31,7 +31,7 @@ EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./taskcluster.sh
 
 # shellcheck source=recipes/linux/dbgsyms.sh
-source ./dbgsyms.sh
+# source ./dbgsyms.sh
 
 # packages without recommends (or *wanted* recommends)
 # TODO: we should expand recommends and just have one list
@@ -81,32 +81,33 @@ packages_with_recommends=(
   xvfb
 )
 
-dbgsym_packages=(
-  libcairo2
-  libegl1
-  libegl-mesa0
-  libgl1
-  libglib2.0-0
-  libgl1-mesa-dri
-  libglapi-mesa
-  libglu1-mesa
-  libglvnd0
-  libglx-mesa0
-  libglx0
-  libgtk-3-0
-  libosmesa6
-  libwayland-egl1
-  mesa-va-drivers
-  mesa-vdpau-drivers
-  mesa-vulkan-drivers
-)
+# dbgsym_packages=(
+#   libcairo2
+#   libegl1
+#   libegl-mesa0
+#   libgl1
+#   libglib2.0-0
+#   libgl1-mesa-dri
+#   libglapi-mesa
+#   libglu1-mesa
+#   libglvnd0
+#   libglx-mesa0
+#   libglx0
+#   libgtk-3-0
+#   libosmesa6
+#   libwayland-egl1
+#   mesa-va-drivers
+#   mesa-vdpau-drivers
+#   mesa-vulkan-drivers
+# )
 
 sys-embed "${packages_with_recommends[@]}"
 retry apt-get install -y -qq "${packages[@]}"
 apt-get remove -y gvfs  # see https://bugzilla.mozilla.org/show_bug.cgi?id=1682934
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
-sys-embed-dbgsym "${dbgsym_packages[@]}"
+# disabled 2023/01/26 because of repo sync. retry with enabled asap
+# sys-embed-dbgsym "${dbgsym_packages[@]}"
 
 retry pip3 install \
   /src/rwait \
