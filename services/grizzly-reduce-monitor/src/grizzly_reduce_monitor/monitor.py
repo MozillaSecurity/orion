@@ -108,6 +108,7 @@ def _fuzzmanager_get_crashes(
             {
                 "op": "AND",
                 "crashentry__tool__name": tool,
+                "doNotReduce": False,
             }
         ):
             if bucket["best_quality"] in {
