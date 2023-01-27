@@ -12,7 +12,7 @@ payload:
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
-    SKIP_DOCKER: ${skip_docker}
+    SKIP_DOCKER: "${skip_docker}"
     TASK_INDEX: ${task_index}
     TASKCLUSTER_SECRET: "${docker_secret}"
   features:
