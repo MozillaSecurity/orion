@@ -61,13 +61,18 @@ timeout -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh || :
 
 # %<---[Coverage]-------------------------------------------------------------
 
+retry-curl --compressed "https://hg.mozilla.org/mozilla-central/archive/$REVISION.zip" -o "$REVISION.zip"
+unzip "$REVISION.zip"
+
 # Collect coverage count data.
 RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     -t coveralls+ \
     --commit-sha "$REVISION" \
     --token NONE \
     --guess-directory-when-missing \
+    --ignore-not-existing \
     -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
+    -s "./mozilla-central-$REVISION" \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.
