@@ -30,17 +30,17 @@ git init gr.css.reports
 (
   cd gr.css.reports
   git remote add origin "${GIT_REPO-git@gr-css-reports:MozillaSecurity/gr.css.reports}"
-  retry git fetch -q --depth=10 origin v2
-  git -c advice.detachedHead=false checkout origin/v2
+  retry git fetch -q --depth=10 origin main
+  git -c advice.detachedHead=false checkout origin/main
   # Ignore the lockfile when installing both to ensure we have the latest
   # version of gr.css and gr.css.generator
   retry npm i --no-package-lock --no-progress --no-save
-  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css@next
+  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css
   python3 -m prefpicker browser-fuzzing.yml prefs.js
   npx gr.css ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
     git commit -m "chore(grammar): update grammar" src/grammar.json
-    retry git push origin HEAD:v2
+    retry git push origin HEAD:main
   fi
 )> /live.log 2>&1
