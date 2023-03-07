@@ -135,7 +135,6 @@ class CronScheduler(Scheduler):
         # clone the git repo
         repo = GitRepo(args.clone_repo, args.push_branch, args.push_branch)
         try:
-
             # create the scheduler
             sched = cls(
                 repo,

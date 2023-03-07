@@ -506,7 +506,6 @@ class Scheduler:
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
         try:
-
             # create the scheduler
             sched = cls(
                 evt,

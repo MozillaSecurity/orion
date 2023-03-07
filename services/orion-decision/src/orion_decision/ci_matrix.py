@@ -19,7 +19,7 @@ from . import Taskcluster
 LANGUAGES = ["node", "python"]
 PLATFORMS = ["linux", "windows", "macos"]
 VERSIONS = {
-    ("node", "linux"): ["14", "16"],
+    ("node", "linux"): ["14", "16", "18"],
     ("python", "linux"): ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"],
     ("python", "windows"): ["3.8", "3.9", "3.10"],
     ("python", "macos"): ["3.8", "3.9", "3.10"],
@@ -27,6 +27,7 @@ VERSIONS = {
 IMAGES = {
     ("node", "linux", "14"): "ci-node-14",
     ("node", "linux", "16"): "ci-node-16",
+    ("node", "linux", "18"): "ci-node-18",
     ("python", "linux", "3.6"): "ci-py-36",
     ("python", "linux", "3.7"): "ci-py-37",
     ("python", "linux", "3.8"): "ci-py-38",
@@ -173,7 +174,11 @@ class MatrixJob:
         assert isinstance(
             self.require_previous_stage_pass, bool
         ), "`require_previous_stage_pass` must be a boolean"
-        assert (self.language, self.platform, self.version,) in IMAGES, (
+        assert (
+            self.language,
+            self.platform,
+            self.version,
+        ) in IMAGES, (
             f"no image available for language '{self.language}', "
             f"platform '{self.platform}', version '{self.version}'"
         )
