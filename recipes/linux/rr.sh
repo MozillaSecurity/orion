@@ -66,7 +66,7 @@ case "${1-install}" in
       popd >/dev/null
       mkdir obj
       pushd obj >/dev/null
-        CC=clang CXX=clang++ cmake -G Ninja -Dstrip=TRUE ../rr
+        CC=clang CXX=clang++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -Dstrip=TRUE ../rr
         cmake --build .
         cpack -G DEB
         dpkg -i dist/rr-*.deb
