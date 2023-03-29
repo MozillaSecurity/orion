@@ -36,7 +36,7 @@ rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
 ./msys64/usr/bin/minidump-stackwalk.exe --version
 
 # get python
-VER=3.10.8
+VER=3.10.10
 retry nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
@@ -45,6 +45,13 @@ rm -rf python
 PATH="$PWD/msys64/opt/python:$PWD/msys64/opt/python/Scripts:$PATH"
 which python
 python -V
+
+# install python dbg syms
+for pkg in core exe lib; do
+  retry_curl -O "https://www.python.org/ftp/python/$VER/amd64/${pkg}_pdb.msi"
+  msiexec /i "${pkg}_pdb.msi" "TARGETDIR=$(cygpath -aw msys64/opt/python)" /quiet
+  rm "${pkg}_pdb.msi"
+done
 
 # patch pip to workaround https://github.com/pypa/pip/issues/4368
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
@@ -74,8 +81,22 @@ retry python -m pip install --upgrade --force-reinstall pip
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
+# get windows debugging tools
+retry_curl "https://go.microsoft.com/fwlink/?linkid=2173743" -o winsdksetup.exe
+if ! ./winsdksetup /features OptionId.WindowsDesktopDebugger /quiet /installpath "$(cygpath -aw msys64/opt)"; then
+  # shellcheck disable=SC2012
+  cat "$(ls -tr "$TEMP/WindowsSDK" | tail -n1)"
+  exit 1
+fi
+
+# install pyext
+retry_curl "https://github.com/SeanCline/PyExt/releases/download/PyExt-v0.1.57/PyExt-x64-Release.zip" -o pyext.zip
+7z x pyext.zip
+mv x64/Release/pyext.dll msys64/opt/Debuggers/x64/winext/
+rm -rf x64 pyext.zip
+
 # get node.js
-VER=16.18.1
+VER=18.14.2
 retry_curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip

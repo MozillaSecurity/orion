@@ -1,6 +1,6 @@
 #!/bin/sh
 set -e -x
-PATH="$PWD/msys64/opt/node:$PATH"
+PATH="$PWD/msys64/opt/Debuggers/x64:$PWD/msys64/opt/node:$PATH"
 
 retry () {
   i=0
