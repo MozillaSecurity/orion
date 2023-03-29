@@ -818,7 +818,7 @@ def test_pool_map() -> None:
     assert pool.max_run_time == expect.max_run_time
     assert pool.metal == expect.metal
     assert pool.minimum_memory_per_core == expect.minimum_memory_per_core
-    assert pool.name == f"{expect.name} ({cfg_map.name})"
+    assert pool.name == f"{expect.name}"
     assert pool.parents == ["pool1"]
     assert pool.platform == expect.platform
     assert pool.preprocess == expect.preprocess

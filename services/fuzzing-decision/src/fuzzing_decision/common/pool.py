@@ -729,8 +729,7 @@ class PoolConfigMap(CommonPoolConfiguration):
             data["schedule_start"] = data["schedule_start"].isoformat()
         # override fields
         data["parents"] = [parent]
-        name = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").name
-        data["name"] = f"{name} ({self.name})"
+        data["name"] = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").name
         return self.RESULT_TYPE(pool_id, data, self.base_dir)
 
     def iterpools(self) -> Generator[CommonPoolConfiguration, None, None]:
