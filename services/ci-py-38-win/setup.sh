@@ -60,6 +60,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 retry python -m pip install tox
 retry python -m pip install poetry
 retry python -m pip install pre-commit
+retry_curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
 
 rm -rf \
   msys64/mingw64/share/doc/ \
