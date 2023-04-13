@@ -39,6 +39,8 @@ py_packages=(
 )
 
 retry pip install "${py_packages[@]}"
+retry-curl https://uploader.codecov.io/latest/linux/codecov -o /usr/local/bin/codecov
+chmod +x /usr/local/bin/codecov
 
 #### Install recipes
 
