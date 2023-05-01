@@ -155,9 +155,9 @@ FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
   if [[ -n "$XPCRT" ]]
   then
-    xvfb-run timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+    xvfb-run timeout --foreground -s 2 ${TARGET_TIME} guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
   else
-    timeout -s 2 ${TARGET_TIME} python3 ./fuzzmanager/misc/afl-libfuzzer/afl-libfuzzer-daemon.py "$@" || [[ $? -eq 124 ]]
+    timeout --foreground -s 2 ${TARGET_TIME} guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
   fi
 
 }
