@@ -76,7 +76,7 @@ EOF
   fi
   # These sysctls shouldn't be necessary for libFuzzer
   # sysctl --load /etc/sysctl.d/60-fuzzos.conf
-  su worker -c "$0"
+  su worker -s "$0"
 else
   if [[ $COVERAGE ]]
   then
