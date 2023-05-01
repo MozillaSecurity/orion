@@ -74,6 +74,13 @@ EOF
 
     trap onexit EXIT
   fi
+
+  cd /src/guided-fuzzing-daemon
+  retry git fetch origin main
+  git reset --hard origin/main
+  python3 setup.py install
+  cd -
+
   # These sysctls shouldn't be necessary for libFuzzer
   # sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -s "$0"

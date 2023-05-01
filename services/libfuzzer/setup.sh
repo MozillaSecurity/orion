@@ -104,7 +104,16 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
-retry pip3 install "git+https://github.com/MozillaSecurity/guided-fuzzing-daemon"
+mkdir -p /src
+git init /src/guided-fuzzing-daemon
+cd /src/guided-fuzzing-daemon
+git remote add origin "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
+retry git fetch origin main
+git checkout main
+cd -
+# install then uninstall so only dependencies remain
+retry pip3 install /src/guided-fuzzing-daemon
+pip3 uninstall -y guided-fuzzing-daemon
 
 /home/worker/.local/bin/cleanup.sh
 
