@@ -20,7 +20,6 @@ cd "${0%/*}"
 ./htop.sh
 ./fuzzfetch.sh
 ./prefpicker.sh
-EDIT=1 ./fuzzmanager.sh
 ./grcov.sh
 ./gsutil.sh
 ./fluentbit.sh
@@ -104,6 +103,8 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+
+retry pip3 install "git+https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 
 /home/worker/.local/bin/cleanup.sh
 
