@@ -18,4 +18,5 @@ apt-get autoremove --purge -y
 rm -rf /var/lib/apt/lists/* || echo "'rm -rf /var/lib/apt/lists/*' failed"
 rm -rf /var/log/* || echo "'rm -rf /var/log/*' failed"
 rm -rf /root/.cache/* || echo "'rm -rf /root/.cache/*' failed"
+rm -rf /root/.cargo/* || echo "'rm -rf /root/.cargo/*' failed"
 rm -rf /tmp/* || echo "'rm -rf /tmp/*' failed"
