@@ -17,26 +17,10 @@ case "${1-install}" in
   install)
     apt-install-auto \
       ca-certificates \
-      curl
+      cargo
 
-    if is-arm64; then
-      PLATFORM="aarch64-unknown-linux-gnu"
-    elif is-amd64; then
-      PLATFORM="x86_64-unknown-linux-gnu"
-    else
-      echo "unknown platform" >&2
-      exit 1
-    fi
-
-    TMPD="$(mktemp -d -p. grcov.XXXXXXXXXX)"
-    pushd "$TMPD" >/dev/null
-      LATEST_VERSION=$(get-latest-github-release "mozilla/grcov")
-      retry-curl -O "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-$PLATFORM.tar.bz2"
-      tar xf grcov-$PLATFORM.tar.bz2
-      install grcov /usr/local/bin/grcov
-      rm grcov grcov-$PLATFORM.tar.bz2
-    popd >/dev/null
-    rm -rf "$TMPD"
+    cargo install --root /usr grcov
+    strip /usr/bin/grcov
     ;;
   test)
     grcov --help
