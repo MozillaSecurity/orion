@@ -72,20 +72,6 @@ if [[ ! -d nspr ]]; then
 fi
 if [[ ! -d nss ]]; then
   retry hg clone -r "$NSS_TAG" https://hg.mozilla.org/projects/nss
-  patch -d nss -p 1 <<- "EOF"
-	diff -r 5c42853e23d7 lib/freebl/det_rng.c
-	--- a/lib/freebl/det_rng.c      Thu Nov 10 11:16:42 2022 +0100
-	+++ b/lib/freebl/det_rng.c      Fri Dec 02 21:39:40 2022 +0000
-	@@ -155,7 +155,7 @@
-	 }
-
-	 SECStatus
-	-PRNGTEST_Instantiate_Kat()
-	+PRNGTEST_Instantiate_Kat(const PRUint8 *entropy, unsigned int entropy_len, const PRUint8 *nonce, unsigned int nonce_len, const PRUint8 *personal_string, unsigned int ps_len)
-	 {
-	     return SECFailure;
-	 }
-	EOF
 fi
 
 # download corpus
