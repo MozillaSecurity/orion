@@ -22,6 +22,7 @@ packages=(
   jshon
   libc6-dev
   libffi-dev
+  libssl-dev
   make
   openssh-client
   patch
