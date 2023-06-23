@@ -25,10 +25,15 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
         gcc \
         python3-dev \
         python3-pip \
+        python3-venv \
         python3-wheel \
-    && retry python3 -m pip install /src/orion-decision \
+    && python3 -m venv /opt/orion-decision \
+    && existVenv="$(ls /opt/orion-decision/bin)" \
+    && retry /opt/orion-decision/bin/pip install /src/orion-decision \
     && apt-mark auto '.*' > /dev/null \
     && for p in $savedAptMark; do apt-mark manual "$p"; done \
+    && venvInstalled="$(echo "$existVenv" "$(ls /opt/orion-decision/bin)" | tr ' ' '\n' | sort | uniq -u)" \
+    && for b in $venvInstalled; do mv "/opt/orion-decision/bin/$b" /usr/local/bin; done \
     && find /usr/local -type f -executable -not \( -name '*tkinter*' \) -exec ldd '{}' ';' \
         | awk '/=>/ { print $(NF-1) }' \
         | sort -u \
