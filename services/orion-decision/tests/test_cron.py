@@ -3,7 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion cron scheduler"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import getLogger
 from pathlib import Path
 from typing import Set
@@ -75,6 +75,7 @@ def test_cron_mark_rebuild(
             if f".{svc}." in path:
                 LOG.debug("%s is expired", path)
                 return {
+                    "deadline": (now - timedelta(days=7)).isoformat(),
                     "expires": now.isoformat(),
                 }
         for svc in missing_svcs:
@@ -83,6 +84,7 @@ def test_cron_mark_rebuild(
                 raise TaskclusterRestFailure("404", None)
         LOG.debug("%s is not expired", path)
         return {
+            "deadline": now.isoformat(),
             "expires": (now + CRON_PERIOD * 2).isoformat(),
         }
 
