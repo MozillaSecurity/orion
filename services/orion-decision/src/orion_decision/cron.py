@@ -88,6 +88,7 @@ class CronScheduler(Scheduler):
         These will have their `dirty` attribute set, which is used to create tasks.
         """
         idx = Taskcluster.get_service("index")
+        queue = Taskcluster.get_service("queue")
         # for each service, check taskcluster index
         #   any service that would expire before next run, should be rebuilt
         assert self.now is not None
@@ -108,6 +109,7 @@ class CronScheduler(Scheduler):
                 )
                 rebuild = True
             else:
+                result = queue.task(result["taskId"])
                 if (
                     min(
                         isoparse(result["deadline"]) + ARTIFACTS_EXPIRE,

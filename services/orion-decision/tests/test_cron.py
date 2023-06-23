@@ -68,27 +68,44 @@ def test_cron_mark_rebuild(
     """test mark_services_for_rebuild"""
     now = datetime.utcnow()
     taskcluster = mocker.patch("orion_decision.cron.Taskcluster", autospec=True)
-    index = taskcluster.get_service.return_value
+    index = mocker.Mock()
+    queue = mocker.Mock()
+
+    def _get_service(name):
+        return {
+            "index": index,
+            "queue": queue,
+        }[name]
+
+    taskcluster.get_service.side_effect = _get_service
+    queue = taskcluster.get_service.return_value
 
     def _find_task(path):
         for svc in expired_svcs:
             if f".{svc}." in path:
                 LOG.debug("%s is expired", path)
-                return {
-                    "deadline": (now - timedelta(days=7)).isoformat(),
-                    "expires": now.isoformat(),
-                }
+                return {"taskId": "expired"}
         for svc in missing_svcs:
             if f".{svc}." in path:
                 LOG.debug("%s is 404", path)
                 raise TaskclusterRestFailure("404", None)
         LOG.debug("%s is not expired", path)
+        return {"taskId": "unexpired"}
+
+    def _get_task(task_id):
         return {
-            "deadline": now.isoformat(),
-            "expires": (now + CRON_PERIOD * 2).isoformat(),
-        }
+            "expired": {
+                "deadline": (now - timedelta(days=7)).isoformat(),
+                "expires": now.isoformat(),
+            },
+            "unexpired": {
+                "deadline": now.isoformat(),
+                "expires": (now + CRON_PERIOD * 2).isoformat(),
+            },
+        }[task_id]
 
     index.findTask.side_effect = _find_task
+    queue.task.side_effect = _get_task
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
