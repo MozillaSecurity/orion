@@ -11,7 +11,7 @@ from typing import Optional
 from dateutil.parser import isoparse
 from taskcluster.exceptions import TaskclusterRestFailure
 
-from . import CRON_PERIOD, Taskcluster
+from . import ARTIFACTS_EXPIRE, CRON_PERIOD, Taskcluster
 from .git import GitRepo
 from .orion import Services
 from .scheduler import Scheduler
@@ -108,7 +108,13 @@ class CronScheduler(Scheduler):
                 )
                 rebuild = True
             else:
-                if isoparse(result["expires"]) < next_run:
+                if (
+                    min(
+                        isoparse(result["deadline"]) + ARTIFACTS_EXPIRE,
+                        isoparse(result["expires"]),
+                    )
+                    < next_run
+                ):
                     LOG.warning(
                         "%s %s is dirty because %s expires %s",
                         type(svc).__name__,
