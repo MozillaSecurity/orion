@@ -22,7 +22,11 @@ pushd /src/fuzzmanager >/dev/null
 popd >/dev/null
 
 # Get fuzzmanager configuration from TC
-get-tc-secret fuzzmanagerconf .fuzzmanagerconf
+if [[ "$ADAPTER" = "reducer" ]]; then
+  get-tc-secret fuzzmanagerconf-rw .fuzzmanagerconf
+else
+  get-tc-secret fuzzmanagerconf .fuzzmanagerconf
+fi
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
