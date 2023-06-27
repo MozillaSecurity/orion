@@ -93,9 +93,11 @@ dbgsym_packages=(
   libglvnd0
   libglx-mesa0
   libglx0
-  libgtk-3-0
+# 2023-06-27: disabled because temporarily missing from dbgsym repo
+#  libgtk-3-0
   libosmesa6
-  libwayland-egl1
+# 2023-06-27: disabled because temporarily missing from dbgsym repo
+#  libwayland-egl1
   mesa-va-drivers
   mesa-vdpau-drivers
   mesa-vulkan-drivers
