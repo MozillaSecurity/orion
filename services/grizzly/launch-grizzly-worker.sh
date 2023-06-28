@@ -33,6 +33,12 @@ EOF
 setup-fuzzmanager-hostname
 chmod 0600 .fuzzmanagerconf
 
+# Get Cloud Storage credentials
+if [[ "$ADAPTER" != "reducer" ]]; then
+  mkdir -p ~/.config/gcloud
+  get-tc-secret google-cloud-storage-creds ~/.config/gcloud/application_default_credentials.json raw
+fi
+
 # only clone if it wasn't already mounted via docker run -v
 if [ ! -d /src/bearspray ]; then
   update-ec2-status "Setup: cloning bearspray"

@@ -107,6 +107,14 @@ echo "Using '$name' as hostname." >&2
 echo "clientid = $name" >>.fuzzmanagerconf
 chmod 0600 .fuzzmanagerconf
 
+# Set up Google Cloud Logging creds
+if [ "$ADAPTER" != "reducer" ]; then
+  mkdir -p ~/.config/gcloud
+  set +x
+  retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('$HOME/.config/gcloud/application_default_credentials.json','w'))"
+  set -x
+fi
+
 status "Setup: cloning bearspray"
 
 # ensure we use the latest FM
