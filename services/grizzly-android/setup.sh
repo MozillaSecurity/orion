@@ -25,7 +25,10 @@ apt-install-auto python3-yaml zstd
 	with open("clang.yml") as fd:
 	  data = yaml.load(fd, Loader=yaml.CLoader)
 	for tc, defn in data.items():
-	  if defn.get("run", {}).get("toolchain-alias", {}).get("by-project", {}).get("default") == "linux64-clang":
+	  alias = defn.get("run", {}).get("toolchain-alias", "")
+	  if isinstance(alias, dict):
+	    alias = alias.get("by-project", {}).get("default")
+	  if alias == "linux64-clang":
 	    print(tc)
 	    break
 	else:
