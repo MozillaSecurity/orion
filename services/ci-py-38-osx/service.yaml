@@ -1,5 +1,5 @@
 name: ci-py-38-osx
 type: homebrew
-base: https://github.com/Homebrew/brew/archive/refs/tags/3.6.9.tar.gz
+base: https://github.com/Homebrew/brew/archive/refs/tags/4.0.26.tar.gz
 force_dirty:
   - orion-decision

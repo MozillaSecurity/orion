@@ -3,7 +3,7 @@ set -e -x
 
 retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
 
-brew install --force-bottle openssl@1.1 python@3.9
+brew install --force-bottle openssl@3 python@3.9
 chmod +w "$HOMEBREW_PREFIX/lib/python3.9/site-packages"
 # shellcheck disable=SC2016
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python@3.9/libexec/bin:${HOMEBREW_PREFIX}/opt/python@3.9/bin:${HOMEBREW_PREFIX}/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/bin:,' "$HOMEBREW_PREFIX/Library/Homebrew/cmd/shellenv.sh"
@@ -13,11 +13,10 @@ brew install --force-bottle p7zip zstd
 brew install --force-bottle fluent-bit
 brew install --force-bottle apr-util gettext subversion
 
-brew install --force-bottle node@14
+brew install --force-bottle node@16
 # shellcheck disable=SC2016
-sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/node@14/bin:,' "$HOMEBREW_PREFIX/Library/Homebrew/cmd/shellenv.sh"
-PATH="$HOMEBREW_PREFIX/opt/node@14/bin:$PATH"
-retry_curl https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
+sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/node@16/bin:,' "$HOMEBREW_PREFIX/Library/Homebrew/cmd/shellenv.sh"
+PATH="$HOMEBREW_PREFIX/opt/node@16/bin:$PATH"
 
 # configure pip
 mkdir -p pip
