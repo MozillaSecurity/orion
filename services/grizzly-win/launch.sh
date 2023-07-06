@@ -120,7 +120,7 @@ fi
 if [ "$ADAPTER" != "reducer" ]; then
   mkdir -p "$APPDATA/gcloud"
   set +x
-  retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('$APPDATA/gcloud/application_default_credentials.json','w'))"
+  retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
   set -x
 fi
 
