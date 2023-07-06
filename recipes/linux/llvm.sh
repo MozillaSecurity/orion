@@ -46,6 +46,7 @@ case "${1-install}" in
 
     install-auto-arg \
       "clang-$VERSION" \
+      "llvm-$VERSION" \
       "lld-$VERSION" \
       "lldb-$VERSION" \
       "libfuzzer-$VERSION-dev" \
