@@ -6,7 +6,7 @@ FROM alpine:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ARG TASKBOOT_VER="0.3.5"
+ARG TASKBOOT_VER="0.3.6"
 
 COPY services/orion-builder /src/orion-builder
 RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; } \
