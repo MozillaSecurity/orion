@@ -11,7 +11,8 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
-from jsonschema import RefResolver, validate
+from jsonschema import validate
+from referencing import Registry, Resource
 from yaml import safe_load as yaml_load
 
 from . import Taskcluster
@@ -39,21 +40,33 @@ IMAGES = {
     ("python", "macos", "3.9"): "ci-py-39-osx",
     ("python", "macos", "3.10"): "ci-py-310-osx",
 }
-SCHEMA_CACHE: Dict[str, Any] = {}
 LOG = getLogger(__name__)
 
 
+def _load_schema_cache() -> Registry:
+    resources = []
+    for path in (Path(__file__).parent / "schemas").glob("*.yaml"):
+        schema = Resource.from_contents(yaml_load(path.read_text()))
+        uri = schema.id()
+        assert uri is not None
+        resources.append((uri, schema))
+    return Registry().with_resources(resources)
+
+
+SCHEMA_CACHE = _load_schema_cache()
+
+
 def _schema_by_name(name: str):
-    for schema in SCHEMA_CACHE.values():
-        if schema["title"] == name:
-            return schema
+    for uri in SCHEMA_CACHE:
+        schema = SCHEMA_CACHE[uri]
+        if schema.contents["title"] == name:
+            return schema.contents
     raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
 
 
 def _validate_schema_by_name(instance: Union[Dict[str, str], str], name: str):
     schema = _schema_by_name(name)
-    resolver = RefResolver(None, referrer=None, store=SCHEMA_CACHE)
-    return validate(instance=instance, schema=schema, resolver=resolver)
+    return validate(instance=instance, schema=schema, registry=SCHEMA_CACHE)
 
 
 class MatrixJob:
@@ -741,12 +754,6 @@ class CIMatrix:
             yield result
 
 
-def _load_schema_cache() -> None:
-    for path in (Path(__file__).parent / "schemas").glob("*.yaml"):
-        schema = yaml_load(path.read_text())
-        SCHEMA_CACHE[schema["$id"]] = schema
-
-
 def _validate_globals() -> None:
     # validate VERSIONS
     valid_image_keys: List[Tuple[str, str, str]] = []
@@ -765,7 +772,5 @@ def _validate_globals() -> None:
     )
 
 
-_load_schema_cache()
-del _load_schema_cache
 _validate_globals()
 del _validate_globals
