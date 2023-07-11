@@ -13,7 +13,7 @@ omit = [
 ]
 
 [tool.black]
-target-version = ["py36"]
+target-version = ["py38"]
 
 [tool.isort]
 known_first_party = "fuzzing_decision"
