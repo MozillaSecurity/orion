@@ -56,11 +56,11 @@ find "$HOMEBREW_PREFIX" -path '*/share/doc' -exec rm -rf '{}' +
 find "$HOMEBREW_PREFIX" -path '*/share/info' -exec rm -rf '{}' +
 find "$HOMEBREW_PREFIX" -path '*/share/man' -exec rm -rf '{}' +
 
-cp orion/scripts/relocate_homebrew.sh "$HOMEBREW_PREFIX/bin/"
+cp orion/scripts/relocate_homebrew "$HOMEBREW_PREFIX/bin/"
 cp orion/services/grizzly-macos/launch.sh .
 
 cp -r orion/services/fuzzing-decision fuzzing-decision
 python -m pip install ./fuzzing-decision
 
-relocate_homebrew.sh
+relocate_homebrew
 tar -jcvf homebrew.tar.bz2 homebrew pip launch.sh
