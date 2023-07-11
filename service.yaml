@@ -1,0 +1,7 @@
+name: orion
+type: test
+tests:
+  - name: lint
+    type: tox
+    image: ci-py-38
+    toxenv: lint

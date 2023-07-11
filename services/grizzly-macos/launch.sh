@@ -7,7 +7,7 @@ export NODE_EXTRA_CA_CERTS="$HOMEBREW_PREFIX/share/ca-certificates/cacert.pem"
 
 retry () {
   i=0
-  while [ $i -lt 9 ]
+  while [ "$i" -lt 9 ]
   do
     "$@" && return
     sleep 30

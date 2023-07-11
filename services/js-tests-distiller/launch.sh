@@ -65,7 +65,7 @@ rm -Rf tests
 TEST262_LIST=/home/ubuntu/LangFuzz/tools/tests/test262.list
 
 # This is a hack to extract include directives for jit-tests and convert them to jstests shell.js style
-(cd $JITTESTS && for f in `grep -rnl " include:" . | grep directives` ; do cp lib/`egrep -o 'include:[a-zA-Z0-9\.\-]+' $f | head -n1 | sed -e 's/include://'` `echo $f | sed -e 's/directives.txt//'`shell.js ; done)
+(cd $JITTESTS && grep -rnl " include:" . | grep directives | while read -r f; do cp "lib/$(grep -E -m1 -o 'include:[a-zA-Z0-9\.\-]+' "$f" | sed -e 's/include://')" "${f/directives.txt}shell.js" ; done)
 
 cp -R $JITTESTS $JSTESTS .
 

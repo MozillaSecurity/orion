@@ -92,7 +92,6 @@ class PoolLauncher(Workflow):
             # redirect stdout/stderr to a log file
             # not sure if the assertions would print
             with (self.log_dir / "live.log").open("w") as log:
-
                 if system() == "Windows":
                     sys.exit(
                         call(self.command, env=self.environment, stdout=log, stderr=log)

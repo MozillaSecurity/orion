@@ -4,7 +4,7 @@ PATH="$PWD/msys64/opt/node:$PATH"
 
 retry () {
   i=0
-  while [ $i -lt 9 ]
+  while [ "$i" -lt 9 ]
   do
     "$@" && return
     sleep 30

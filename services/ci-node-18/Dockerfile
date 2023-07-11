@@ -9,7 +9,7 @@ LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 ARG DEBIAN_FRONTEND=noninteractive
 
 COPY services/orion-decision /src/orion-decision
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         ca-certificates \
@@ -54,6 +54,6 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}
 USER worker
 WORKDIR /home/worker
 
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && mkdir .ssh \
     && retry ssh-keyscan github.com > .ssh/known_hosts

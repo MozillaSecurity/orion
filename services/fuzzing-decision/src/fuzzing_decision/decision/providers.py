@@ -184,7 +184,6 @@ class GCP(Provider):
         platform: str,
         demand: bool,
     ) -> List[Dict[str, Any]]:
-
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
         assert (

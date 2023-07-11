@@ -157,5 +157,5 @@ do
 done
 screen -S funfuzz -X screen ~/status.sh
 echo "[$(date -u -Iseconds)] waiting $TARGET_TIME"
-sleep $TARGET_TIME
+sleep "$TARGET_TIME"
 echo "[$(date -u -Iseconds)] $TARGET_TIME elapsed, exiting..."

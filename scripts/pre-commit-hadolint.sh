@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e -x -o pipefail
 
-URL="https://github.com/hadolint/hadolint/releases/download/v1.19.0/hadolint-Linux-x86_64"
-CHECKSUM="5099a932032f0d2c708529fb7739d4b2335d0e104ed051591a41d622fe4e4cc4"
+URL="https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64"
+CHECKSUM="56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010"
 HADOLINT=~/.cache/orion/hadolint
 
 function checksum () {
@@ -18,7 +18,7 @@ if [[ -e "$HADOLINT" ]]
 then
   if [[ "$(checksum)" != "$CHECKSUM" ]]
   then
-    retry-curl -z "$HADOLINT" -o "$HADOLINT" "$URL"
+    retry-curl -o "$HADOLINT" "$URL"
     [[ "$(checksum)" == "$CHECKSUM" ]]  # assert that checksum matches
     chmod +x "$HADOLINT"
   fi

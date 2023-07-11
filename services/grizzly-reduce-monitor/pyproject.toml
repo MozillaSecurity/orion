@@ -15,10 +15,6 @@ omit = [
     "*/.egg/*",
 ]
 
-[tool.isort]
-known_first_party = "grizzly_reduce_monitor"
-profile = "black"
-
 [[tool.mypy.overrides]]
 module = [
     "Reporter.*",
@@ -51,3 +47,23 @@ log_level = "DEBUG"
 filterwarnings = [
     "ignore:The 'warn' method is deprecated:DeprecationWarning:taskcluster",
 ]
+
+[tool.ruff]
+ignore = []
+line-length = 88
+select = [
+    # flake8
+    "E",
+    "F",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # includes yesqa
+    "RUF",
+]
+target-version = "py38"
+
+[tool.ruff.isort]
+known-first-party = ["grizzly_reduce_monitor"]
