@@ -1,5 +1,0 @@
-name: core
-arch:
-  amd64:
-    dockerfile: amd64/Dockerfile
-manifest: ["./scripts/docker-manifest.sh", "mozillasecurity", "core"]
