@@ -7,11 +7,10 @@ import slugid
 import yaml
 from pytest_mock import MockerFixture
 
-from fuzzing_decision.common.pool import MachineTypes
+from fuzzing_decision.common.pool import MachineTypes, parse_size
 from fuzzing_decision.common.pool import PoolConfigLoader as CommonPoolConfigLoader
 from fuzzing_decision.common.pool import PoolConfigMap as CommonPoolConfigMap
 from fuzzing_decision.common.pool import PoolConfiguration as CommonPoolConfiguration
-from fuzzing_decision.common.pool import parse_size
 from fuzzing_decision.decision.pool import (
     DOCKER_WORKER_DEVICES,
     PoolConfigLoader,
@@ -70,7 +69,6 @@ def test_machine_filters(
     gpu: bool,
     result: Union[List[Optional[str]], Type[KeyError]],
 ) -> None:
-
     if isinstance(result, list):
         assert (
             list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu)) == result
@@ -170,7 +168,6 @@ def test_aws_resources(
     platform: str,
     demand: bool,
 ) -> None:
-
     conf = PoolConfiguration(
         "test",
         {
@@ -572,7 +569,7 @@ def test_tasks(
             )
         )
         assert set(task["scopes"]) == set(
-            ["secrets:get:project/fuzzing/decision"] + scopes
+            ["secrets:get:project/fuzzing/decision", *scopes]
         )
         # scopes are already asserted above
         # - read the value for comparison instead of deleting the key, so the object is

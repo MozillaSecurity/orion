@@ -8,9 +8,8 @@ import sys
 from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
-from os import chdir
+from os import chdir, getenv
 from os import environ as os_environ
-from os import getenv
 from pathlib import Path
 from shutil import which
 from subprocess import run

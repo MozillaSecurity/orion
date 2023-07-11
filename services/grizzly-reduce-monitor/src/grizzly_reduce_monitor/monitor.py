@@ -133,7 +133,7 @@ def _fuzzmanager_get_crashes(
     )
 
     buckets_by_tool: Dict[str, List[str]] = {}
-    for (bucket, tool) in bucket_tools:
+    for bucket, tool in bucket_tools:
         buckets_by_tool.setdefault(tool, [])
         buckets_by_tool[tool].append(bucket)
     for tool, bucket_filter in buckets_by_tool.items():

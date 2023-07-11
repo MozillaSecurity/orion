@@ -97,7 +97,7 @@ class GitRepo:
         LOG.debug("calling: git %s", " ".join(str(arg) for arg in args))
         for _ in range(tries - 1):
             result = run(
-                ("git",) + args,
+                ("git", *args),
                 capture_output=True,
                 cwd=self.path,
                 text=True,
@@ -113,7 +113,7 @@ class GitRepo:
             sleep(RETRY_SLEEP)
         try:
             return run(
-                ("git",) + args,
+                ("git", *args),
                 check=True,
                 capture_output=True,
                 cwd=self.path,

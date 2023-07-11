@@ -15,10 +15,6 @@ omit = [
 [tool.black]
 target-version = ["py38"]
 
-[tool.isort]
-known_first_party = "fuzzing_decision"
-profile = "black"
-
 [[tool.mypy.overrides]]
 module = [
     "responses",
@@ -48,3 +44,23 @@ disable = [
 
 [tool.pytest.ini_options]
 log_level = "DEBUG"
+
+[tool.ruff]
+ignore = []
+line-length = 88
+select = [
+    # flake8
+    "E",
+    "F",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # includes yesqa
+    "RUF",
+]
+target-version = "py38"
+
+[tool.ruff.isort]
+known-first-party = ["fuzzing_decision"]

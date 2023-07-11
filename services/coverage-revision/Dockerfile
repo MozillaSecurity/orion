@@ -10,7 +10,7 @@ COPY base/linux/etc/pip.conf /etc/pip.conf
 
 WORKDIR /root
 
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
     && retry apk add --no-cache curl \
     && retry pip -q install fuzzfetch
 

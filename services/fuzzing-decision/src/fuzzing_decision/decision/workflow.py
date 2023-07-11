@@ -77,7 +77,6 @@ class Workflow(CommonWorkflow):
         self.community_config_dir = self.git_clone(**config["community_config"])
 
     def generate(self, resources, config: Dict[str, Any]) -> None:
-
         # Setup resources manager to track only fuzzing instances
         for pattern in self.build_resources_patterns():
             resources.manage(pattern)

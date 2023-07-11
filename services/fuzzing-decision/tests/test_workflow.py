@@ -13,7 +13,6 @@ fuzzing_config:
 
 
 def test_patterns(tmp_path: pathlib.Path) -> None:
-
     # Write community fuzzing config
     conf = tmp_path / "config" / "projects" / "fuzzing.yml"
     conf.parent.mkdir(parents=True)

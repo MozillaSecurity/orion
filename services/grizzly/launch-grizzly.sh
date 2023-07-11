@@ -61,6 +61,7 @@ EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
+# shellcheck disable=SC2317
 function onexit () {
   echo "Waiting for logs to flush..." >&2
   sleep 15

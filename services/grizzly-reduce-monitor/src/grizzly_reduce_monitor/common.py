@@ -125,7 +125,6 @@ class CrashManager(Reporter):
         )
 
         while next_url:
-
             resp_json = self.get(next_url, params=params).json()
 
             if isinstance(resp_json, dict):

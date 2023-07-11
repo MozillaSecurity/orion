@@ -7,7 +7,7 @@
 # usage: retry COMMAND [ARGS...]
 retry () {
   i=0
-  while [ $i -lt 9 ]
+  while [ "$i" -lt 9 ]
   do
     if "$@"
     then

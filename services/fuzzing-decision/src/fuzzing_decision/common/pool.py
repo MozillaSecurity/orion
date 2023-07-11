@@ -578,7 +578,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         for field in cannot_set:
             assert data.get(field) is None, f"{self.preprocess} cannot set {field}"
         data["preprocess"] = ""  # blank the preprocess field to avoid inheritance
-        data["parents"] = [self.pool_id] + data.get("parents", [])
+        data["parents"] = [self.pool_id, *data.get("parents", [])]
         result = type(self)(pool_id, data, self.base_dir)
         result.name = f"{self.name} ({result.name})"
         return result

@@ -49,7 +49,7 @@ class RemoteWait:
             assert data["state"] == "new"
             try:
                 proc = subprocess.Popen(cmd)
-            except:  # noqa pylint: disable=bare-except
+            except:  # pylint: disable=bare-except
                 data["state"] = "done"
                 data["result"] = 1
                 self._token_file.write_text(json.dumps(data))

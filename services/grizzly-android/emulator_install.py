@@ -101,7 +101,7 @@ def retry(*args, **kwds) -> Callable[..., Any]:
                         time.sleep(delay)
                         continue
                     raise
-                except:  # noqa pylint: disable=bare-except
+                except:  # pylint: disable=bare-except
                     if on_error is not None:
                         on_error()
                     raise
@@ -576,8 +576,10 @@ class AndroidEmulator:
 
             LOG.info("Launching Android emulator with snapshot=%s", self.snapshot)
             emu = subprocess.Popen(  # pylint: disable=consider-using-with
-                [str(self.paths.sdk_root / "emulator" / ("emulator" + EXE_SUFFIX))]
-                + args,
+                [
+                    str(self.paths.sdk_root / "emulator" / ("emulator" + EXE_SUFFIX)),
+                    *args,
+                ],
                 env=env,
                 stderr=output,
                 stdout=output,
@@ -615,7 +617,7 @@ class AndroidEmulator:
                 emu.terminate()
                 emu.wait()
                 raise AndroidEmulatorError("Emulator failed to boot in time.") from None
-            except:  # noqa pylint: disable=bare-except
+            except:  # pylint: disable=bare-except
                 emu.terminate()
                 emu.wait()
                 raise
@@ -623,7 +625,7 @@ class AndroidEmulator:
             self.emu = emu
             self.pid = emu.pid
 
-        except:  # noqa pylint: disable=bare-except
+        except:  # pylint: disable=bare-except
             self._stop_xvfb()
             raise
 
