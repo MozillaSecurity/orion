@@ -1,13 +1,5 @@
 name: orion-decision
 tests:
-  - name: python 3.6 unittests
-    type: tox
-    image: ci-py-36
-    toxenv: py36
-  - name: python 3.7 unittests
-    type: tox
-    image: ci-py-37
-    toxenv: py37
   - name: python 3.8 unittests
     type: tox
     image: ci-py-38

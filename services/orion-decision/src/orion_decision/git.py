@@ -6,7 +6,7 @@
 from logging import getLogger
 from pathlib import Path
 from shutil import rmtree
-from subprocess import PIPE, CalledProcessError, run
+from subprocess import CalledProcessError, run
 from tempfile import mkdtemp
 from time import sleep
 from typing import Any, Dict, Generator, Optional, Union
@@ -98,10 +98,9 @@ class GitRepo:
         for _ in range(tries - 1):
             result = run(
                 ("git",) + args,
-                stdout=PIPE,
-                stderr=PIPE,
+                capture_output=True,
                 cwd=self.path,
-                universal_newlines=True,
+                text=True,
             )
             if result.returncode == 0:
                 return result.stdout
@@ -116,10 +115,9 @@ class GitRepo:
             return run(
                 ("git",) + args,
                 check=True,
-                stdout=PIPE,
-                stderr=PIPE,
+                capture_output=True,
                 cwd=self.path,
-                universal_newlines=True,
+                text=True,
             ).stdout
         except CalledProcessError as exc:
             LOG.error("git command returned error:\n%s", exc.stderr)
