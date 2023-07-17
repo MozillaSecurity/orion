@@ -8,7 +8,7 @@ LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY services/orion-decision /src/orion-decision
 RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
-    && retry apk add --no-cache build-base git python3 py3-pip py3-wheel python3-dev py3-requests py3-setuptools py3-six \
+    && retry apk add --no-cache build-base git python3 py3-pip py3-wheel python3-dev py3-requests py3-setuptools py3-six py3-yaml \
     && retry pip --no-cache-dir --disable-pip-version-check install -e /src/orion-decision \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip {} \; \
     && apk del build-base py3-pip py3-wheel python3-dev \
