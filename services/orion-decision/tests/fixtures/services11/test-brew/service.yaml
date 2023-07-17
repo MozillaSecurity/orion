@@ -1,0 +1,3 @@
+name: brew-svc
+type: homebrew
+base: brew.tar.bz2

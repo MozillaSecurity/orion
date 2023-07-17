@@ -1,0 +1,7 @@
+name: test-svc
+type: test
+tests:
+  - name: test
+    type: tox
+    image: ci-py-38
+    toxenv: py38

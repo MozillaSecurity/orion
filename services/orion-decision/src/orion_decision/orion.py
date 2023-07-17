@@ -194,8 +194,8 @@ class Service:
         service_deps: Names of images that this one depends on.
         path_deps: Paths that this image depends on.
         recipe_deps: Names of recipes that this service depends on.
-        weak_deps: Names of images that should trigger a rebuild of this one
-                              but are not build deps.
+        weak_deps: Names of images that should trigger a rebuild of this one but are not
+                   build deps.
         dirty: Whether or not this image needs to be rebuilt
         tests: Tests to run against this service
         root: Path where service is defined
@@ -249,7 +249,7 @@ class Service:
         else:
             tests = []
         if "type" in metadata:
-            assert metadata["type"] in {"docker", "msys", "homebrew"}
+            assert metadata["type"] in {"docker", "msys", "homebrew", "test"}
         result: Service
         if metadata.get("type") == "msys":
             base = metadata["base"]
@@ -259,6 +259,8 @@ class Service:
             base = metadata["base"]
             assert (metadata_path.parent / "setup.sh").is_file()
             result = ServiceHomebrew(base, context, name, tests, metadata_path.parent)
+        elif metadata.get("type") == "test":
+            result = ServiceTestOnly(context, name, tests, metadata_path.parent)
         else:
             cpu = {"x86_64": "amd64"}.get(machine(), machine())
             if (
@@ -336,6 +338,32 @@ class ServiceMsys(Service):
         self.base = base
 
 
+class ServiceTestOnly(Service):
+    """Orion service (no-op)
+
+    Attributes:
+        context (Path): build context
+        name (str): Image name
+        service_deps (set(str)): Names of images that this one depends on.
+        path_deps (set(Path)): Paths that this image depends on.
+        recipe_deps (set(str)): Names of recipes that this service depends on.
+        dirty (bool): Whether or not this image needs to be rebuilt
+        tests (list[ServiceTest]): Tests to run against this service
+        root (Path): Path where service is defined
+    """
+
+    def __init__(self, context, name, tests, root):
+        """Initialize a ServiceTestOnly instance.
+
+        Arguments:
+            context (Path): build context
+            name (str): Image name
+            tests (list[ServiceTest]): Tests to run against this service
+            root (Path): Path where service is defined
+        """
+        super().__init__(None, context, name, tests, root)
+
+
 class Recipe:
     """Installation recipe used by Orion Services.
 
@@ -344,8 +372,8 @@ class Recipe:
         service_deps: Set of services that this recipe depends on.
         path_deps: Paths that this recipe depends on.
         recipe_deps: Names of other recipes that this recipe depends on.
-        weak_deps: Names of images that should trigger a rebuild of this one
-                              but are not build deps.
+        weak_deps: Names of images that should trigger a rebuild of this one but are not
+                   build deps.
         dirty: Whether or not this recipe needs tests run.
     """
 
@@ -501,6 +529,8 @@ class Services(dict):
 
             if isinstance(service, (ServiceMsys, ServiceHomebrew)):
                 search_root = service.root
+            elif isinstance(service, ServiceTestOnly):
+                continue
             else:
                 # calculate image dependencies
                 parser = DockerfileParser(path=str(service.dockerfile))

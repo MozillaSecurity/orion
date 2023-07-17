@@ -10,7 +10,14 @@ import pytest
 from pytest_mock import MockerFixture
 from yaml import safe_load as yaml_load
 
-from orion_decision.orion import Service, Services, ServiceTest, ToxServiceTest
+from orion_decision.orion import (
+    Service,
+    ServiceHomebrew,
+    ServiceMsys,
+    Services,
+    ServiceTest,
+    ToxServiceTest,
+)
 
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
@@ -89,6 +96,52 @@ def test_service_load04(defn: Dict[str, Any]) -> None:
         assert isinstance(result, eval(expect["_type"]))
         for field, value in expect["object"].items():
             assert getattr(result, field) == value
+
+
+def test_service_load05() -> None:
+    """test that msys service type is loaded from metadata"""
+    root = FIXTURES / "services11"
+    svc = Service.from_metadata_yaml(root / "test-msys" / "service.yaml", root)
+    assert isinstance(svc, ServiceMsys)
+    assert svc.base == "msys.tar.xz"
+    assert svc.context == root
+    assert svc.name == "msys-svc"
+    # these are calculated by `Services`, so should be clear
+    assert svc.service_deps == set()
+    assert svc.path_deps == set()
+    assert svc.tests == []
+    assert svc.root == root / "test-msys"
+    assert not svc.dirty
+
+
+def test_service_load06() -> None:
+    """test that msys service type is loaded from metadata"""
+    root = FIXTURES / "services11"
+    svc = Service.from_metadata_yaml(root / "test-brew" / "service.yaml", root)
+    assert isinstance(svc, ServiceHomebrew)
+    assert svc.base == "brew.tar.bz2"
+    assert svc.context == root
+    assert svc.name == "brew-svc"
+    # these are calculated by `Services`, so should be clear
+    assert svc.service_deps == set()
+    assert svc.path_deps == set()
+    assert svc.tests == []
+    assert svc.root == root / "test-brew"
+    assert not svc.dirty
+
+
+def test_service_load07() -> None:
+    """test that test service type is loaded from metadata"""
+    root = FIXTURES / "services11"
+    svc = Service.from_metadata_yaml(root / "test-only" / "service.yaml", root)
+    assert svc.context == root
+    assert svc.name == "test-svc"
+    # these are calculated by `Services`, so should be clear
+    assert svc.service_deps == set()
+    assert svc.path_deps == set()
+    assert len(svc.tests) == 1
+    assert svc.root == root / "test-only"
+    assert not svc.dirty
 
 
 @pytest.mark.parametrize(

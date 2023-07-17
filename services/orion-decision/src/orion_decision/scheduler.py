@@ -35,6 +35,7 @@ from .orion import (
     ServiceHomebrew,
     ServiceMsys,
     Services,
+    ServiceTestOnly,
     ToxServiceTest,
 )
 
@@ -42,7 +43,6 @@ LOG = getLogger(__name__)
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
-MSYS_EXE_TASK = Template((TEMPLATES / "build_msys_exe.yaml").read_text())
 HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
@@ -166,12 +166,7 @@ class Scheduler:
     ):
         assert self.now is not None
         if isinstance(service, ServiceMsys):
-            if service.base.endswith(".exe"):
-                if not service.base.endswith(".sfx.exe"):
-                    LOG.warning("'base' ends with .exe, but not .sfx.exe", service.base)
-                task_template = MSYS_EXE_TASK
-            else:
-                task_template = MSYS_TASK
+            task_template = MSYS_TASK
             build_task = yaml_load(
                 task_template.substitute(
                     clone_url=self._clone_url(),
@@ -467,6 +462,10 @@ class Scheduler:
                     test_tasks_created.add(task_id)
                     test_tasks.append(task_id)
                 test_tasks.extend(dirty_recipe_test_tasks)
+
+                if isinstance(obj, ServiceTestOnly):
+                    assert obj.tests
+                    continue
 
                 build_tasks_created.add(
                     self._create_build_task(
