@@ -61,7 +61,7 @@ function onexit () {
   tar -C /home/ubuntu -c work | zstd -f -o /logs/work.tar.zst
   echo "Waiting for logs to flush..." >&2
   sleep 15
-  killall -INT td-agent-bit
+  killall -INT td-agent-bit || true
   sleep 15
 }
 trap onexit EXIT
