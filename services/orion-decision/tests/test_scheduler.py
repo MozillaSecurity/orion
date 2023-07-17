@@ -21,10 +21,14 @@ from orion_decision import (
     SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_BREW,
+    WORKER_TYPE_MSYS,
 )
 from orion_decision.git import GithubEvent
 from orion_decision.scheduler import (
     BUILD_TASK,
+    HOMEBREW_TASK,
+    MSYS_TASK,
     PUSH_TASK,
     RECIPE_TEST_TASK,
     TEST_TASK,
@@ -581,3 +585,132 @@ def test_create_09(mocker: MockerFixture) -> None:
     )
     expected3["dependencies"].append(task2_id)
     assert task3 == expected3
+
+
+def test_create_10(mocker: MockerFixture) -> None:
+    """test msys task creation"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services11"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["msys-svc"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 1
+    _, task = queue.createTask.call_args[0]
+    assert task == yaml_load(
+        MSYS_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            msys_base_url="msys.tar.xz",
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler=SCHEDULER_ID,
+            setup_sh_path="test-msys/setup.sh",
+            service_name="msys-svc",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE_MSYS,
+        )
+    )
+
+
+def test_create_11(mocker: MockerFixture) -> None:
+    """test homebrew task creation"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services11"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["brew-svc"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 1
+    _, task = queue.createTask.call_args[0]
+    assert task == yaml_load(
+        HOMEBREW_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            homebrew_base_url="brew.tar.bz2",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler=SCHEDULER_ID,
+            service_name="brew-svc",
+            setup_sh_path="test-brew/setup.sh",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE_BREW,
+        )
+    )
+
+
+def test_create_12(mocker: MockerFixture) -> None:
+    """test test task non-creation"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services11"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.fetch_ref = "fetch"
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched.services["test-svc"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 1
+    _, task = queue.createTask.call_args[0]
+    expected = yaml_load(
+        TEST_TASK.substitute(
+            commit="commit",
+            commit_url="https://example.com",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler=SCHEDULER_ID,
+            service_name="test-svc",
+            source_url=SOURCE_URL,
+            task_group="group",
+            test_name="test",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected["payload"]["image"] = "ci-py-38"
+    sched.services["test-svc"].tests[0].update_task(
+        expected, "https://example.com", "fetch", "commit", "test-only"
+    )
+    assert task == expected
