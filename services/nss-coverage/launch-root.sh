@@ -64,7 +64,7 @@ mkdir -p /var/lib/td-agent-bit/pos
 function onexit () {
   echo "Waiting for logs to flush..." >&2
   sleep 15
-  killall -INT td-agent-bit
+  killall -INT td-agent-bit || true
   sleep 15
 }
 trap onexit EXIT

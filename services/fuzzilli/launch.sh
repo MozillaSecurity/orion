@@ -23,7 +23,7 @@ get-tc-secret google-logging-creds /etc/google/auth/application_default_credenti
     #tar -c /home/ubuntu | zstd -f -o /logs/work.tar.zst
     echo "Waiting for logs to flush..." >&2
     sleep 15
-    killall -INT td-agent-bit
+    killall -INT td-agent-bit || true
     sleep 15
     #cp /home/ubuntu/* /logs/
   }
