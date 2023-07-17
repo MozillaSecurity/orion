@@ -22,6 +22,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
         py3-pip \
         py3-requests \
         py3-wheel \
+        py3-yaml \
         python3 \
         python3-dev \
     # configure podman
