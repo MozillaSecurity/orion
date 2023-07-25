@@ -125,7 +125,7 @@ then
     git-clone git@domino-xpcshell:MozillaSecurity/domino-xpcshell.git
     (
       cd domino-xpcshell
-      retry npm install --no-progress
+      retry npm update --no-progress
       node dist/server.js "$XPCRT" &
     )
   else
