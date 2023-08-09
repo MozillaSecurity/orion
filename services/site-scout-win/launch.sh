@@ -129,4 +129,4 @@ trap "kill $!" EXIT
 
 status "Setup: launching site-scout"
 yml="$(python -c "import pathlib,random;print(random.choice(list(pathlib.Path('site-scout-private').glob('**/*.yml'))))")"
-site-scout ./build/firefox -i "$yml" --status-report status.txt --time-limit 60 --jobs 2
+site-scout ./build/firefox -i "$yml" --status-report status.txt --time-limit 60 --jobs 2 --fuzzmanager
