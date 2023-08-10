@@ -74,4 +74,4 @@ trap "kill $!" EXIT
 
 update-ec2-status "Setup: launching site-scout"
 yml="$(python3 -c "import pathlib,random;print(random.choice(list(pathlib.Path('/src/site-scout-private').glob('**/*.yml'))))")"
-python3 -m site_scout ./build/firefox.exe -i "$yml" --status-report status.txt --time-limit 60 --jobs 2 --fuzzmanager
+python3 -m site_scout ./build/firefox -i "$yml" --status-report status.txt --time-limit 60 --jobs 2 --fuzzmanager
