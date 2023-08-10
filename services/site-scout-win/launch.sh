@@ -91,7 +91,6 @@ retry python -m pip install fuzzfetch git+https://github.com/MozillaSecurity/sit
 status "Setup: cloning site-scout-private"
 
 # Get deployment key from TC
-get-tc-secret deploy-site-scout-private .ssh/id_ecdsa.site-scout-private
 set +x
 retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-site-scout-private" | python -c "import json,sys;open('.ssh/id_ecdsa.site-scout-private','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
