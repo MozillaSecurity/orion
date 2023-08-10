@@ -84,7 +84,7 @@ chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
 status "Setup: installing site-scout"
-retry python -m pip install --user --no-build-isolation fuzzfetch git+https://github.com/MozillaSecurity/site-scout
+retry python -m pip install fuzzfetch git+https://github.com/MozillaSecurity/site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v
