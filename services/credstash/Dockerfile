@@ -6,7 +6,7 @@ FROM alpine:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
+RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
     && retry apk add --no-cache \
         py3-cryptography \
         py3-pip \
