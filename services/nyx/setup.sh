@@ -24,6 +24,10 @@ pkgs=(
   git
   jshon
   lbzip2
+  libglib2.0-0
+  libjpeg-turbo8
+  libpixman-1-0
+  libpng16-16
   libxml2
   openssh-client
   psmisc
