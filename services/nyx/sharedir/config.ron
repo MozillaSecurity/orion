@@ -1,0 +1,31 @@
+#![enable(implicit_some)]
+(
+  include_default_config_path: "/srv/repos/ipc-research/ipc-fuzzing/config/default_config_vm.ron",
+  fuzz: (
+    bitmap_size: 65536,
+    cow_primary_size: 0x180000000,
+    cpu_pin_start_at: 0,
+    dict: [],
+    mem_limit: 6144,
+    seed_path: "",
+    seed_pattern: "",
+    snapshot_placement: none,
+    thread_id: 0,
+    threads: 1,
+    time_limit: (
+      secs: 30,
+      nanos: 0,
+    ),
+    use_incremental_snapshots: false,
+    workdir_path: "/home/worker/workdir/",
+    write_protected_input_buffer: false,
+  ),
+  runner: QemuSnapshot((
+    debug: true,
+    hda: "/home/worker/firefox.img",
+    presnapshot: "/home/worker/snapshot/",
+    qemu_binary: "/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/x86_64-softmmu/qemu-system-x86_64",
+    sharedir: "/home/worker/sharedir/",
+    snapshot_path: DefaultPath,
+  )),
+)
