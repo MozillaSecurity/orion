@@ -97,6 +97,7 @@ prefpicker browser-fuzzing.yml prefs.js
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/page.zip .
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/ld_preload_*.so .
 cp -r /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/htools .
+cp htools/hget_no_pt .
 popd >/dev/null
 
 mkdir corpus.out
