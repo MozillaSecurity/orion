@@ -5,9 +5,6 @@ set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
-export SKIP_RUST=1
-source "/srv/repos/setup/clang.sh"
-retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
 # start logging
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
@@ -60,6 +57,11 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
+
+# install clang
+export SKIP_RUST=1
+source "/srv/repos/setup/clang.sh"
+retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
 # shellcheck disable=SC2317
 function onexit () {
