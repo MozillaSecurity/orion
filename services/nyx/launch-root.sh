@@ -63,6 +63,13 @@ export SKIP_RUST=1
 source "/srv/repos/setup/clang.sh"
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
+# setup kvm device
+if [[ ! -e /dev/kvm ]]; then
+  mknod /dev/kvm c 10 "$(grep '\<kvm\>' /proc/misc | cut -f 1 -d' ')"
+  chgrp kvm /dev/kvm
+  chmod 0660 /dev/kvm
+fi
+
 # shellcheck disable=SC2317
 function onexit () {
   echo "Waiting for logs to flush..." >&2
