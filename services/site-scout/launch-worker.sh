@@ -70,7 +70,7 @@ esac
 # setup reporter
 python3 -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
-trap "kill $!" EXIT
+trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
 
 update-ec2-status "Setup: launching site-scout"
 yml="$(python3 -c "import pathlib,random;print(random.choice(list(pathlib.Path('/src/site-scout-private').glob('**/*.yml'))))")"
