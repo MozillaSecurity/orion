@@ -29,7 +29,7 @@ mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
 # get new minidump-stackwalk
-retry_curl -O "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
+retry_curl -O "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-1.toolchains.v3.win64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
 zstdcat minidump-stackwalk.tar.zst | tar xv
 mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
 rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
