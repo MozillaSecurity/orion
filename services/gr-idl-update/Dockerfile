@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM mozillasecurity/ci-node-14:latest
+FROM mozillasecurity/ci-node-18:latest
 
 LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
