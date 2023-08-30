@@ -6,7 +6,7 @@ cycle_time: 1h
 max_run_time: 1h
 schedule_start: null
 cores_per_task: 1
-metal: False
+metal: false
 name: Amazing fuzzing pool
 tasks: 1
 command:
@@ -21,3 +21,4 @@ preprocess: pre
 macros: {}
 run_as_admin: false
 gpu: false
+nested_virtualization: false

@@ -26,6 +26,7 @@ class Provider(ABC):
         disk_size: Union[int, str],
         platform: str,
         demand: bool,
+        nested_virtualization: bool,
     ) -> List[Dict[str, Any]]:
         raise NotImplementedError()
 
@@ -113,7 +114,9 @@ class AWS(Provider):
         disk_size: Union[int, str],
         platform: str,
         demand: bool,
+        nested_virtualization: bool,
     ) -> List[Dict[str, Any]]:
+        assert not nested_virtualization
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform)
@@ -158,6 +161,7 @@ class Static(Provider):
         disk_size: Union[int, str],
         platform: str,
         demand: bool,
+        nested_virtualization: bool,
     ) -> List[Dict[str, Any]]:
         return []
 
@@ -183,6 +187,7 @@ class GCP(Provider):
         disk_size: Union[int, str],
         platform: str,
         demand: bool,
+        nested_virtualization: bool,
     ) -> List[Dict[str, Any]]:
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
@@ -224,6 +229,15 @@ class GCP(Provider):
                     {
                         "provisioningModel": "SPOT",
                         "instanceTerminationAction": "DELETE",
+                    }
+                )
+        if nested_virtualization:
+            for config in result:
+                config.update(
+                    {
+                        "advancedMachineFeatures": {
+                            "enableNestedVirtualization": True,
+                        },
                     }
                 )
         return result

@@ -301,6 +301,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         assert self.cycle_time is not None
         assert self.tasks is not None
         assert self.demand is not None
+        assert self.nested_virtualization is not None
         config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
@@ -308,6 +309,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.disk_size,
                 self.platform,
                 self.demand,
+                self.nested_virtualization,
             ),
             "maxCapacity": (
                 # * 2 since Taskcluster seems to not reuse workers very quickly in some
@@ -492,6 +494,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         assert self.disk_size is not None
         assert self.platform is not None
         assert self.demand is not None
+        assert self.nested_virtualization is not None
         config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
@@ -499,6 +502,7 @@ class PoolConfigMap(CommonPoolConfigMap):
                 self.disk_size,
                 self.platform,
                 self.demand,
+                self.nested_virtualization,
             ),
             "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,

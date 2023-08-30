@@ -1,6 +1,6 @@
 name: test
 parents: []
-metal: False
+metal: false
 cores_per_task: 1
 imageset: test
 tasks: 1
@@ -15,3 +15,4 @@ platform: test
 run_as_admin: false
 gpu: false
 demand: false
+nested_virtualization: false

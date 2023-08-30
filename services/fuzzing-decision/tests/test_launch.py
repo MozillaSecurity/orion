@@ -61,6 +61,7 @@ def pool_data() -> dict:
         "preprocess": "",
         "macros": {},
         "run_as_admin": False,
+        "nested_virtualization": False,
     }
 
 
