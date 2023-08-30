@@ -193,6 +193,7 @@ def test_aws_resources(
             "scopes": [],
             "tasks": 3,
             "run_as_admin": False,
+            "nested_virtualization": False,
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -307,6 +308,7 @@ def test_gcp_resources(
             "scopes": [],
             "tasks": 3,
             "run_as_admin": False,
+            "nested_virtualization": False,
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -521,6 +523,7 @@ def test_tasks(
             "scopes": scopes,
             "tasks": 2,
             "run_as_admin": run_as_admin,
+            "nested_virtualization": False,
         },
     )
 
@@ -760,6 +763,7 @@ def test_flatten(pool_path: Path) -> None:
     assert pool.schedule_start == expect.schedule_start
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
+    assert pool.nested_virtualization == expect.nested_virtualization
 
 
 def test_pool_map() -> None:
@@ -795,6 +799,7 @@ def test_pool_map() -> None:
     assert cfg_map.schedule_start == expect.schedule_start
     assert set(cfg_map.scopes) == set()
     assert cfg_map.tasks is None
+    assert cfg_map.nested_virtualization == expect.nested_virtualization
 
     pools = list(cfg_map.iterpools())
     assert len(pools) == 1
@@ -822,6 +827,7 @@ def test_pool_map() -> None:
     assert pool.schedule_start == expect.schedule_start
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
+    assert pool.nested_virtualization == expect.nested_virtualization
 
 
 def test_pool_map_admin(mocker: MockerFixture) -> None:
@@ -896,6 +902,7 @@ def test_cycle_crons() -> None:
             "scopes": [],
             "tasks": 2,
             "run_as_admin": False,
+            "nested_virtualization": False,
         },
     )
 
@@ -956,3 +963,40 @@ def test_required() -> None:
     CommonPoolConfiguration("test", {"name": "test pool"}, _flattened=set())
     with pytest.raises(AssertionError):
         CommonPoolConfiguration("test", {}, _flattened=set())
+
+
+def test_aws_nested_virt(
+    mock_clouds: Dict[str, Provider],
+    mock_machines: MachineTypes,
+) -> None:
+    pool = cast(
+        PoolConfiguration,
+        PoolConfiguration.from_file(POOL_FIXTURES / "pool1.yml"),
+    )
+    pool.cloud = "aws"
+    pool.nested_virtualization = True
+    with pytest.raises(AssertionError):
+        list(pool.build_resources(mock_clouds, mock_machines))
+
+
+def test_gcp_nested_virt(
+    mock_clouds: Dict[str, Provider],
+    mock_machines: MachineTypes,
+) -> None:
+    cfg = cast(
+        PoolConfiguration,
+        PoolConfiguration.from_file(POOL_FIXTURES / "pool4.yml"),
+    )
+    cfg.cloud = "gcp"
+    cfg.nested_virtualization = True
+    cfg.imageset = "generic-worker-A"
+    cfg.cores_per_task = 1
+    cfg.metal = False
+    cfg.minimum_memory_per_core = 1
+    pool_obj, _hook, _role = cfg.build_resources(mock_clouds, mock_machines)
+    configs = pool_obj.to_json()["config"]["launchConfigs"]
+    assert configs
+    for launch_cfg in configs:
+        assert "advancedMachineFeatures" in launch_cfg
+        assert "enableNestedVirtualization" in launch_cfg["advancedMachineFeatures"]
+        assert launch_cfg["advancedMachineFeatures"]["enableNestedVirtualization"]

@@ -11,6 +11,8 @@ generic-worker-A:
   aws:
     amis:
       us-west-1: ami-1234
+  gcp:
+    image: path/to/gwimage
   workerConfig:
     genericWorker:
       config:

@@ -47,6 +47,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "metal": bool,
         "minimum_memory_per_core": (float, str),
         "name": str,
+        "nested_virtualization": bool,
         "platform": str,
         "preprocess": str,
         "run_as_admin": bool,
@@ -337,6 +338,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.metal = data.get("metal")
         self.name = data["name"]
         assert self.name is not None, "name is required for every configuration"
+        self.nested_virtualization = data.get("nested_virtualization")
         self.platform = data.get("platform")
         self.tasks = data.get("tasks")
         self.preprocess = data.get("preprocess")
@@ -571,6 +573,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "imageset",
             "metal",
             "minimum_memory_per_core",
+            "nested_virtualization",
             "platform",
             "preprocess",
             "schedule_start",
@@ -599,6 +602,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "metal",
             "minimum_memory_per_core",
             "name",
+            "nested_virtualization",
             "platform",
             "preprocess",
             "schedule_start",
@@ -699,6 +703,7 @@ class PoolConfigMap(CommonPoolConfiguration):
             "imageset",
             "metal",
             "minimum_memory_per_core",
+            "nested_virtualization",
             "platform",
             "schedule_start",
         )
