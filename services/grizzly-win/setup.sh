@@ -89,7 +89,7 @@ npm -v
 
 # get grcov
 retry_curl -O "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-grcov.latest/artifacts/public/build/grcov.tar.zst"
-zstdcat grcov.tar.zst | tar --strip-components=1 -xv
+zstdcat grcov.tar.zst | tar -xv
 mv grcov.exe msys64/usr/bin/
 ./msys64/usr/bin/grcov.exe --version
 
