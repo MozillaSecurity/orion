@@ -10,7 +10,7 @@ function checksum () {
 }
 
 function retry-curl () {
-  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent "$@"
+  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
 mkdir -p "$(dirname "$HADOLINT")"

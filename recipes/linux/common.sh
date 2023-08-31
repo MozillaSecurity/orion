@@ -76,7 +76,7 @@ function apt-install-auto () {
 
 # wrap curl with sane defaults
 function retry-curl () {
-  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent "$@"
+  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
 function get-latest-github-release () {

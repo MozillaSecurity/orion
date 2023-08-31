@@ -2,7 +2,7 @@
 set -e -x
 
 retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 retry brew install --force-bottle openssl@3 python@3.8 tcl-tk
 # shellcheck disable=SC2016
