@@ -100,6 +100,11 @@ def _define_decision_args(parser: argparse.ArgumentParser) -> None:
         help="Create tasks in this task group (default: TASK_ID).",
     )
     parser.add_argument(
+        "--scheduler",
+        default=None,
+        help="Create tasks with this scheduler ID (default: fetch from TaskCluster).",
+    )
+    parser.add_argument(
         "--now",
         default=getenv("TASKCLUSTER_NOW", datetime.utcnow().isoformat()),
         type=isoparse,

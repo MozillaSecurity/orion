@@ -20,7 +20,6 @@ DEADLINE = timedelta(hours=2)
 MAX_RUN_TIME = timedelta(hours=1)
 OWNER_EMAIL = "truber@mozilla.com"
 PROVISIONER_ID = "proj-fuzzing"
-SCHEDULER_ID = "taskcluster-github"
 SOURCE_URL = "https://github.com/MozillaSecurity/orion"
 WORKER_TYPE = "ci"
 WORKER_TYPE_MSYS = "ci-windows"

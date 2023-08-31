@@ -21,7 +21,6 @@ from orion_decision import (
     MAX_RUN_TIME,
     OWNER_EMAIL,
     PROVISIONER_ID,
-    SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
 )
@@ -110,7 +109,15 @@ def test_cron_mark_rebuild(
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
-    sched = CronScheduler(repo, now, "group", "secret", "/path/to/repo", "push")
+    sched = CronScheduler(
+        repo,
+        now,
+        "group",
+        "scheduler",
+        "secret",
+        "/path/to/repo",
+        "push",
+    )
     sched.mark_services_for_rebuild()
     for svc in sched.services.values():
         assert svc.dirty == bool(svc.name in dirty_svcs)
@@ -125,7 +132,15 @@ def test_cron_create_01(mocker: MockerFixture) -> None:
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
-    sched = CronScheduler(repo, now, "group", "secret", "/path/to/repo", "push")
+    sched = CronScheduler(
+        repo,
+        now,
+        "group",
+        "scheduler",
+        "secret",
+        "/path/to/repo",
+        "push",
+    )
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
@@ -140,7 +155,15 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     repo.head.return_value = "commit"
-    sched = CronScheduler(repo, now, "group", "secret", "https://example.com", "push")
+    sched = CronScheduler(
+        repo,
+        now,
+        "group",
+        "scheduler",
+        "secret",
+        "https://example.com",
+        "push",
+    )
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 2
@@ -157,7 +180,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -175,7 +198,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             skip_docker="0",
             source_url=SOURCE_URL,
@@ -198,7 +221,15 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     repo.head.return_value = "commit"
-    sched = CronScheduler(repo, now, "group", "secret", "https://example.com", "push")
+    sched = CronScheduler(
+        repo,
+        now,
+        "group",
+        "scheduler",
+        "secret",
+        "https://example.com",
+        "push",
+    )
     sched.services["test1"].dirty = True
     sched.services["test2"].dirty = True
     sched.create_tasks()
@@ -216,7 +247,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -234,7 +265,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             skip_docker="0",
             source_url=SOURCE_URL,
@@ -258,7 +289,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test2",
             source_url=SOURCE_URL,
             task_group="group",
@@ -280,7 +311,14 @@ def test_cron_create_04(mocker: MockerFixture) -> None:
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     repo.head.return_value = "commit"
     sched = CronScheduler(
-        repo, now, "group", "secret", "https://example.com", "push", dry_run=True
+        repo,
+        now,
+        "group",
+        "scheduler",
+        "secret",
+        "https://example.com",
+        "push",
+        dry_run=True,
     )
     sched.services["test1"].dirty = True
     sched.create_tasks()

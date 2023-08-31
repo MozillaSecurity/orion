@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 from taskcluster.utils import stringDate
 from yaml import safe_load as yaml_load
 
-from orion_decision import DEADLINE, MAX_RUN_TIME, PROVISIONER_ID, SCHEDULER_ID
+from orion_decision import DEADLINE, MAX_RUN_TIME, PROVISIONER_ID
 from orion_decision.ci_matrix import (
     CISecret,
     CISecretEnv,
@@ -59,7 +59,7 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
         spec=GithubEvent(),
     )
     mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
-    sched = CIScheduler("test", evt, now, "group", {})
+    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
@@ -139,7 +139,7 @@ def test_ci_create_02(
         sec = _create_secret(matrix_secret)
         secrets.append(sec)
     mtx.return_value.secrets = secrets
-    sched = CIScheduler("test", evt, now, "group", {})
+    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args[0]
@@ -158,7 +158,7 @@ def test_ci_create_02(
         "now": stringDate(now),
         "project": "test",
         "provisioner": PROVISIONER_ID,
-        "scheduler": SCHEDULER_ID,
+        "scheduler": "scheduler",
         "task_group": "group",
         "user": evt.user,
         "worker": WORKER_TYPES[platform],
@@ -220,7 +220,7 @@ def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
     )
     mtx.return_value.jobs = [job1, job2]
     mtx.return_value.secrets = []
-    sched = CIScheduler("test", evt, now, "group", {})
+    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     task1_id, task1 = queue.createTask.call_args_list[0][0]
@@ -236,7 +236,7 @@ def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
         "now": stringDate(now),
         "project": "test",
         "provisioner": PROVISIONER_ID,
-        "scheduler": SCHEDULER_ID,
+        "scheduler": "scheduler",
         "task_group": "group",
         "user": evt.user,
         "worker": WORKER_TYPES[job1.platform],
