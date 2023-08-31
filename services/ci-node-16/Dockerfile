@@ -11,7 +11,7 @@ ARG PYTHON_VER=3.11.4
 
 COPY services/orion-decision /src/orion-decision
 RUN retry () { i=0; while [ "$i" -lt 9 ]; do "$@" && return || sleep 30; i="${i+1}"; done; "$@"; } \
-    && retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; } \
+    && retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; } \
     && retry apt-get update -qq \
     && retry apt-get install -y -qq --no-install-recommends --no-install-suggests \
         ca-certificates \

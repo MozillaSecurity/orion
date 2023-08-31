@@ -16,7 +16,7 @@ retry () {
   "$@"
 }
 
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 status () {
   if [ -n "$TASKCLUSTER_FUZZING_POOL" ]

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e -x
 
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 "$@"; }
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 brew install --force-bottle openssl@3 python@3.9
 chmod +w "$HOMEBREW_PREFIX/lib/python3.9/site-packages"
