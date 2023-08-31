@@ -16,11 +16,13 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     apt-install-auto \
+      binutils \
       ca-certificates \
-      cargo
+      curl \
+      zstd
 
-    cargo install --root /usr grcov
-    strip /usr/bin/grcov
+    retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-grcov.latest/artifacts/public/build/grcov.tar.zst" | zstdcat | tar -x -v -C /usr/local/bin grcov
+    strip --strip-unneeded /usr/local/bin/grcov
     ;;
   test)
     grcov --help
