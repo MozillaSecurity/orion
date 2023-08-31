@@ -6,6 +6,7 @@
 from argparse import Namespace
 from datetime import datetime
 from logging import getLogger
+from os import getenv
 from typing import Optional
 
 from dateutil.parser import isoparse
@@ -26,6 +27,7 @@ class CronScheduler(Scheduler):
         repo: The Orion repo containing services.
         now: The time to calculate task times from.
         task_group: The taskGroupID to add created tasks to.
+        scheduler_id: TC scheduler ID to create tasks in.
         docker_secret: The Taskcluster secret name holding Docker Hub credentials.
         services (Services): The services
         clone_url: Git repo url
@@ -38,6 +40,7 @@ class CronScheduler(Scheduler):
         repo: GitRepo,
         now: Optional[datetime],
         task_group: str,
+        scheduler_id: str,
         docker_secret: str,
         clone_url: str,
         branch: str,
@@ -49,6 +52,7 @@ class CronScheduler(Scheduler):
             repo: The Orion repo containing services.
             now: The time to calculate task times from.
             task_group: The taskGroupID to add created tasks to.
+            scheduler_id: TC scheduler ID to create tasks in.
             docker_secret: The Taskcluster secret name holding Docker Hub creds.
             branch: Git main branch
             dry_run: Don't actually queue tasks in Taskcluster.
@@ -56,6 +60,7 @@ class CronScheduler(Scheduler):
         self.repo = repo
         self.now = now
         self.task_group = task_group
+        self.scheduler_id = scheduler_id
         self.docker_secret = docker_secret
         self.dry_run = dry_run
         self.clone_url = clone_url
@@ -140,6 +145,13 @@ class CronScheduler(Scheduler):
         Returns:
             Shell return code.
         """
+        # get schedulerId from TC queue
+        if args.scheduler is None:
+            task_obj = Taskcluster.get_service("queue").task(getenv("TASK_ID"))
+            scheduler_id = task_obj["schedulerId"]
+        else:
+            scheduler_id = args.scheduler
+
         # clone the git repo
         repo = GitRepo(args.clone_repo, args.push_branch, args.push_branch)
         try:
@@ -148,6 +160,7 @@ class CronScheduler(Scheduler):
                 repo,
                 args.now,
                 args.task_group,
+                scheduler_id,
                 args.docker_hub_secret,
                 args.clone_repo,
                 args.push_branch,

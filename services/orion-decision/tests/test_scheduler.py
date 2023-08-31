@@ -18,7 +18,6 @@ from orion_decision import (
     MAX_RUN_TIME,
     OWNER_EMAIL,
     PROVISIONER_ID,
-    SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
     WORKER_TYPE_BREW,
@@ -62,7 +61,7 @@ def test_mark_rebuild_01(mocker: MockerFixture) -> None:
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
     evt.commit_message = "/force-rebuild"
-    sched = Scheduler(evt, None, "group", "secret", "branch")
+    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     for svc in sched.services.values():
         assert svc.dirty
@@ -79,7 +78,7 @@ def test_mark_rebuild_02(mocker: MockerFixture) -> None:
     )
     evt.commit_message = ""
     evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
-    sched = Scheduler(evt, None, "group", "secret", "branch")
+    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     assert evt.list_changed_paths.call_count == 1
     assert sched.services["test1"].dirty
@@ -101,7 +100,7 @@ def test_mark_rebuild_03(mocker: MockerFixture) -> None:
     )
     evt.commit_message = "/force-rebuild=test3,test6"
     evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
-    sched = Scheduler(evt, None, "group", "secret", "branch")
+    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     assert evt.list_changed_paths.call_count == 1
     assert sched.services["test1"].dirty
@@ -124,7 +123,7 @@ def test_create_01(mocker: MockerFixture) -> None:
     evt.repo.git = mocker.Mock(
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
@@ -144,7 +143,7 @@ def test_create_02(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -161,7 +160,7 @@ def test_create_02(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -186,7 +185,7 @@ def test_create_03(mocker: MockerFixture) -> None:
     evt.event_type = "push"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 2
@@ -203,7 +202,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -221,7 +220,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             skip_docker="0",
             source_url=SOURCE_URL,
@@ -249,7 +248,7 @@ def test_create_04(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.services["test2"].dirty = True
     sched.create_tasks()
@@ -267,7 +266,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -287,7 +286,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test2",
             source_url=SOURCE_URL,
             task_group="group",
@@ -310,7 +309,7 @@ def test_create_05(mocker: MockerFixture) -> None:
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
     evt.event_type = "release"
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 0
@@ -332,7 +331,7 @@ def test_create_06(mocker: MockerFixture) -> None:
     evt.branch = "push"
     evt.pull_request = None
     evt.http_url = "https://example.com"
-    sched = Scheduler(evt, now, "group", "secret", "push", dry_run=True)
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push", dry_run=True)
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 0
@@ -353,7 +352,7 @@ def test_create_07(mocker: MockerFixture) -> None:
     evt.branch = "push"
     evt.http_url = "https://example.com"
     evt.pull_request = 1
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -370,7 +369,7 @@ def test_create_07(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
@@ -418,7 +417,7 @@ def test_create_08(
     evt.fetch_ref = "fetch"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["testci1"].dirty = ci1_dirty
     sched.services["svc1"].dirty = svc1_dirty
     sched.services["svc2"].dirty = svc2_dirty
@@ -440,7 +439,7 @@ def test_create_08(
                 now=stringDate(now),
                 owner_email=OWNER_EMAIL,
                 provisioner=PROVISIONER_ID,
-                scheduler=SCHEDULER_ID,
+                scheduler="scheduler",
                 service_name="testci1",
                 source_url=SOURCE_URL,
                 task_group="group",
@@ -459,7 +458,7 @@ def test_create_08(
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name=svc,
             source_url=SOURCE_URL,
             task_group="group",
@@ -491,7 +490,7 @@ def test_create_08(
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name=svc,
             source_url=SOURCE_URL,
             task_group="group",
@@ -517,7 +516,7 @@ def test_create_09(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test5"].dirty = True
     sched.services["test6"].dirty = True
     sched.services.recipes["withdep.sh"].dirty = True
@@ -536,7 +535,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test5",
             source_url=SOURCE_URL,
             task_group="group",
@@ -555,7 +554,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
             recipe_name="withdep.sh",
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
@@ -576,7 +575,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test6",
             source_url=SOURCE_URL,
             task_group="group",
@@ -602,7 +601,7 @@ def test_create_10(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["msys-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -618,7 +617,7 @@ def test_create_10(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             setup_sh_path="test-msys/setup.sh",
             service_name="msys-svc",
             source_url=SOURCE_URL,
@@ -643,7 +642,7 @@ def test_create_11(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["brew-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -659,7 +658,7 @@ def test_create_11(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="brew-svc",
             setup_sh_path="test-brew/setup.sh",
             source_url=SOURCE_URL,
@@ -685,7 +684,7 @@ def test_create_12(mocker: MockerFixture) -> None:
     evt.fetch_ref = "fetch"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "secret", "push")
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
     sched.services["test-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -701,7 +700,7 @@ def test_create_12(mocker: MockerFixture) -> None:
             now=stringDate(now),
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
-            scheduler=SCHEDULER_ID,
+            scheduler="scheduler",
             service_name="test-svc",
             source_url=SOURCE_URL,
             task_group="group",

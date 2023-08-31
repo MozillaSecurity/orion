@@ -7,6 +7,7 @@ import argparse
 import re
 from datetime import datetime
 from logging import getLogger
+from os import getenv
 from pathlib import Path
 from string import Template
 from typing import Dict, List, Optional, Set, Union
@@ -21,7 +22,6 @@ from . import (
     MAX_RUN_TIME,
     OWNER_EMAIL,
     PROVISIONER_ID,
-    SCHEDULER_ID,
     SOURCE_URL,
     WORKER_TYPE,
     WORKER_TYPE_BREW,
@@ -56,6 +56,7 @@ class Scheduler:
         github_event: The event that triggered this decision.
         now: The time to calculate task times from.
         task_group: The taskGroupID to add created tasks to.
+        scheduler_id: TC scheduler ID to create tasks in.
         docker_secret: The Taskcluster secret name holding Docker Hub credentials.
         push_branch: The branch name that should trigger a push to Docker Hub.
         services (Services): The services
@@ -67,6 +68,7 @@ class Scheduler:
         github_event: GithubEvent,
         now: Optional[datetime],
         task_group: str,
+        scheduler_id: str,
         docker_secret: str,
         push_branch: str,
         dry_run: bool = False,
@@ -77,6 +79,7 @@ class Scheduler:
             github_event: The event that triggered this decision.
             now: The time to calculate task times from.
             task_group: The taskGroupID to add created tasks to.
+            scheduler_id: TC scheduler ID to create tasks in.
             docker_secret: The Taskcluster secret name holding Docker Hub creds.
             push_branch: The branch name that should trigger a push to Docker Hub.
             dry_run: Don't actually queue tasks in Taskcluster.
@@ -84,6 +87,7 @@ class Scheduler:
         self.github_event = github_event
         self.now = now
         self.task_group = task_group
+        self.scheduler_id = scheduler_id
         self.docker_secret = docker_secret
         self.push_branch = push_branch
         self.dry_run = dry_run
@@ -178,7 +182,7 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
+                    scheduler=self.scheduler_id,
                     service_name=service.name,
                     setup_sh_path=str(
                         (service.root / "setup.sh").relative_to(service.context)
@@ -200,7 +204,7 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
+                    scheduler=self.scheduler_id,
                     service_name=service.name,
                     setup_sh_path=str(
                         (service.root / "setup.sh").relative_to(service.context)
@@ -223,7 +227,7 @@ class Scheduler:
                     now=stringDate(self.now),
                     owner_email=OWNER_EMAIL,
                     provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
+                    scheduler=self.scheduler_id,
                     service_name=service.name,
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
@@ -255,7 +259,7 @@ class Scheduler:
                 now=stringDate(self.now),
                 owner_email=OWNER_EMAIL,
                 provisioner=PROVISIONER_ID,
-                scheduler=SCHEDULER_ID,
+                scheduler=self.scheduler_id,
                 service_name=service.name,
                 skip_docker=f"{isinstance(service, (ServiceHomebrew, ServiceMsys)):d}",
                 source_url=SOURCE_URL,
@@ -307,7 +311,7 @@ class Scheduler:
                 now=stringDate(self.now),
                 owner_email=OWNER_EMAIL,
                 provisioner=PROVISIONER_ID,
-                scheduler=SCHEDULER_ID,
+                scheduler=self.scheduler_id,
                 service_name=service.name,
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
@@ -358,7 +362,7 @@ class Scheduler:
                 owner_email=OWNER_EMAIL,
                 provisioner=PROVISIONER_ID,
                 recipe_name=recipe.name,
-                scheduler=SCHEDULER_ID,
+                scheduler=self.scheduler_id,
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
                 worker=WORKER_TYPE,
@@ -502,6 +506,13 @@ class Scheduler:
         Returns:
             Shell return code.
         """
+        # get schedulerId from TC queue
+        if args.scheduler is None:
+            task_obj = Taskcluster.get_service("queue").task(getenv("TASK_ID"))
+            scheduler_id = task_obj["schedulerId"]
+        else:
+            scheduler_id = args.scheduler
+
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
         try:
@@ -510,6 +521,7 @@ class Scheduler:
                 evt,
                 args.now,
                 args.task_group,
+                scheduler_id,
                 args.docker_hub_secret,
                 args.push_branch,
                 args.dry_run,

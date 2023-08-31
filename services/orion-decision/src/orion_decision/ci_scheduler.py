@@ -8,6 +8,7 @@ from datetime import datetime
 from itertools import chain
 from json import dumps as json_dump
 from logging import getLogger
+from os import getenv
 from pathlib import Path
 from string import Template
 from typing import Any, Dict, List
@@ -20,7 +21,6 @@ from . import (
     DEADLINE,
     MAX_RUN_TIME,
     PROVISIONER_ID,
-    SCHEDULER_ID,
     TASKCLUSTER_ROOT_URL,
     WORKER_TYPE,
     WORKER_TYPE_BREW,
@@ -50,6 +50,7 @@ class CIScheduler:
         github_event: Github event that triggered this run.
         now: Taskcluster time when decision was triggered.
         task_group: Task group to create tasks in.
+        scheduler_id: TC scheduler ID to create tasks in.
         dry_run: Calculate what should be created, but don't actually
                  create tasks in Taskcluster.
         matrix: CI job matrix
@@ -61,6 +62,7 @@ class CIScheduler:
         github_event: GithubEvent,
         now: datetime,
         task_group: str,
+        scheduler_id: str,
         matrix: Dict[str, Any],
         dry_run: bool = False,
     ) -> None:
@@ -71,6 +73,7 @@ class CIScheduler:
             github_event: Github event that triggered this run.
             now: Taskcluster time when decision was triggered.
             task_group: Task group to create tasks in.
+            scheduler_id: TC scheduler ID to create tasks in.
             matrix: CI job matrix
             dry_run: Calculate what should be created, but don't actually
                      create tasks in Taskcluster.
@@ -79,6 +82,7 @@ class CIScheduler:
         self.github_event = github_event
         self.now = now
         self.task_group = task_group
+        self.scheduler_id = scheduler_id
         self.dry_run = dry_run
         assert github_event.event_type is not None
         self.matrix = CIMatrix(
@@ -142,7 +146,7 @@ class CIScheduler:
                     "now": stringDate(self.now),
                     "project": self.project_name,
                     "provisioner": PROVISIONER_ID,
-                    "scheduler": SCHEDULER_ID,
+                    "scheduler": self.scheduler_id,
                     "task_group": self.task_group,
                     "user": self.github_event.user,
                     "worker": WORKER_TYPES[job.platform],
@@ -193,6 +197,13 @@ class CIScheduler:
         Returns:
             Shell return code.
         """
+        # get schedulerId from TC queue
+        if args.scheduler is None:
+            task_obj = Taskcluster.get_service("queue").task(getenv("TASK_ID"))
+            scheduler_id = task_obj["schedulerId"]
+        else:
+            scheduler_id = args.scheduler
+
         # get the github event & repo
         evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
         assert evt.commit_message is not None
@@ -210,6 +221,7 @@ class CIScheduler:
                 evt,
                 args.now,
                 args.task_group,
+                scheduler_id,
                 args.matrix,
                 args.dry_run,
             )
