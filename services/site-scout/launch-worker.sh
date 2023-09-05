@@ -73,5 +73,4 @@ python3 -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 
 trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
 
 update-ec2-status "Setup: launching site-scout"
-readarray -t yml < <(ls /src/site-scout-private/visit-yml/*.yml)
-python3 -m site_scout ./build/firefox -i "${yml[@]}" --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager
+python3 -m site_scout ./build/firefox -i /src/site-scout-private/visit-yml/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager
