@@ -127,5 +127,4 @@ python -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
 trap "kill $!; python -m TaskStatusReporter --report-from-file status.txt" EXIT
 
 status "Setup: launching site-scout"
-# shellcheck disable=SC2046
-site-scout ./build/firefox.exe -i $(ls /src/site-scout-private/visit-yml/*.yml) --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager
+site-scout ./build/firefox.exe -i ./site-scout-private/visit-yml/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager
