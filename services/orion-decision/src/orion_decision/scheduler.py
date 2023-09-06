@@ -136,6 +136,16 @@ class Scheduler:
         if self.github_event.event_type == "release":
             LOG.warning("Detected release event. Nothing to do!")
             return True
+        if (
+            self.github_event.event_type == "push"
+            and self.github_event.branch != self.push_branch
+        ):
+            assert self.github_event.repo is not None
+            for ref, commit in self.github_event.repo.refs().items():
+                if commit == self.github_event.commit:
+                    if ref.startswith("refs/pull/"):
+                        LOG.warning("Push in a PR branch. No tasks scheduled.")
+                        return True
         return False
 
     def mark_services_for_rebuild(self) -> None:

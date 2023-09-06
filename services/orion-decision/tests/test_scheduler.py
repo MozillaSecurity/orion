@@ -180,6 +180,7 @@ def test_create_03(mocker: MockerFixture) -> None:
     evt.repo.git = mocker.Mock(
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
+    evt.repo.refs.return_value = {}
     evt.commit = "commit"
     evt.branch = "push"
     evt.event_type = "push"
@@ -326,6 +327,7 @@ def test_create_06(mocker: MockerFixture) -> None:
     evt.repo.git = mocker.Mock(
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
+    evt.repo.refs.return_value = {}
     evt.event_type = "push"
     evt.commit = "commit"
     evt.branch = "push"
@@ -713,3 +715,27 @@ def test_create_12(mocker: MockerFixture) -> None:
         expected, "https://example.com", "fetch", "commit", "test-only"
     )
     assert task == expected
+
+
+@pytest.mark.parametrize("branch, tasks", [("dev", 0), ("main", 0), ("push", 2)])
+def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
+    """test push in PR task creation skipped"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.utcnow()
+    root = FIXTURES / "services03"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.repo.refs.return_value = {"HEAD": "commit", "refs/pull/1/head": "commit"}
+    evt.commit = "commit"
+    evt.event_type = "push"
+    evt.branch = branch
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == tasks
