@@ -58,6 +58,18 @@ class GitRepo:
             LOG.debug("using existing git repo: %s", self.path)
             self.git("show", "--quiet")  # assert that path is valid
 
+    def refs(self) -> Dict[str, str]:
+        """Get the list of refs available with associated commits.
+
+        Returns:
+            dictionary mapping ref name to commit hash.
+        """
+        result = {}
+        for entry in self.git("ls-remote", "--quiet").splitlines():
+            commit, ref = entry.split()
+            result[ref] = commit
+        return result
+
     def head(self) -> str:
         """Get the commit ref of HEAD.
 

@@ -58,6 +58,7 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
         event_type="push",
         spec=GithubEvent(),
     )
+    evt.repo.refs.return_value = {}
     mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
     sched = CIScheduler("test", evt, now, "group", "scheduler", {})
     sched.create_tasks()
@@ -101,6 +102,7 @@ def test_ci_create_02(
         user="testuser",
         spec=GithubEvent(),
     )
+    evt.repo.refs.return_value = {}
     mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
     job = MatrixJob(
         name="testjob",
@@ -199,6 +201,7 @@ def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
         tag=None,
         spec=GithubEvent(),
     )
+    evt.repo.refs.return_value = {}
     mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
     job1 = MatrixJob(
         name="testjob1",
@@ -256,3 +259,41 @@ def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
         expected["requires"] = "all-resolved"
     expected["dependencies"].append(task1_id)
     assert task2 == expected
+
+
+@pytest.mark.parametrize("branch, tasks", [("dev", 0), ("main", 1), ("master", 1)])
+def test_ci_create_04(mocker: MockerFixture, branch: str, tasks: int) -> None:
+    """test PR push task skipped"""
+    taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
+    queue = mocker.Mock()
+    index = mocker.Mock()
+    index.findTask.return_value = {"taskId": "msys-task"}
+    taskcluster.get_service.side_effect = lambda x: {"index": index, "queue": queue}[x]
+    now = datetime.utcnow()
+    evt = mocker.Mock(
+        branch=branch,
+        event_type="push",
+        ssh_url="ssh://repo",
+        http_url="test://repo",
+        fetch_ref="fetchref",
+        repo_slug="project/test",
+        tag=None,
+        commit="commit",
+        user="testuser",
+        spec=GithubEvent(),
+    )
+    evt.repo.refs.return_value = {"HEAD": "commit", "refs/pull/1/head": "commit"}
+    mtx = mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
+    job = MatrixJob(
+        name="testjob",
+        language="python",
+        version="3.7",
+        platform="linux",
+        env={},
+        script=["test"],
+    )
+    mtx.return_value.jobs = [job]
+    mtx.return_value.secrets = []
+    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
+    sched.create_tasks()
+    assert queue.createTask.call_count == tasks

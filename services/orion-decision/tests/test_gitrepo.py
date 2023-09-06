@@ -74,6 +74,18 @@ def test_retry(mocker: MockerFixture) -> None:
     assert sleep.call_count == 9
 
 
+def test_refs() -> None:
+    repo = GitRepo(FIXTURES / "git03", "main", "FETCH_HEAD")
+    try:
+        refs = repo.refs()
+    finally:
+        repo.cleanup()
+    assert refs == {
+        "HEAD": "f52af064b7d715ea87595e9b21f1ae6323064f88",
+        "refs/heads/main": "f52af064b7d715ea87595e9b21f1ae6323064f88",
+    }
+
+
 @pytest.mark.parametrize(
     "action, event, result, repo_args",
     [
