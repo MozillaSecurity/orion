@@ -7,20 +7,27 @@ tasks:
       created: {$fromNow: ''}
       deadline: {$fromNow: '1 hour'}
       provisionerId: proj-fuzzing
-      workerType: ci
+      workerType: ci-gw
       payload:
         features:
           taskclusterProxy: true
         maxRunTime: 3600
-        image: mozillasecurity/orion-decision:latest
         env:
           DOCKER_HUB_SECRET: project/fuzzing/docker-hub
           GITHUB_EVENT: {$json: {$eval: event}}
           GITHUB_ACTION: ${tasks_for}
           TASKCLUSTER_NOW: ${now}
         command:
-          - decision
-          - -v
+          - - bash
+            - "-exc"
+            - "-o"
+            - "pipefail"
+            - >
+              retry () { for _ in {1..9}; do if "$@"; then return; else sleep 30; fi; done; "$@"; };
+              retry podman pull mozillasecurity/orion-decision:latest;
+              podman run --rm -e TASK_ID -e RUN_ID -e TASKCLUSTER_ROOT_URL --add-host=taskcluster:127.0.0.1 --net=host
+              -e TASKCLUSTER_PROXY_URL=http://localhost:80 -e DOCKER_HUB_SECRET -e GITHUB_EVENT -e GITHUB_ACTION -e TASKCLUSTER_NOW
+              mozillasecurity/orion-decision:latest decision -v
       scopes:
         - docker-worker:capability:privileged
         - index:insert-task:project.fuzzing.orion.*
