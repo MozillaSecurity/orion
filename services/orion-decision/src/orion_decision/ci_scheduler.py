@@ -93,6 +93,19 @@ class CIScheduler:
 
     def create_tasks(self) -> None:
         """Create CI tasks in Taskcluster."""
+        # Don't run push tasks in a PR. These are entirely redundant.
+        # Ignore if branch is master/main, in case a PR is merged by push directly.
+        # In that case the PR ref would still exist, although the push is to main.
+        if self.github_event.event_type == "push" and self.github_event.branch not in {
+            "master",
+            "main",
+        }:
+            assert self.github_event.repo is not None
+            for ref, commit in self.github_event.repo.refs().items():
+                if commit == self.github_event.commit:
+                    if ref.startswith("refs/pull/"):
+                        LOG.warning("Push in a PR branch. No CI tasks scheduled.")
+                        return
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
         prev_stage: List[str] = []
         for stage in sorted({job.stage for job in self.matrix.jobs}):
