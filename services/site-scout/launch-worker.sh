@@ -57,6 +57,8 @@ update-ec2-status "Setup: fetching build"
 build="$(python3 -c "import random;print(random.choice(['asan','debug','tsan','asan32','debug32']))")"
 case $build in
   asan32)
+    # TEMPORARY workaround for frequent OOMs
+    export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
     fuzzfetch -n build --fuzzing --asan --cpu x86
     ;;
   debug32)
