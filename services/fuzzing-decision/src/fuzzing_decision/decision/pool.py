@@ -71,7 +71,7 @@ class MountArtifactResolver:
 
 def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     """Add image or mount to task payload, depending on platform."""
-    if config.platform in {"macos", "windows"}:
+    if config.worker == "generic" and config.platform != "linux":
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
         task_id: Union[str, int]
@@ -98,7 +98,7 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
             }
         )
         task["dependencies"].append(task_id)
-    else:
+    elif config.worker != "generic":
         # `container` can be either a string or a dict, so can't template it
         task["payload"]["image"] = config.container
 
@@ -161,8 +161,66 @@ def configure_task(
                 'eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch',
             ],
         ]
+    elif config.worker == "generic":
+        # linux generic-worker needs to run podman itself
+        if isinstance(config.container, str):
+            # docker image, download and use directly
+            pass
+        elif config.container["type"] == "docker-image":
+            config.container["name"]
+        elif config.container["type"] == "indexed-image":
+            # need to resolve "image" to a task ID where the mount artifact is
+            task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])
+        else:
+            task_id = config.container["taskId"]
 
-    if config.platform in {"macos", "windows"}:
+        assert isinstance(config.container, dict)
+        assert config.container["type"] == "docker-image"
+        task_id: Union[str, int]
+        if config.container["type"] == "indexed-image":
+            # need to resolve "image" to a task ID where the mount artifact is
+            task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])
+        else:
+            task_id = config.container["taskId"]
+        task["payload"].setdefault("mounts", [])
+        suffixes = Path(config.container["path"]).suffixes
+        if len(suffixes) >= 2 and suffixes[-2] == ".tar":
+            fmt = f"tar{suffixes[-1]}"
+        else:
+            assert suffixes, "unabled to determine format from container path"
+            fmt = suffixes[-1][1:]
+        task["payload"]["mounts"].append(
+            {
+                "format": fmt,
+                "content": {
+                    "taskId": task_id,
+                    "artifact": config.container["path"],
+                },
+                "directory": ".",
+            }
+        )
+        task["dependencies"].append(task_id)
+        """
+        task["payload"]["command"] = [
+            [
+                "bash",
+                "-exc",
+                "-o",
+                "pipefail",
+                'curl --retry 5 --connect-timeout 25 -sSfL --write-out '
+                '"%{stderr}Resolved orion-decision to %{url_effective}\n"'
+                '"$TASKCLUSTER_PROXY_URL/api/index/v1/task/project.fuzzing.orion.'
+                'orion-decision.master/artifacts/public/orion-decision.tar.zst"'
+                '| zstdcat | podman load; podman run --rm -e TASK_ID -e RUN_ID '
+                '-e TASKCLUSTER_ROOT_URL --add-host=taskcluster:127.0.0.1 --net=host'
+                '-e TASKCLUSTER_PROXY_URL=http://localhost:80 -e PROJECT_NAME '
+                '-e CI_MATRIX -e GITHUB_EVENT -e GITHUB_ACTION -e TASKCLUSTER_NOW'
+                'mozillasecurity/orion-decision:latest ci-decision -v'
+        """
+
+        raise NotImplementedError()
+
+    if config.worker == "generic":
         # translate artifacts from dict to array for generic-worker
         task["payload"]["artifacts"] = [
             # `... or artifact` because dict.update returns None
@@ -320,7 +378,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             ),
             "minCapacity": 0,
         }
-        if self.platform == "linux":
+        if self.worker == "docker":
             config["lifecycle"] = {
                 # give workers 15 minutes to register before assuming they're broken
                 "registrationTimeout": parse_time("15m"),
@@ -396,7 +454,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         # this artifact is required by pool_launch
         result["project/fuzzing/private/logs"] = {
             "expires": expires,
-            "path": "/logs/" if self.platform == "linux" else "logs",
+            "path": "/logs/" if self.worker == "docker" else "logs",
             "type": "directory",
         }
         return result
@@ -507,7 +565,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,
         }
-        if self.platform == "linux":
+        if self.worker == "docker":
             config["lifecycle"] = {
                 # give workers 15 minutes to register before assuming they're broken
                 "registrationTimeout": parse_time("15m"),

@@ -62,6 +62,7 @@ def pool_data() -> dict:
         "macros": {},
         "run_as_admin": False,
         "nested_virtualization": False,
+        "worker": "generic",
     }
 
 

@@ -194,6 +194,7 @@ def test_aws_resources(
             "tasks": 3,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": "generic",
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -309,6 +310,7 @@ def test_gcp_resources(
             "tasks": 3,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": "docker",
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -524,6 +526,7 @@ def test_tasks(
             "tasks": 2,
             "run_as_admin": run_as_admin,
             "nested_virtualization": False,
+            "worker": "docker",
         },
     )
 
@@ -800,6 +803,7 @@ def test_pool_map() -> None:
     assert set(cfg_map.scopes) == set()
     assert cfg_map.tasks is None
     assert cfg_map.nested_virtualization == expect.nested_virtualization
+    assert cfg_map.worker == expect.worker
 
     pools = list(cfg_map.iterpools())
     assert len(pools) == 1
@@ -828,6 +832,7 @@ def test_pool_map() -> None:
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
+    assert pool.worker == expect.worker
 
 
 def test_pool_map_admin(mocker: MockerFixture) -> None:
@@ -903,6 +908,7 @@ def test_cycle_crons() -> None:
             "tasks": 2,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": "docker",
         },
     )
 
