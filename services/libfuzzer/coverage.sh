@@ -18,7 +18,9 @@ source ~/.local/bin/common.sh
 # Setup required coverage environment variables.
 export COVERAGE=1
 
-REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+if [[ -z "$REVISION" ]]; then
+  REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+fi
 export REVISION
 
 TOOLNAME="${TOOLNAME:-libFuzzer-$FUZZER}"
@@ -61,7 +63,7 @@ timeout --foreground -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh |
 
 # %<---[Coverage]-------------------------------------------------------------
 
-retry-curl --compressed "https://hg.mozilla.org/mozilla-central/archive/$REVISION.zip" -o "$REVISION.zip"
+retry-curl --compressed "https://hg.mozilla.org/${REPO-mozilla-central}/archive/$REVISION.zip" -o "$REVISION.zip"
 unzip "$REVISION.zip"
 
 # Collect coverage count data.
@@ -72,12 +74,12 @@ RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
     --guess-directory-when-missing \
     --ignore-not-existing \
     -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
-    -s "./mozilla-central-$REVISION" \
+    -s "./${REPO-mozilla-central}-$REVISION" \
     > "$WORKDIR/coverage.json"
 
 # Submit coverage data.
 python3 -m CovReporter \
-    --repository mozilla-central \
+    --repository "${REPO-mozilla-central}" \
     --description "libFuzzer ($FUZZER,rt=$COVRUNTIME)" \
     --tool "$TOOLNAME" \
     --submit "$WORKDIR/coverage.json"

@@ -19,6 +19,10 @@ then
   FETCH_ARGS+=(--coverage --build "$REVISION")
 fi
 
+if [[ "$REPO" = "try" ]]; then
+  FETCH_ARGS+=(--try)
+fi
+
 # Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 JS="${JS:-0}"
