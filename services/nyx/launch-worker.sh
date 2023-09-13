@@ -3,6 +3,9 @@ set -e
 set -x
 set -o pipefail
 
+id
+ls -l /dev/kvm
+
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
