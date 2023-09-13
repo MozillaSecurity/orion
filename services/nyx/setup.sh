@@ -15,8 +15,7 @@ DEBIAN_FRONTEND="teletype"
 export DEBIAN_FRONTEND
 
 # Add unprivileged user
-groupadd --force --system kvm
-useradd --create-home --groups kvm --home-dir /home/worker --shell /bin/bash worker
+useradd --create-home --home-dir /home/worker --shell /bin/bash worker
 
 pkgs=(
   ca-certificates
