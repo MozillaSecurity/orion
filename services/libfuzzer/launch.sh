@@ -85,6 +85,10 @@ EOF
   # sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -s "$0"
 else
+  # get gcp fuzzdata credentials
+  mkdir -p ~/.config/gcloud
+  get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
+
   if [[ $COVERAGE ]]
   then
 

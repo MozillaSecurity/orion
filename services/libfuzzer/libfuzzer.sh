@@ -14,6 +14,23 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+gcs-cat () {
+# gcs-cat bucket path
+python3 - "$1" "$2" << "EOF"
+import os
+import sys
+from google.cloud import storage
+
+client = storage.Client()
+bucket = client.bucket(sys.argv[1])
+
+blob = bucket.blob(sys.argv[2])
+print(f"Downloading gs://{sys.argv[1]}/{sys.argv[2]}", file=sys.stderr)
+with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
+    blob.download_to_file(stdout)
+EOF
+}
+
 if [[ -z "$FUZZER" ]]
 then
   echo "Required environment variable FUZZER was not found!" >&2
@@ -232,7 +249,7 @@ CORPORA="./corpora/"
 
 if [[ -n "$TOKENS" ]]
 then
-  retry svn export --force "$FUZZDATA_URL/$TOKENS" ./tokens.dict
+  gcs-cat guided-fuzzing-data "$TOKENS" > ./tokens.dict
   TOKENS="-dict=./tokens.dict"
 fi
 
