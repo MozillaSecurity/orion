@@ -112,7 +112,7 @@ retry git fetch origin main
 git checkout main
 cd -
 # install then uninstall so only dependencies remain
-retry pip3 install /src/guided-fuzzing-daemon
+retry pip3 install google-cloud-storage /src/guided-fuzzing-daemon
 pip3 uninstall -y guided-fuzzing-daemon
 
 /home/worker/.local/bin/cleanup.sh
