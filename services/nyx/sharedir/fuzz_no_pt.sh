@@ -35,6 +35,6 @@ chown user fuzz.sh
 chown user stage2.sh
 
 echo "[!] switching user (root -> user)" | ./hcat
-su user -c "sh -c ./stage2.sh"
+su user -c "sh stage2.sh"
 
 sleep 200000000

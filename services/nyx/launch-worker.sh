@@ -64,13 +64,14 @@ mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 
 # pull corpus
-time gcs-dl-all guided-fuzzing-data nyx-ipc-fuzzing/corpus ./corpus
+if [[ ! -d corpus ]]; then
+  time gcs-dl-all guided-fuzzing-data nyx-ipc-fuzzing/corpus ./corpus
+fi
 
 # pull qemu image
 if [[ ! -e ~/firefox.img ]]; then
   time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
-time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/snapshot.tar.zst | zstdcat | tar -x
 
 # clone ipc-fuzzing & build harness/tools
 # get deployment key from TC
@@ -84,18 +85,82 @@ IdentityFile ~/.ssh/id_ecdsa.ipc_fuzzing
 EOF
 pushd /srv/repos/ipc-research >/dev/null
 git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
-cd ipc-fuzzing/preload/harness
+cd ipc-fuzzing
+sed -i '32 {s/^/#/}' userspace-tools/compile_64.sh
+sed -i 's/^gcc /clang /' userspace-tools/compile_64.sh
+sed -i 's/uint32_t bytes /uint64_t bytes /' userspace-tools/src/htools/hget.c
+cd preload/harness
 sed -i '23,26 {s/^/#/}' compile.sh
 sed -i '38,41 {s/^/#/}' compile.sh
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 ./compile.sh
 popd >/dev/null
 
+# create snapshot
+if [[ ! -d ~/snapshot ]]; then
+  pushd /srv/repos/ipc-research/ipc-fuzzing/userspace-tools >/dev/null
+  sed -i 's,^QEMU_PT_BIN.*,QEMU_PT_BIN=/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/x86_64-softmmu/qemu-system-x86_64,' qemu_tool.sh
+  sed -i 's/-vnc/-monitor tcp:127.0.0.1:55555,server,nowait -vnc/' qemu_tool.sh
+  touch config.sh
+  qemu-cmd () {
+    set +x
+    echo "$@" | nc -N 127.0.0.1 55555 >/dev/null
+    set -x
+  }
+  gen-qemu-sendkeys () {
+    set +x
+    echo -n "$@" | while read -r -n1 letter; do
+      case "$letter" in
+        "")
+          echo "spc"
+          ;;
+        "/")
+          echo "shift-7"
+          ;;
+        '"')
+          echo "shift-2"
+          ;;
+        "-")
+          echo "slash"
+          ;;
+        ";")
+          echo "shift-comma"
+          ;;
+        *)
+          echo "$letter"
+          ;;
+      esac
+    done | while read -r key; do
+      echo "sendkey $key"
+    done
+    echo "sendkey ret"
+    echo ""
+    set -x
+  }
+
+  ./qemu_tool.sh create_snapshot ~/firefox.img 6144 ~/snapshot &
+  sleep 30
+  qemu-cmd "sendkey alt-f2"
+  sleep 1
+  qemu-cmd "$(gen-qemu-sendkeys gnome-terminal)"
+  sleep 2
+  qemu-cmd "$(gen-qemu-sendkeys "sudo screen -d -m bash -c \"sleep 5; /home/user/loader\"; exit")"
+  sleep 5
+  qemu-cmd "$(gen-qemu-sendkeys user)"
+  wait
+  popd >/dev/null
+fi
+
 # setup sharedir
 pushd sharedir >/dev/null
-fuzzfetch -n firefox --nyx --fuzzing --asan
-find firefox/ -type d | sed 's/^/mkdir -p /' >> ff_files.sh
-find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/' >> ff_files.sh
+if [[ ! -d firefox ]]; then
+  fuzzfetch -n firefox --nyx --fuzzing --asan
+fi
+{
+  find firefox/ -type d | sed 's/^/mkdir -p /'
+  find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/'
+  find firefox/ -type f -executable | sed 's/.*/chmod +x \0/'
+} >> ff_files.sh
 prefpicker browser-fuzzing.yml prefs.js
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/page.zip .
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/ld_preload_*.so .

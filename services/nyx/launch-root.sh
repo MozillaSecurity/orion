@@ -19,6 +19,18 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 
 [INPUT]
     Name tail
+    Path /logs/nyx.log
+    Path_Key file
+    Key message
+    Refresh_Interval 5
+    Read_from_Head On
+    Skip_Long_Lines On
+    Buffer_Max_Size 1M
+    DB /var/lib/td-agent-bit/pos/nyx.pos
+    DB.locking true
+
+[INPUT]
+    Name tail
     Path /logs/live.log
     Path_Key file
     Key message
@@ -26,7 +38,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     Read_from_Head On
     Skip_Long_Lines On
     Buffer_Max_Size 1M
-    DB /var/lib/td-agent-bit/pos/grizzly-logs.pos
+    DB /var/lib/td-agent-bit/pos/live.pos
     DB.locking true
 
 [FILTER]
@@ -65,7 +77,11 @@ retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.c
 
 # setup kvm device
 kvm_gid="$(stat -c%g /dev/kvm)"
-kvm_grp="$(grep ":$kvm_gid:" /etc/group | cut -d: -f1)"
+kvm_grp="$({ grep ":$kvm_gid:" /etc/group || true; } | cut -d: -f1)"
+if [[ -z "$kvm_grp" ]]; then
+  groupadd -g "$kvm_gid" --system kvm
+  kvm_grp=kvm
+fi
 if [[ ! -e /dev/kvm ]]; then
   mknod /dev/kvm c 10 "$(grep '\<kvm\>' /proc/misc | cut -f 1 -d' ')"
 fi

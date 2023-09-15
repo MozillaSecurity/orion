@@ -29,6 +29,7 @@ pkgs=(
   libpixman-1-0
   libpng16-16
   libxml2
+  netcat-openbsd
   openssh-client
   psmisc
   python3
