@@ -9,7 +9,7 @@ sudo swapoff -a
 
 echo "[!] requesting firefox from hypervisor" | ./hcat
 ./hget ff_files.sh ff_files.sh
-source ff_files.sh
+sh ff_files.sh
 
 echo "[!] requesting page.zip from hypervisor" | ./hcat
 ./hget_bulk page.zip page.zip
