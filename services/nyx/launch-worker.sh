@@ -139,13 +139,13 @@ if [[ ! -d ~/snapshot ]]; then
   }
 
   ./qemu_tool.sh create_snapshot ~/firefox.img 6144 ~/snapshot &
-  sleep 30
+  sleep 45
   qemu-cmd "sendkey alt-f2"
-  sleep 1
-  qemu-cmd "$(gen-qemu-sendkeys gnome-terminal)"
-  sleep 2
-  qemu-cmd "$(gen-qemu-sendkeys "sudo screen -d -m bash -c \"sleep 5; /home/user/loader\"; exit")"
   sleep 5
+  qemu-cmd "$(gen-qemu-sendkeys gnome-terminal)"
+  sleep 30
+  qemu-cmd "$(gen-qemu-sendkeys "sudo screen -d -m bash -c \"sleep 5; /home/user/loader\"; exit")"
+  sleep 45
   qemu-cmd "$(gen-qemu-sendkeys user)"
   wait
   popd >/dev/null
