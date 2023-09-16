@@ -97,4 +97,6 @@ function onexit () {
 trap onexit EXIT
 
 chown -R worker:worker /home/worker/sharedir
+chown root:worker /logs
+chmod 0775 /logs
 su worker -c "/home/worker/launch-worker.sh"
