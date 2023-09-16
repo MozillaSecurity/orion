@@ -170,6 +170,10 @@ popd >/dev/null
 
 mkdir corpus.out
 
+function onexit () {
+  rm -rf ~/corpus.out/*/queue
+}
+
 # run and watch for results
 AFL_NYX_LOG=/logs/nyx.log \
 /srv/repos/AFLplusplus/afl-fuzz -V 3600 -t 30000 -X -i ./corpus -o ./corpus.out -- ./sharedir
