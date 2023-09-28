@@ -171,8 +171,10 @@ popd >/dev/null
 mkdir corpus.out
 
 function onexit () {
-  rm -rf ~/corpus.out/*/queue
+  tar -C ~/corpus.out --remove-files -cf queue.tar ./*/queue
+  zstd --rm ~/corpus.out/queue.tar
 }
+trap onexit EXIT
 
 # run and watch for results
 AFL_NYX_LOG=/logs/nyx.log \
