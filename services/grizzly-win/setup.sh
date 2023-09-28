@@ -1,5 +1,6 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
+shopt -s extglob
 
 retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
 retry_curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
@@ -22,8 +23,8 @@ pacman --noconfirm -Rs psmisc
 retry_curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
-VER=2.0.5
-retry_curl -O "https://fluentbit.io/releases/2.0/fluent-bit-${VER}-win64.zip"
+VER=2.1.10
+retry_curl -O "https://fluentbit.io/releases/${VER/%.+([0-9])/}/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
