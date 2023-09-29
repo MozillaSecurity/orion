@@ -2,7 +2,7 @@
 set -e -x
 
 retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry_curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -S \
@@ -27,13 +27,6 @@ retry_curl -O "https://fluentbit.io/releases/2.0/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
-
-# get new minidump-stackwalk
-retry_curl -O "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-1.toolchains.v3.win64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst"
-zstdcat minidump-stackwalk.tar.zst | tar xv
-mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
-rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
-./msys64/usr/bin/minidump-stackwalk.exe --version
 
 # get python
 VER=3.10.8
@@ -87,11 +80,33 @@ which node
 node -v
 npm -v
 
+retry_curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json
+resolve_tc () {
+python - "$1" << EOF
+import json
+import sys
+with open("label-to-taskid.json") as fd:
+  label_to_task = json.load(fd)
+task_id = label_to_task[f"toolchain-win64-{sys.argv[1]}"]
+print(f"https://firefox-ci-tc.services.mozilla.com/api/queue/v1/task/{task_id}/artifacts/public/build/{sys.argv[1]}.tar.zst")
+EOF
+}
+
 # get grcov
-retry_curl -O "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.win64-grcov.latest/artifacts/public/build/grcov.tar.zst"
+retry_curl -O "$(resolve_tc grcov)"
 zstdcat grcov.tar.zst | tar -xv
-mv grcov.exe msys64/usr/bin/
+mv grcov/grcov.exe msys64/usr/bin/
+rm -rf grcov grcov.tar.zst
 ./msys64/usr/bin/grcov.exe --version
+
+# get new minidump-stackwalk
+retry_curl -O "$(resolve_tc minidump-stackwalk)"
+zstdcat minidump-stackwalk.tar.zst | tar xv
+mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
+rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
+./msys64/usr/bin/minidump-stackwalk.exe --version
+
+rm label-to-taskid.json
 
 # install utils to match linux ci images
 retry python -m pip install \
