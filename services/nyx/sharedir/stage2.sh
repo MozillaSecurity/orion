@@ -41,12 +41,16 @@ echo "[!] starting firefox" | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
 
 export MOZ_FUZZ_LOG_IPC=1
-export NYX_FUZZER="IPC_Generic"
+export NYX_FUZZER="${NYX_FUZZER}"
 export NYX_AFL_PLUS_PLUS_MODE=ON
 export NYX_ASAN_EXECUTABLE=TRUE
 export NYX_NET_FUZZ_MODE=ON
 LD_LIBRARY_PATH="/home/user/firefox/" \
-LD_BIND_NOW=1 ASAN_OPTIONS="hard_rss_limit_mb=4096:max_allocation_size_mb=3073:symbolize=0:detect_leaks=0:allocator_may_return_null=1:log_path=/tmp/data.log:abort_on_error=true" LD_PRELOAD=./ld_preload_fuzz.so /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
+LD_BIND_NOW=1 \
+ASAN_OPTIONS="${ASAN_OPTIONS}" \
+UBSAN_OPTIONS="${UBSAN_OPTIONS}" \
+LD_PRELOAD=./ld_preload_fuzz.so \
+/home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
 echo $?
 
 echo "[!] Debug output:" | ./hcat
