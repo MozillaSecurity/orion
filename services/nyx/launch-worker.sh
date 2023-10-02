@@ -9,11 +9,11 @@ ls -l /dev/kvm
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-for r in fuzzfetch FuzzManager prefpicker; do
+for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
   pushd "/srv/repos/$r" >/dev/null
   retry git fetch --depth=1 --no-tags origin
   git reset --hard FETCH_HEAD
-  pip3 install -U .
+  retry pip3 install -U .
   popd >/dev/null
 done
 
@@ -34,38 +34,29 @@ with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
 EOF
 }
 
-gcs-dl-all () {
-# gcs-dl-all bucket prefix dest
-python3 - "$1" "$2" "$3" << "EOF"
-import os
-import sys
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path, PurePosixPath
-from google.cloud import storage
-
-storage_client = storage.Client()
-bucket = storage_client.bucket(sys.argv[1])
-
-n_workers = len(os.sched_getaffinity(0))
-prefix_path = PurePosixPath(sys.argv[2])
-with ThreadPoolExecutor(max_workers=n_workers) as executor:
-  for blob in bucket.list_blobs(prefix=sys.argv[2]):
-    if blob.name.endswith("/"):
-      continue
-    blob_path = PurePosixPath(blob.name)
-    dest = Path(sys.argv[3]) / blob_path.relative_to(prefix_path)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    executor.submit(blob.download_to_filename, dest)
-EOF
-}
-
 # get Cloud Storage credentials
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 
-# pull corpus
-if [[ ! -d corpus ]]; then
-  time gcs-dl-all guided-fuzzing-data nyx-ipc-fuzzing/corpus ./corpus
+# get AWS S3 credentials
+setup-aws-credentials
+
+S3_PROJECT="Nyx-$NYX_FUZZER"
+S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
+
+# Get FuzzManager configuration
+# We require FuzzManager credentials in order to submit our results.
+if [[ ! -e ~/.fuzzmanagerconf ]]
+then
+  get-tc-secret fuzzmanagerconf .fuzzmanagerconf
+  # Update FuzzManager config for this instance.
+  mkdir -p signatures
+  cat >> .fuzzmanagerconf << EOF
+sigdir = $HOME/signatures
+EOF
+  # Update Fuzzmanager config with suitable hostname based on the execution environment.
+  setup-fuzzmanager-hostname
+  chmod 0600 ~/.fuzzmanagerconf
 fi
 
 # pull qemu image
@@ -151,7 +142,37 @@ if [[ ! -d ~/snapshot ]]; then
   popd >/dev/null
 fi
 
-# setup sharedir
+ASAN_OPTIONS=\
+abort_on_error=true:\
+allocator_may_return_null=true:\
+check_initialization_order=true:\
+dedup_token_length=1:\
+detect_invalid_pointer_pairs=2:\
+detect_leaks=0:\
+detect_stack_use_after_scope=true:\
+hard_rss_limit_mb=4096:\
+log_path=/tmp/data.log:\
+max_allocation_size_mb=3073:\
+print_cmdline=true:\
+print_scariness=true:\
+start_deactivated=false:\
+strict_init_order=true:\
+strict_string_checks=true:\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
+symbolize=0:\
+$ASAN_OPTIONS
+ASAN_OPTIONS=${ASAN_OPTIONS//:/ }
+
+UBSAN_OPTIONS=\
+halt_on_error=1:\
+print_stacktrace=1:\
+print_summary=1:\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
+symbolize=0:\
+$UBSAN_OPTIONS
+UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
+
+#setup sharedir
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
   fuzzfetch -n firefox --nyx --fuzzing --asan
@@ -161,6 +182,9 @@ fi
   find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/'
   find firefox/ -type f -executable | sed 's/.*/chmod +x \0/'
 } >> ff_files.sh
+sed -i "s/\${NYX_FUZZER}/$NYX_FUZZER/" stage2.sh
+sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
+sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/page.zip .
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/ld_preload_*.so .
@@ -170,12 +194,20 @@ popd >/dev/null
 
 mkdir corpus.out
 
-function onexit () {
-  tar -C ~/corpus.out --remove-files -cf queue.tar ./*/queue
-  zstd --rm ~/corpus.out/queue.tar
-}
-trap onexit EXIT
+if [[ -z "$NYX_INSTANCES" ]]
+then
+  NYX_INSTANCES="$(nproc)"
+fi
 
-# run and watch for results
-AFL_NYX_LOG=/logs/nyx.log \
-/srv/repos/AFLplusplus/afl-fuzz -V 3600 -t 30000 -X -i ./corpus -o ./corpus.out -- ./sharedir
+export AFL_NYX_LOG=/logs/nyx.log
+
+if [[ -n "$S3_CORPUS_REFRESH" ]]
+then
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
+else
+  # Download the corpus from S3
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+  # run and watch for results
+  mkdir -p corpus.out
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --afl-binary-dir /srv/repos/AFLplusplus --sharedir ./sharedir --fuzzmanager --s3-queue-upload --tool "$S3_PROJECT" --nyx --nyx-instances "$NYX_INSTANCES" --afl-timeout 30000 ./corpus ./corpus.out
+fi

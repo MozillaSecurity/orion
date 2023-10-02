@@ -27,6 +27,10 @@ CLANG_INDEX="$(resolve-toolchain clang)"
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" | zstdcat | tar -x -C /opt
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.${CLANG_INDEX/clang/x64-compiler-rt}.latest/artifacts/public/build/compiler-rt-x86_64-unknown-linux-gnu.tar.zst" | zstdcat | tar --strip-components=1 -C /opt/clang/lib/clang/* -x
 
+retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.content.v1.${CLANG_INDEX/linux64-/}.latest/artifacts/public/llvm-project.tar.zst" | zstdcat | tar -x -O llvm-project/compiler-rt/lib/asan/scripts/asan_symbolize.py > /opt/clang/bin/asan_symbolize
+sed -i 's/env python$/env python3/' /opt/clang/bin/asan_symbolize
+chmod +x /opt/clang/bin/asan_symbolize
+
 cat << "EOF" >> /etc/profile
 PATH="$PATH:/opt/clang/bin"
 CC="/opt/clang/bin/clang"

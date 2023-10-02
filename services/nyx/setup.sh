@@ -78,7 +78,7 @@ git-clone-rev https://github.com/AFLplusplus/AFLplusplus 497ff5ff7962ee492fef315
 pushd AFLplusplus >/dev/null
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/009d9522d711757cd237ad66dfee3d6f1523deff.patch | git apply
 retry-curl https://hg.mozilla.org/mozilla-central/raw-file/8ccfbd9588cf6dc09d2171fcff3f0b4a13a3e711/taskcluster/scripts/misc/afl-nyx.patch | git apply
-make afl-fuzz
+make afl-fuzz afl-showmap
 pushd nyx_mode >/dev/null
 git submodule init
 retry git submodule update --depth 1 --single-branch libnyx
@@ -100,14 +100,19 @@ popd >/dev/null
 popd >/dev/null
 apt-mark manual "$(dpkg -S /usr/lib/x86_64-linux-gnu/libpython3.\*.so.1 | cut -d: -f1)"
 
-pushd /srv/repos >/dev/null
-git-clone https://github.com/MozillaSecurity/FuzzManager
-git-clone https://github.com/MozillaSecurity/fuzzfetch
-git-clone https://github.com/MozillaSecurity/prefpicker
-popd >/dev/null
-
 mkdir -p /srv/repos/ipc-research
 chown -R worker:worker /home/worker /srv/repos
-retry su worker -c "pip3 install google-cloud-storage /srv/repos/FuzzManager /srv/repos/fuzzfetch /srv/repos/prefpicker"
+
+pushd /srv/repos >/dev/null
+for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
+  git-clone "https://github.com/MozillaSecurity/$r"
+  chown -R worker:worker "$r"
+  # install then uninstall so only dependencies remain
+  retry su worker -c "pip3 install ./$r"
+  su worker -c "pip3 uninstall -y $r"
+done
+popd >/dev/null
+
+retry su worker -c "pip3 install google-cloud-storage"
 rm -rf /opt/clang /opt/rustc
 /srv/repos/setup/cleanup.sh
