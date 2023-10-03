@@ -79,8 +79,14 @@ EOF
 retry pip install git+https://github.com/MozillaSecurity/FuzzManager
 
 # Get fuzzmanager configuration from TC
+if [ "$ADAPTER" = "reducer" ]
+then
+  fmsecret=fuzzmanagerconf-rw
+else
+  fmsecret=fuzzmanagerconf
+fi
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/$fmsecret" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 # Update fuzzmanager config for this instance

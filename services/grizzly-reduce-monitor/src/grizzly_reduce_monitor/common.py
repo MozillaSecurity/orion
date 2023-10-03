@@ -236,7 +236,7 @@ class ReductionWorkflow(ABC):
         # get fuzzmanager config from taskcluster
         conf_path = Path.home() / ".fuzzmanagerconf"
         if not conf_path.is_file():
-            key = Taskcluster.load_secrets("project/fuzzing/fuzzmanagerconf")["key"]
+            key = Taskcluster.load_secrets("project/fuzzing/fuzzmanagerconf-rw")["key"]
             conf_path.write_text(key)
             conf_path.chmod(0o400)
 

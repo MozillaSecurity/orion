@@ -56,7 +56,7 @@ scopes:
   - "generic-worker:run-as-administrator:${provisioner}/grizzly-reduce-worker-windows"
   - "secrets:get:project/fuzzing/deploy-bearspray"
   - "secrets:get:project/fuzzing/deploy-grizzly-private"
-  - "secrets:get:project/fuzzing/fuzzmanagerconf"
+  - "secrets:get:project/fuzzing/fuzzmanagerconf-rw"
   - "secrets:get:project/fuzzing/google-logging-creds"
 taskGroupId: "${task_group}"
 workerType: "${worker}"
