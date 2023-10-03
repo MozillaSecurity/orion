@@ -41,6 +41,7 @@ cat > td-agent-bit.conf << EOF
     Skip_Long_Lines On
     Buffer_Max_Size 1M
     DB td-grizzly-logs.pos
+    DB.locking true
 
 [FILTER]
     Name rewrite_tag
