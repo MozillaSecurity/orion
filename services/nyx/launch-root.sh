@@ -19,7 +19,7 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 
 [INPUT]
     Name tail
-    Path /logs/nyx.log
+    Path /logs/live.log,/logs/nyx*.log,/logs/afl*.log
     Path_Key file
     Key message
     Refresh_Interval 5
@@ -29,29 +29,16 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     DB /var/lib/td-agent-bit/pos/nyx.pos
     DB.locking true
 
-[INPUT]
-    Name tail
-    Path /logs/live.log
-    Path_Key file
-    Key message
-    Refresh_Interval 5
-    Read_from_Head On
-    Skip_Long_Lines On
-    Buffer_Max_Size 1M
-    DB /var/lib/td-agent-bit/pos/live.pos
-    DB.locking true
-
 [FILTER]
     Name rewrite_tag
     Match tail.*
-    Rule \$file screenlog.([0-9]+)$ screen\$1.log false
     Rule \$file ([^/]+)$ \$1 false
 
 [FILTER]
     Name record_modifier
     Match *
     Record host $(relative-hostname)
-    Record pool ${EC2SPOTMANAGER_POOLID-${TASKCLUSTER_FUZZING_POOL-unknown}}
+    Record pool ${TASKCLUSTER_FUZZING_POOL-unknown}
     Remove_key file
 
 [OUTPUT]
@@ -59,13 +46,6 @@ cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
     Match *
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
-
-[OUTPUT]
-    Name file
-    Match screen*.log
-    Path /logs/
-    Format template
-    Template {time} {message}
 EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
