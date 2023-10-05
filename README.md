@@ -15,9 +15,6 @@ Monorepo for building and publishing multiple Docker containers as microservices
   - [Build Instructions and Development](#build-instructions-and-development)
     - [Usage](#usage)
     - [Testing](#testing)
-    - [Known Issues](#known-issues)
-    - [error creating overlay mount to /var/lib/docker/overlay2/<...>/merged: device or resource busy](#error-creating-overlay-mount-to-varlibdockeroverlay2merged-device-or-resource-busy)
-  - [Architecture](#architecture)
 
 ### What is Orion?
 
