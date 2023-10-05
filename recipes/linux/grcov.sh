@@ -21,7 +21,7 @@ case "${1-install}" in
       curl \
       zstd
 
-    retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-grcov.latest/artifacts/public/build/grcov.tar.zst" | zstdcat | tar -x -v -C /usr/local/bin grcov
+    retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-grcov.latest/artifacts/public/build/grcov.tar.zst" | zstdcat | tar -x -v --strip-components=1 -C /usr/local/bin grcov
     strip --strip-unneeded /usr/local/bin/grcov
     ;;
   test)
