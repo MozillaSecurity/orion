@@ -82,6 +82,38 @@ make afl-fuzz afl-showmap
 pushd nyx_mode >/dev/null
 git submodule init
 retry git submodule update --depth 1 --single-branch libnyx
+pushd libnyx >/dev/null
+git apply << "EOF"
+diff --git a/fuzz_runner/src/nyx/qemu_process.rs b/fuzz_runner/src/nyx/qemu_process.rs
+index d062d87..c4ebeea 100644
+--- a/fuzz_runner/src/nyx/qemu_process.rs
++++ b/fuzz_runner/src/nyx/qemu_process.rs
+@@ -97,9 +97,7 @@ impl QemuProcess {
+     pub fn new(params: QemuParams) -> Result<QemuProcess, String> {
+         Self::prepare_redqueen_workdir(&params.workdir, params.qemu_id);
+
+-        if params.qemu_id == 0{
+-            println!("[!] libnyx: spawning qemu with:\n {}", params.cmd.join(" "));
+-        }
++        println!("[!] libnyx: spawning qemu with:\n {}", params.cmd.join(" "));
+
+         let (shm_work_dir, file_lock) = Self::create_shm_work_dir();
+         let mut shm_work_dir_path = PathBuf::from(&shm_work_dir);
+diff --git a/fuzz_runner/src/nyx/params.rs b/fuzz_runner/src/nyx/params.rs
+index b3eab6a..c8fe559 100644
+--- a/fuzz_runner/src/nyx/params.rs
++++ b/fuzz_runner/src/nyx/params.rs
+@@ -152,7 +152,7 @@ impl QemuParams {
+                         },
+                         QemuNyxRole::Child => {
+                             cmd.push("-fast_vm_reload".to_string());
+-                            cmd.push(format!("path={}/snapshot/,load=on,pre_path={}", workdir, x.presnapshot));
++                            cmd.push(format!("path={}/snapshot/,load=on", workdir));
+                         },
+                     };
+                 },
+EOF
+popd >/dev/null
 retry git submodule update --depth 1 --single-branch packer
 retry git submodule update --depth 1 --single-branch QEMU-Nyx
 pushd QEMU-Nyx >/dev/null
