@@ -48,6 +48,7 @@ packages=(
   subversion
   ubuntu-desktop-minimal
   ubuntu-restricted-addons
+  vulkan-validationlayers
   wget
   zip
   zstd
