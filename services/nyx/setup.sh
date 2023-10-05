@@ -51,6 +51,7 @@ retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/k
 SRCDIR=/srv/repos/fuzzing-decision "${0%/*}/fuzzing_tc.sh"
 "${0%/*}/fluentbit.sh"
 "${0%/*}/taskcluster.sh"
+export SKIP_PROFILE=1
 source "${0%/*}/clang.sh"
 
 function git-clone-rev () {

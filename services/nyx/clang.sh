@@ -31,13 +31,15 @@ retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.c
 sed -i 's/env python$/env python3/' /opt/clang/bin/asan_symbolize
 chmod +x /opt/clang/bin/asan_symbolize
 
-cat << "EOF" >> /etc/profile
+if [[ "$SKIP_PROFILE" != "1" ]]; then
+  cat << "EOF" >> /etc/profile
 PATH="$PATH:/opt/clang/bin"
 CC="/opt/clang/bin/clang"
 CXX="/opt/clang/bin/clang++"
 AR="/opt/clang/bin/llvm-ar"
 LDFLAGS="-fuse-ld=lld"
 EOF
+fi
 
 PATH="$PATH:/opt/clang/bin"
 CC="/opt/clang/bin/clang"
@@ -56,9 +58,11 @@ if [[ "$SKIP_RUST" != "1" ]]; then
   update-ec2-status "[$(date -Iseconds)] setup: installing rust"
   RUST_INDEX="$(resolve-toolchain rust)"
   retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$RUST_INDEX.latest/artifacts/public/build/rustc.tar.zst" | zstdcat | tar -x -C /opt
-  cat << "EOF" >> /etc/profile
+  if [[ "$SKIP_PROFILE" != "1" ]]; then
+    cat << "EOF" >> /etc/profile
 PATH="$PATH:/opt/rustc/bin"
 EOF
+  fi
   PATH="$PATH:/opt/rustc/bin"
   rustc --version
   cargo --version

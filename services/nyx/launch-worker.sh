@@ -3,6 +3,7 @@ set -e
 set -x
 set -o pipefail
 
+# KVM debugging info
 id
 ls -l /dev/kvm
 
@@ -181,6 +182,9 @@ else
     --afl-binary-dir /srv/repos/AFLplusplus \
     --sharedir ./sharedir \
     --fuzzmanager \
+    --nyx-async-corpus \
+    --nyx-log-pattern /logs/nyx%d.log \
+    --afl-log-pattern /logs/afl%d.log \
     --stats "./stats" \
     --s3-queue-upload \
     --tool "$S3_PROJECT" \
