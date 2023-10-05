@@ -16,6 +16,7 @@ COPY \
     services/nyx/launch-prv.sh \
     services/nyx/launch-root.sh \
     services/nyx/launch-worker.sh \
+    services/nyx/snapshot.sh \
     /home/worker/
 COPY services/nyx/sharedir /home/worker/sharedir
 WORKDIR /home/worker

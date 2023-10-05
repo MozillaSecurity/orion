@@ -34,6 +34,36 @@ with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
 EOF
 }
 
+get-deadline () {
+  local tmp deadline started max_run_time run_end
+  tmp="$(mktemp -d)"
+  retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
+  retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json"
+  deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
+  started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
+  max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
+  rm -rf "$tmp"
+  run_end="$((started + max_run_time))"
+  if [[ $run_end -lt $deadline ]]; then
+    echo "$run_end"
+  else
+    echo "$deadline"
+  fi
+}
+
+get-target-time () {
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+    echo $(($(get-deadline) - $(date +%s) - 5 * 60))
+  else
+    echo $((10 * 365 * 24 * 3600))
+  fi
+}
+
+run-daemon () {
+  timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+}
+
+
 # get Cloud Storage credentials
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
@@ -46,8 +76,7 @@ S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
-if [[ ! -e ~/.fuzzmanagerconf ]]
-then
+if [[ ! -e ~/.fuzzmanagerconf ]]; then
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
   # Update FuzzManager config for this instance.
   mkdir -p signatures
@@ -89,90 +118,33 @@ popd >/dev/null
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]; then
-  pushd /srv/repos/ipc-research/ipc-fuzzing/userspace-tools >/dev/null
-  sed -i 's,^QEMU_PT_BIN.*,QEMU_PT_BIN=/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/x86_64-softmmu/qemu-system-x86_64,' qemu_tool.sh
-  sed -i 's/-vnc/-monitor tcp:127.0.0.1:55555,server,nowait -vnc/' qemu_tool.sh
-  touch config.sh
-  qemu-cmd () {
-    set +x
-    echo "$@" | nc -N 127.0.0.1 55555 >/dev/null
-    set -x
-  }
-  gen-qemu-sendkeys () {
-    set +x
-    echo -n "$@" | while read -r -n1 letter; do
-      case "$letter" in
-        "")
-          echo "spc"
-          ;;
-        "/")
-          echo "shift-7"
-          ;;
-        '"')
-          echo "shift-2"
-          ;;
-        "-")
-          echo "slash"
-          ;;
-        ";")
-          echo "shift-comma"
-          ;;
-        *)
-          echo "$letter"
-          ;;
-      esac
-    done | while read -r key; do
-      echo "sendkey $key"
-    done
-    echo "sendkey ret"
-    echo ""
-    set -x
-  }
-
-  ./qemu_tool.sh create_snapshot ~/firefox.img 6144 ~/snapshot &
-  sleep 120
-  qemu-cmd "sendkey alt-f2"
-  sleep 30
-  qemu-cmd "$(gen-qemu-sendkeys gnome-terminal)"
-  sleep 60
-  qemu-cmd "$(gen-qemu-sendkeys "sudo screen -d -m bash -c \"sleep 5; /home/user/loader\"; exit")"
-  sleep 90
-  qemu-cmd "$(gen-qemu-sendkeys user)"
-  wait
-  popd >/dev/null
+  ./snapshot.sh
 fi
+
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+fi
+
+# setup sharedir
 
 ASAN_OPTIONS=\
 abort_on_error=true:\
 allocator_may_return_null=true:\
-check_initialization_order=true:\
-dedup_token_length=1:\
-detect_invalid_pointer_pairs=2:\
 detect_leaks=0:\
-detect_stack_use_after_scope=true:\
 hard_rss_limit_mb=4096:\
 log_path=/tmp/data.log:\
 max_allocation_size_mb=3073:\
-print_cmdline=true:\
-print_scariness=true:\
-start_deactivated=false:\
-strict_init_order=true:\
-strict_string_checks=true:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
 symbolize=0:\
 $ASAN_OPTIONS
 ASAN_OPTIONS=${ASAN_OPTIONS//:/ }
 
 UBSAN_OPTIONS=\
-halt_on_error=1:\
-print_stacktrace=1:\
-print_summary=1:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
 symbolize=0:\
 $UBSAN_OPTIONS
 UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
-#setup sharedir
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
   fuzzfetch -n firefox --nyx --fuzzing --asan
@@ -194,20 +166,24 @@ popd >/dev/null
 
 mkdir corpus.out
 
-if [[ -z "$NYX_INSTANCES" ]]
-then
+if [[ -z "$NYX_INSTANCES" ]]; then
   NYX_INSTANCES="$(nproc)"
 fi
 
-export AFL_NYX_LOG=/logs/nyx.log
-
-if [[ -n "$S3_CORPUS_REFRESH" ]]
-then
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
+if [[ -n "$S3_CORPUS_REFRESH" ]]; then
+  time run-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
 else
   # Download the corpus from S3
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+  time run-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
   # run and watch for results
-  mkdir -p corpus.out
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --afl-binary-dir /srv/repos/AFLplusplus --sharedir ./sharedir --fuzzmanager --s3-queue-upload --tool "$S3_PROJECT" --nyx --nyx-instances "$NYX_INSTANCES" --afl-timeout 30000 ./corpus ./corpus.out
+  time run-daemon "${S3_PROJECT_ARGS[@]}" \
+    --nyx --nyx-instances "$NYX_INSTANCES" \
+    --afl-binary-dir /srv/repos/AFLplusplus \
+    --sharedir ./sharedir \
+    --fuzzmanager \
+    --stats "./stats" \
+    --s3-queue-upload \
+    --tool "$S3_PROJECT" \
+    --afl-timeout 30000 \
+    ./corpus ./corpus.out
 fi
