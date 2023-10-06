@@ -43,7 +43,7 @@ function sys-update () {
 
 # `apt-get install` command with retry functionality.
 function sys-embed () {
-  retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@"
+  retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@" >&2
 }
 
 # `apt-get install` dependencies without installing the package itself
@@ -70,7 +70,7 @@ function apt-install-auto () {
   done
   if [[ ${#new[@]} -ne 0 ]]; then
     sys-embed "${new[@]}"
-    apt-mark auto "${new[@]}"
+    apt-mark auto "${new[@]}" >&2
   fi
 }
 
