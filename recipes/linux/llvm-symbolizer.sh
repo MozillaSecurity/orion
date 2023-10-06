@@ -10,6 +10,8 @@ set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
+# shellcheck source=recipes/linux/taskgraph-m-c-latest.sh
+source "${0%/*}/taskgraph-m-c-latest.sh"
 
 #### Install LLVM Symbolizer
 
@@ -21,7 +23,7 @@ case "${1-install}" in
       curl \
       zstd
 
-    retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.linux64-llvm-symbolizer.latest/artifacts/public/build/llvm-symbolizer.tar.zst" | zstdcat | tar -x -v -C /usr/local/bin --strip-components=2
+    retry-curl "$(resolve-tc llvm-symbolizer)" | zstdcat | tar -x -v --strip-components=2 -C /usr/local/bin
     strip --strip-unneeded /usr/local/bin/llvm-symbolizer
     ;;
   test)
