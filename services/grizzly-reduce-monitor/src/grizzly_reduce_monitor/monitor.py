@@ -37,7 +37,7 @@ LOG = getLogger(__name__)
 GENERIC_PLATFORM = "linux"
 
 TC_QUEUES = {
-    "android": "grizzly-reduce-worker-android",
+    # "android": "grizzly-reduce-worker-android",
     "linux": "grizzly-reduce-worker",
     # "macosx": "grizzly-reduce-worker-macos",
     "windows": "grizzly-reduce-worker-windows",
