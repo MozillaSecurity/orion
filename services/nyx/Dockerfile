@@ -7,6 +7,7 @@ COPY \
     recipes/linux/fuzzing_tc.sh \
     recipes/linux/fuzzmanager.sh \
     recipes/linux/taskcluster.sh \
+    recipes/linux/taskgraph-m-c-latest.sh \
     services/nyx/setup.sh \
     services/nyx/clang.sh \
     /srv/repos/setup/

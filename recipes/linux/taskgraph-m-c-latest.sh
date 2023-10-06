@@ -4,7 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 # shellcheck source=recipes/linux/common.sh
-source "$(dirname "${BASH_SOURCE%/*}")/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 #### Helpers for fetching toolchain artifacts from fxci
 
