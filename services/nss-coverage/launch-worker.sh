@@ -32,25 +32,13 @@ NSPR_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISIO
 
 if [[ ! -d clang ]]; then
   update-ec2-status "[$(date -Iseconds)] setup: installing clang"
-  # resolve current clang toolchain
-  retry-curl -O "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/taskcluster/ci/toolchain/clang.yml"
-  python3 <<- "EOF" > clang.txt
-	import yaml
-	with open("clang.yml") as fd:
-	  data = yaml.load(fd, Loader=yaml.CLoader)
-	for tc, defn in data.items():
-	  if defn.get("run", {}).get("toolchain-alias", {}).get("by-project", {}).get("default") == "linux64-clang":
-	    print(tc)
-	    break
-	else:
-	  raise Exception("No linux64-clang toolchain found")
-	EOF
-  CLANG_INDEX="$(cat clang.txt)"
-  rm clang.txt clang.yml
-
   # install clang
-  retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.$CLANG_INDEX.latest/artifacts/public/build/clang.tar.zst" | zstdcat | tar -x
-  retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.${CLANG_INDEX/clang/x64-compiler-rt}.latest/artifacts/public/build/compiler-rt-x86_64-unknown-linux-gnu.tar.zst" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
+  retry-curl "$(resolve-tc clang)" | zstdcat | tar -x
+  clang_ver="$(resolve-tc-alias clang)"
+  compiler_ver="x64-compiler-rt-${clang_ver/clang-/}"
+  compiler_task="$(resolve-tc "$compiler_ver")"
+  compiler_task="${compiler_task/\/public\/*/}/$(resolve-tc-artifact compiler-rt "$compiler_ver")"
+  retry-curl "$compiler_task" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
 fi
 CC="$PWD/clang/bin/clang"
 CXX="$PWD/clang/bin/clang++"
