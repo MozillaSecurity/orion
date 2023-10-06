@@ -34,10 +34,11 @@ pkgs=(
   psmisc
   python3
   python3-dev
+  python3-distutils
   python3-pip
   python3-setuptools
+  python3-venv
   python3-wheel
-  python3-distutils
   zstd
 )
 

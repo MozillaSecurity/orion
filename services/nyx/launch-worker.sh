@@ -60,11 +60,6 @@ get-target-time () {
   fi
 }
 
-run-daemon () {
-  timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
-}
-
-
 # get Cloud Storage credentials
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
@@ -171,23 +166,31 @@ if [[ -z "$NYX_INSTANCES" ]]; then
   NYX_INSTANCES="$(nproc)"
 fi
 
+DAEMON_ARGS=()
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  DAEMON_ARGS+=(--nyx-hide-logs)
+fi
+
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
-  time run-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
 else
   # Download the corpus from S3
-  time run-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
   # run and watch for results
-  time run-daemon "${S3_PROJECT_ARGS[@]}" \
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
     --nyx --nyx-instances "$NYX_INSTANCES" \
     --afl-binary-dir /srv/repos/AFLplusplus \
     --sharedir ./sharedir \
     --fuzzmanager \
+    --max-runtime "$(get-target-time)" \
     --nyx-async-corpus \
     --nyx-log-pattern /logs/nyx%d.log \
     --afl-log-pattern /logs/afl%d.log \
     --stats "./stats" \
     --s3-queue-upload \
     --tool "$S3_PROJECT" \
-    --afl-timeout 30000 \
-    ./corpus ./corpus.out
+    --afl-timeout "${AFL_TIMEOUT-30000}" \
+    "${DAEMON_ARGS[@]}" \
+    -i ./corpus \
+    -o ./corpus.out
 fi
