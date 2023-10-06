@@ -30,6 +30,8 @@ EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./gcov-9.sh
 ./taskcluster.sh
 
+# shellcheck source=recipes/linux/taskgraph-m-c-latest.sh
+source ./taskgraph-m-c-latest.sh
 # shellcheck source=recipes/linux/dbgsyms.sh
 source ./dbgsyms.sh
 
@@ -157,7 +159,8 @@ EOF
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
 
 # get new minidump-stackwalk
-retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-1.toolchains.v3.linux64-minidump-stackwalk.latest/artifacts/public/build/minidump-stackwalk.tar.zst" | zstdcat | tar xv --strip 1 -C "/usr/local/bin"
+retry-curl "$(resolve-tc minidump-stackwalk)" | zstdcat | tar -x -v --strip-components=1 -C /usr/local/bin
+strip --strip-unneeded /usr/local/bin/minidump-stackwalk
 /usr/local/bin/minidump-stackwalk --version
 
 chown -R worker:worker /home/worker /src
