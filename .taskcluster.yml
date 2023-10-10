@@ -2,7 +2,10 @@ version: 1
 policy:
   pullRequests: collaborators
 tasks:
-  - $if: 'tasks_for != "github-pull-request" || event["action"] in ["opened", "reopened", "synchronize"]'
+  - $if: >
+      (tasks_for == "github-push")
+      || (tasks_for == "github-pull-request" && event["action"] in ["opened", "reopened", "synchronize"])
+      || (tasks_for == "github-release" && event["action"] in ["published"])
     then:
       created: {$fromNow: ''}
       deadline: {$fromNow: '1 hour'}
@@ -41,3 +44,4 @@ tasks:
         description: Schedule Orion build tasks
         owner: truber@mozilla.com
         source: https://github.com/MozillaSecurity/orion
+    else: []
