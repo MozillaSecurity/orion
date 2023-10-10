@@ -1,6 +1,6 @@
 # Fuzzing automated deployment on Taskcluster
 
-This Python 3 project manages Taskcluster resources and their deployment using public [community configuration](https://github.com/mozilla/community-tc-config/) & private fuzzing configuration.
+This Python 3 project manages Taskcluster resources and their deployment using public [community configuration](https://github.com/taskcluster/community-tc-config/) & private fuzzing configuration.
 
 It uses [tc-admin](https://github.com/taskcluster/tc-admin) to allow admins to easily update those resources using a Git workflow.
 
@@ -56,7 +56,7 @@ A Taskcluster secret is used by both modes to be able to clone private repositor
 
 # Repository with public base information for the Taskcluster instance
 community_config:
-  url: 'https://github.com/mozilla/community-tc-config.git'
+  url: 'https://github.com/taskcluster/community-tc-config.git'
   revision: master
 
 # Repository with private fuzzing configuration
@@ -117,7 +117,7 @@ It's possible to replace Taskcluster secret usage by a local YAML configuration 
 
 # Use a local community configuration
 community_config:
-  path: /path/to/mozilla/community-tc-config
+  path: /path/to/taskcluster/community-tc-config
 
 # Use a local fuzzing configuration
 fuzzing_config:

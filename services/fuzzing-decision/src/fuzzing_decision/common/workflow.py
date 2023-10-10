@@ -47,7 +47,7 @@ class Workflow:
         assert isinstance(config, dict)
         if "community_config" not in config:
             config["community_config"] = {
-                "url": "git@github.com:mozilla/community-tc-config.git",
+                "url": "git@github.com:taskcluster/community-tc-config.git",
                 "revision": "main",
             }
 
