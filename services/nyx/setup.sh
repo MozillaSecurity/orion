@@ -147,6 +147,6 @@ for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
 done
 popd >/dev/null
 
-retry su worker -c "pip3 install google-cloud-storage"
+retry su worker -c "pip3 install google-cloud-storage psutil"
 rm -rf /opt/clang /opt/rustc
 /srv/repos/setup/cleanup.sh
