@@ -5,13 +5,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/taskgraph-m-c-latest.sh"
 
 # install clang from firefox-ci
 update-ec2-status "[$(date -Iseconds)] setup: installing clang"
-retry-curl "$(resolve-tc clang)" | zstdcat | tar -x -C /opt
 clang_ver="$(resolve-tc-alias clang)"
 compiler_ver="x64-compiler-rt-${clang_ver/clang-/}"
-compiler_task="$(resolve-tc "$compiler_ver")"
-compiler_task="${compiler_task/\/public\/*/}/$(resolve-tc-artifact compiler-rt "$compiler_ver")"
-retry-curl "$compiler_task" | zstdcat | tar --strip-components=1 -C /opt/clang/lib/clang/* -x
-retry-curl "$(resolve-tc-src clang)" | zstdcat | tar -x -O llvm-project/compiler-rt/lib/asan/scripts/asan_symbolize.py > /opt/clang/bin/asan_symbolize
+retry-curl "$(resolve-tc "$clang_ver")" | zstdcat | tar -x -C /opt
+retry-curl "$(resolve-tc "$compiler_ver")" | zstdcat | tar --strip-components=1 -C /opt/clang/lib/clang/* -x
+retry-curl "$(resolve-tc-src "$clang_ver")" | zstdcat | tar -x -O llvm-project/compiler-rt/lib/asan/scripts/asan_symbolize.py > /opt/clang/bin/asan_symbolize
 sed -i 's/env python$/env python3/' /opt/clang/bin/asan_symbolize
 chmod +x /opt/clang/bin/asan_symbolize
 

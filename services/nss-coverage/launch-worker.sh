@@ -9,6 +9,8 @@ set -o pipefail
 
 # shellcheck source=recipes/linux/common.sh
 source .local/bin/common.sh
+# shellcheck source=recipes/linux/taskgraph-m-c-latest.sh
+source /src/recipes/taskgraph-m-c-latest.sh
 
 if [[ ! -e .fuzzmanagerconf ]] && [[ "$NO_REPORT" != "1" ]]; then
   # Get fuzzmanager configuration from TC
@@ -33,12 +35,10 @@ NSPR_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISIO
 if [[ ! -d clang ]]; then
   update-ec2-status "[$(date -Iseconds)] setup: installing clang"
   # install clang
-  retry-curl "$(resolve-tc clang)" | zstdcat | tar -x
   clang_ver="$(resolve-tc-alias clang)"
   compiler_ver="x64-compiler-rt-${clang_ver/clang-/}"
-  compiler_task="$(resolve-tc "$compiler_ver")"
-  compiler_task="${compiler_task/\/public\/*/}/$(resolve-tc-artifact compiler-rt "$compiler_ver")"
-  retry-curl "$compiler_task" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
+  retry-curl "$(resolve-tc "$clang_ver")" | zstdcat | tar -x
+  retry-curl "$(resolve-tc "$compiler_ver")" | zstdcat | tar --strip-components=1 -C clang/lib/clang/* -x
 fi
 CC="$PWD/clang/bin/clang"
 CXX="$PWD/clang/bin/clang++"
