@@ -8,7 +8,7 @@ source "/srv/repos/setup/common.sh"
 
 # start logging
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
-mkdir -p /etc/td-agent-bit
+mkdir -p /etc/td-agent-bit /logs
 cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
 [SERVICE]
     Daemon       On

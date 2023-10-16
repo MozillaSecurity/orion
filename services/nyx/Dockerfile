@@ -21,4 +21,5 @@ COPY \
     /home/worker/
 COPY services/nyx/sharedir /home/worker/sharedir
 WORKDIR /home/worker
-CMD ["/home/worker/launch-prv.sh"]
+ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
+CMD ["/home/worker/launch-root.sh"]
