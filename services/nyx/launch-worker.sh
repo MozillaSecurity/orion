@@ -86,11 +86,13 @@ fi
 
 # pull qemu image
 if [[ ! -e ~/firefox.img ]]; then
+  update-ec2-status "downloading firefox.img"
   time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
 
 # clone ipc-fuzzing & build harness/tools
 # get deployment key from TC
+update-ec2-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
 cat << EOF >> ~/.ssh/config
 
@@ -114,11 +116,8 @@ popd >/dev/null
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]; then
+  update-ec2-status "creating snapshot"
   ./snapshot.sh
-fi
-
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
-  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 fi
 
 # setup sharedir
@@ -143,6 +142,7 @@ UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
+  update-ec2-status "downloading firefox"
   fuzzfetch -n firefox --nyx --fuzzing --asan
 fi
 {
@@ -161,6 +161,12 @@ cp htools/hget_no_pt .
 popd >/dev/null
 
 mkdir corpus.out
+
+update-ec2-status "launching guided-fuzzing-daemon"
+
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+fi
 
 if [[ -z "$NYX_INSTANCES" ]]; then
   NYX_INSTANCES="$(python3 -c "import psutil; print(psutil.cpu_count(logical=False))")"
