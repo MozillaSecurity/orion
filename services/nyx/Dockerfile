@@ -14,7 +14,6 @@ COPY \
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
 RUN /srv/repos/setup/setup.sh
 COPY \
-    services/nyx/launch-prv.sh \
     services/nyx/launch-root.sh \
     services/nyx/launch-worker.sh \
     services/nyx/snapshot.sh \
