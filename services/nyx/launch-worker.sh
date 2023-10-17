@@ -163,7 +163,7 @@ popd >/dev/null
 mkdir corpus.out
 
 if [[ -z "$NYX_INSTANCES" ]]; then
-  NYX_INSTANCES="$(python -c "import psutil; print(psutil.cpu_count(logical=False))")"
+  NYX_INSTANCES="$(python3 -c "import psutil; print(psutil.cpu_count(logical=False))")"
 fi
 
 DAEMON_ARGS=()
