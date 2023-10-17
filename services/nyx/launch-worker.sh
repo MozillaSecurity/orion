@@ -168,7 +168,7 @@ fi
 
 DAEMON_ARGS=()
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
-  DAEMON_ARGS+=(--nyx-hide-logs)
+  DAEMON_ARGS+=(--afl-hide-logs)
 fi
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
