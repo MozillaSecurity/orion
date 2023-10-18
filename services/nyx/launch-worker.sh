@@ -199,4 +199,8 @@ else
     "${DAEMON_ARGS[@]}" \
     -i ./corpus \
     -o ./corpus.out
+  for st in ./corpus.out/*/fuzzer_stats; do
+    idx="$(basename "$(dirname "$st")")"
+    cp "$st" "/logs/fuzzer_stats$idx.txt"
+  done
 fi
