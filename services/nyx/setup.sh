@@ -80,10 +80,63 @@ function git-clone-rev () {
 # build AFL++ w/ Nyx
 apt-install-auto libgtk-3-dev pax-utils python3-msgpack python3-jinja2 cpio bzip2
 pushd /srv/repos >/dev/null
-git-clone-rev https://github.com/AFLplusplus/AFLplusplus 497ff5ff7962ee492fef315227366d658c637ab2
+git-clone-rev https://github.com/AFLplusplus/AFLplusplus d09950f4bb98431576b872436f0fbf773ab895db
 pushd AFLplusplus >/dev/null
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/009d9522d711757cd237ad66dfee3d6f1523deff.patch | git apply
-retry-curl https://hg.mozilla.org/mozilla-central/raw-file/8ccfbd9588cf6dc09d2171fcff3f0b4a13a3e711/taskcluster/scripts/misc/afl-nyx.patch | git apply
+# https://hg.mozilla.org/mozilla-central/raw-file/8ccfbd9588cf6dc09d2171fcff3f0b4a13a3e711/taskcluster/scripts/misc/afl-nyx.patch
+git apply << "EOF"
+commit f5ceb29f2f61439de7adbe8494a2e305c586b904
+Author: Jesse Schwartzentruber <truber@mozilla.com>
+Date:   Fri Jul 14 13:20:02 2023 -0400
+
+    Don't set rpath to mozfetch
+
+diff --git a/src/afl-cc.c b/src/afl-cc.c
+index 58d44e5d..4c23d153 100644
+--- a/src/afl-cc.c
++++ b/src/afl-cc.c
+@@ -1138,22 +1138,6 @@ static void edit_params(u32 argc, char **argv, char **envp) {
+
+   if (!have_pic) { cc_params[cc_par_cnt++] = "-fPIC"; }
+
+-  // in case LLVM is installed not via a package manager or "make install"
+-  // e.g. compiled download or compiled from github then its ./lib directory
+-  // might not be in the search path. Add it if so.
+-  u8 *libdir = strdup(LLVM_LIBDIR);
+-  if (plusplus_mode && strlen(libdir) && strncmp(libdir, "/usr", 4) &&
+-      strncmp(libdir, "/lib", 4)) {
+-
+-    cc_params[cc_par_cnt++] = "-Wl,-rpath";
+-    cc_params[cc_par_cnt++] = libdir;
+-
+-  } else {
+-
+-    free(libdir);
+-
+-  }
+-
+   if (getenv("AFL_HARDEN")) {
+
+     cc_params[cc_par_cnt++] = "-fstack-protector-all";
+commit d606e18332b4f919780604b9daf9a3761602b7c5
+Author: Jesse Schwartzentruber <truber@mozilla.com>
+Date:   Fri Jul 14 11:04:04 2023 -0400
+
+    Increase MAP_SIZE for Nyx
+
+diff --git a/include/config.h b/include/config.h
+index 8585041e..6e526717 100644
+--- a/include/config.h
++++ b/include/config.h
+@@ -442,7 +442,7 @@
+    problems with complex programs). You need to recompile the target binary
+    after changing this - otherwise, SEGVs may ensue. */
+
+-#define MAP_SIZE_POW2 16
++#define MAP_SIZE_POW2 23
+
+ /* Do not change this unless you really know what you are doing. */
+
+EOF
 make afl-fuzz afl-showmap
 pushd nyx_mode >/dev/null
 git submodule init
