@@ -18,6 +18,10 @@ for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
   popd >/dev/null
 done
 
+update-status () {
+  update-ec2-status "[$(date -Is)] $*"
+}
+
 gcs-cat () {
 # gcs-cat bucket path
 python3 - "$1" "$2" << "EOF"
@@ -86,13 +90,13 @@ fi
 
 # pull qemu image
 if [[ ! -e ~/firefox.img ]]; then
-  update-ec2-status "downloading firefox.img"
+  update-status "downloading firefox.img"
   time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
 
 # clone ipc-fuzzing & build harness/tools
 # get deployment key from TC
-update-ec2-status "installing ipc-fuzzing repo"
+update-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
 cat << EOF >> ~/.ssh/config
 
@@ -116,7 +120,7 @@ popd >/dev/null
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]; then
-  update-ec2-status "creating snapshot"
+  update-status "creating snapshot"
   ./snapshot.sh
 fi
 
@@ -142,7 +146,7 @@ UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
-  update-ec2-status "downloading firefox"
+  update-status "downloading firefox"
   fuzzfetch -n firefox --nyx --fuzzing --asan
 fi
 {
@@ -162,7 +166,7 @@ popd >/dev/null
 
 mkdir corpus.out
 
-update-ec2-status "launching guided-fuzzing-daemon"
+update-status "preparing to launch guided-fuzzing-daemon"
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
@@ -178,11 +182,14 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
 fi
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
+  update-status "starting corpus refresh"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
 else
   # Download the corpus from S3
+  update-status "downloading corpus"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
   # run and watch for results
+  update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
     --nyx --nyx-instances "$NYX_INSTANCES" \
     --afl-binary-dir /srv/repos/AFLplusplus \
