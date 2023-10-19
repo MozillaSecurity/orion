@@ -176,33 +176,38 @@ if [[ -z "$NYX_INSTANCES" ]]; then
   NYX_INSTANCES="$(python3 -c "import psutil; print(psutil.cpu_count(logical=False))")"
 fi
 
-DAEMON_ARGS=()
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
-  DAEMON_ARGS+=(--afl-hide-logs)
-fi
+DAEMON_ARGS=(
+  --afl-binary-dir /srv/repos/AFLplusplus
+  --afl-timeout "${AFL_TIMEOUT-30000}"
+  --nyx
+  --sharedir ./sharedir
+)
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
   update-status "starting corpus refresh"
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --nyx --s3-corpus-refresh ./corpus
+  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
+    --build ./sharedir/firefox \
+    --s3-corpus-refresh ./corpus \
+    "${DAEMON_ARGS[@]}"
 else
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+    DAEMON_ARGS+=(--afl-hide-logs)
+  fi
   # Download the corpus from S3
   update-status "downloading corpus"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
-    --nyx --nyx-instances "$NYX_INSTANCES" \
-    --afl-binary-dir /srv/repos/AFLplusplus \
-    --sharedir ./sharedir \
+    --afl-log-pattern /logs/afl%d.log \
     --fuzzmanager \
     --max-runtime "$(get-target-time)" \
     --nyx-async-corpus \
+    --nyx-instances "$NYX_INSTANCES" \
     --nyx-log-pattern /logs/nyx%d.log \
-    --afl-log-pattern /logs/afl%d.log \
-    --stats "./stats" \
     --s3-queue-upload \
+    --stats "./stats" \
     --tool "$S3_PROJECT" \
-    --afl-timeout "${AFL_TIMEOUT-30000}" \
     "${DAEMON_ARGS[@]}" \
     -i ./corpus \
     -o ./corpus.out
