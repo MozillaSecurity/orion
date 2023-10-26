@@ -236,6 +236,7 @@ def test_aws_resources(
             config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
     if platform == "linux":
         expected["config"]["lifecycle"] = {
+            "queueInactivityTimeout": 7200,
             "registrationTimeout": 900,
             "reregistrationTimeout": 345600,
         }
@@ -403,7 +404,11 @@ def test_gcp_resources(
                     "zone": "us-west1-a",
                 },
             ],
-            "lifecycle": {"registrationTimeout": 900, "reregistrationTimeout": 345600},
+            "lifecycle": {
+                "queueInactivityTimeout": 7200,
+                "registrationTimeout": 900,
+                "reregistrationTimeout": 345600,
+            },
             "maxCapacity": 6,
             "minCapacity": 0,
         },
