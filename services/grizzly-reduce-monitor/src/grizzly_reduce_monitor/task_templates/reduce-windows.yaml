@@ -36,7 +36,6 @@ payload:
     INPUT: "${crash_id}"
     TIMEOUT: "60"
   features:
-    runAsAdministrator: true
     taskclusterProxy: true
   maxRunTime: !!int "${max_run_time}"
   mounts:
@@ -45,15 +44,12 @@ payload:
         taskId: "${image_task_id}"
         artifact: public/msys2.tar.bz2
       directory: .
-  osGroups: [Administrators]
 priority: high
 provisionerId: "${provisioner}"
 retries: 5
 routes: []
 schedulerId: "${scheduler}"
 scopes:
-  - "generic-worker:os-group:${provisioner}/grizzly-reduce-worker-windows/Administrators"
-  - "generic-worker:run-as-administrator:${provisioner}/grizzly-reduce-worker-windows"
   - "secrets:get:project/fuzzing/deploy-bearspray"
   - "secrets:get:project/fuzzing/deploy-grizzly-private"
   - "secrets:get:project/fuzzing/fuzzmanagerconf"
