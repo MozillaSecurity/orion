@@ -28,6 +28,9 @@ payload:
     - "set PATH=%CD%\\msys64\\opt\\python;%CD%\\msys64\\opt\\python\\Scripts;%CD%\\msys64\\MINGW64\\bin;%CD%\\msys64\\usr\\bin;%PATH%"
     - ci-launch
   maxRunTime: !!int "${max_run_time}"
+  onExitStatus:
+    retry:
+      - 0x40010004
 metadata:
   name: "${project} ${name}"
   description: "${project} ${name}"

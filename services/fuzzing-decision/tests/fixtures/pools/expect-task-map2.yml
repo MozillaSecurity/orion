@@ -32,6 +32,9 @@ payload:
       format: tar.zst
   osGroups:
     - Administrators
+  onExitStatus:
+    retry:
+      - 0x40010004
 priority: high
 provisionerId: proj-fuzzing
 retries: 5

@@ -152,6 +152,10 @@ def configure_task(
             task["payload"].setdefault("osGroups", [])
             task["payload"]["osGroups"].append("Administrators")
             task["payload"]["features"]["runAsAdministrator"] = True
+        task["payload"].setdefault("onExitStatus", {})
+        task["payload"]["onExitStatus"].setdefault("retry", [])
+        # system restart
+        task["payload"]["onExitStatus"]["retry"].append(0x40010004)
     elif config.platform == "macos":
         task["payload"]["command"] = [
             [

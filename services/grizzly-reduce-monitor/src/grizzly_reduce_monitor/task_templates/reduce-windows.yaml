@@ -44,6 +44,9 @@ payload:
         taskId: "${image_task_id}"
         artifact: public/msys2.tar.bz2
       directory: .
+  onExitStatus:
+    retry:
+      - 0x40010004
 priority: high
 provisionerId: "${provisioner}"
 retries: 5
