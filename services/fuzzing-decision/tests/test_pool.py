@@ -633,6 +633,7 @@ def test_tasks(
                     "format": "tar.bz2",
                 },
             ]
+            expected["payload"]["onExitStatus"] = {"retry": [0x40010004]}
             if run_as_admin:
                 expected["payload"]["osGroups"] = ["Administrators"]
                 expected["payload"]["features"]["runAsAdministrator"] = True

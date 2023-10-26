@@ -34,6 +34,9 @@ payload:
   env:
     MSYSTEM: MINGW64
   maxRunTime: !!int "${max_run_time}"
+  onExitStatus:
+    retry:
+      - 0x40010004
 routes:
   - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
 scopes:
