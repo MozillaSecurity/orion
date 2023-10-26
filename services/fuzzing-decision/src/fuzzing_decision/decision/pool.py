@@ -329,6 +329,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                 # give workers 15 minutes to register before assuming they're broken
                 "registrationTimeout": parse_time("15m"),
                 "reregistrationTimeout": parse_time("4d"),
+                "queueInactivityTimeout": parse_time("2h"),
             }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
@@ -516,6 +517,7 @@ class PoolConfigMap(CommonPoolConfigMap):
                 # give workers 15 minutes to register before assuming they're broken
                 "registrationTimeout": parse_time("15m"),
                 "reregistrationTimeout": parse_time("4d"),
+                "queueInactivityTimeout": parse_time("2h"),
             }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
