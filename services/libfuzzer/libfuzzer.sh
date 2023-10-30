@@ -353,6 +353,7 @@ else
   update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
     --s3-corpus-refresh "$HOME/workspace" \
+    --stats "./stats" \
     --libfuzzer \
     --build "$(dirname "$HOME/$TARGET_BIN")"
 fi

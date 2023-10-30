@@ -185,6 +185,7 @@ DAEMON_ARGS=(
   --afl-timeout "${AFL_TIMEOUT-30000}"
   --nyx
   --sharedir ./sharedir
+  --stats ./stats
 )
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
@@ -210,7 +211,6 @@ else
     --nyx-instances "$NYX_INSTANCES" \
     --nyx-log-pattern /logs/nyx%d.log \
     --s3-queue-upload \
-    --stats "./stats" \
     --tool "$S3_PROJECT" \
     "${DAEMON_ARGS[@]}" \
     -i ./corpus \
