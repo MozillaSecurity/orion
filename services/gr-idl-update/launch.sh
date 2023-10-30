@@ -32,6 +32,6 @@ git init gridl
   if git status -s; then
     git add data/idls
     git commit -m "feat(grammar): update webidls"
-    retry git push origin HEAD:master
+    retry git push origin HEAD:main
   fi
 )> /live.log 2>&1
