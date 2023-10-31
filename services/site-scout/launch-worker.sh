@@ -59,13 +59,13 @@ case $build in
   asan32)
     # TEMPORARY workaround for frequent OOMs
     export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
-    fuzzfetch -n build --fuzzing --asan --cpu x86
+    python3 -m fuzzfetch -n build --fuzzing --asan --cpu x86
     ;;
   debug32)
-    fuzzfetch -n build --fuzzing --debug --cpu x86
+    python3 -m fuzzfetch -n build --fuzzing --debug --cpu x86
     ;;
   *)
-    fuzzfetch -n build --fuzzing "--$build"
+    python3 -m fuzzfetch -n build --fuzzing "--$build"
     ;;
 esac
 
