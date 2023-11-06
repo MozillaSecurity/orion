@@ -16,7 +16,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get node.js
-VER=18.14.2
+VER=18.18.2
 retry_curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 unzip node.zip
 rm node.zip
