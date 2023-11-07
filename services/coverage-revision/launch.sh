@@ -13,6 +13,6 @@ DST="${DST-/coverage-revision.txt}"
 ## Check that file isn't empty
 [ -s "$DST" ]
 
-## Check that the revision exists on mozilla-central
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
-retry_curl --head "https://hg.mozilla.org/mozilla-central/rev/$(cat "$DST")" > /dev/null
+## Download revision source so coverage tasks can fetch from here
+retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 12 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry_curl "https://hg.mozilla.org/mozilla-central/archive/$(cat "$DST").zip" -o /source.zip
