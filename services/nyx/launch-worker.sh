@@ -210,6 +210,7 @@ else
     --nyx-async-corpus \
     --nyx-instances "$NYX_INSTANCES" \
     --nyx-log-pattern /logs/nyx%d.log \
+    --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so \
     --s3-queue-upload \
     --tool "$S3_PROJECT" \
     "${DAEMON_ARGS[@]}" \
