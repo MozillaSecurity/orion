@@ -28,6 +28,7 @@ pkgs=(
   git
   jshon
   lbzip2
+  libblocksruntime0
   libglib2.0-0
   libjpeg-turbo8
   libpixman-1-0
@@ -47,7 +48,7 @@ pkgs=(
 )
 
 sys-update
-apt-install-auto make
+apt-install-auto libblocksruntime-dev make
 sys-embed "${pkgs[@]}"
 
 mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin
@@ -82,9 +83,22 @@ apt-install-auto libgtk-3-dev pax-utils python3-msgpack python3-jinja2 cpio bzip
 pushd /srv/repos >/dev/null
 git-clone-rev https://github.com/AFLplusplus/AFLplusplus d09950f4bb98431576b872436f0fbf773ab895db
 pushd AFLplusplus >/dev/null
+# Use proper AFL_NYX_AUX_SIZE for nyx_aux_string
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/bfb841d01383a4801a28b007c5f7039f2f28bef9.diff | git apply
-# https://hg.mozilla.org/mozilla-central/raw-file/8ccfbd9588cf6dc09d2171fcff3f0b4a13a3e711/taskcluster/scripts/misc/afl-nyx.patch
+# WIP 2-byte chunked variant of honggfuzz custom mutator
+retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2eb9330772d30723ba122c.diff | git apply
 git apply << "EOF"
+diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
+index 5c2fcddb..2dde8ba1 100644
+--- a/custom_mutators/honggfuzz/Makefile
++++ b/custom_mutators/honggfuzz/Makefile
+@@ -1,5 +1,5 @@
+
+-CFLAGS = -O3 -funroll-loops -fPIC -Wl,-Bsymbolic
++CFLAGS = -O3 -funroll-loops -fPIC -fblocks -lBlocksRuntime -Wl,-Bsymbolic
+
+ all: honggfuzz-mutator.so honggfuzz-2b-chunked-mutator.so
+
 commit f5ceb29f2f61439de7adbe8494a2e305c586b904
 Author: Jesse Schwartzentruber <truber@mozilla.com>
 Date:   Fri Jul 14 13:20:02 2023 -0400
@@ -139,6 +153,9 @@ index 8585041e..6e526717 100644
 
 EOF
 make afl-fuzz afl-showmap
+pushd custom_mutators/honggfuzz >/dev/null
+make
+popd >/dev/null
 pushd nyx_mode >/dev/null
 git submodule init
 retry git submodule update --depth 1 --single-branch libnyx
