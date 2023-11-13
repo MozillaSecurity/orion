@@ -9,6 +9,9 @@ retry brew install --force-bottle openssl@3 python@3.12
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python@3.12/libexec/bin:${HOMEBREW_PREFIX}/opt/python@3.12/bin:${HOMEBREW_PREFIX}/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/bin:,' homebrew/Library/Homebrew/cmd/shellenv.sh
 PATH="$HOMEBREW_PREFIX/opt/python@3.12/libexec/bin:$HOMEBREW_PREFIX/opt/python@3.12/bin:$HOMEBREW_PREFIX/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/bin:$PATH"
 
+# remove PEP-668 marker
+find "$HOMEBREW_PREFIX" -type f -name "EXTERNALLY-MANAGED" -delete
+
 # configure pip
 mkdir -p pip
 cat << EOF > pip/pip.ini
