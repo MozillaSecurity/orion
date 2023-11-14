@@ -35,5 +35,5 @@ appconfig.options.add(
 # We always want to run against community Taskcluster instance
 os.environ["TASKCLUSTER_ROOT_URL"] = "https://community-tc.services.mozilla.com"
 
-# Setup our workflow as resource generetor
+# Setup our workflow as resource generator
 appconfig.generators.register(Workflow.tc_admin_boot)
