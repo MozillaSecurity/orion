@@ -17,7 +17,7 @@ target-version = ["py38"]
 
 [[tool.mypy.overrides]]
 module = [
-    "responses",
+    "setuptools",
     "slugid",
     "taskcluster.*",
     "tcadmin.*"
