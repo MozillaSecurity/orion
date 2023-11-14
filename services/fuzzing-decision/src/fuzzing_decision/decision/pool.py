@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Dict, Generator, List, Optional, Union, cast
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union, cast
 
 import dateutil.parser
 import yaml
@@ -407,7 +407,9 @@ class PoolConfiguration(CommonPoolConfiguration):
         }
         return result
 
-    def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):
+    def build_tasks(
+        self, parent_task_id: str, env: Optional[Dict[str, str]] = None
+    ) -> Generator[Tuple[str, Dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
         preprocess_task_id = None
@@ -582,7 +584,9 @@ class PoolConfigMap(CommonPoolConfigMap):
             if tasks:
                 yield self.apply(parent)
 
-    def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):
+    def build_tasks(
+        self, parent_task_id: str, env: Optional[Dict[str, str]] = None
+    ) -> Generator[Tuple[str, Dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.utcnow()
 
