@@ -1,6 +1,10 @@
+# type: ignore
+# This Source Code Form is subject to the terms of the Mozilla Public License,
+# v. 2.0. If a copy of the MPL was not distributed with this file, You can
+# obtain one at http://mozilla.org/MPL/2.0/.
+
 import json
-import pathlib
-from typing import Dict, Iterable
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -8,10 +12,10 @@ import responses
 
 from fuzzing_decision.common import taskcluster
 from fuzzing_decision.common.pool import MachineTypes
-from fuzzing_decision.decision.providers import AWS, GCP, Provider
+from fuzzing_decision.decision.providers import AWS, GCP
 from fuzzing_decision.decision.workflow import Workflow
 
-FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture(autouse=True)
@@ -36,7 +40,7 @@ def appconfig():
 
 
 @pytest.fixture
-def mock_taskcluster_workflow() -> Iterable[Workflow]:
+def mock_taskcluster_workflow():
     """Mock Taskcluster HTTP services"""
 
     workflow = Workflow()
@@ -58,14 +62,14 @@ def mock_taskcluster_workflow() -> Iterable[Workflow]:
 
 
 @pytest.fixture
-def mock_clouds() -> Dict[str, Provider]:
+def mock_clouds():
     """Mock Cloud providers setup"""
     community = FIXTURES_DIR / "community"
     return {"aws": AWS(community), "gcp": GCP(community)}
 
 
 @pytest.fixture
-def mock_machines() -> MachineTypes:
+def mock_machines():
     """Mock a static list of machines"""
     path_ = FIXTURES_DIR / "machines.yml"
     assert path_.exists()
@@ -73,6 +77,6 @@ def mock_machines() -> MachineTypes:
 
 
 @pytest.fixture(autouse=True)
-def disable_cleanup() -> None:
+def disable_cleanup():
     """Disable workflow cleanup in unit tests as tmpdir is automatically removed"""
     Workflow.cleanup = Mock()  # type: ignore

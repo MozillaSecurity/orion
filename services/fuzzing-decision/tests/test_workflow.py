@@ -1,5 +1,10 @@
-import pathlib
+# type: ignore
+# This Source Code Form is subject to the terms of the Mozilla Public License,
+# v. 2.0. If a copy of the MPL was not distributed with this file, You can
+# obtain one at http://mozilla.org/MPL/2.0/.
+
 import re
+from pathlib import Path
 
 import pytest
 import yaml
@@ -12,7 +17,7 @@ fuzzing_config:
 """
 
 
-def test_patterns(tmp_path: pathlib.Path) -> None:
+def test_patterns(tmp_path):
     # Write community fuzzing config
     conf = tmp_path / "config" / "projects" / "fuzzing.yml"
     conf.parent.mkdir(parents=True)
@@ -37,7 +42,7 @@ def test_patterns(tmp_path: pathlib.Path) -> None:
         "Role=hook-id:project-fuzzing/(?!(B)$)",
     ]
 
-    def _match(test: str) -> bool:
+    def _match(test):
         return any([re.match(pattern, test) for pattern in patterns])
 
     # Check all fuzzing hooks are managed
@@ -53,12 +58,12 @@ def test_patterns(tmp_path: pathlib.Path) -> None:
     assert _match("WorkerPool=proj-fuzzing/ci-bis")
 
 
-def test_configure_local(tmp_path: pathlib.Path) -> None:
+def test_configure_local(tmp_path):
     workflow = Workflow()
 
     # Fails on missing file
     with pytest.raises(AssertionError, match="Missing configuration in nope.yml"):
-        workflow.configure(local_path=pathlib.Path("nope.yml"))
+        workflow.configure(local_path=Path("nope.yml"))
 
     # Read a local conf
     conf = tmp_path / "conf.yml"
@@ -85,7 +90,7 @@ def test_configure_local(tmp_path: pathlib.Path) -> None:
     }
 
 
-def test_configure_secret(mock_taskcluster_workflow: Workflow) -> None:
+def test_configure_secret(mock_taskcluster_workflow):
     workflow = mock_taskcluster_workflow
 
     # Read a remote conf from Taskcluster secret

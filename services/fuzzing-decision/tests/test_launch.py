@@ -1,18 +1,21 @@
+# type: ignore
+# This Source Code Form is subject to the terms of the Mozilla Public License,
+# v. 2.0. If a copy of the MPL was not distributed with this file, You can
+# obtain one at http://mozilla.org/MPL/2.0/.
+
 import os
-from pathlib import Path
 from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest
 import yaml
-from pytest_mock import MockerFixture
 
 from fuzzing_decision.pool_launch import cli
 from fuzzing_decision.pool_launch.launcher import PoolLauncher
 
 
 @patch("fuzzing_decision.pool_launch.cli.PoolLauncher", autospec=True)
-def test_main_calls(mock_launcher) -> None:
+def test_main_calls(mock_launcher):
     # if configure returns None, clone/load_params should not be called
     mock_launcher.return_value.configure.return_value = None
     cli.main([])
@@ -37,7 +40,7 @@ def test_main_calls(mock_launcher) -> None:
 
 
 @pytest.fixture
-def pool_data() -> dict:
+def pool_data():
     return {
         "cloud": "aws",
         "scopes": [],
@@ -66,7 +69,7 @@ def pool_data() -> dict:
 
 
 @patch("os.environ", {})
-def test_load_params_1(tmp_path: Path, pool_data: dict) -> None:
+def test_load_params_1(tmp_path, pool_data):
     os.environ["STATIC"] = "value"
     pool_data["macros"]["ENVVAR1"] = "123456"
     pool_data["macros"]["ENVVAR2"] = "789abc"
@@ -91,7 +94,7 @@ def test_load_params_1(tmp_path: Path, pool_data: dict) -> None:
 
 
 @patch("os.environ", {})
-def test_load_params_2(tmp_path: Path, pool_data: dict) -> None:
+def test_load_params_2(tmp_path, pool_data):
     os.environ["STATIC"] = "value"
     pool_data["command"] = ["new-command", "arg1", "arg2"]
 
@@ -110,7 +113,7 @@ def test_load_params_2(tmp_path: Path, pool_data: dict) -> None:
 
 
 @patch("os.environ", {})
-def test_load_params_3(tmp_path: Path, pool_data: dict) -> None:
+def test_load_params_3(tmp_path, pool_data):
     pool_data["command"] = ["new-command", "arg1", "arg2"]
 
     # test 3: command from init and pool is error
@@ -124,7 +127,7 @@ def test_load_params_3(tmp_path: Path, pool_data: dict) -> None:
 
 
 @patch("os.environ", {})
-def test_load_params_4(tmp_path: Path, pool_data: dict) -> None:
+def test_load_params_4(tmp_path, pool_data):
     os.environ["STATIC"] = "value"
     pool_data["command"] = ["new-command", "arg1", "arg2"]
     pool_data["preprocess"] = "preproc"
@@ -171,9 +174,7 @@ def test_load_params_4(tmp_path: Path, pool_data: dict) -> None:
     }
 
 
-def test_launch_exec(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
-) -> None:
+def test_launch_exec(tmp_path, monkeypatch, mocker):
     # Start with taskcluster detection disabled, even on CI
     monkeypatch.delenv("TASK_ID", raising=False)
     monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
