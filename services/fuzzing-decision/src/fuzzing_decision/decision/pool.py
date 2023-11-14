@@ -19,6 +19,7 @@ from taskcluster.utils import fromNow, slugId, stringDate
 from tcadmin.resources import Hook, Role, WorkerPool
 
 from ..common import taskcluster
+from ..common.pool import CommonPoolConfiguration as BasePoolConfiguration
 from ..common.pool import MachineTypes, parse_time
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
@@ -573,6 +574,13 @@ class PoolConfigMap(CommonPoolConfigMap):
             description=DESCRIPTION,
             scopes=scopes,
         )
+
+    def iterpools(self) -> Generator[BasePoolConfiguration, None, None]:
+        for parent in self.apply_to:
+            # skip if base pool is disabled (.tasks == 0)
+            tasks = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").tasks
+            if tasks:
+                yield self.apply(parent)
 
     def build_tasks(self, parent_task_id: str, env: Optional[Dict[str, str]] = None):
         """Create fuzzing tasks and attach them to a decision task"""

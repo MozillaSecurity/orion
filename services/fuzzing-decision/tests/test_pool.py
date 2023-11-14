@@ -858,6 +858,19 @@ def test_pool_map_admin(mocker):
     assert task == expect
 
 
+def test_pool_map_disabled(mocker):
+    """A pool map which includes a disabled pool does not generate any tasks"""
+    mocker.patch.dict(
+        "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
+        {"orion.fuzzer.main": "task-mount-abc"},
+    )
+
+    cfg_map = PoolConfigMap.from_file(POOL_FIXTURES / "map3.yml")
+    cfg_map.run_as_admin = True
+    tasks = list(cfg_map.build_tasks("someTaskId"))
+    assert not tasks
+
+
 @pytest.mark.parametrize(
     "loader, config_cls, map_cls",
     [

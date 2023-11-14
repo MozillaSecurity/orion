@@ -1,0 +1,9 @@
+apply_to:
+  - pool13
+container:
+  type: indexed-image
+  namespace: orion.fuzzer.main
+  path: img.tar.zst
+name: map3
+tasks: 1
+run_as_admin: true

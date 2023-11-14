@@ -709,6 +709,8 @@ class PoolConfigMap(CommonPoolConfiguration):
         )
         not_allowed = ("preprocess",)
         pools = list(self.iterpools())
+        if not pools:
+            return
         for field in same_fields:
             assert (
                 len({getattr(pool, field) for pool in pools}) == 1
