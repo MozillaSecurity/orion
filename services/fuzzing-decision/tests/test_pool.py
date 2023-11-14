@@ -841,7 +841,7 @@ def test_pool_map_admin(mocker):
     with (POOL_FIXTURES / "expect-task-map2.yml").open() as expect_fd:
         expect = yaml.safe_load(expect_fd)
     _task_ids, tasks = zip(*cfg_map.build_tasks("someTaskId"))
-    assert len(tasks) == 4
+    assert len(tasks) == 2
     task = tasks[0]
     # remove timestamps. these are tested elsewhere
     task.pop("created")

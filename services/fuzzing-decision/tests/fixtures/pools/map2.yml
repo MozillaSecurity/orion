@@ -5,4 +5,5 @@ container:
   namespace: orion.fuzzer.main
   path: img.tar.zst
 name: map2
+tasks: 2
 run_as_admin: true
