@@ -65,11 +65,17 @@ EOF
     mkdir -p /var/lib/td-agent-bit/pos
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
+    mkdir -p /tests
+
     function onexit () {
       echo "Waiting for logs to flush..." >&2
       sleep 15
       killall -INT td-agent-bit || true
       sleep 15
+      if [[ -d /home/worker/corpora ]]
+      then
+        find /home/worker/corpora '(' -name 'slow-unit-*' -o -name 'oom-*' -o -name 'timeout-*' ')' -execdir cp '{}' /tests +
+      fi
     }
 
     trap onexit EXIT
@@ -81,8 +87,6 @@ EOF
   python3 setup.py install
   cd -
 
-  # These sysctls shouldn't be necessary for libFuzzer
-  # sysctl --load /etc/sysctl.d/60-fuzzos.conf
   su worker -s "$0"
 else
   # get gcp fuzzdata credentials
