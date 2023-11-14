@@ -3,7 +3,7 @@ dependencies:
   - task-mount-abc
 extra: {}
 metadata:
-  name: Fuzzing task windows-pool4/map2 - 1/4
+  name: Fuzzing task windows-pool4/map2 - 1/2
   owner: fuzzing@allizom.org
   source: https://github.com/MozillaSecurity/orion
 payload:
