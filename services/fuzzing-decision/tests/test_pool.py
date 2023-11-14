@@ -1,23 +1,25 @@
-import datetime
+# type: ignore
+# This Source Code Form is subject to the terms of the Mozilla Public License,
+# v. 2.0. If a copy of the MPL was not distributed with this file, You can
+# obtain one at http://mozilla.org/MPL/2.0/.
+
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
 import pytest
 import slugid
 import yaml
-from pytest_mock import MockerFixture
 
-from fuzzing_decision.common.pool import MachineTypes, parse_size
 from fuzzing_decision.common.pool import PoolConfigLoader as CommonPoolConfigLoader
 from fuzzing_decision.common.pool import PoolConfigMap as CommonPoolConfigMap
 from fuzzing_decision.common.pool import PoolConfiguration as CommonPoolConfiguration
+from fuzzing_decision.common.pool import parse_size
 from fuzzing_decision.decision.pool import (
     DOCKER_WORKER_DEVICES,
     PoolConfigLoader,
     PoolConfigMap,
     PoolConfiguration,
 )
-from fuzzing_decision.decision.providers import Provider
 
 POOL_FIXTURES = Path(__file__).parent / "fixtures" / "pools"
 
@@ -33,7 +35,7 @@ WST_URL = "https://community-websocktunnel.services.mozilla.com"
         ("128t", "1g", 128 * 1024),
     ],
 )
-def test_parse_size(size: str, divisor: Union[float, str], result: int) -> None:
+def test_parse_size(size, divisor, result):
     if isinstance(divisor, str):
         divisor = parse_size(divisor)
 
@@ -60,15 +62,15 @@ def test_parse_size(size: str, divisor: Union[float, str], result: int) -> None:
     ],
 )
 def test_machine_filters(
-    mock_machines: MachineTypes,
-    provider: str,
-    cpu: str,
-    ram: int,
-    cores: int,
-    metal: bool,
-    gpu: bool,
-    result: Union[List[Optional[str]], Type[KeyError]],
-) -> None:
+    mock_machines,
+    provider,
+    cpu,
+    ram,
+    cores,
+    metal,
+    gpu,
+    result,
+):
     if isinstance(result, list):
         assert (
             list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu)) == result
@@ -79,9 +81,9 @@ def test_machine_filters(
 
 
 # Hook & role should be the same across cloud providers
-def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, Any]:
-    empty_str_list: List[str] = []
-    empty_str_dict: Dict[str, str] = {}
+def _get_expected_hook(platform="linux"):
+    empty_str_list = []
+    empty_str_dict = {}
     return {
         "bindings": empty_str_list,
         "description": (
@@ -137,8 +139,8 @@ def _get_expected_hook(platform: Union[List[str], str] = "linux") -> Dict[str, A
 
 
 def _get_expected_role(
-    platform: Union[List[str], str] = "linux",
-) -> Dict[str, Union[List[str], str]]:
+    platform="linux",
+):
     return {
         "description": (
             "*DO NOT EDIT* - This resource is configured automatically.\n\nFuzzing "
@@ -162,12 +164,12 @@ def _get_expected_role(
 @pytest.mark.parametrize("platform", ["linux", "windows"])
 @pytest.mark.parametrize("demand", [True, False])
 def test_aws_resources(
-    env: Optional[Dict[str, str]],
-    mock_clouds: Dict[str, Provider],
-    mock_machines: MachineTypes,
-    platform: str,
-    demand: bool,
-) -> None:
+    env,
+    mock_clouds,
+    mock_machines,
+    platform,
+    demand,
+):
     conf = PoolConfiguration(
         "test",
         {
@@ -200,8 +202,8 @@ def test_aws_resources(
     assert len(resources) == 3
     pool, hook, role = resources
 
-    empty_str_dict: Dict[str, str] = {}
-    expected: Dict[str, Any] = {
+    empty_str_dict = {}
+    expected = {
         "config": {
             "launchConfigs": [
                 {
@@ -279,11 +281,11 @@ def test_aws_resources(
 @pytest.mark.parametrize("demand", [True, False])
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
 def test_gcp_resources(
-    env: Optional[Dict[str, str]],
-    mock_clouds: Dict[str, Provider],
-    mock_machines: MachineTypes,
-    demand: bool,
-) -> None:
+    env,
+    mock_clouds,
+    mock_machines,
+    demand,
+):
     conf = PoolConfiguration(
         "test",
         {
@@ -316,7 +318,7 @@ def test_gcp_resources(
     assert len(resources) == 3
     pool, hook, role = resources
 
-    expected: Dict[str, Any] = {
+    expected = {
         "config": {
             "launchConfigs": [
                 {
@@ -469,12 +471,12 @@ def test_gcp_resources(
     ],
 )
 def test_tasks(
-    env: Optional[Dict[str, str]],
+    env,
     scope_caps,
-    platform: str,
-    run_as_admin: bool,
-    mocker: MockerFixture,
-) -> None:
+    platform,
+    run_as_admin,
+    mocker,
+):
     mocker.patch.dict(
         "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
         {"orion.fuzzer.main": "task-mount-abc"},
@@ -541,9 +543,9 @@ def test_tasks(
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value: str) -> datetime.datetime:
+    def _get_date(value: str):
         assert isinstance(value, str)
-        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     for i, task in enumerate(tasks):
         created = _get_date(task.pop("created"))
@@ -656,10 +658,8 @@ def test_tasks(
         assert task == expected
 
 
-def test_preprocess_tasks() -> None:
-    conf = cast(
-        PoolConfiguration, PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
-    )
+def test_preprocess_tasks():
+    conf = PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
 
     task_ids, tasks = zip(*conf.build_tasks("someTaskId"))
 
@@ -670,9 +670,9 @@ def test_preprocess_tasks() -> None:
     # Check we have 2 valid task definitions
     assert len(tasks) == 2
 
-    def _get_date(value: str) -> datetime.datetime:
+    def _get_date(value: str):
         assert isinstance(value, str)
-        return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
 
     expected = [
         {
@@ -740,14 +740,14 @@ def test_preprocess_tasks() -> None:
 
 
 @pytest.mark.parametrize("pool_path", POOL_FIXTURES.glob("pool*.yml"))
-def test_flatten(pool_path: Path) -> None:
+def test_flatten(pool_path):
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _: Optional[Set[str]]) -> None:
+        def _flatten(self, _):
             pass
 
-    pool = cast(CommonPoolConfiguration, CommonPoolConfiguration.from_file(pool_path))
+    pool = CommonPoolConfiguration.from_file(pool_path)
     expect_path = pool_path.with_name(pool_path.name.replace("pool", "expect"))
-    expect = cast(PoolConfigNoFlatten, PoolConfigNoFlatten.from_file(expect_path))
+    expect = PoolConfigNoFlatten.from_file(expect_path)
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
@@ -772,18 +772,13 @@ def test_flatten(pool_path: Path) -> None:
     assert pool.nested_virtualization == expect.nested_virtualization
 
 
-def test_pool_map() -> None:
+def test_pool_map():
     class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _: Optional[Set[str]]) -> None:
+        def _flatten(self, _):
             pass
 
-    cfg_map = cast(
-        CommonPoolConfigMap, CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
-    )
-    expect = cast(
-        PoolConfigNoFlatten,
-        PoolConfigNoFlatten.from_file(POOL_FIXTURES / "expect1.yml"),
-    )
+    cfg_map = CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
+    expect = PoolConfigNoFlatten.from_file(POOL_FIXTURES / "expect1.yml")
     assert cfg_map.apply_to == ["pool1"]
     assert cfg_map.cloud == expect.cloud
     assert cfg_map.command is None
@@ -809,7 +804,6 @@ def test_pool_map() -> None:
 
     pools = list(cfg_map.iterpools())
     assert len(pools) == 1
-    # pool = cast(CommonPoolConfiguration, pools[0])
     pool = pools[0]
     assert isinstance(pool, CommonPoolConfiguration)
     assert pool.cloud == expect.cloud
@@ -836,13 +830,13 @@ def test_pool_map() -> None:
     assert pool.nested_virtualization == expect.nested_virtualization
 
 
-def test_pool_map_admin(mocker: MockerFixture) -> None:
+def test_pool_map_admin(mocker):
     mocker.patch.dict(
         "fuzzing_decision.decision.pool.MountArtifactResolver.CACHE",
         {"orion.fuzzer.main": "task-mount-abc"},
     )
 
-    cfg_map = cast(PoolConfigMap, PoolConfigMap.from_file(POOL_FIXTURES / "map2.yml"))
+    cfg_map = PoolConfigMap.from_file(POOL_FIXTURES / "map2.yml")
     cfg_map.run_as_admin = True
     with (POOL_FIXTURES / "expect-task-map2.yml").open() as expect_fd:
         expect = yaml.safe_load(expect_fd)
@@ -872,17 +866,17 @@ def test_pool_map_admin(mocker: MockerFixture) -> None:
     ],
 )
 def test_pool_loader(
-    loader: CommonPoolConfigLoader,
-    config_cls: Type[CommonPoolConfiguration],
-    map_cls: Type[CommonPoolConfigMap],
-) -> None:
+    loader,
+    config_cls,
+    map_cls,
+):
     obj = loader.from_file(POOL_FIXTURES / "load-cfg.yml")
     assert isinstance(obj, config_cls)
     obj = loader.from_file(POOL_FIXTURES / "load-map.yml")
     assert isinstance(obj, map_cls)
 
 
-def test_cycle_crons() -> None:
+def test_cycle_crons():
     conf = CommonPoolConfiguration(
         "test",
         {
@@ -954,31 +948,28 @@ def test_cycle_crons() -> None:
     # using schedule_start should be the same as using datetime.now()
     conf.schedule_start = None
     conf.cycle_time = 3600 * 12
-    start = datetime.datetime.now(datetime.timezone.utc)
+    start = datetime.now(timezone.utc)
     calc_none = list(conf.cycle_crons())
-    fin = datetime.datetime.now(datetime.timezone.utc)
+    fin = datetime.now(timezone.utc)
     for offset in range(int((fin - start).total_seconds()) + 1):
-        conf.schedule_start = start + datetime.timedelta(seconds=offset)
+        conf.schedule_start = start + timedelta(seconds=offset)
         if calc_none == list(conf.cycle_crons()):
             break
     else:
         assert calc_none == list(conf.cycle_crons())
 
 
-def test_required() -> None:
+def test_required():
     CommonPoolConfiguration("test", {"name": "test pool"}, _flattened=set())
     with pytest.raises(AssertionError):
         CommonPoolConfiguration("test", {}, _flattened=set())
 
 
 def test_aws_nested_virt(
-    mock_clouds: Dict[str, Provider],
-    mock_machines: MachineTypes,
-) -> None:
-    pool = cast(
-        PoolConfiguration,
-        PoolConfiguration.from_file(POOL_FIXTURES / "pool1.yml"),
-    )
+    mock_clouds,
+    mock_machines,
+):
+    pool = PoolConfiguration.from_file(POOL_FIXTURES / "pool1.yml")
     pool.cloud = "aws"
     pool.nested_virtualization = True
     with pytest.raises(AssertionError):
@@ -986,13 +977,10 @@ def test_aws_nested_virt(
 
 
 def test_gcp_nested_virt(
-    mock_clouds: Dict[str, Provider],
-    mock_machines: MachineTypes,
-) -> None:
-    cfg = cast(
-        PoolConfiguration,
-        PoolConfiguration.from_file(POOL_FIXTURES / "pool4.yml"),
-    )
+    mock_clouds,
+    mock_machines,
+):
+    cfg = PoolConfiguration.from_file(POOL_FIXTURES / "pool4.yml")
     cfg.cloud = "gcp"
     cfg.nested_virtualization = True
     cfg.imageset = "generic-worker-A"
