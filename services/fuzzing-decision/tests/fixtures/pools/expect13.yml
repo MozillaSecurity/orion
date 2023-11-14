@@ -1,0 +1,29 @@
+cloud: gcp
+scopes:
+  - scope4
+disk_size: 140g
+cycle_time: 4h
+max_run_time: 4h
+schedule_start: null
+cores_per_task: 40
+metal: true
+name: pool13
+tasks: 0
+command:
+  - cmd4
+  - arg4
+container: MozillaSecurity/fuzzer:default
+minimum_memory_per_core: 4g
+imageset: generic-worker-4
+parents:
+  - pool4
+cpu: x64
+platform: windows
+preprocess: ""
+macros:
+  ENVVAR1: "abc"
+  ENVVAR5: "xyz"
+run_as_admin: false
+gpu: false
+demand: false
+nested_virtualization: false
