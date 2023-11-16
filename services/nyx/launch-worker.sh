@@ -174,6 +174,12 @@ update-status "preparing to launch guided-fuzzing-daemon"
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+
+  onexit () {
+    # ensure final stats are complete
+    python3 -m TaskStatusReporter --report-from-file ./stats
+  }
+  trap onexit EXIT
 fi
 
 if [[ -z "$NYX_INSTANCES" ]]; then
