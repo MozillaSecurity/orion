@@ -71,8 +71,7 @@ if [[ ! -e /dev/kvm ]]; then
 fi
 usermod -a -G "$kvm_grp" worker
 
-# shellcheck disable=SC2317
-function onexit () {
+onexit () {
   echo "Waiting for logs to flush..." >&2
   sleep 15
   killall -INT td-agent-bit || true

@@ -284,20 +284,14 @@ export UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 # %<---[StatusFile]-----------------------------------------------------------
 
-if [[ "${SHIP,,}" = "taskcluster" ]]; then
-tee run-tcreport.sh << EOF
-#!/bin/bash
-while true; do python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30; sleep 30; done
-EOF
-chmod u+x run-tcreport.sh
-screen -t tcreport -dmS tcreport ./run-tcreport.sh
-else
-tee run-ec2report.sh << EOF
-#!/bin/bash
-python3 -m EC2Reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30
-EOF
-chmod u+x run-ec2report.sh
-screen -t ec2report -dmS ec2report ./run-ec2report.sh
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+
+  onexit () {
+    # ensure final stats are complete
+    python3 -m TaskStatusReporter --report-from-file ./stats
+  }
+  trap onexit EXIT
 fi
 
 # %<---[LibFuzzer]------------------------------------------------------------
