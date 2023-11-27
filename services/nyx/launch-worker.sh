@@ -206,9 +206,20 @@ else
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
-  # Download the corpus from S3
-  update-status "downloading corpus"
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+
+  # Sometimes, don't download the existing corpus.
+  # This can increase coverage in large targets and prevents bad corpora.
+  # Results will be merged with the existing corpus on next refresh.
+  if [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+    # Download the corpus from S3
+    update-status "downloading corpus"
+    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+  fi
+  # Ensure corpus is not empty
+  if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
+    echo "Hello world" > ./corpus/input0
+  fi
+
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
