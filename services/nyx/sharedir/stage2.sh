@@ -58,6 +58,7 @@ mv prefs.js /home/user/.mozilla/firefox/*test/
 
 echo "[!] starting firefox" | ./hcat
 
+export LIBGL_ALWAYS_SOFTWARE=1
 export MOZ_FUZZ_LOG_IPC=1
 export NYX_AFL_PLUS_PLUS_MODE=ON
 export NYX_ASAN_EXECUTABLE=TRUE
@@ -67,7 +68,7 @@ LD_BIND_NOW=1 \
 ASAN_OPTIONS="${ASAN_OPTIONS}" \
 UBSAN_OPTIONS="${UBSAN_OPTIONS}" \
 LD_PRELOAD=./ld_preload_fuzz.so \
-/home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
+xvfb-run /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
 echo $?
 
 echo "[!] Debug output:" | ./hcat
