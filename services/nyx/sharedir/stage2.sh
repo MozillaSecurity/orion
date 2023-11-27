@@ -15,11 +15,26 @@ echo "[!] requesting firefox from hypervisor" | ./hcat
 ./hget ff_files.sh ff_files.sh
 sh ff_files.sh
 
-echo "[!] requesting page.zip from hypervisor" | ./hcat
-./hget_bulk page.zip page.zip
-echo "[!] unpacking page.zip" | ./hcat
-unzip page.zip | ./hcat
-ln -s caniuse.html fuzz.html
+echo "[!] requesting config.sh" | ./hcat
+./hget config.sh config.sh
+. ./config.sh
+
+if [ -z "$MOCHITEST_ARGS" ]; then
+  echo "[!] requesting ${NYX_PAGE-page.zip} from hypervisor" | ./hcat
+  ./hget_bulk "${NYX_PAGE-page.zip}" page.zip
+  echo "[!] unpacking ${NYX_PAGE-page.zip}" | ./hcat
+  unzip "${NYX_PAGE-page.zip}" | ./hcat
+  ln -s "${NYX_PAGE_HTMLNAME-caniuse.html}" fuzz.html
+else
+  echo "[!] requesting testenv.txz from hypervisor" | ./hcat
+  ./hget_bulk testenv.txz testenv.txz
+  echo "[!] requesting tools.txz from hypervisor" | ./hcat
+  ./hget_bulk tools.txz tools.txz
+  echo "[!] unpacking testenv.txz" | ./hcat
+  tar xf testenv.txz
+  echo "[!] unpacking tools.txz" | ./hcat
+  tar xf tools.txz -C tests/bin/
+fi
 
 echo "[!] agent is running in the following path:" | ./hcat
 pwd | ./hcat
@@ -44,7 +59,6 @@ mv prefs.js /home/user/.mozilla/firefox/*test/
 echo "[!] starting firefox" | ./hcat
 
 export MOZ_FUZZ_LOG_IPC=1
-export NYX_FUZZER="${NYX_FUZZER}"
 export NYX_AFL_PLUS_PLUS_MODE=ON
 export NYX_ASAN_EXECUTABLE=TRUE
 export NYX_NET_FUZZ_MODE=ON
