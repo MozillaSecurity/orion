@@ -36,13 +36,12 @@ export AFL_IGNORE_PROBLEMS_COVERAGE=1
 export AFL_DEBUG=1
 
 echo "[!] Creating firefox profile" | ./hcat
-
+./hget prefs.js prefs.js
 LD_LIBRARY_PATH="/home/user/firefox/" \
 /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
+mv prefs.js /home/user/.mozilla/firefox/*test/
 
 echo "[!] starting firefox" | ./hcat
-
-mv prefs.js /home/user/.mozilla/firefox/*test/
 
 export MOZ_FUZZ_LOG_IPC=1
 export NYX_FUZZER="${NYX_FUZZER}"
