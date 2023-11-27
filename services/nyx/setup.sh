@@ -264,6 +264,7 @@ for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
   retry su worker -c "pip3 install ./$r"
   su worker -c "pip3 uninstall -y $r"
 done
+su worker -c "pip3 install ./nyx_ipc_manager"
 popd >/dev/null
 
 retry su worker -c "pip3 install google-cloud-storage psutil"
