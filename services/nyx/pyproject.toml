@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+target-version = ["py38"]
+
+[[tool.mypy.overrides]]
+module = [
+    "setuptools",
+]
+ignore_missing_imports = true
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.ruff]
+ignore = []
+line-length = 88
+select = [
+    # flake8
+    "E",
+    "F",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # includes yesqa
+    "RUF",
+]
+target-version = "py38"
