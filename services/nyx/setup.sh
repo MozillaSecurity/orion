@@ -199,6 +199,50 @@ retry git submodule update --depth 1 --single-branch capstone_v4
 retry git submodule update --depth 1 --single-branch libxdc
 export CAPSTONE_ROOT="$PWD/capstone_v4"
 export LIBXDC_ROOT="$PWD/libxdc"
+git apply << "EOF"
+diff --git a/nyx/hypercall/hypercall.c b/nyx/hypercall/hypercall.c
+index fa06af3201..47053472ed 100644
+--- a/nyx/hypercall/hypercall.c
++++ b/nyx/hypercall/hypercall.c
+@@ -746,9 +746,34 @@ static void handle_hypercall_kafl_dump_file(struct kvm_run *run,
+         strncpy(filename, "tmp.XXXXXX", sizeof(filename) - 1);
+     }
+
+-    char *base_name = basename(filename); // clobbers the filename buffer!
+-    assert(asprintf(&host_path, "%s/dump/%s", GET_GLOBAL_STATE()->workdir_path,
+-                    base_name) != -1);
++    char *slashmatch = strstr(filename, "/");
++    char *base_name = NULL;
++    if (slashmatch) {
++        char sub_dir[256];
++        memset(sub_dir, 0, sizeof(sub_dir));
++        memcpy(sub_dir, filename, slashmatch - filename);
++
++        // Safety check, avoid dots in the subdir as they might make us
++        // leave the dump directory.
++        if (strstr(sub_dir, ".") || !strlen(sub_dir)) {
++            nyx_error("Invalid filename in %s: %s. Skipping..\n",
++                      __func__, filename);
++            goto err_out1;
++        }
++
++        assert(asprintf(&host_path, "%s/dump/%s", GET_GLOBAL_STATE()->workdir_path,
++                        sub_dir) != -1);
++        mkdir(host_path, 0777); // TODO: Check for errors other than EEXIST
++
++        base_name = basename(filename); // clobbers the filename buffer!
++        assert(asprintf(&host_path, "%s/dump/%s/%s", GET_GLOBAL_STATE()->workdir_path,
++                        sub_dir, base_name) != -1);
++
++    } else {
++        base_name = basename(filename); // clobbers the filename buffer!
++        assert(asprintf(&host_path, "%s/dump/%s", GET_GLOBAL_STATE()->workdir_path,
++                        base_name) != -1);
++    }
+
+     // check if base_name is mkstemp() pattern, otherwise write/append to exact name
+     char *pattern = strstr(base_name, "XXXXXX");
+EOF
 popd >/dev/null
 ./build_nyx_support.sh
 popd >/dev/null
