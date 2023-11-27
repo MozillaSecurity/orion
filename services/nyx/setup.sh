@@ -28,12 +28,23 @@ pkgs=(
   git
   jshon
   lbzip2
+  libasound2
   libblocksruntime0
+  libfontconfig1
+  libfreetype6
   libglib2.0-0
+  libgtk-3-0
   libjpeg-turbo8
   libpixman-1-0
   libpng16-16
+  libx11-6
+  libx11-xcb1
+  libxcomposite1
+  libxdamage1
+  libxext6
+  libxfixes3
   libxml2
+  libxrandr2
   netcat-openbsd
   openssh-client
   psmisc
@@ -44,6 +55,7 @@ pkgs=(
   python3-setuptools
   python3-venv
   python3-wheel
+  xvfb
   zstd
 )
 

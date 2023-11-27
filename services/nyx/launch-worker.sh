@@ -75,9 +75,6 @@ get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_d
 # get AWS S3 credentials
 setup-aws-credentials
 
-S3_PROJECT="Nyx-$NYX_FUZZER"
-S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
-
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -e ~/.fuzzmanagerconf ]]; then
@@ -160,7 +157,6 @@ fi
   find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/'
   find firefox/ -type f -executable | sed 's/.*/chmod +x \0/'
 } >> ff_files.sh
-sed -i "s/\${NYX_FUZZER}/$NYX_FUZZER/" stage2.sh
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
@@ -196,13 +192,41 @@ DAEMON_ARGS=(
   --stats ./stats
 )
 
+S3_PROJECT="Nyx-$NYX_FUZZER"
+S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
+
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
   update-status "starting corpus refresh"
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
-    --build ./sharedir/firefox \
-    --s3-corpus-refresh ./corpus \
-    "${DAEMON_ARGS[@]}"
+  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]; then
+    guided-fuzzing-daemon --s3-list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project; do
+      time guided-fuzzing-daemon \
+        --s3-bucket mozilla-aflfuzz --project "$project" \
+        --build ./sharedir/firefox \
+        --s3-corpus-refresh ./corpus \
+        "${DAEMON_ARGS[@]}"
+    done
+  else
+    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
+      --build ./sharedir/firefox \
+      --s3-corpus-refresh ./corpus \
+      "${DAEMON_ARGS[@]}"
+  fi
 else
+  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]; then
+    mkdir -p corpus.add
+    xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file caniuse.html --file-zip page.zip
+    DAEMON_ARGS+=(
+      --nyx-add-corpus ./corpus.out/workdir/dump/seeds
+    )
+    source ./sharedir/config.sh
+    S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
+  elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]; then
+    nyx-ipc-manager --generic --sharedir ./sharedir --file caniuse.html --file-zip page.zip
+  else
+    echo "unknown $NYX_FUZZER" 1>&2
+    exit 2
+  fi
+
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
