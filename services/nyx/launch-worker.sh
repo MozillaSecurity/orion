@@ -118,6 +118,8 @@ sed -i 's/uint32_t bytes /uint64_t bytes /' userspace-tools/src/htools/hget.c
 cd preload/harness
 sed -i '23,26 {s/^/#/}' compile.sh
 sed -i '38,41 {s/^/#/}' compile.sh
+sed -i 's/ -fsanitize=address//' compile.sh
+sed -i 's/ -O0/ -O2/' compile.sh
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 ./compile.sh
 popd >/dev/null
