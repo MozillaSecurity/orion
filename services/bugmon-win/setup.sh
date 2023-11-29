@@ -93,5 +93,6 @@ rm -rf \
   msys64/usr/share/doc/ \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
+cp orion/services/bugmon-win/launch.sh .
 
 
