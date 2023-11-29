@@ -12,7 +12,6 @@ retry pacman --noconfirm -S \
   p7zip \
   patch \
   psmisc \
-  subversion \
   tar \
   zstd
 pacman --noconfirm -Scc

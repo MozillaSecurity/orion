@@ -14,13 +14,6 @@ retry () {
 }
 retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
-status () {
-  if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
-  then
-    python -m TaskStatusReporter --report "$@" || true
-  fi
-}
-
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
 
