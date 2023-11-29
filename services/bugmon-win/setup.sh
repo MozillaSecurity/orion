@@ -94,5 +94,4 @@ rm -rf \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
 cp orion/services/bugmon-win/launch.sh .
-
-
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip
