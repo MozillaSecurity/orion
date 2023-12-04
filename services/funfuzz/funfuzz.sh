@@ -69,7 +69,7 @@ fi
 if [[ -z "$NO_PULL" ]]
 then
   (cd ~/trees/funfuzz
-   retry git fetch --depth 1 origin master
+   retry git fetch --depth 1 --no-tags origin master HEAD
    git reset --hard FETCH_HEAD
   )
 fi

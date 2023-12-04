@@ -16,7 +16,7 @@ source "/srv/repos/setup/common.sh"
 
 for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
   pushd "/srv/repos/$r" >/dev/null
-  retry git fetch --depth=1 --no-tags origin
+  retry git fetch --depth=1 --no-tags origin HEAD
   git reset --hard FETCH_HEAD
   retry pip3 install -U .
   popd >/dev/null
