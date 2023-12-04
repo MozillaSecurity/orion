@@ -86,6 +86,9 @@ retry python -m pip install \
   psutil \
   virtualenv
 
+#### Create aritifact directory
+mkdir bugmon-artifacts
+
 rm -rf \
   msys64/mingw64/share/doc/ \
   msys64/mingw64/share/info/ \
@@ -94,4 +97,4 @@ rm -rf \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
 cp orion/services/bugmon-win/launch.sh .
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip bugmon-artifacts
