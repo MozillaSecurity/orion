@@ -147,6 +147,9 @@ symbolize=0:\
 $UBSAN_OPTIONS
 UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
+NYX_PAGE="${NYX_PAGE-page.zip}"
+NYX_PAGE_HTMLNAME="${NYX_PAGE_HTMLNAME-caniuse.html}"
+
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
   update-status "downloading firefox"
@@ -160,7 +163,7 @@ fi
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
-cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/page.zip .
+cp "/srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/$NYX_PAGE" .
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/ld_preload_*.so .
 cp -r /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/htools .
 cp htools/hget_no_pt .
@@ -214,14 +217,14 @@ if [[ -n "$S3_CORPUS_REFRESH" ]]; then
 else
   if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]; then
     mkdir -p corpus.add
-    xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file caniuse.html --file-zip page.zip
+    xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
     DAEMON_ARGS+=(
       --nyx-add-corpus ./corpus.out/workdir/dump/seeds
     )
     source ./sharedir/config.sh
     S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
   elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]; then
-    nyx-ipc-manager --generic --sharedir ./sharedir --file caniuse.html --file-zip page.zip
+    nyx-ipc-manager --generic --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
   else
     echo "unknown $NYX_FUZZER" 1>&2
     exit 2
