@@ -86,7 +86,7 @@ retry python -m pip install \
   psutil \
   virtualenv
 
-#### Create aritifact directory
+#### Create artifact directory
 mkdir bugmon-artifacts
 
 rm -rf \
