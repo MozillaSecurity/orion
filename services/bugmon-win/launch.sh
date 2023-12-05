@@ -20,7 +20,7 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -Disabl
 retry python -m pip install git+https://github.com/MozillaSecurity/bugmon-tc.git
 
 ARTIFACT_DEST="$USERPROFILE/bugmon-artifacts"
-TC_ARTIFACT_ROOT="$USERPROFILE/project/fuzzing/bugmon"
+TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 CONFIRM_ARGS=""
 if [ -n "$FORCE_CONFIRM" ]; then
