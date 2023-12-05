@@ -17,7 +17,7 @@ retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[do
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
 
-retry python -m pip install git+https://github.com/MozillaSecurity/bugmon.git
+retry python -m pip install git+https://github.com/MozillaSecurity/bugmon-tc.git
 
 ARTIFACT_DEST="$USERPROFILE/bugmon-artifacts"
 TC_ARTIFACT_ROOT="$USERPROFILE/project/fuzzing/bugmon"
