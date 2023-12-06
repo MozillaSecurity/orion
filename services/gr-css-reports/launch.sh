@@ -35,9 +35,9 @@ git init gr.css.reports
   # Ignore the lockfile when installing both to ensure we have the latest
   # version of gr.css and gr.css.generator
   retry npm i --no-package-lock --no-progress --no-save
-  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css
+  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css --no-save
   python3 -m prefpicker browser-fuzzing.yml prefs.js
-  npx gr.css ~/nightly/firefox src/grammar.json -p prefs.js &&
+  node node_modules/@mozillasecurity/gr.css/dist/gr.css.js ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
     git commit -m "chore(grammar): update grammar" src/grammar.json
