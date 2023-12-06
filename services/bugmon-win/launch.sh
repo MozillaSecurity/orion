@@ -20,7 +20,7 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -Disabl
 mkdir -p "$USERPROFILE/Local/autobisect/autobisect/"
 cat << EOF > "$USERPROFILE/Local/autobisect/autobisect/autobisect.ini"
 [autobisect]
-storage-path: $USERPROFILE/builds/
+storage-path: $(cd "$USERPROFILE" && pwd -W)/builds/
 persist: true
 ; size in MBs
 persist-limit: 30000
