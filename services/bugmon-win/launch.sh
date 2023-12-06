@@ -17,6 +17,14 @@ retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[do
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
 
+cat << EOF > "$USERPROFILE/Local/autobisect/autobisect/autobisect.ini"
+[autobisect]
+storage-path: $USERPROFILE/builds/
+persist: true
+; size in MBs
+persist-limit: 30000
+EOF
+
 retry python -m pip install git+https://github.com/MozillaSecurity/bugmon-tc.git
 
 ARTIFACT_DEST="$USERPROFILE/bugmon-artifacts"
