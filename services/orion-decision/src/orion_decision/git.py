@@ -138,7 +138,7 @@ class GitRepo:
     def _clone(self, clone_url: Union[Path, str], clone_ref: str, commit: str) -> None:
         self.git("init")
         self.git("remote", "add", "origin", clone_url)
-        self.git("fetch", "-q", "origin", clone_ref, tries=RETRIES)
+        self.git("fetch", "-t", "-q", "origin", clone_ref, tries=RETRIES)
         self.git("-c", "advice.detachedHead=false", "checkout", commit)
 
     def cleanup(self) -> None:
