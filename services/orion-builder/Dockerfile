@@ -6,9 +6,8 @@ FROM alpine:latest
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ARG TASKBOOT_VER="0.3.6"
-
 COPY services/orion-builder /src/orion-builder
+
 RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; } \
     && retry apk add --no-cache \
         # base packages
@@ -25,18 +24,14 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
         py3-yaml \
         python3 \
         python3-dev \
+    && find /usr/lib/python3.* -type f -name EXTERNALLY-MANAGED -delete \
+    && pip freeze > /src/os_constraints.txt \
     # configure podman
     && sed -i 's/^#mount_program/mount_program/' /etc/containers/storage.conf \
     # install task-boot
-    && retry wget -q https://github.com/mozilla/task-boot/archive/$TASKBOOT_VER.tar.gz \
-    && tar xzf $TASKBOOT_VER.tar.gz \
-    && cd task-boot-$TASKBOOT_VER \
-    && patch -p1 -i /src/orion-builder/podman.patch \
-    && retry pip --no-cache-dir --disable-pip-version-check install . \
-    && cd .. \
-    && rm -rf $TASKBOOT_VER.tar.gz task-boot-$TASKBOOT_VER \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off git+https://github.com/mozilla/task-boot \
     # install orion-builder
-    && retry pip --no-cache-dir --disable-pip-version-check install -e /src/orion-builder \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off -e /src/orion-builder \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && rm -rf /root/.cache /usr/bin/__pycache__ \
     # precompile .py files

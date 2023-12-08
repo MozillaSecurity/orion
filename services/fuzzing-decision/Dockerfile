@@ -7,10 +7,24 @@ FROM alpine:latest
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
 COPY services/fuzzing-decision /src/fuzzing-decision
-RUN retry () { i=0; while [ $i -lt 9 ]; do "$@" && return || sleep 30; i="$((i+1))"; done; "$@"; } \
-    && retry apk add --no-cache build-base git openssh-client python3 py3-multidict py3-pip py3-requests py3-six py3-wheel py3-yaml python3-dev \
-    && retry pip install --no-cache-dir --disable-pip-version-check --progress-bar off tc-admin \
-    && retry pip install --no-cache-dir --disable-pip-version-check --progress-bar off -e "/src/fuzzing-decision[decision]" \
+
+RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; } \
+    && retry apk add --no-cache \
+        build-base \
+        git \
+        openssh-client \
+        py3-multidict \
+        py3-pip \
+        py3-requests \
+        py3-six \
+        py3-wheel \
+        py3-yaml \
+        python3 \
+        python3-dev \
+    && find /usr/lib/python3.* -type f -name EXTERNALLY-MANAGED -delete \
+    && pip freeze > /src/os_constraints.txt \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off tc-admin \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off -e "/src/fuzzing-decision[decision]" \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && apk del build-base py3-pip py3-wheel python3-dev \
     && python -m compileall -b -q /usr/lib \
