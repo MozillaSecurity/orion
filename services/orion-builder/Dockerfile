@@ -24,6 +24,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
         py3-yaml \
         python3 \
         python3-dev \
+        zstd \
     && find /usr/lib/python3.* -type f -name EXTERNALLY-MANAGED -delete \
     && pip freeze > /src/os_constraints.txt \
     # configure podman
