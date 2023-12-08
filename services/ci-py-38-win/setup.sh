@@ -1,8 +1,8 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
 
-retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
+retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -Sy \
@@ -15,7 +15,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-retry_curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get python
 VER=3.8.10
@@ -60,7 +60,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 retry python -m pip install tox
 retry python -m pip install poetry
 retry python -m pip install pre-commit
-retry_curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
+retry-curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
 
 rm -rf \
   msys64/mingw64/share/doc/ \

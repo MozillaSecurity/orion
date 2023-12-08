@@ -1,8 +1,8 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
 
-retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
+retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 retry brew install --force-bottle openssl@3 python@3.8 tcl-tk
 # shellcheck disable=SC2016
@@ -29,7 +29,7 @@ export PIP_CONFIG_FILE="$PWD/pip/pip.ini"
 retry python -m pip install tox
 retry python -m pip install poetry
 retry python -m pip install pre-commit
-retry_curl https://uploader.codecov.io/latest/macos/codecov -o homebrew/bin/codecov
+retry-curl https://uploader.codecov.io/latest/macos/codecov -o homebrew/bin/codecov
 chmod +x homebrew/bin/codecov
 
 rm -rf homebrew/docs
