@@ -2,8 +2,8 @@
 set -e -x -o pipefail
 shopt -s extglob
 
-retry () { i=0; while [ "$i" -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
-retry_curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
+retry-curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -S \
@@ -20,11 +20,11 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-retry_curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
 VER=2.1.10
-retry_curl -O "https://fluentbit.io/releases/${VER/%.+([0-9])/}/fluent-bit-${VER}-win64.zip"
+retry-curl -O "https://fluentbit.io/releases/${VER/%.+([0-9])/}/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
@@ -70,7 +70,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 
 # get node.js
 VER=18.18.2
-retry_curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
+retry-curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip
 rm -rf msys64/opt/node
@@ -81,7 +81,7 @@ which node
 node -v
 npm -v
 
-retry_curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json
+retry-curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json
 resolve_tc () {
 python - "$1" << EOF
 import json
@@ -94,14 +94,14 @@ EOF
 }
 
 # get grcov
-retry_curl -O "$(resolve_tc grcov)"
+retry-curl -O "$(resolve_tc grcov)"
 zstdcat grcov.tar.zst | tar -xv
 mv grcov/grcov.exe msys64/usr/bin/
 rm -rf grcov grcov.tar.zst
 ./msys64/usr/bin/grcov.exe --version
 
 # get new minidump-stackwalk
-retry_curl -O "$(resolve_tc minidump-stackwalk)"
+retry-curl -O "$(resolve_tc minidump-stackwalk)"
 zstdcat minidump-stackwalk.tar.zst | tar xv
 mv minidump-stackwalk/minidump-stackwalk.exe msys64/usr/bin/
 rm -rf minidump-stackwalk minidump-stackwalk.tar.zst
