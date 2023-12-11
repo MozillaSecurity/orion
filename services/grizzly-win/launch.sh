@@ -1,22 +1,20 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
 PATH="$PWD/msys64/opt/node:$PATH"
 
 retry () {
   i=0
-  while [ "$i" -lt 9 ]
-  do
+  while [[ "$i" -lt 9 ]]; do
     "$@" && return
     sleep 30
     i="$((i+1))"
   done
   "$@"
 }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 status () {
-  if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
-  then
+  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
     python -m TaskStatusReporter --report "$@" || true
   fi
 }
@@ -25,7 +23,7 @@ powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -Disabl
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
 
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
@@ -80,7 +78,7 @@ retry pip install git+https://github.com/MozillaSecurity/FuzzManager
 
 # Get fuzzmanager configuration from TC
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 # Update fuzzmanager config for this instance
@@ -101,7 +99,7 @@ status "Setup: cloning bearspray"
 # Get deployment key from TC
 mkdir -p .ssh
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 cat << EOF >> .ssh/config
@@ -112,16 +110,15 @@ IdentitiesOnly yes
 IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.bearspray
 EOF
 
-if [ "$ADAPTER" = "reducer" ]
-then
+if [[ "$ADAPTER" = "reducer" ]]; then
   ssh-keyscan github.com >> .ssh/known_hosts
 fi
 
 # Set up Google Cloud Logging creds
-if [ "$ADAPTER" != "reducer" ]; then
+if [[ "$ADAPTER" != "reducer" ]]; then
   mkdir -p "$APPDATA/gcloud"
   set +x
-  retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
+  retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
   set -x
 fi
 

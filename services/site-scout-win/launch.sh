@@ -1,27 +1,25 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
 
 retry () {
   i=0
-  while [ "$i" -lt 9 ]
-  do
+  while [[ "$i" -lt 9 ]]; do
     "$@" && return
     sleep 30
     i="$((i+1))"
   done
   "$@"
 }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 status () {
-  if [ -n "$TASKCLUSTER_FUZZING_POOL" ]
-  then
+  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
     python -m TaskStatusReporter --report "$@" || true
   fi
 }
 
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
 cat > td-agent-bit.conf << EOF
 [SERVICE]
@@ -68,7 +66,7 @@ retry pip install git+https://github.com/MozillaSecurity/FuzzManager
 
 # Get fuzzmanager configuration from TC
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf-site-scout" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/fuzzmanagerconf-site-scout" | python -c "import json,sys;open('.fuzzmanagerconf','w').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
 # Update fuzzmanager config for this instance
@@ -93,7 +91,7 @@ status "Setup: cloning site-scout-private"
 
 # Get deployment key from TC
 set +x
-retry_curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-site-scout-private" | python -c "import json,sys;open('.ssh/id_ecdsa.site-scout-private','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
+retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-site-scout-private" | python -c "import json,sys;open('.ssh/id_ecdsa.site-scout-private','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 cat << EOF >> .ssh/config
 
