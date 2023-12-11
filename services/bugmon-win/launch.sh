@@ -1,18 +1,16 @@
-#!/bin/sh
-set -e -x
+#!/usr/bin/env bash
+set -e -x -o pipefail
 PATH="$PWD/msys64/opt/node:$PATH"
 
 retry () {
   i=0
-  while [ "$i" -lt 9 ]
-  do
+  while [[ "$i" -lt 9 ]]; do
     "$@" && return
     sleep 30
     i="$((i+1))"
   done
   "$@"
 }
-retry_curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
 powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
@@ -32,7 +30,7 @@ ARTIFACT_DEST="$PWD/bugmon-artifacts"
 TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 CONFIRM_ARGS=""
-if [ -n "$FORCE_CONFIRM" ]; then
+if [[ -n "$FORCE_CONFIRM" ]]; then
   CONFIRM_ARGS="--force-confirm"
 fi
 
