@@ -41,6 +41,7 @@ packages=(
   git
   htop
   jshon
+  lbzip2
   less
   lib32z1
   lib32z1-dev

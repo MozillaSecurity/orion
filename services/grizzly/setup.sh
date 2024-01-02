@@ -37,6 +37,7 @@ source ./dbgsyms.sh
 # packages without recommends (or *wanted* recommends)
 # TODO: we should expand recommends and just have one list
 packages=(
+  lbzip2
   libasound2
   libc6-dbg
   libdbus-glib-1-2
