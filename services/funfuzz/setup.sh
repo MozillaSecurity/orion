@@ -34,6 +34,7 @@ packages=(
   git
   gpg-agent
   jshon
+  lbzip2
   less
   libc6-dbg
   libc6-dbg:i386

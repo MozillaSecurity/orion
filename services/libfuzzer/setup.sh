@@ -35,6 +35,7 @@ packages=(
   git
   gpg-agent
   jshon
+  lbzip2
   less
   libglu1-mesa
   libosmesa6
