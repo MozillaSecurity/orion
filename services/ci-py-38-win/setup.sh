@@ -58,9 +58,11 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 
 # install utils to match linux ci images
 retry python -m pip install tox
-retry python -m pip install poetry
 retry python -m pip install pre-commit
 retry-curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
+
+retry python -m pip install pipx
+PIPX_HOME="$PWD/msys64/opt/pipx" PIPX_BIN_DIR="$PWD/msys64/opt/python/Scripts" pipx install poetry
 
 rm -rf \
   msys64/mingw64/share/doc/ \
