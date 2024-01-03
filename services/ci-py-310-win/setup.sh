@@ -62,14 +62,17 @@ retry python -m pip install pre-commit
 retry-curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
 
 retry python -m pip install pipx
+export PIPX_HOME="$PWD/msys64/opt/pipx"
+export PIPX_BIN_DIR="$PWD/msys64/opt/python/Scripts"
+
+retry pipx install poetry
 
 # patch pipx' pip to workaround https://github.com/pypa/pip/issues/4368
 sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/pipx/shared/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
-export PIPX_HOME="$PWD/msys64/opt/pipx"
-export PIPX_BIN_DIR="$PWD/msys64/opt/python/Scripts"
-retry pipx install poetry
+# reinstall to use patched pip
+retry pipx reinstall poetry
 
 rm -rf \
   msys64/mingw64/share/doc/ \
