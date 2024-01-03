@@ -40,7 +40,7 @@ which python
 python -V
 
 # patch pip to workaround https://github.com/pypa/pip/issues/4368
-sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # configure pip
@@ -64,7 +64,7 @@ EOF
 retry python -m pip install --upgrade --force-reinstall pip
 
 # patch new pip to workaround https://github.com/pypa/pip/issues/4368
-sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 retry-curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json

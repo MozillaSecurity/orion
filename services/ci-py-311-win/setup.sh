@@ -29,7 +29,7 @@ which python
 python -V
 
 # patch pip to workaround https://github.com/pypa/pip/issues/4368
-sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # configure pip
@@ -53,7 +53,7 @@ EOF
 retry python -m pip install --upgrade --force-reinstall pip
 
 # patch new pip to workaround https://github.com/pypa/pip/issues/4368
-sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # install utils to match linux ci images
@@ -62,7 +62,14 @@ retry python -m pip install pre-commit
 retry-curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
 
 retry python -m pip install pipx
-PIPX_HOME="$PWD/msys64/opt/pipx" PIPX_BIN_DIR="$PWD/msys64/opt/python/Scripts" pipx install poetry
+
+# patch pipx' pip to workaround https://github.com/pypa/pip/issues/4368
+sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\\1maker.executable = '\\/usr\\/bin\\/env python'/" \
+  msys64/opt/pipx/shared/Lib/site-packages/pip/_internal/operations/install/wheel.py
+
+export PIPX_HOME="$PWD/msys64/opt/pipx"
+export PIPX_BIN_DIR="$PWD/msys64/opt/python/Scripts"
+retry pipx install poetry
 
 rm -rf \
   msys64/mingw64/share/doc/ \
