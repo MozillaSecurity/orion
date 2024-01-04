@@ -85,25 +85,27 @@ packages_with_recommends=(
 )
 
 dbgsym_packages=(
+  # 2023-01-04 mesa packages missing ddebs in kisak/turtle ppa
+  # libegl-mesa0
+  # libgl1-mesa-dri
+  # libglapi-mesa
+  # libglx-mesa0
+  # libosmesa6
+  # mesa-va-drivers
+  # mesa-vdpau-drivers
+  # mesa-vulkan-drivers
+
+  # 2023-06-27: disabled because temporarily missing from dbgsym repo
+  # libgtk-3-0
+  # libwayland-egl1
+
   libcairo2
   libegl1
-  libegl-mesa0
   libgl1
   libglib2.0-0
-  libgl1-mesa-dri
-  libglapi-mesa
   libglu1-mesa
   libglvnd0
-  libglx-mesa0
   libglx0
-# 2023-06-27: disabled because temporarily missing from dbgsym repo
-#  libgtk-3-0
-  libosmesa6
-# 2023-06-27: disabled because temporarily missing from dbgsym repo
-#  libwayland-egl1
-  mesa-va-drivers
-  mesa-vdpau-drivers
-  mesa-vulkan-drivers
 )
 
 sys-embed "${packages_with_recommends[@]}"
@@ -114,7 +116,7 @@ apt-get remove -y gvfs  # see https://bugzilla.mozilla.org/show_bug.cgi?id=16829
 # see https://bugzilla.mozilla.org/show_bug.cgi?id=1835691 for details
 # The fix was released as https://docs.mesa3d.org/relnotes/23.1.6.html
 # The fix should be included in Ubuntu 22.04.4 and 23.10 and this can be removed.
-retry add-apt-repository -y ppa:kisak/kisak-mesa -c main -c main/debug
+retry add-apt-repository -y ppa:kisak/turtle -c main -c main/debug
 retry apt-get install -y -qq libgl1-mesa-dri
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
