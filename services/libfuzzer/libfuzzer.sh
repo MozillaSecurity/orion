@@ -126,6 +126,7 @@ then
     (
       cd domino-xpcshell
       retry npm update --no-progress
+      retry npm run build
       node dist/server.js "$XPCRT" &
     )
   else
