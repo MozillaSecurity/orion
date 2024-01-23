@@ -52,24 +52,21 @@ export AFL_DEBUG=1
 
 echo "[!] Creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
-LD_LIBRARY_PATH="/home/user/firefox/" \
+LD_LIBRARY_PATH="/home/user/firefox" \
 /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
 
 echo "[!] starting firefox" | ./hcat
-
+./hget launch.sh launch.sh
+chmod +x launch.sh
 export LIBGL_ALWAYS_SOFTWARE=1
 export MOZ_FUZZ_LOG_IPC=1
 export NYX_AFL_PLUS_PLUS_MODE=ON
 export NYX_ASAN_EXECUTABLE=TRUE
 export NYX_NET_FUZZ_MODE=ON
-LD_LIBRARY_PATH="/home/user/firefox/" \
-LD_BIND_NOW=1 \
 ASAN_OPTIONS="${ASAN_OPTIONS}" \
 UBSAN_OPTIONS="${UBSAN_OPTIONS}" \
-LD_PRELOAD=./ld_preload_fuzz.so \
-xvfb-run /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
-echo $?
+xvfb-run ./launch.sh /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
 
 echo "[!] Debug output:" | ./hcat
 cat /tmp/data.log* | ./hcat
