@@ -15,6 +15,7 @@ COPY \
     recipes/linux/taskcluster.sh \
     recipes/linux/taskgraph-m-c-latest.sh \
     services/nyx/setup.sh \
+    services/nyx/preload-exit.patch \
     services/nyx/clang.sh \
     /srv/repos/setup/
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
