@@ -97,6 +97,7 @@ fi
 
 # clone ipc-fuzzing & build harness/tools
 # get deployment key from TC
+if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]; then
 update-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
 cat << EOF >> ~/.ssh/config
@@ -120,6 +121,7 @@ sed -i 's/ -O0/ -O2/' compile.sh
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 ./compile.sh
 popd >/dev/null
+fi
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]; then
@@ -159,7 +161,7 @@ fi
   find firefox/ -type d | sed 's/^/mkdir -p /'
   find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/'
   find firefox/ -type f -executable | sed 's/.*/chmod +x \0/'
-} >> ff_files.sh
+} > ff_files.sh
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
@@ -169,7 +171,7 @@ cp -r /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/htools .
 cp htools/hget_no_pt .
 popd >/dev/null
 
-mkdir corpus.out
+mkdir -p corpus.out
 
 update-status "preparing to launch guided-fuzzing-daemon"
 
