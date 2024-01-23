@@ -127,6 +127,7 @@ then
       cd domino-xpcshell
       retry npm update --no-progress
       retry npm run build
+      chmod +x dist/bin/transform.js
       node dist/server.js "$XPCRT" &
     )
   else
