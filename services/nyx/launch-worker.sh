@@ -113,6 +113,7 @@ cd ipc-fuzzing
 sed -i '32 {s/^/#/}' userspace-tools/compile_64.sh
 sed -i 's/^gcc /clang /' userspace-tools/compile_64.sh
 sed -i 's/uint32_t bytes /uint64_t bytes /' userspace-tools/src/htools/hget.c
+git apply /srv/repos/setup/preload-exit.patch
 cd preload/harness
 sed -i '23,26 {s/^/#/}' compile.sh
 sed -i '38,41 {s/^/#/}' compile.sh
