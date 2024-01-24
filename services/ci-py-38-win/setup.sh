@@ -72,4 +72,5 @@ rm -rf \
 cp -r orion/services/orion-decision orion-decision
 retry python -m pip install ./orion-decision
 cp orion/recipes/linux/py-ci.sh .
+rm -f msys64/etc/mtab
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64 py-ci.sh pip

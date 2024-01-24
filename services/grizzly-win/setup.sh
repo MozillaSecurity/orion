@@ -125,4 +125,5 @@ cp orion/services/grizzly-win/launch.sh .
 
 cp -r orion/services/fuzzing-decision fuzzing-decision
 retry python -m pip install ./fuzzing-decision
+rm -f msys64/etc/mtab
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip td-agent-bit
