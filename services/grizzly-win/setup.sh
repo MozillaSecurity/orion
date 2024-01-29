@@ -69,7 +69,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 # get node.js
-VER=18.18.2
+VER=20.11.0
 retry-curl "https://nodejs.org/dist/v${VER}/node-v${VER}-win-x64.zip" -o node.zip
 7z x node.zip
 rm node.zip
