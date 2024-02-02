@@ -39,6 +39,7 @@ packages=(
   less
   libglu1-mesa
   libosmesa6
+  libpci3
   llvm-9
   locales
   nano
