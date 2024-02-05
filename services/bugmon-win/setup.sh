@@ -97,5 +97,6 @@ rm -rf \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
 cp orion/services/bugmon-win/launch.sh .
-rm -f msys64/etc/mtab
+# Delete symlinks
+find msys64 -type l -delete
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip bugmon-artifacts
