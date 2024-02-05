@@ -54,7 +54,12 @@ if [[ ! -d /src/site-scout-private ]]; then
 fi
 
 update-ec2-status "Setup: fetching build"
-build="$(python3 -c "import random;print(random.choice(['asan','debug','tsan','asan32','debug32']))")"
+
+# select build
+echo "Build types: ${BUILD_TYPES}"
+BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
+build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
+# download build
 case $build in
   asan32)
     # TEMPORARY workaround for frequent OOMs
@@ -74,5 +79,12 @@ python3 -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 
 # shellcheck disable=SC2064
 trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
 
+# select URL collections
+mkdir active_lists
+for LIST in $URL_LISTS
+do
+    cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
+done
+
 update-ec2-status "Setup: launching site-scout"
-python3 -m site_scout ./build/firefox -i /src/site-scout-private/visit-yml/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager
+python3 -m site_scout ./build/firefox -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager

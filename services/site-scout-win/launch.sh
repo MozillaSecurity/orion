@@ -110,7 +110,12 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 status "Setup: fetching build"
-build="$(python -c "import random;print(random.choice(['asan','debug','debug32']))")"
+
+# select build
+echo "Build types: ${BUILD_TYPES}"
+BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
+build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
+# download build
 case $build in
   debug32)
     fuzzfetch -n build --fuzzing --debug --cpu x86
@@ -125,5 +130,12 @@ python -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; python -m TaskStatusReporter --report-from-file status.txt" EXIT
 
+# select URL collections
+mkdir active_lists
+for LIST in ${URL_LISTS}
+do
+    cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
+done
+
 status "Setup: launching site-scout"
-site-scout ./build/firefox.exe -i ./site-scout-private/visit-yml/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager
+site-scout ./build/firefox.exe -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager
