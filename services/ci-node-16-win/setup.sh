@@ -35,5 +35,6 @@ rm -rf \
   msys64/usr/share/doc/ \
   msys64/usr/share/info/ \
   msys64/usr/share/man/
-rm -f msys64/etc/mtab
+# Delete symlinks
+find msys64 -type l -delete
 tar -jcvf msys2.tar.bz2 --hard-dereference msys64
