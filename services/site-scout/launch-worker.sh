@@ -83,7 +83,7 @@ trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
 mkdir active_lists
 for LIST in $URL_LISTS
 do
-    cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
+    cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
 update-ec2-status "Setup: launching site-scout"
