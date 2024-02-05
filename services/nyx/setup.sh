@@ -93,10 +93,8 @@ function git-clone-rev () {
 # build AFL++ w/ Nyx
 apt-install-auto libgtk-3-dev pax-utils python3-msgpack python3-jinja2 cpio bzip2
 pushd /srv/repos >/dev/null
-git-clone-rev https://github.com/AFLplusplus/AFLplusplus d09950f4bb98431576b872436f0fbf773ab895db
+git-clone-rev https://github.com/AFLplusplus/AFLplusplus 0d164e4c1811c4d05f940f78e90fc56b661fb3b4
 pushd AFLplusplus >/dev/null
-# Use proper AFL_NYX_AUX_SIZE for nyx_aux_string
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/bfb841d01383a4801a28b007c5f7039f2f28bef9.diff | git apply
 # WIP 2-byte chunked variant of honggfuzz custom mutator
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2eb9330772d30723ba122c.diff | git apply
 git apply << "EOF"
@@ -111,39 +109,6 @@ index 5c2fcddb..2dde8ba1 100644
 
  all: honggfuzz-mutator.so honggfuzz-2b-chunked-mutator.so
 
-commit f5ceb29f2f61439de7adbe8494a2e305c586b904
-Author: Jesse Schwartzentruber <truber@mozilla.com>
-Date:   Fri Jul 14 13:20:02 2023 -0400
-
-    Don't set rpath to mozfetch
-
-diff --git a/src/afl-cc.c b/src/afl-cc.c
-index 58d44e5d..4c23d153 100644
---- a/src/afl-cc.c
-+++ b/src/afl-cc.c
-@@ -1138,22 +1138,6 @@ static void edit_params(u32 argc, char **argv, char **envp) {
-
-   if (!have_pic) { cc_params[cc_par_cnt++] = "-fPIC"; }
-
--  // in case LLVM is installed not via a package manager or "make install"
--  // e.g. compiled download or compiled from github then its ./lib directory
--  // might not be in the search path. Add it if so.
--  u8 *libdir = strdup(LLVM_LIBDIR);
--  if (plusplus_mode && strlen(libdir) && strncmp(libdir, "/usr", 4) &&
--      strncmp(libdir, "/lib", 4)) {
--
--    cc_params[cc_par_cnt++] = "-Wl,-rpath";
--    cc_params[cc_par_cnt++] = libdir;
--
--  } else {
--
--    free(libdir);
--
--  }
--
-   if (getenv("AFL_HARDEN")) {
-
-     cc_params[cc_par_cnt++] = "-fstack-protector-all";
 commit d606e18332b4f919780604b9daf9a3761602b7c5
 Author: Jesse Schwartzentruber <truber@mozilla.com>
 Date:   Fri Jul 14 11:04:04 2023 -0400
@@ -188,19 +153,6 @@ index d062d87..c4ebeea 100644
 
          let (shm_work_dir, file_lock) = Self::create_shm_work_dir();
          let mut shm_work_dir_path = PathBuf::from(&shm_work_dir);
-diff --git a/fuzz_runner/src/nyx/params.rs b/fuzz_runner/src/nyx/params.rs
-index b3eab6a..c8fe559 100644
---- a/fuzz_runner/src/nyx/params.rs
-+++ b/fuzz_runner/src/nyx/params.rs
-@@ -152,7 +152,7 @@ impl QemuParams {
-                         },
-                         QemuNyxRole::Child => {
-                             cmd.push("-fast_vm_reload".to_string());
--                            cmd.push(format!("path={}/snapshot/,load=on,pre_path={}", workdir, x.presnapshot));
-+                            cmd.push(format!("path={}/snapshot/,load=on", workdir));
-                         },
-                     };
-                 },
 EOF
 popd >/dev/null
 retry git submodule update --depth 1 --single-branch packer
