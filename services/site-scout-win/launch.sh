@@ -114,7 +114,7 @@ status "Setup: fetching build"
 # select build
 echo "Build types: ${BUILD_TYPES}"
 BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
-build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
+build="$(python -c "$BUILD_SELECT_SCRIPT")"
 # download build
 case $build in
   debug32)
