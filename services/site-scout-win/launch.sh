@@ -134,7 +134,7 @@ trap "kill $!; python -m TaskStatusReporter --report-from-file status.txt" EXIT
 mkdir active_lists
 for LIST in ${URL_LISTS}
 do
-    cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
+    cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
 status "Setup: launching site-scout"
