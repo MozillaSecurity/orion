@@ -109,18 +109,11 @@ IdentityFile ~/.ssh/id_ecdsa.ipc_fuzzing
 EOF
 pushd /srv/repos/ipc-research >/dev/null
 git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
-cd ipc-fuzzing
-sed -i '32 {s/^/#/}' userspace-tools/compile_64.sh
-sed -i 's/^gcc /clang /' userspace-tools/compile_64.sh
-sed -i 's/uint32_t bytes /uint64_t bytes /' userspace-tools/src/htools/hget.c
-git apply /srv/repos/setup/preload-exit.patch
-cd preload/harness
-sed -i '23,26 {s/^/#/}' compile.sh
-sed -i '38,41 {s/^/#/}' compile.sh
-sed -i 's/ -fsanitize=address//' compile.sh
-sed -i 's/ -O0/ -O2/' compile.sh
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
-./compile.sh
+cd ipc-fuzzing/userspace-tools
+make clean htools_no_pt
+cd ../preload/harness
+make clean bin64/ld_preload_no_pt.so
 popd >/dev/null
 fi
 
@@ -167,8 +160,9 @@ sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
 cp "/srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/$NYX_PAGE" .
-cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/ld_preload_*.so .
-cp -r /srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/htools .
+cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/bin64/ld_preload_*.so .
+mkdir -p htools
+cp /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/bin64/h* htools
 cp htools/hget_no_pt .
 popd >/dev/null
 
