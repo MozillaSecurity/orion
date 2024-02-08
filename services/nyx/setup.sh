@@ -45,6 +45,7 @@ pkgs=(
   libxfixes3
   libxml2
   libxrandr2
+  make
   netcat-openbsd
   openssh-client
   psmisc
