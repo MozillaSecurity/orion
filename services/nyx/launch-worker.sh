@@ -149,7 +149,8 @@ NYX_PAGE_HTMLNAME="${NYX_PAGE_HTMLNAME-caniuse.html}"
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
   update-status "downloading firefox"
-  fuzzfetch -n firefox --nyx --fuzzing --asan
+  # shellcheck disable=SC2086
+  fuzzfetch -n firefox ${FUZZFETCH_FLAGS---nyx --fuzzing --asan}
 fi
 {
   find firefox/ -type d | sed 's/^/mkdir -p /'
