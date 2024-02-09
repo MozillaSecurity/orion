@@ -24,6 +24,7 @@ payload:
   env:
     ADAPTER: reducer
     FUZZING_CPU_COUNT: "0"  # force single instance/task
+    HEADLESS: "xvfb"
     IGNORE: "log-limit memory timeout"
     INPUT: "${crash_id}"
     TIMEOUT: "60"
