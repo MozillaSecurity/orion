@@ -113,7 +113,7 @@ export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplu
 cd ipc-fuzzing/userspace-tools
 make clean htools_no_pt
 cd ../preload/harness
-make clean bin64/ld_preload_no_pt.so
+make clean bin64/ld_preload_fuzz_no_pt.so
 popd >/dev/null
 fi
 
