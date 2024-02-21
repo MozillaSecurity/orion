@@ -11,6 +11,8 @@ set -o pipefail
 id
 ls -l /dev/kvm
 
+COVERAGE="${COVERAGE-0}"
+
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
@@ -109,13 +111,18 @@ IdentityFile ~/.ssh/id_ecdsa.ipc_fuzzing
 EOF
 pushd /srv/repos/ipc-research >/dev/null
 git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
-export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 cd ipc-fuzzing/userspace-tools
+else
+pushd /srv/repos/ipc-research/ipc-fuzzing >/dev/null
+retry git fetch --depth=1 --no-tags origin HEAD
+git reset --hard FETCH_HEAD
+cd userspace-tools
+fi
+export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 make clean htools_no_pt
 cd ../preload/harness
 make clean bin64/ld_preload_fuzz_no_pt.so
 popd >/dev/null
-fi
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]; then
@@ -159,6 +166,7 @@ fi
 } > ff_files.sh
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
+sed -i "s,\${COVERAGE},$COVERAGE," stage2.sh
 prefpicker browser-fuzzing.yml prefs.js
 cp "/srv/repos/ipc-research/ipc-fuzzing/preload/harness/sharedir/$NYX_PAGE" .
 cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/bin64/ld_preload_*.so .
@@ -168,6 +176,16 @@ cp htools/hget_no_pt .
 popd >/dev/null
 
 mkdir -p corpus.out
+
+# download coverage opt build to calculate line-clusters
+if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]; then
+  mkdir -p corpus.out/workdir/dump
+  rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
+  prefix="$(grep pathprefix sharedir/firefox/firefox.fuzzmanagerconf | cut -d\  -f3-)"
+  fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
+  python3 /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/postprocess-gcno.py lineclusters.json cov-opt "$prefix"
+  rm -rf cov-opt
+fi
 
 update-status "preparing to launch guided-fuzzing-daemon"
 
@@ -264,4 +282,22 @@ else
     idx="$(basename "$(dirname "$st")")"
     cp "$st" "/logs/fuzzer_stats$idx.txt"
   done
+fi
+
+if [[ $COVERAGE -eq 1 ]]; then
+  # Process coverage data
+  python3 /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/nyx-code-coverage.py \
+    ./corpus.out/workdir/dump/ \
+    ./lineclusters.json \
+    "$prefix" \
+    "$rev" \
+    ./sharedir \
+    ./coverage.json
+
+  # Submit coverage data.
+  python3 -m CovReporter \
+    --repository mozilla-central \
+    --description "$S3_PROJECT" \
+    --tool "$S3_PROJECT" \
+    --submit ./coverage.json
 fi
