@@ -132,7 +132,7 @@ def _get_expected_hook(platform="linux"):
             "schedulerId": "-",
             "scopes": [f"assume:hook-id:project-fuzzing/{platform}-test"],
             "tags": empty_str_dict,
-            "workerType": "ci",
+            "workerType": "ci-gw",
         },
         "triggerSchema": empty_str_dict,
     }
