@@ -49,6 +49,7 @@ export AFL_MAP_SIZE=8388608
 export AFL_IGNORE_PROBLEMS=1
 export AFL_IGNORE_PROBLEMS_COVERAGE=1
 export AFL_DEBUG=1
+export MOZ_FUZZ_COVERAGE="${COVERAGE}"
 
 echo "[!] Creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
