@@ -367,7 +367,10 @@ class PoolConfiguration(CommonPoolConfiguration):
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
 
-        scopes = decision_task["scopes"] + ["queue:create-task:highest:proj-fuzzing/ci"]
+        scopes = decision_task["scopes"] + [
+            "queue:create-task:highest:proj-fuzzing/ci",
+            "queue:create-task:highest:proj-fuzzing/ci-gw",
+        ]
         decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
 
         yield Hook(
@@ -555,7 +558,10 @@ class PoolConfigMap(CommonPoolConfigMap):
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
 
-        scopes = decision_task["scopes"] + ["queue:create-task:highest:proj-fuzzing/ci"]
+        scopes = decision_task["scopes"] + [
+            "queue:create-task:highest:proj-fuzzing/ci",
+            "queue:create-task:highest:proj-fuzzing/ci-gw",
+        ]
         decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
 
         yield Hook(
