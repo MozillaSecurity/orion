@@ -49,7 +49,7 @@ gen-qemu-sendkeys () {
   set -x
 }
 
-./qemu_tool.sh create_snapshot ~/firefox.img 6144 ~/snapshot &
+./qemu_tool.sh create_snapshot ~/firefox.img 12288 ~/snapshot &
 sleep 120
 qemu-cmd "sendkey alt-f2"
 sleep 30

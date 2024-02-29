@@ -6,7 +6,7 @@
     cow_primary_size: 0x180000000,
     cpu_pin_start_at: 0,
     dict: [],
-    mem_limit: 6144,
+    mem_limit: 12288,
     seed_path: "",
     seed_pattern: "",
     snapshot_placement: none,
