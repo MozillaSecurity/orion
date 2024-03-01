@@ -20,6 +20,16 @@ git-clone https://github.com/MozillaSecurity/bugmon-tc.git ./bugmon-tc
 cd bugmon-tc
 poetry install
 
+mkdir -p /home/worker/.cache/autobisect
+mkdir -p /home/worker/.config/autobisect
+cat << EOF >  /home/worker/.config/autobisect/autobisect.ini
+[autobisect]
+storage-path: /home/worker/.cache/autobisect
+persist: false
+; size in MBs
+persist-limit: 0
+EOF
+
 # Copy pernosco-shared to poetry python virtual env
 BASE_PY_PATH="$(python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
 POETRY_PY_PATH="$(poetry run python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
