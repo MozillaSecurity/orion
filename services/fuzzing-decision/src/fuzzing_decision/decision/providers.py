@@ -7,6 +7,8 @@ from typing import Any, Dict, FrozenSet, Iterable, List, Tuple, Union
 
 import yaml
 
+from ..common.pool import parse_time
+
 LOG = logging.getLogger(__name__)
 
 
@@ -32,28 +34,46 @@ class Provider(ABC):
         assert worker in self.imagesets, f"Missing worker {worker}"
         out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
-        out.setdefault("genericWorker", {})
-        out["genericWorker"].setdefault("config", {})
+        if platform == "linux":
+            out.setdefault("dockerConfig", {})
+            out.update(
+                {
+                    "shutdown": {
+                        "enabled": True,
+                        "afterIdleSeconds": parse_time("3m"),
+                    }
+                }
+            )
+            out["dockerConfig"].update(
+                {"allowPrivileged": True, "allowDisableSeccomp": True}
+            )
 
-        # Fixed config for websocket tunnel
-        out["genericWorker"]["config"].update(
-            {
-                "wstAudience": "communitytc",
-                "wstServerURL": (
-                    "https://community-websocktunnel.services.mozilla.com"
-                ),
-            }
-        )
+            # Clear any generic-worker specific config
+            out.pop("genericWorker", None)
 
-        # Add a deploymentId by hashing the config
-        payload = json.dumps(out, sort_keys=True).encode("utf-8")
-        out["genericWorker"]["config"]["deploymentId"] = hashlib.sha256(
-            payload
-        ).hexdigest()[:16]
+        else:
+            out.setdefault("genericWorker", {})
+            out["genericWorker"].setdefault("config", {})
 
-        # Clear any Docker specific config
-        out.pop("dockerConfig", None)
-        out.pop("shutdown", None)
+            # Fixed config for websocket tunnel
+            out["genericWorker"]["config"].update(
+                {
+                    "wstAudience": "communitytc",
+                    "wstServerURL": (
+                        "https://community-websocktunnel.services.mozilla.com"
+                    ),
+                }
+            )
+
+            # Add a deploymentId by hashing the config
+            payload = json.dumps(out, sort_keys=True).encode("utf-8")
+            out["genericWorker"]["config"]["deploymentId"] = hashlib.sha256(
+                payload
+            ).hexdigest()[:16]
+
+            # Clear any Docker specific config
+            out.pop("dockerConfig", None)
+            out.pop("shutdown", None)
 
         return out
 
