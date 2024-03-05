@@ -137,5 +137,8 @@ do
     cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
+# create directory for launch failure results
+mkdir -p "${TMP}/site-scout/local-results"
+
 status "Setup: launching site-scout"
-site-scout ./build/firefox.exe -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager
+site-scout ./build/firefox.exe -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager -o "${TMP}/site-scout/local-results"
