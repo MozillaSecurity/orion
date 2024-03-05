@@ -325,12 +325,13 @@ class PoolConfiguration(CommonPoolConfiguration):
             ),
             "minCapacity": 0,
         }
-        config["lifecycle"] = {
-            # give workers 15 minutes to register before assuming they're broken
-            "registrationTimeout": parse_time("15m"),
-            "reregistrationTimeout": parse_time("4d"),
-            "queueInactivityTimeout": parse_time("2h"),
-        }
+        if self.platform == "linux":
+            config["lifecycle"] = {
+                # give workers 15 minutes to register before assuming they're broken
+                "registrationTimeout": parse_time("15m"),
+                "reregistrationTimeout": parse_time("4d"),
+                "queueInactivityTimeout": parse_time("2h"),
+            }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
@@ -517,12 +518,13 @@ class PoolConfigMap(CommonPoolConfigMap):
             "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,
         }
-        config["lifecycle"] = {
-            # give workers 15 minutes to register before assuming they're broken
-            "registrationTimeout": parse_time("15m"),
-            "reregistrationTimeout": parse_time("4d"),
-            "queueInactivityTimeout": parse_time("2h"),
-        }
+        if self.platform == "linux":
+            config["lifecycle"] = {
+                # give workers 15 minutes to register before assuming they're broken
+                "registrationTimeout": parse_time("15m"),
+                "reregistrationTimeout": parse_time("4d"),
+                "queueInactivityTimeout": parse_time("2h"),
+            }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(

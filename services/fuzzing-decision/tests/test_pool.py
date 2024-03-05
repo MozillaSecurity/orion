@@ -203,6 +203,7 @@ def test_aws_resources(
     assert len(resources) == 3
     pool, hook, role = resources
 
+    empty_str_dict = {}
     expected = {
         "config": {
             "launchConfigs": [
@@ -216,25 +217,9 @@ def test_aws_resources(
                         "SubnetId": "subnet-XXX",
                     },
                     "region": "us-west-1",
-                    "workerConfig": {
-                        "genericWorker": {
-                            "config": {
-                                "anyKey": "anyValue",
-                                "deploymentId": "d82eac5c561913ee",
-                                "wstAudience": "communitytc",
-                                "wstServerURL": (
-                                    "https://community-websocktunnel.services.mozilla.com"
-                                ),
-                            },
-                        },
-                    },
+                    "workerConfig": empty_str_dict,
                 }
             ],
-            "lifecycle": {
-                "queueInactivityTimeout": 7200,
-                "registrationTimeout": 900,
-                "reregistrationTimeout": 345600,
-            },
             "maxCapacity": 6,
             "minCapacity": 0,
         },
@@ -252,6 +237,36 @@ def test_aws_resources(
     if not demand:
         for config in expected["config"]["launchConfigs"]:
             config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
+    if platform == "linux":
+        expected["config"]["lifecycle"] = {
+            "queueInactivityTimeout": 7200,
+            "registrationTimeout": 900,
+            "reregistrationTimeout": 345600,
+        }
+        expected["config"]["launchConfigs"][0]["workerConfig"].update(
+            {
+                "dockerConfig": {
+                    "allowDisableSeccomp": True,
+                    "allowPrivileged": True,
+                },
+                "shutdown": {"afterIdleSeconds": 180, "enabled": True},
+            }
+        )
+    else:
+        expected["config"]["launchConfigs"][0]["workerConfig"].update(
+            {
+                "genericWorker": {
+                    "config": {
+                        "anyKey": "anyValue",
+                        "deploymentId": "d82eac5c561913ee",
+                        "wstAudience": "communitytc",
+                        "wstServerURL": (
+                            "https://community-websocktunnel.services.mozilla.com"
+                        ),
+                    },
+                },
+            },
+        )
 
     assert pool.to_json() == expected
 
@@ -327,15 +342,11 @@ def test_gcp_resources(
                     "region": "us-west1",
                     "scheduling": {"onHostMaintenance": "terminate"},
                     "workerConfig": {
-                        "genericWorker": {
-                            "config": {
-                                "deploymentId": "fd62535159568ca7",
-                                "wstAudience": "communitytc",
-                                "wstServerURL": (
-                                    "https://community-websocktunnel.services.mozilla.com"
-                                ),
-                            },
+                        "dockerConfig": {
+                            "allowDisableSeccomp": True,
+                            "allowPrivileged": True,
                         },
+                        "shutdown": {"afterIdleSeconds": 180, "enabled": True},
                     },
                     "zone": "us-west1-a",
                 },
@@ -359,15 +370,11 @@ def test_gcp_resources(
                     "region": "us-west1",
                     "scheduling": {"onHostMaintenance": "terminate"},
                     "workerConfig": {
-                        "genericWorker": {
-                            "config": {
-                                "deploymentId": "fd62535159568ca7",
-                                "wstAudience": "communitytc",
-                                "wstServerURL": (
-                                    "https://community-websocktunnel.services.mozilla.com"
-                                ),
-                            },
+                        "dockerConfig": {
+                            "allowDisableSeccomp": True,
+                            "allowPrivileged": True,
                         },
+                        "shutdown": {"afterIdleSeconds": 180, "enabled": True},
                     },
                     "zone": "us-west1-b",
                 },
@@ -391,15 +398,11 @@ def test_gcp_resources(
                     "region": "us-west1",
                     "scheduling": {"onHostMaintenance": "terminate"},
                     "workerConfig": {
-                        "genericWorker": {
-                            "config": {
-                                "deploymentId": "fd62535159568ca7",
-                                "wstAudience": "communitytc",
-                                "wstServerURL": (
-                                    "https://community-websocktunnel.services.mozilla.com"
-                                ),
-                            },
+                        "dockerConfig": {
+                            "allowDisableSeccomp": True,
+                            "allowPrivileged": True,
                         },
+                        "shutdown": {"afterIdleSeconds": 180, "enabled": True},
                     },
                     "zone": "us-west1-a",
                 },
