@@ -86,5 +86,8 @@ do
     cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
+# create directory for launch failure results
+mkdir -p /tmp/site-scout/local-results
+
 update-ec2-status "Setup: launching site-scout"
-python3 -m site_scout ./build/firefox -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager
+python3 -m site_scout ./build/firefox -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager -o /tmp/site-scout/local-results
