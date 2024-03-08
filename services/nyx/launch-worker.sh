@@ -132,6 +132,8 @@ fi
 
 # setup sharedir
 
+export AFL_NYX_HANDLE_INVALID_WRITE=1
+
 ASAN_OPTIONS=\
 abort_on_error=true:\
 allocator_may_return_null=true:\
