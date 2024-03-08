@@ -257,6 +257,8 @@ else
     # Download the corpus from S3
     update-status "downloading corpus"
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+  else
+    mkdir -p corpus
   fi
   # Ensure corpus is not empty
   if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
