@@ -156,8 +156,23 @@ NYX_PAGE_HTMLNAME="${NYX_PAGE_HTMLNAME-caniuse.html}"
 pushd sharedir >/dev/null
 if [[ ! -d firefox ]]; then
   update-status "downloading firefox"
+
+  default_args=(
+    --nyx
+    --fuzzing
+    --asan
+  )
+  if [[ $COVERAGE -eq 1 ]]; then
+    default_args+=(--coverage)
+    if [[ -z "$REVISION" ]]; then
+      default_args+=(
+        --build "$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+      )
+    fi
+  fi
+
   # shellcheck disable=SC2086
-  fuzzfetch -n firefox ${FUZZFETCH_FLAGS---nyx --fuzzing --asan}
+  fuzzfetch -n firefox ${FUZZFETCH_FLAGS-${default_args[@]}}
 fi
 {
   find firefox/ -type d | sed 's/^/mkdir -p /'
