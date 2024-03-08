@@ -268,7 +268,7 @@ else
   # Sometimes, don't download the existing corpus.
   # This can increase coverage in large targets and prevents bad corpora.
   # Results will be merged with the existing corpus on next refresh.
-  if [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
     # Download the corpus from S3
     update-status "downloading corpus"
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
