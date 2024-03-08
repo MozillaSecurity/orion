@@ -98,6 +98,8 @@ git-clone-rev https://github.com/AFLplusplus/AFLplusplus 0d164e4c1811c4d05f940f7
 pushd AFLplusplus >/dev/null
 # WIP 2-byte chunked variant of honggfuzz custom mutator
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2eb9330772d30723ba122c.diff | git apply
+# Add optional handling of Nyx InvalidWriteToPayload event
+retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/52e19d35fac636f9ea4679d402b5eaabaa74aa0a.diff | git apply
 git apply << "EOF"
 diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
 index 5c2fcddb..2dde8ba1 100644
