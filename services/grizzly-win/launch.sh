@@ -141,6 +141,10 @@ exit_code=$?
 echo "returned $exit_code" >&2
 echo "sleeping so logs can flush" >&2
 sleep 15
+
+# Archive grizzly working directory
+7z a -tzip grizzly.zip AppData/Local/Temp/grizzly
+
 case $exit_code in
   5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
     exit 0
