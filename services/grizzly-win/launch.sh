@@ -143,7 +143,9 @@ echo "sleeping so logs can flush" >&2
 sleep 15
 
 # Archive grizzly working directory
-7z a -tzip grizzly.zip AppData/Local/Temp/grizzly
+if [ -d "AppData/Local/Temp/grizzly" ]; then
+  7z a -tzip grizzly.zip AppData/Local/Temp/grizzly
+fi
 
 case $exit_code in
   5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
