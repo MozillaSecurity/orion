@@ -72,10 +72,7 @@ EOF
       sleep 15
       killall -INT td-agent-bit || true
       sleep 15
-      if [[ -d /home/worker/corpora ]]
-      then
-        find /home/worker/corpora '(' -name 'slow-unit-*' -o -name 'oom-*' -o -name 'timeout-*' ')' -execdir cp '{}' /tests ';'
-      fi
+      find /home/worker '(' -name 'slow-unit-*' -o -name 'oom-*' -o -name 'timeout-*' ')' -execdir cp '{}' /tests ';'
     }
 
     trap onexit EXIT
