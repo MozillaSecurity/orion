@@ -133,9 +133,6 @@ cd ..
 status "Setup: installing bearspray"
 retry python -m pip install -e bearspray
 
-# Initialize grizzly working directory
-mkdir -p AppData/Local/Temp/grizzly
-
 status "Setup: launching bearspray"
 set +e
 python -m bearspray "$ADAPTER"
@@ -146,9 +143,7 @@ echo "sleeping so logs can flush" >&2
 sleep 15
 
 # Archive grizzly working directory
-if [ -d "AppData/Local/Temp/grizzly" ]; then
-  7z a -tzip grizzly.zip AppData/Local/Temp/grizzly
-fi
+7z a -tzip tmp_grizzly.zip AppData/Local/Temp/grizzly || touch tmp_grizzly.zip
 
 case $exit_code in
   5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)

@@ -11,8 +11,8 @@ metadata:
 payload:
   artifacts:
     - expires: "${expires}"
-      name: project/fuzzing/grizzly.zip
-      path: grizzly.zip
+      name: project/fuzzing/tmp_grizzly.zip
+      path: tmp_grizzly.zip
       type: file
     - expires: "${expires}"
       name: project/fuzzing/fluentbit.log
