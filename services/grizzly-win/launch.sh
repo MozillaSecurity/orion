@@ -133,6 +133,9 @@ cd ..
 status "Setup: installing bearspray"
 retry python -m pip install -e bearspray
 
+# Initialize grizzly working directory
+mkdir -p AppData/Local/Temp/grizzly
+
 status "Setup: launching bearspray"
 set +e
 python -m bearspray "$ADAPTER"
