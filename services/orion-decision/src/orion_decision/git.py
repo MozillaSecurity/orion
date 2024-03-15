@@ -218,7 +218,9 @@ class GithubEvent:
         return f"https://github.com/{self.repo_slug}"
 
     @classmethod
-    def from_taskcluster(cls, action: str, event: Dict[str, Any]) -> "GithubEvent":
+    def from_taskcluster(
+        cls, action: str, event: Dict[str, Any], clone_secret: Optional[str] = None
+    ) -> "GithubEvent":
         """Initialize the GithubEvent from Taskcluster context variables.
 
         Arguments:
@@ -227,6 +229,7 @@ class GithubEvent:
             event: The raw Github Webhook event object.
                 ref: https://docs.github.com/en/free-pro-team@latest/developers
                      /webhooks-and-events/webhook-events-and-payloads
+            clone_secret: Taskcluster secret path used to fetch clone ssh key.
 
         Returns:
             Object describing the Github Event we're responding to.
@@ -259,7 +262,11 @@ class GithubEvent:
             if set(event["before"]) != {"0"}:
                 self.commit_range = f"{event['before']}..{event['after']}"
             self.fetch_ref = event["after"]
-        self.repo = GitRepo(self.http_url, self.fetch_ref, self.commit)
+        if clone_secret:
+            clone_url = self.ssh_url
+        else:
+            clone_url = self.http_url
+        self.repo = GitRepo(clone_url, self.fetch_ref, self.commit)
 
         # fetch both sides of the commit range
         if self.commit_range is not None:

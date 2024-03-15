@@ -218,7 +218,9 @@ class CIScheduler:
             scheduler_id = args.scheduler
 
         # get the github event & repo
-        evt = GithubEvent.from_taskcluster(args.github_action, args.github_event)
+        evt = GithubEvent.from_taskcluster(
+            args.github_action, args.github_event, args.clone_secret
+        )
         assert evt.commit_message is not None
         try:
             if "[skip ci]" in evt.commit_message or "[skip tc]" in evt.commit_message:
