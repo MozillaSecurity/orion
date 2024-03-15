@@ -29,7 +29,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
     && python -m compileall -b -q /usr/lib \
     && find /usr/lib -name \*.py -delete \
     && find /usr/lib -name __pycache__ -exec rm -rf \{\} + \
-    && mkdir -p .ssh \
-    && retry ssh-keyscan github.com > .ssh/known_hosts
+    && mkdir -p /root/.ssh \
+    && retry ssh-keyscan github.com > /root/.ssh/known_hosts
 
 CMD ["decision"]
