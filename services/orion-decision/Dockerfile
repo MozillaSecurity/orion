@@ -12,6 +12,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
     && retry apk add --no-cache \
         build-base \
         git \
+        openssh-client \
         py3-pip \
         py3-requests \
         py3-setuptools \
@@ -27,6 +28,8 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
     && apk del build-base py3-pip py3-wheel python3-dev \
     && python -m compileall -b -q /usr/lib \
     && find /usr/lib -name \*.py -delete \
-    && find /usr/lib -name __pycache__ -exec rm -rf \{\} +
+    && find /usr/lib -name __pycache__ -exec rm -rf \{\} + \
+    && mkdir -p .ssh \
+    && retry ssh-keyscan github.com > .ssh/known_hosts
 
 CMD ["decision"]
