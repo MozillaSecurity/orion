@@ -154,6 +154,7 @@ def test_ci_main(mocker: MockerFixture) -> None:
     """test CLI main entrypoint for CI decision"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)
     parser = mocker.patch("orion_decision.cli.parse_ci_args", autospec=True)
+    parser.return_value.clone_secret = None
     sched = mocker.patch("orion_decision.cli.CIScheduler", autospec=True)
     with pytest.raises(SystemExit) as exc:
         ci_main()

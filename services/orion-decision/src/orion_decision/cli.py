@@ -19,7 +19,7 @@ from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
 
 from .ci_check import check_matrix
-from .ci_matrix import CISecretEnv, MatrixJob
+from .ci_matrix import CISecretEnv, CISecretKey, MatrixJob
 from .ci_scheduler import CIScheduler
 from .cron import CronScheduler
 from .git import GitRepo
@@ -264,6 +264,11 @@ def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=getenv("PROJECT_NAME"),
         help="The human readable project name for CI",
     )
+    parser.add_argument(
+        "--clone-secret",
+        default=getenv("CLONE_SECRET"),
+        help="Use Taskcluster secret to clone repo via ssh",
+    )
 
     result = parser.parse_args(argv)
     _sanity_check_github_args(parser, result)
@@ -315,6 +320,10 @@ def ci_main() -> None:
     """CI decision entrypoint."""
     args = parse_ci_args()
     configure_logging(level=args.log_level)
+    if args.clone_secret:
+        secret = CISecretKey(args.clone_secret, "key")
+        LOG.info("Cloning using secret: %s", secret.secret)
+        secret.write()
     sys.exit(CIScheduler.main(args))
 
 
