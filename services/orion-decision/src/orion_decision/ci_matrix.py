@@ -525,6 +525,7 @@ class CISecretKey(CISecret):
         `~/.ssh/id_rsa.{hostname}` is used. In that case the `hostname` alias to
         `github.com` is also created in `~/.ssh/config`.
         """
+        (Path.home() / ".ssh").mkdir(exist_ok=True)
         if self.hostname is not None:
             dest = Path.home() / ".ssh" / f"id_rsa.{self.hostname}"
             with (Path.home() / ".ssh" / "config").open("a") as cfg:
