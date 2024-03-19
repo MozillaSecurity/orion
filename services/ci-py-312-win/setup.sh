@@ -61,6 +61,9 @@ retry python -m pip install tox
 retry python -m pip install pre-commit
 retry-curl https://uploader.codecov.io/latest/windows/codecov.exe -o msys64/usr/bin/codecov.exe
 
+mkdir -p .ssh
+retry ssh-keyscan github.com > .ssh/known_hosts
+
 rm -rf \
   msys64/mingw64/share/doc/ \
   msys64/mingw64/share/info/ \
@@ -73,4 +76,4 @@ retry python -m pip install ./orion-decision
 cp orion/recipes/linux/py-ci.sh .
 # Delete symlinks
 find msys64 -type l -delete
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64 py-ci.sh pip
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 py-ci.sh pip .ssh

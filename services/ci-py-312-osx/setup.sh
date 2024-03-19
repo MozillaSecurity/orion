@@ -35,10 +35,13 @@ retry python -m pip install pre-commit
 retry-curl https://uploader.codecov.io/latest/macos/codecov -o homebrew/bin/codecov
 chmod +x homebrew/bin/codecov
 
+mkdir -p .ssh
+retry ssh-keyscan github.com > .ssh/known_hosts
+
 rm -rf homebrew/docs
 cp -r orion/services/orion-decision orion-decision
 cp orion/scripts/relocate_homebrew homebrew/bin/
 python -m pip install ./orion-decision
 cp orion/recipes/linux/py-ci.sh .
 relocate_homebrew
-tar -jcvf homebrew.tar.bz2 homebrew py-ci.sh pip
+tar -jcvf homebrew.tar.bz2 homebrew py-ci.sh pip .ssh

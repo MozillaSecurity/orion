@@ -29,6 +29,9 @@ node -v
 retry-curl https://www.npmjs.com/install.sh | npm_install="7.24.2" sh
 npm -v
 
+mkdir -p .ssh
+retry ssh-keyscan github.com > .ssh/known_hosts
+
 rm -rf \
   msys64/mingw64/share/doc/ \
   msys64/mingw64/share/info/ \
@@ -38,4 +41,4 @@ rm -rf \
   msys64/usr/share/man/
 # Delete symlinks
 find msys64 -type l -delete
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 .ssh
