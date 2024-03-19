@@ -536,7 +536,8 @@ class CISecretKey(CISecret):
             dest = Path.home() / ".ssh" / "id_rsa"
         key = self.get_secret_data()
         assert isinstance(key, str), f"key has type {type(key).__name__}, expected str"
-        dest.write_text(key)
+        with dest.open("w", newline="\n") as fp:
+            fp.write(key)
         dest.chmod(0o400)
 
 
