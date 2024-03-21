@@ -18,8 +18,10 @@ source ~/.local/bin/common.sh
 # Setup required coverage environment variables.
 export COVERAGE=1
 
+export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
+
 if [[ -z "$REVISION" ]]; then
-  REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+  REVISION="$(retry-curl --compressed "$ARTIFACT_ROOT/coverage-revision.txt")"
 fi
 export REVISION
 
@@ -63,8 +65,8 @@ timeout --foreground -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh |
 
 # %<---[Coverage]-------------------------------------------------------------
 
-retry-curl --compressed "https://hg.mozilla.org/${REPO-mozilla-central}/archive/$REVISION.zip" -o "$REVISION.zip"
-unzip "$REVISION.zip"
+retry-curl --compressed -O "$ARTIFACT_ROOT/source.zip"
+unzip source.zip
 
 # Collect coverage count data.
 RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
