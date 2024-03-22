@@ -20,7 +20,7 @@ payload:
         mkdir homebrew &&
         curl -sSL --connect-timeout 25 --fail --retry 5 "${homebrew_base_url}" | tar x --strip 1 -C homebrew &&
         eval "$$(homebrew/bin/brew shellenv)" &&
-        git init orion &&
+        git -c init.defaultBranch=clone init orion &&
         cd orion &&
         git remote add origin "${clone_url}" &&
         retry git fetch -q --depth=1 origin "${commit}" &&

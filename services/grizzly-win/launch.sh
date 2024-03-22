@@ -123,7 +123,7 @@ if [[ "$ADAPTER" != "reducer" ]]; then
 fi
 
 # Checkout bearspray
-git init bearspray
+git -c init.defaultBranch=clone init bearspray
 cd bearspray
 git remote add origin git@bearspray:MozillaSecurity/bearspray.git
 retry git fetch -q --depth 1 --no-tags origin HEAD

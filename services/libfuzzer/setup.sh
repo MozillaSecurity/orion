@@ -107,7 +107,7 @@ cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
 mkdir -p /src
-git init /src/guided-fuzzing-daemon
+git -c init.defaultBranch=clone init /src/guided-fuzzing-daemon
 cd /src/guided-fuzzing-daemon
 git remote add origin "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 retry git fetch origin main

@@ -83,7 +83,7 @@ function git-clone-rev () {
   else
     dest="$(basename "$1" .git)"
   fi
-  git init "$dest"
+  git -c init.defaultBranch=clone init "$dest"
   pushd "$dest" >/dev/null || return 1
   git remote add origin "$url"
   retry git fetch -q --depth 1 --no-tags origin "$rev"

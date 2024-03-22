@@ -102,7 +102,7 @@ IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.site-scout-private
 EOF
 
 # Checkout site-scout-private
-git init site-scout-private
+git -c init.defaultBranch=clone init site-scout-private
 cd site-scout-private
 git remote add origin git@site-scout-private:MozillaSecurity/site-scout-private.git
 retry git fetch -q --depth 1 --no-tags origin HEAD

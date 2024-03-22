@@ -27,7 +27,7 @@ export PUPPETEER_PRODUCT=firefox
 export EMAIL=nobody@community-tc.services.mozilla.com
 export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 
-git init domino-web-tests
+git -c init.defaultBranch=clone init domino-web-tests
 cd domino-web-tests
 git remote add origin "${GIT_REPO-git@domino-web-tests:MozillaSecurity/domino-web-tests}"
 retry git fetch -q --depth=10 origin "${GIT_BRANCH-master}"

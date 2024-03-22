@@ -24,7 +24,7 @@ payload:
     - printf "@echo off\r\nbash -c -x -e 'retry () { i=0; while [ $$i -lt 9 ]; do if \"$$@\"; then return; else sleep 30; fi; i=\"$${i+1}\"; done; \"$$@\"; }; retry pacman --noconfirm -Syuu'\r\nexit /b 0\r\n" > pacman_upd.bat
     - .\pacman_upd.bat  # Core update (in case any core packages are outdated)
     - .\pacman_upd.bat  # Normal update
-    - git init orion
+    - git -c init.defaultBranch=clone init orion
     - cd orion
     - git remote add origin "${clone_url}"
     - bash -c -x -e "retry () { i=0; while [ $$i -lt 9 ]; do if \"$$@\"; then return; else sleep 30; fi; i=\"$${i+1}\"; done; \"$$@\"; }; retry git fetch -q --depth=1 origin \"${commit}\""

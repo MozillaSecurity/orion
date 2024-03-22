@@ -65,7 +65,7 @@ retry pip3 install python-dateutil
  (cd trees
   mkdir -p funfuzz
   (cd funfuzz
-   git init .
+   git -c init.defaultBranch=clone init .
    git remote add -t master origin https://github.com/MozillaSecurity/funfuzz
    retry git fetch --depth 1 --no-tags origin master HEAD
    git reset --hard FETCH_HEAD

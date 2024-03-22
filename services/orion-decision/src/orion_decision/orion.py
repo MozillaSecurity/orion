@@ -174,7 +174,7 @@ class ToxServiceTest(ServiceTest):
             "-c",
             'retry () { for _ in {1..9}; do "$@" && return || sleep 30; done; "$@"; } '
             "&& "
-            "git init repo && "
+            "git -c init.defaultBranch=clone init repo && "
             "cd repo && "
             f"git remote add origin '{clone_url}' && "
             f"retry git fetch -q --depth=10 origin '{fetch_ref}' && "

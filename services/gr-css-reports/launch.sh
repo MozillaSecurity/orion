@@ -26,7 +26,7 @@ retry python3 -m pip install git+https://github.com/MozillaSecurity/prefpicker.g
 # Fetch build
 fuzzfetch -a --fuzzing -n nightly
 
-git init gr.css.reports
+git -c init.defaultBranch=clone init gr.css.reports
 (
   cd gr.css.reports
   git remote add origin "${GIT_REPO-git@gr-css-reports:MozillaSecurity/gr.css.reports}"

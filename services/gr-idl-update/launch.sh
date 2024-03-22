@@ -20,7 +20,7 @@ export CI=1
 export EMAIL=nobody@community-tc.services.mozilla.com
 export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 
-git init gridl
+git -c init.defaultBranch=clone init gridl
 (
   cd gridl
   git remote add origin "${GIT_REPO-git@gridl:MozillaSecurity/gridl}"
