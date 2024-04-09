@@ -1,0 +1,16 @@
+language: python
+script: [test]
+artifacts:
+  - src: /logs
+    type: directory
+    url: public/logs/
+jobs:
+  include:
+    - name: python test 1
+      version: "3.8"
+    - name: python test 2
+      version: "3.9"
+      artifacts:
+        - src: /some/other/file
+          type: file
+          url: private/blah

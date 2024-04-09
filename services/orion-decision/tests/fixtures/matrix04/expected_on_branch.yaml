@@ -8,4 +8,6 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
 secrets: []
+artifacts: []

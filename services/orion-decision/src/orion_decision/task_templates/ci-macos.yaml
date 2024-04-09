@@ -29,6 +29,7 @@ payload:
         eval "$$(homebrew/bin/brew shellenv)" &&
         exec ci-launch
   maxRunTime: !!int "${max_run_time}"
+  artifacts: []
 metadata:
   name: "${project} ${name}"
   description: "${project} ${name}"

@@ -12,6 +12,7 @@ jobs:
         name: TOKEN2
         key: null
         secret: project/test/token2
+    artifacts: []
 secrets:
   - type: env
     name: TOKEN
@@ -28,3 +29,4 @@ secrets:
     secret: project/test/deploy-repo
     key: null
     hostname: repo
+artifacts: []

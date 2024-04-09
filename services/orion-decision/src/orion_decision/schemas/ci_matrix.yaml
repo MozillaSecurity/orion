@@ -106,6 +106,11 @@ properties:
               type: array
               items:
                 $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_secret.yaml"
+            artifacts:
+              type: array
+              description: Optional. Artifacts to generate from job.
+              items:
+                $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_artifact.yaml"
             when:
               additionalProperties: false
               type: object
@@ -157,4 +162,9 @@ properties:
     type: array
     items:
       $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_secret.yaml"
+  artifacts:
+    type: array
+    description: Optional. Artifacts to generate from all jobs.
+    items:
+      $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_artifact.yaml"
 required: []

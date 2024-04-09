@@ -108,6 +108,7 @@ def test_ci_launch_args(mocker: MockerFixture) -> None:
         "stage": 1,
         "require_previous_stage_pass": False,
         "secrets": [],
+        "artifacts": [],
     }
     with pytest.raises(SystemExit):
         parse_ci_launch_args([])

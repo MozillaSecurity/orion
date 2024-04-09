@@ -15,6 +15,7 @@ from yaml import safe_load as yaml_load
 
 from orion_decision import DEADLINE, MAX_RUN_TIME, PROVISIONER_ID
 from orion_decision.ci_matrix import (
+    CIArtifact,
     CISecret,
     CISecretEnv,
     CISecretFile,
@@ -65,29 +66,24 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
     assert queue.createTask.call_count == 0
 
 
-@pytest.mark.parametrize(
-    "platform, matrix_secret, job_secret",
-    [
-        ("linux", None, None),
-        ("windows", None, None),
-        ("linux", "env", None),
-        ("linux", "key", None),
-        ("linux", "deploy", None),
-        ("linux", "file", None),
-        ("linux", "env", "key"),
-    ],
-)
+@pytest.mark.parametrize("matrix_artifact", (None, "file", "dir"))
+@pytest.mark.parametrize("job_artifact", (None, "file", "dir"))
+@pytest.mark.parametrize("matrix_secret", (None, "env", "key", "deploy", "file"))
+@pytest.mark.parametrize("job_secret", (None, "env", "key", "deploy", "file"))
+@pytest.mark.parametrize("platform", ("linux", "windows", "macos"))
 def test_ci_create_02(
     mocker: MockerFixture,
     platform: str,
     matrix_secret: Optional[str],
     job_secret: Optional[str],
+    matrix_artifact: Optional[str],
+    job_artifact: Optional[str],
 ) -> None:
     """test single stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = mocker.Mock()
     index = mocker.Mock()
-    index.findTask.return_value = {"taskId": "msys-task"}
+    index.findTask.return_value = {"taskId": "gw-task"}
     taskcluster.get_service.side_effect = lambda x: {"index": index, "queue": queue}[x]
     now = datetime.utcnow()
     evt = mocker.Mock(
@@ -114,33 +110,44 @@ def test_ci_create_02(
     )
     mtx.return_value.jobs = [job]
     secrets = []
+    artifacts = []
     scopes = []
     clone_repo = evt.http_url
 
-    def _create_secret(kind: str) -> CISecret:
+    def _create_secret(kind: str, tag: str) -> CISecret:
         nonlocal clone_repo
         sec: CISecret
         if kind == "env":
-            sec = CISecretEnv("project/test/token", "TOKEN")
+            sec = CISecretEnv(f"project/test/{tag}token", "TOKEN")
         elif kind == "deploy":
             clone_repo = evt.ssh_url
-            sec = CISecretKey("project/test/key")
+            sec = CISecretKey(f"project/test/{tag}key")
         elif kind == "key":
-            sec = CISecretKey("project/test/key", hostname="host")
+            sec = CISecretKey(f"project/test/{tag}key", hostname="host")
         elif kind == "file":
-            sec = CISecretFile("project/test/cfg", "/cfg")
+            sec = CISecretFile(f"project/test/{tag}cfg", "/cfg")
         else:
             assert False, f"unknown secret kind: {kind}"
         scopes.append(f"secrets:get:{sec.secret}")
         return sec
 
+    def _create_artifact(kind: str, tag: str) -> CIArtifact:
+        return CIArtifact(kind, f"path/to/{tag}{kind}", f"project/test/{tag}{kind}")
+
     if job_secret is not None:
-        sec = _create_secret(job_secret)
+        sec = _create_secret(job_secret, "job")
         job.secrets.append(sec)
     if matrix_secret is not None:
-        sec = _create_secret(matrix_secret)
+        sec = _create_secret(matrix_secret, "mx")
         secrets.append(sec)
+    if job_artifact:
+        art = _create_artifact(job_artifact, "job")
+        job.artifacts.append(art)
+    if matrix_artifact:
+        art = _create_artifact(matrix_artifact, "mx")
+        artifacts.append(art)
     mtx.return_value.secrets = secrets
+    mtx.return_value.artifacts = artifacts
     sched = CIScheduler("test", evt, now, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -148,6 +155,7 @@ def test_ci_create_02(
     # add matrix secrets to `job`. this is different than how it's done in the
     # scheduler, but will have the same effect (and the scheduler is done with `job`)
     job.secrets.extend(secrets)
+    job.artifacts.extend(artifacts)
     kwds = {
         "ci_job": json_dump(str(job)),
         "clone_repo": clone_repo,
@@ -167,10 +175,39 @@ def test_ci_create_02(
     }
     if platform == "linux":
         kwds["image"] = job.image
+        for art_flag, art_lst in [
+            (job_artifact, job.artifacts),
+            (matrix_artifact, artifacts),
+        ]:
+            if art_flag is None:
+                continue
+            assert len(art_lst) >= 1
+            exp_art = art_lst[0]
+            assert exp_art.url in task["payload"]["artifacts"]
+            tsk_art = task["payload"]["artifacts"].pop(exp_art.url)
+            assert tsk_art["path"] == exp_art.src
     else:
         assert index.findTask.call_count == 1
         assert job.image in index.findTask.call_args[0][0]
-        kwds["msys_task"] = "msys-task"
+        if platform == "windows":
+            kwds["msys_task"] = "gw-task"
+        else:
+            kwds["homebrew_task"] = "gw-task"
+        for art_flag, art_lst in [
+            (job_artifact, job.artifacts),
+            (matrix_artifact, artifacts),
+        ]:
+            if art_flag is None:
+                continue
+            assert len(art_lst) >= 1
+            exp_art = art_lst[0]
+            for idx, tsk_art in enumerate(task["payload"]["artifacts"]):
+                if tsk_art["name"] == exp_art.url:
+                    assert tsk_art["path"] == exp_art.src
+                    del task["payload"]["artifacts"][idx]
+                    break
+            else:
+                raise RuntimeError("artifact not found")
     expected = yaml_load(TEMPLATES[platform].substitute(**kwds))
     expected["requires"] = "all-resolved"
     expected["scopes"].extend(scopes)
@@ -182,6 +219,7 @@ def test_ci_create_02(
     task["scopes"] = expected["scopes"]
     assert task == expected
     assert all(sec.secret in task["payload"]["env"]["CI_JOB"] for sec in job.secrets)
+    assert all(art.url in task["payload"]["env"]["CI_JOB"] for art in job.artifacts)
 
 
 @pytest.mark.parametrize("previous_pass", [True, False])

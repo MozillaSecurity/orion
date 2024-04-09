@@ -23,6 +23,11 @@ properties:
     exclusiveMinimum: 0
   require_previous_stage_pass:
     type: boolean
+  artifacts:
+    type: array
+    items:
+      $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_artifact.yaml"
+    description: Optional. Artifacts to generate from job.
   secrets:
     type: array
     items:
@@ -37,3 +42,4 @@ required:
   - stage
   - require_previous_stage_pass
   - secrets
+  - artifacts

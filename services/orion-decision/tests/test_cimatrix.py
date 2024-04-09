@@ -10,6 +10,7 @@ import pytest
 from yaml import safe_load as yaml_load
 
 from orion_decision.ci_matrix import (
+    CIArtifact,
     CIMatrix,
     CISecret,
     CISecretEnv,
@@ -35,18 +36,22 @@ pytestmark = pytest.mark.usefixtures("mock_ci_languages")
         "matrix05",
         # secrets
         "matrix07",
+        # artifacts
+        "matrix08",
     ],
 )
 def test_matrix_load(fixture: str) -> None:
     """simple matrix load"""
     obj = yaml_load((FIXTURES / fixture / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / fixture / "expected.yaml").read_text())
-    assert set(exp) == {"jobs", "secrets"}
+    assert set(exp) == {"jobs", "secrets", "artifacts"}
     mtx = CIMatrix(obj, "master", False)
     jobs = {str(MatrixJob.from_json(data)) for data in exp["jobs"]}
     assert {str(job) for job in mtx.jobs} == jobs
     secrets = {str(CISecret.from_json(data)) for data in exp["secrets"]}
     assert {str(sec) for sec in mtx.secrets} == secrets
+    artifacts = {str(CIArtifact.from_json(data)) for data in exp["artifacts"]}
+    assert {str(art) for art in mtx.artifacts} == artifacts
 
 
 @pytest.mark.parametrize(
@@ -61,7 +66,7 @@ def test_matrix_release(case: str, branch: str, event_type: str) -> None:
     """test job `when` conditions"""
     obj = yaml_load((FIXTURES / "matrix04" / "matrix.yaml").read_text())
     exp = yaml_load((FIXTURES / "matrix04" / f"expected_{case}.yaml").read_text())
-    assert set(exp) == {"jobs", "secrets"}
+    assert set(exp) == {"jobs", "secrets", "artifacts"}
     mtx = CIMatrix(obj, branch, event_type)
     jobs = {str(MatrixJob.from_json(data)) for data in exp["jobs"]}
     assert {str(job) for job in mtx.jobs} == jobs
@@ -93,7 +98,16 @@ def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
         [CISecretKey("project/deploy")],
     ],
 )
-def test_matrix_job_serialize(secrets: List[CISecret]) -> None:
+@pytest.mark.parametrize(
+    "artifacts",
+    [
+        [],
+        [CIArtifact("file", "/src", "public/log.txt")],
+    ],
+)
+def test_matrix_job_serialize(
+    secrets: List[CISecret], artifacts: List[CIArtifact]
+) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(
         "name",
@@ -106,9 +120,12 @@ def test_matrix_job_serialize(secrets: List[CISecret]) -> None:
         previous_pass=True,
     )
     job.secrets.extend(secrets)
+    job.artifacts.extend(artifacts)
     job_json = str(job)
     if secrets:
         assert all(secret.secret in job_json for secret in secrets if secret)
+    if artifacts:
+        assert all(artifact.url in job_json for artifact in artifacts)
     job2 = MatrixJob.from_json(job_json)
     assert job == job2
 

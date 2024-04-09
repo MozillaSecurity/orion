@@ -128,6 +128,9 @@ class CIScheduler:
                 job_ser["secrets"].extend(
                     secret.serialize() for secret in self.matrix.secrets
                 )
+                job_ser["artifacts"].extend(
+                    art.serialize() for art in self.matrix.artifacts
+                )
                 # set CI environment vars for compatibility with eg. codecov
                 job_ser["env"].update(
                     {
@@ -187,6 +190,31 @@ class CIScheduler:
                         task["scopes"].append(f"secrets:get:{sec.secret}")
                     # ensure scopes are unique
                     task["scopes"] = list(set(task["scopes"]))
+                if job.artifacts or self.matrix.artifacts:
+                    LOG.debug(
+                        "adding %d job and %d matrix artifacts",
+                        len(job.artifacts),
+                        len(self.matrix.artifacts),
+                    )
+                    if job.platform == "linux":
+                        task["payload"]["artifacts"].update(
+                            {
+                                art.url: {
+                                    "path": art.src,
+                                    "type": art.type,
+                                }
+                                for art in chain(job.artifacts, self.matrix.artifacts)
+                            }
+                        )
+                    else:
+                        task["payload"]["artifacts"].extend(
+                            {
+                                "name": art.url,
+                                "path": art.src,
+                                "type": art.type,
+                            }
+                            for art in chain(job.artifacts, self.matrix.artifacts)
+                        )
                 if not job.require_previous_stage_pass:
                     task["requires"] = "all-resolved"
                 task["dependencies"].extend(prev_stage)

@@ -21,6 +21,7 @@ def mock_ci_languages() -> Iterable[None]:
         {
             ("python", "linux"): ["3.6", "3.7", "3.8", "3.9"],
             ("python", "windows"): ["3.7"],
+            ("python", "macos"): ["3.7"],
             ("node", "linux"): ["12"],
         },
         clear=True,
@@ -32,6 +33,7 @@ def mock_ci_languages() -> Iterable[None]:
             ("python", "linux", "3.8"): "py38",
             ("python", "linux", "3.9"): "py39",
             ("python", "windows", "3.7"): "py37-win",
+            ("python", "macos", "3.7"): "py37-macos",
             ("node", "linux", "12"): "node12",
         },
         clear=True,
