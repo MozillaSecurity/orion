@@ -1,0 +1,25 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/orion-decision/src/orion_decision/schemas/ci_artifact.yaml"
+title: CIArtifact
+description: An artifact generated in CI build matrix
+type: object
+properties:
+  src:
+    description: Location in task to get artifact.
+    type: string
+    minLength: 1
+  type:
+    enum:
+      - file
+      - directory
+    description: Artifact upload type.
+    type: string
+  url:
+    description: Published location of artifact.
+    type: string
+    minLength: 1
+required:
+  - src
+  - type
+  - url
+additionalProperties: false

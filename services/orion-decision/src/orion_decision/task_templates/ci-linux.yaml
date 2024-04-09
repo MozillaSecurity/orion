@@ -18,6 +18,7 @@ payload:
     path: public/${image}.tar.zst
     namespace: project.fuzzing.orion.${image}.master
   maxRunTime: !!int "${max_run_time}"
+  artifacts: {}
 routes: []
 scopes:
   - "queue:scheduler-id:${scheduler}"

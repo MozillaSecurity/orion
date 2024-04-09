@@ -10,6 +10,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - env:
       A: xyz
     language: python
@@ -20,4 +21,6 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
 secrets: []
+artifacts: []

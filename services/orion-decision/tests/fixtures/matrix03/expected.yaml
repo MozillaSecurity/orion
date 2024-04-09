@@ -8,6 +8,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python test 3.8
     language: python
     version: "3.8"
@@ -17,6 +18,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python test 3.9
     language: python
     version: "3.9"
@@ -27,6 +29,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python test 3.7 win
     language: python
     version: "3.7"
@@ -36,6 +39,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: node 12 test
     language: node
     version: "12"
@@ -45,4 +49,6 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
 secrets: []
+artifacts: []

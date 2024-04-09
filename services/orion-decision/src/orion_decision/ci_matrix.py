@@ -91,10 +91,12 @@ class MatrixJob:
                with all jobs in the same stage running in parallel.
         version: Version number of `language` to run (must be in
                  `VERSIONS[(language, platform)]`)
+        artifacts: Artifact files/directories defined for this job.
     """
 
     __slots__ = (
         "env",
+        "artifacts",
         "language",
         "name",
         "platform",
@@ -144,6 +146,7 @@ class MatrixJob:
         self.stage = stage
         self.require_previous_stage_pass = previous_pass
         self.secrets: List[CISecret] = []
+        self.artifacts: List[CIArtifact] = []
 
     @property
     def image(self) -> str:
@@ -199,6 +202,12 @@ class MatrixJob:
             f"no image available for language '{self.language}', "
             f"platform '{self.platform}', version '{self.version}'"
         )
+        assert len(self.artifacts) == len(
+            {a.src for a in self.artifacts}
+        ), "`src` for all artifacts must be unique"
+        assert len(self.artifacts) == len(
+            {a.url for a in self.artifacts}
+        ), "`url` for all artifacts must be unique"
 
     @classmethod
     def from_json(cls, data: str) -> "MatrixJob":
@@ -227,6 +236,9 @@ class MatrixJob:
         result.stage = obj["stage"]
         result.require_previous_stage_pass = obj["require_previous_stage_pass"]
         result.secrets.extend(CISecret.from_json(secret) for secret in obj["secrets"])
+        result.artifacts.extend(
+            CIArtifact.from_json(artifact) for artifact in obj.get("artifacts", [])
+        )
         result.check()
         return result
 
@@ -234,9 +246,13 @@ class MatrixJob:
         for attr in self.__slots__:
             if attr == "secrets":
                 continue
+            if attr == "artifacts":
+                continue
             if getattr(self, attr) != getattr(other, attr):
                 return False
-        return all(secret in other.secrets for secret in self.secrets)
+        return all(secret in other.secrets for secret in self.secrets) and all(
+            art in other.artifacts for art in self.artifacts
+        )
 
     def __str__(self) -> str:
         return json_dumps(self.serialize())
@@ -249,6 +265,7 @@ class MatrixJob:
         """
         obj = {attr: getattr(self, attr) for attr in self.__slots__}
         obj["secrets"] = [secret.serialize() for secret in self.secrets]
+        obj["artifacts"] = [art.serialize() for art in self.artifacts]
         return obj
 
     def matches(
@@ -295,6 +312,59 @@ class MatrixJob:
                     return False
 
         return True
+
+
+class CIArtifact:
+    """Representation of a Taskcluster artifact used by CI jobs.
+
+    Attributes:
+        type: Type of `src`, either 'file' or 'directory'.
+        src: Path in the job environment.
+        url: Artifact URL on the task ('public/' prefix is world readable).
+    """
+
+    def __init__(self, type_: str, src: str, url: str) -> None:
+        """Initialize
+
+        Arguments:
+            type: Type of `src`, either 'file' or 'directory'.
+            src: Path in the job environment.
+            url: Artifact URL on the task ('public/' prefix is world readable).
+        """
+        self.type = type_
+        self.src = src
+        self.url = url
+
+    def __str__(self) -> str:
+        return json_dumps(self.serialize())
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CIArtifact):
+            return False
+        return (
+            self.type == other.type and self.src == other.src and self.url == other.url
+        )
+
+    @classmethod
+    def from_json(cls, data: Dict[str, str]) -> "CIArtifact":
+        """Deserialize and create a CIArtifact from JSON.
+
+        Arguments:
+            data: JSON serialized CIArtifact.
+
+        Returns:
+            CIArtifact: Artifact object.
+        """
+        _validate_schema_by_name(instance=data, name="CIArtifact")
+        return cls(data["type"], data["src"], data["url"])
+
+    def serialize(self) -> Dict[str, str]:
+        """Return a JSON serializable copy of self."""
+        return {
+            "src": self.src,
+            "type": self.type,
+            "url": self.url,
+        }
 
 
 class CISecret(ABC):
@@ -557,9 +627,10 @@ class CIMatrix:
      Attributes:
         jobs: CI jobs to run.
         secrets: Secrets to be fetched when each job is run.
+        artifacts: Artifact files/directories defined for all jobs.
     """
 
-    __slots__ = ("jobs", "secrets")
+    __slots__ = ("jobs", "secrets", "artifacts")
 
     def __init__(
         self,
@@ -577,6 +648,7 @@ class CIMatrix:
         # matrix is language/platform/version
         self.jobs: List[MatrixJob] = []
         self.secrets: List[CISecret] = []
+        self.artifacts: List[CIArtifact] = []
         self._parse_matrix(matrix, branch, event_type)
 
     def _parse_matrix(
@@ -653,6 +725,9 @@ class CIMatrix:
 
         if "secrets" in matrix:
             self.secrets.extend(self._parse_secrets(matrix["secrets"]))
+
+        if "artifacts" in matrix:
+            self.artifacts.extend(self._parse_artifacts(matrix["artifacts"]))
 
         if "jobs" in matrix:
             # exclude jobs
@@ -732,6 +807,11 @@ class CIMatrix:
                     if "secrets" in include:
                         job.secrets.extend(self._parse_secrets(include["secrets"]))
 
+                    if "artifacts" in include:
+                        job.artifacts.extend(
+                            self._parse_artifacts(include["artifacts"])
+                        )
+
                     if include.get("when", {}).get("all_passed") is not None:
                         job.stage = 2
                         job.require_previous_stage_pass = include["when"]["all_passed"]
@@ -752,14 +832,36 @@ class CIMatrix:
                 "', '".join(sorted(missing)),
             )
 
+        artifact_srcs = {a.src for a in self.artifacts}
+        artifact_urls = {a.url for a in self.artifacts}
+
+        assert len(self.artifacts) == len(
+            artifact_srcs
+        ), "`src` for all artifacts must be unique"
+        assert len(self.artifacts) == len(
+            artifact_urls
+        ), "`url` for all artifacts must be unique"
+
         for job in self.jobs:
             job.check()
+            assert not any(
+                artifact_srcs & {a.src for a in job.artifacts}
+            ), "job artifact src redefines matrix artifact"
+            assert not any(
+                artifact_urls & {a.url for a in job.artifacts}
+            ), "job artifact url redefines matrix artifact"
 
     def _parse_secrets(self, secrets: str) -> Generator[CISecret, None, None]:
         for secret in secrets:
             result = CISecret.from_json(secret)
             assert not any(result.is_alias(secret) for secret in self.secrets)
             yield result
+
+    def _parse_artifacts(
+        self, artifacts: List[Dict[str, str]]
+    ) -> Generator[CIArtifact, None, None]:
+        for data in artifacts:
+            yield CIArtifact.from_json(data)
 
 
 def _validate_globals() -> None:

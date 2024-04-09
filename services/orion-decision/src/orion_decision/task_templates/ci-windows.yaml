@@ -31,6 +31,7 @@ payload:
   onExitStatus:
     retry:
       - 0x40010004
+  artifacts: []
 metadata:
   name: "${project} ${name}"
   description: "${project} ${name}"

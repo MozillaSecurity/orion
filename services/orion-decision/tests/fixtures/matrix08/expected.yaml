@@ -1,25 +1,15 @@
 jobs:
-  - name: python test 3.6
+  - name: python test 1
     language: python
-    version: "3.6"
+    version: "3.8"
     platform: linux
     env: {}
     script: [test]
-    stage: 2
+    stage: 1
     require_previous_stage_pass: false
     secrets: []
     artifacts: []
-  - name: python test 3.7
-    language: python
-    version: "3.7"
-    platform: linux
-    env: {}
-    script: [test]
-    stage: 2
-    require_previous_stage_pass: true
-    secrets: []
-    artifacts: []
-  - name: python test 3.9
+  - name: python test 2
     language: python
     version: "3.9"
     platform: linux
@@ -28,6 +18,13 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
-    artifacts: []
+    artifacts:
+      - src: /some/other/file
+        type: file
+        url: private/blah
 secrets: []
-artifacts: []
+artifacts:
+  - src: /logs
+    type: directory
+    url: public/logs/
+

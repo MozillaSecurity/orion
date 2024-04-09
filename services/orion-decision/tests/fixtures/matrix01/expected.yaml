@@ -9,6 +9,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python/linux/3.8
     language: python
     version: "3.8"
@@ -19,6 +20,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python/linux/3.9
     language: python
     version: "3.9"
@@ -29,6 +31,7 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
   - name: python/linux/3.9
     language: python
     version: "3.9"
@@ -39,4 +42,6 @@ jobs:
     stage: 1
     require_previous_stage_pass: false
     secrets: []
+    artifacts: []
 secrets: []
+artifacts: []
