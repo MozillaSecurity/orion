@@ -245,14 +245,18 @@ class MatrixJob:
     def __eq__(self, other) -> bool:
         for attr in self.__slots__:
             if attr == "secrets":
-                continue
+                if len(self.secrets) != len(other.secrets):
+                    return False
+                if not all(secret in other.secrets for secret in self.secrets):
+                    return False
             if attr == "artifacts":
-                continue
+                if len(self.artifacts) != len(other.artifacts):
+                    return False
+                if not all(art in other.artifacts for art in self.artifacts):
+                    return False
             if getattr(self, attr) != getattr(other, attr):
                 return False
-        return all(secret in other.secrets for secret in self.secrets) and all(
-            art in other.artifacts for art in self.artifacts
-        )
+        return True
 
     def __str__(self) -> str:
         return json_dumps(self.serialize())
