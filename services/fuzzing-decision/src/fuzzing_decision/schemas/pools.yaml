@@ -123,7 +123,7 @@ properties:
     type: string
     format: "date-time"
   scopes:
-    description: "List of taskcluster scopes to limit the worker to"
+    description: "An array of taskcluster scopes to apply to the task"
     type: array
     items:
       type: string
