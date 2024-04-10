@@ -1,0 +1,127 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: "Pool"
+description: "Pool definition"
+type: object
+required:
+  - name
+additionalProperties: false
+properties:
+  apply_to:
+    description: "An array of configurations to apply this configuration to."
+    type: array
+    items:
+      type: string
+  artifacts:
+    description: "Object containing artifact mappings for the task instance"
+    type: object
+    patternProperties:
+      ^.*$:
+        properties:
+          type:
+            type: string
+            pattern: "^file|directory$"
+          url:
+            description: "Taskcluster URL part of the artifact"
+            type: string
+            pattern: "^[A-Za-z0-9_-]+(/[A-Za-z0-9_.-]+)+$"
+  cloud:
+    description: "The cloud service where the task should run"
+    type: string
+    pattern: "^aws|gcp|static$"
+  command:
+    description: "List of commands to run"
+    type: array
+    items:
+      type: string
+  container:
+    type: object
+    additionalProperties: false
+    properties:
+      namespace:
+        type: string
+      path:
+        type: string
+      type:
+        type: string
+        pattern: "^indexed-image$"
+    required:
+      - type
+      - namespace
+      - path
+  cores_per_task:
+    description: "Number of cores per task"
+    type: integer
+  cpu:
+    description: "CPU architecture type"
+    type: string
+    pattern: "^(x(86_)?64|arm64)$"
+  cycle_time:
+    description: "Maximum time before completely refreshing this pool"
+    type: string
+    pattern: "^[0-9]+[sSmMhHdD]$"
+  demand:
+    description: "Boolean indicating if task requires an on-demand instance"
+    type: boolean
+  disk_size:
+    description: "Disk size"
+    type: string
+    pattern: "^\\d*(.\\d+)?[kKmMgG]?$"
+  gpu:
+    description: "Boolean indicating if task requires a GPU instance type"
+    type: boolean
+  imageset:
+    description: "The name of the taskcluster imageset"
+    type: string
+  macros:
+    description: "Arbitrary dictionary of macros to set"
+    type: object
+    additionalProperties: false
+    patternProperties:
+      ^.*$:
+        type:
+          - string
+          - integer
+  max_run_time:
+    description: "Maximum time to run each instance"
+    pattern: "^\\d+h$"
+  metal:
+    description: "Boolean indicating if task requires a bare metal instance type"
+    type: boolean
+  minimum_memory_per_core:
+    description: "Minimum amount of memory per core"
+    type: string
+    pattern: "^\\d*(.\\d+)?[kKmMgG]?$"
+  name:
+    description: "Human description"
+    type: string
+  nested_virtualization:
+    description: "Boolean indicating if task requires an instance type that supported nested virtualization"
+    type: boolean
+  parents:
+    description: "An array of configurations to inherit from."
+    type: array
+    items:
+      type: string
+  platform:
+    description: "Platform type"
+    type: string
+    pattern: "^([Ll]inux|[Ww]in(dows)?|[Mm]ac(os|osx)?|[Aa]ndroid)$"
+  preprocess:
+    description: "A configuration item to run as part of the preprocess stage"
+    type: string
+  run_as_admin:
+    description: "Boolean indicating if the image should be run with administrator privileges"
+    type: boolean
+  schedule_start:
+    description: "Date and time to start applying this configuration"
+    type: string
+    format: "date-time"
+  scopes:
+    description: "List of taskcluster scopes to limit the worker to"
+    type: array
+    items:
+      type: string
+      pattern: "^[A-Za-z0-9:_/-]+$"
+  tasks:
+    description: "Number of tasks to run"
+    type: integer

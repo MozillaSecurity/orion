@@ -1,0 +1,40 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: "Machines"
+description: "Cloud service machine mappings"
+type: object
+additionalProperties: false
+patternProperties:
+  "^(aws|gcp)$":
+    description: "Cloud provider name"
+    additionalProperties: false
+    type: object
+    patternProperties:
+      "^(x(86_)?64|arm64)$":
+        description: "CPU Architecture"
+        type: object
+        patternProperties:
+          "^.*$":
+            description: "Properties of machine instance"
+            type: object
+            additionalProperties: false
+            properties:
+              cpu:
+                description: "Number of CPUs"
+                type: integer
+              ram:
+                description: "RAM in gigabytes"
+                type: integer
+              gpu:
+                description: "Boolean indicating if a GPU instance should be used"
+                type: boolean
+              metal:
+                description: "Boolean indicating if a bare metal instance should be used"
+                type: boolean
+              zone_blacklist:
+                description: "Zones to avoid"
+                type: array
+                items:
+                  type: string
+            required:
+              - cpu
+              - ram
