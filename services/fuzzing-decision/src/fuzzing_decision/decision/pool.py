@@ -129,7 +129,8 @@ def configure_task(
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("4 weeks", now)))
     )
-    task["scopes"] = sorted(chain(config.get_scopes(), task["scopes"]))
+    task["routes"] = sorted(set(config.routes + task["routes"]))
+    task["scopes"] = sorted(set(chain(config.get_scopes(), task["scopes"])))
     add_capabilities_for_scopes(task)
     add_task_image(task, config)
     if config.platform == "windows":

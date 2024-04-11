@@ -38,7 +38,9 @@ payload:
 priority: high
 provisionerId: proj-fuzzing
 retries: 5
-routes: []
+routes:
+  - notify.email.user1@mozilla.com.on-failed
+  - notify.email.user4@mozilla.com.on-failed
 schedulerId: "-"
 scopes:
   - generic-worker:os-group:proj-fuzzing/windows-map2/Administrators

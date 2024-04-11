@@ -1,4 +1,6 @@
 cloud: aws
+routes:
+  - notify.email.user1@mozilla.com.on-failed
 scopes:
   - scope1
 disk_size: 120g
