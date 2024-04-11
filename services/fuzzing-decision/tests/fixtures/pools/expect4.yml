@@ -1,4 +1,6 @@
 cloud: gcp
+routes:
+  - notify.email.user4@mozilla.com.on-failed
 scopes:
   - scope4
 disk_size: 140g

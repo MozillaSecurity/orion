@@ -1,4 +1,7 @@
 cloud: aws
+routes:
+  - notify.email.user1@mozilla.com.on-failed
+  - notify.email.user2@mozilla.com.on-failed
 scopes:
   - scope1
   - scope2

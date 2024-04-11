@@ -52,6 +52,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "preprocess": str,
         "run_as_admin": bool,
         "schedule_start": (datetime, str),
+        "routes": list,
         "scopes": list,
         "tasks": int,
     }
@@ -236,6 +237,7 @@ class CommonPoolConfiguration(abc.ABC):
         run_as_admin: whether to run as Administrator or unprivileged user
                       (only valid when platform is windows)
         schedule_start: reference date for `cycle_time` scheduling
+        routes: list of taskcluster notification routes to enable on the target
         scopes: list of taskcluster scopes required by the target
         tasks: number of tasks to run (each with `cores_per_task`)
     """
@@ -356,6 +358,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.command = data["command"].copy()
         else:
             self.command = None
+        self.routes = data.get("routes", []).copy()
         self.scopes = data.get("scopes", []).copy()
 
         # size fields
@@ -542,6 +545,8 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.parents = []
             if self.preprocess is None:
                 self.preprocess = ""
+            if self.routes is None:
+                self.routes = []
             if self.scopes is None:
                 self.scopes = []
             # assert complete
@@ -610,7 +615,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "run_as_admin",
         )
         merge_dict_fields = ("artifacts", "macros")
-        merge_list_fields = ("scopes",)
+        merge_list_fields = ("routes", "scopes")
         null_fields = {
             field for field in overwriting_fields if getattr(self, field) is None
         }
