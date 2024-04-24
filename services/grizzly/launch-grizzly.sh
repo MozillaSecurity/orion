@@ -84,7 +84,12 @@ rwait wait "$wait_token"
 exit_code=$?
 echo "returned $exit_code" >&2
 case $exit_code in
-  5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
+  5)  # grizzly.common.utils.Exit
+      # expected results not reproduced (opposite of SUCCESS)
+    exit 0
+    ;;
+  4)  # grizzly.common.utils.LAUNCH_FAILURE
+      # unrelated target failure (browser startup crash, etc)
     exit 0
     ;;
   *)
