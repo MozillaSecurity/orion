@@ -147,7 +147,12 @@ sleep 15
 7z a -tzip tmp_grizzly.zip AppData/Local/Temp/grizzly/* -x\!AppData/Local/Temp/grizzly/target/ || touch tmp_grizzly.zip
 
 case $exit_code in
-  5)  # grizzly.session.Session.EXIT_FAILURE (reduce no-repro)
+  5)  # grizzly.common.utils.Exit
+      # expected results not reproduced (opposite of SUCCESS)
+    exit 0
+    ;;
+  4)  # grizzly.common.utils.LAUNCH_FAILURE
+      # unrelated target failure (browser startup crash, etc)
     exit 0
     ;;
   *)
