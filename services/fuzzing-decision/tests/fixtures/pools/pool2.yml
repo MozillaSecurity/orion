@@ -1,4 +1,6 @@
 cloud: null
+routes:
+  - notify.email.user2@mozilla.com.on-failed
 scopes:
   - scope2
 disk_size: null

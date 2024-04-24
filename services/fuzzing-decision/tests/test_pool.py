@@ -767,6 +767,7 @@ def test_flatten(pool_path):
     assert pool.platform == expect.platform
     assert pool.preprocess == expect.preprocess
     assert pool.schedule_start == expect.schedule_start
+    assert set(pool.routes) == set(expect.routes)
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
@@ -851,10 +852,9 @@ def test_pool_map_admin(mocker):
     for artifact in task["payload"]["artifacts"]:
         artifact.pop("expires")
     # ensure lists are comparable
-    task["dependencies"] = sorted(task["dependencies"])
-    expect["dependencies"] = sorted(expect["dependencies"])
-    task["scopes"] = sorted(task["scopes"])
-    expect["scopes"] = sorted(expect["scopes"])
+    for key in ("dependencies", "routes", "scopes"):
+        task[key] = sorted(task[key])
+        expect[key] = sorted(expect[key])
     assert task == expect
 
 

@@ -97,6 +97,12 @@ properties:
   nested_virtualization:
     description: "Boolean indicating if task requires an instance type that supported nested virtualization"
     type: boolean
+  routes:
+    description: "An array of routes to apply to the task"
+    type: array
+    items:
+      type: string
+      pattern: "^notify\\.(email|pulse|matrix-room|slack-channel)\\..+?on-(exception|failed)$"
   parents:
     description: "An array of configurations to inherit from."
     type: array
@@ -117,7 +123,7 @@ properties:
     type: string
     format: "date-time"
   scopes:
-    description: "List of taskcluster scopes to limit the worker to"
+    description: "An array of taskcluster scopes to apply to the task"
     type: array
     items:
       type: string
