@@ -228,7 +228,7 @@ DAEMON_ARGS=(
   --stats ./stats
 )
 
-S3_PROJECT="Nyx-$NYX_FUZZER"
+S3_PROJECT="${S3_PROJECT-Nyx-$NYX_FUZZER}"
 S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]; then
