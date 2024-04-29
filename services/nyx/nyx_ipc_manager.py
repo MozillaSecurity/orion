@@ -11,7 +11,7 @@ from argparse import REMAINDER, ArgumentParser
 from pathlib import Path, PurePosixPath
 from random import choice, randint
 from subprocess import TimeoutExpired, check_call, run
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, TextIO
 
 
 def run_generic(
@@ -137,6 +137,18 @@ def run_file_local(
     return run_generic(
         args, bindir, local_file_cache_path, min_msg_size, ignore_message_types, 30
     )
+
+
+def add_nyx_env_vars(fd: TextIO):
+    """Add env vars prefixed MOZ_FUZZ_ to config.sh which is
+    passed through to the QEMU target.
+    """
+    for env, value in os.environ.items():
+        if env.startswith("MOZ_FUZZ_") and env not in {
+            "MOZ_FUZZ_IPC_TRIGGER",
+            "MOZ_FUZZ_IPC_TRIGGER_SINGLEMSG_WAIT",
+        }:
+            print(f'export {env}="{value}"', file=fd)
 
 
 def run_afl(
@@ -434,12 +446,13 @@ def main(args: Optional[List[str]] = None) -> int:
                 print('export NYX_FUZZER="IPC_SingleMessage"', file=fd)
                 mochitest_arg_str = " ".join(mochitest_args)
                 print(f'export MOCHITEST_ARGS="{mochitest_arg_str}"', file=fd)
-
+                add_nyx_env_vars(fd)
         else:
             with (opts.sharedir / "config.sh").open("w") as fd:
                 print('export NYX_FUZZER="IPC_Generic"', file=fd)
                 mochitest_arg_str = " ".join(mochitest_args)
                 print(f'export MOCHITEST_ARGS="{mochitest_arg_str}"', file=fd)
+                add_nyx_env_vars(fd)
 
     elif opts.file is not None:
         # Run with a local page instead of mochitests
@@ -504,6 +517,7 @@ def main(args: Optional[List[str]] = None) -> int:
                     f'export NYX_PAGE_HTMLNAME="{opts.file.name}"',
                     file=fd,
                 )
+                add_nyx_env_vars(fd)
         else:
             with (opts.sharedir / "config.sh").open("w") as fd:
                 print('export NYX_FUZZER="IPC_Generic"', file=fd)
@@ -512,6 +526,7 @@ def main(args: Optional[List[str]] = None) -> int:
                     f'export NYX_PAGE_HTMLNAME="{opts.file.name}"',
                     file=fd,
                 )
+                add_nyx_env_vars(fd)
 
         if opts.write_corpus is not None or opts.afl is not None:
             if opts.single:
