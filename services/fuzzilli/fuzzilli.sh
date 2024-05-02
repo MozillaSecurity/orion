@@ -42,17 +42,27 @@ fi
 if [[ $DIFFERENTIAL ]]
 then
   get-tc-secret deploy-fuzzilli-differential "$HOME/.ssh/id_rsa.fuzzilli"
-else
-  get-tc-secret deploy-fuzzilli "$HOME/.ssh/id_rsa.fuzzilli"
-fi
 
-# Setup Key Identities
-cat << EOF > "$HOME/.ssh/config"
+  # Setup Key Identities for private fuzzilli fork
+  cat << EOF > "$HOME/.ssh/config"
 
 Host fuzzilli
 Hostname github.com
 IdentityFile "$HOME/.ssh/id_rsa.fuzzilli"
 EOF
+
+else
+  get-tc-secret deploy-fuzzing-shells-private ~/.ssh/id_rsa.fuzzing-shells-private
+
+  # Setup Key Identities for private overlay
+  cat >> ~/.ssh/config << EOF
+
+Host fuzzing-shells-private
+Hostname github.com
+IdentityFile "$HOME/.ssh/id_rsa.fuzzing-shells-private
+EOF
+
+fi
 
 # -----------------------------------------------------------------------------
 
@@ -65,7 +75,10 @@ if [[ $DIFFERENTIAL ]]
 then
   git-clone git@fuzzilli:MozillaSecurity/fuzzilli-differential.git fuzzilli
 else
-  git-clone git@fuzzilli:MozillaSecurity/fuzzilli.git fuzzilli
+  git-clone https://github.com/googleprojectzero/fuzzilli fuzzilli
+  git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
+
+  rsync -rv --progress fuzzing-shells-private/fuzzilli/ fuzzilli/
 fi
 
 # Copy over the S3Manager, we need it for the fuzzilli daemon
