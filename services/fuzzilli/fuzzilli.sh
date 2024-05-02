@@ -59,7 +59,7 @@ else
 
 Host fuzzing-shells-private
 Hostname github.com
-IdentityFile "$HOME/.ssh/id_rsa.fuzzing-shells-private
+IdentityFile "$HOME/.ssh/id_rsa.fuzzing-shells-private"
 EOF
 
 fi
