@@ -17,7 +17,8 @@ then
   setup-aws-credentials
 fi
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+then
   function get-deadline () {
     tmp="$(mktemp -d)"
     retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
@@ -27,7 +28,8 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
     max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
     rm -rf "$tmp"
     run_end="$((started + max_run_time))"
-    if [[ $run_end -lt $deadline ]]; then
+    if [[ $run_end -lt $deadline ]]
+    then
       echo "$run_end"
     else
       echo "$deadline"
@@ -90,9 +92,11 @@ sigdir = $HOME/signatures
 tool = ${TOOLNAME-Fuzzilli}
 EOF
 
-if [ -n "$TASKCLUSTER_ROOT_URL" ] && [ -n "$TASK_ID" ]; then
+if [[ -n "$TASKCLUSTER_ROOT_URL" ]] && [[ -n "$TASK_ID" ]]
+then
     echo "clientid = task-${TASK_ID}-run-${RUN_ID}"
-elif [ -n "$EC2SPOTMANAGER_POOLID" ]; then
+elif [[ -n "$EC2SPOTMANAGER_POOLID" ]]
+then
     echo "clientid = $(retry-curl http://169.254.169.254/latest/meta-data/public-hostname)"
 else
     echo "clientid = ${CLIENT_ID-$(uname -n)}"
@@ -116,12 +120,16 @@ ls -al /opt/swift5
 
 export PATH=/opt/swift5/usr/bin:$PATH
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+then
   python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 
   onexit () {
     # ensure final stats are complete
-    python3 -m TaskStatusReporter --report-from-file ./stats
+    if [[ -e ./stats ]]
+    then
+      python3 -m TaskStatusReporter --report-from-file ./stats
+    fi
   }
   trap onexit EXIT
 fi

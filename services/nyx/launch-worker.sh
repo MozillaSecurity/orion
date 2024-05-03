@@ -16,7 +16,8 @@ COVERAGE="${COVERAGE-0}"
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon; do
+for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon
+do
   pushd "/srv/repos/$r" >/dev/null
   retry git fetch --depth=1 --no-tags origin HEAD
   git reset --hard FETCH_HEAD
@@ -55,7 +56,8 @@ get-deadline () {
   max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
   rm -rf "$tmp"
   run_end="$((started + max_run_time))"
-  if [[ $run_end -lt $deadline ]]; then
+  if [[ $run_end -lt $deadline ]]
+  then
     echo "$run_end"
   else
     echo "$deadline"
@@ -63,7 +65,8 @@ get-deadline () {
 }
 
 get-target-time () {
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+  then
     echo $(($(get-deadline) - $(date +%s) - 5 * 60))
   else
     echo $((10 * 365 * 24 * 3600))
@@ -79,7 +82,8 @@ setup-aws-credentials
 
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
-if [[ ! -e ~/.fuzzmanagerconf ]]; then
+if [[ ! -e ~/.fuzzmanagerconf ]]
+then
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
   # Update FuzzManager config for this instance.
   mkdir -p signatures
@@ -92,14 +96,16 @@ EOF
 fi
 
 # pull qemu image
-if [[ ! -e ~/firefox.img ]]; then
+if [[ ! -e ~/firefox.img ]]
+then
   update-status "downloading firefox.img"
   time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
 
 # clone ipc-fuzzing & build harness/tools
 # get deployment key from TC
-if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]; then
+if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]
+then
 update-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
 cat << EOF >> ~/.ssh/config
@@ -125,7 +131,8 @@ make clean bin64/ld_preload_fuzz_no_pt.so
 popd >/dev/null
 
 # create snapshot
-if [[ ! -d ~/snapshot ]]; then
+if [[ ! -d ~/snapshot ]]
+then
   update-status "creating snapshot"
   ./snapshot.sh
 fi
@@ -156,7 +163,8 @@ NYX_PAGE="${NYX_PAGE-page.zip}"
 NYX_PAGE_HTMLNAME="${NYX_PAGE_HTMLNAME-caniuse.html}"
 
 pushd sharedir >/dev/null
-if [[ ! -d firefox ]]; then
+if [[ ! -d firefox ]]
+then
   update-status "downloading firefox"
 
   default_args=(
@@ -164,9 +172,11 @@ if [[ ! -d firefox ]]; then
     --fuzzing
     --asan
   )
-  if [[ $COVERAGE -eq 1 ]]; then
+  if [[ $COVERAGE -eq 1 ]]
+  then
     default_args+=(--coverage)
-    if [[ -z "$REVISION" ]]; then
+    if [[ -z "$REVISION" ]]
+    then
       default_args+=(
         --build "$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
       )
@@ -195,7 +205,8 @@ popd >/dev/null
 mkdir -p corpus.out
 
 # download coverage opt build to calculate line-clusters
-if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]; then
+if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]
+then
   mkdir -p corpus.out/workdir/dump
   rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
   fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
@@ -206,17 +217,22 @@ fi
 
 update-status "preparing to launch guided-fuzzing-daemon"
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+then
   python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 
   onexit () {
     # ensure final stats are complete
-    python3 -m TaskStatusReporter --report-from-file ./stats
+    if [[ -e ./stats ]]
+    then
+      python3 -m TaskStatusReporter --report-from-file ./stats
+    fi
   }
   trap onexit EXIT
 fi
 
-if [[ -z "$NYX_INSTANCES" ]]; then
+if [[ -z "$NYX_INSTANCES" ]]
+then
   NYX_INSTANCES="$(python3 -c "import psutil; print(psutil.cpu_count(logical=False))")"
 fi
 
@@ -231,10 +247,13 @@ DAEMON_ARGS=(
 S3_PROJECT="${S3_PROJECT-Nyx-$NYX_FUZZER}"
 S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
-if [[ -n "$S3_CORPUS_REFRESH" ]]; then
+if [[ -n "$S3_CORPUS_REFRESH" ]]
+then
   update-status "starting corpus refresh"
-  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]; then
-    guided-fuzzing-daemon --s3-list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project; do
+  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]
+  then
+    guided-fuzzing-daemon --s3-list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project
+    do
       time guided-fuzzing-daemon \
         --s3-bucket mozilla-aflfuzz --project "$project" \
         --build ./sharedir/firefox \
@@ -248,7 +267,8 @@ if [[ -n "$S3_CORPUS_REFRESH" ]]; then
       "${DAEMON_ARGS[@]}"
   fi
 else
-  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]; then
+  if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]
+  then
     mkdir -p corpus.add
     xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
     DAEMON_ARGS+=(
@@ -256,21 +276,24 @@ else
     )
     source ./sharedir/config.sh
     S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
-  elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]; then
+  elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]
+  then
     nyx-ipc-manager --generic --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
   else
     echo "unknown $NYX_FUZZER" 1>&2
     exit 2
   fi
 
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+  then
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
 
   # Sometimes, don't download the existing corpus.
   # This can increase coverage in large targets and prevents bad corpora.
   # Results will be merged with the existing corpus on next refresh.
-  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]
+  then
     # Download the corpus from S3
     update-status "downloading corpus"
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
@@ -278,7 +301,8 @@ else
     mkdir -p corpus
   fi
   # Ensure corpus is not empty
-  if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
+  if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]
+  then
     echo "Hello world" > ./corpus/input0
   fi
 
@@ -297,13 +321,15 @@ else
     "${DAEMON_ARGS[@]}" \
     -i ./corpus \
     -o ./corpus.out
-  for st in ./corpus.out/*/fuzzer_stats; do
+  for st in ./corpus.out/*/fuzzer_stats
+  do
     idx="$(basename "$(dirname "$st")")"
     cp "$st" "/logs/fuzzer_stats$idx.txt"
   done
 fi
 
-if [[ $COVERAGE -eq 1 ]]; then
+if [[ $COVERAGE -eq 1 ]]
+then
   # Process coverage data
   prefix="$(grep pathprefix sharedir/firefox/firefox.fuzzmanagerconf | cut -d\  -f3-)"
   python3 /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/nyx-code-coverage.py \
