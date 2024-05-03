@@ -116,6 +116,16 @@ ls -al /opt/swift5
 
 export PATH=/opt/swift5/usr/bin:$PATH
 
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+
+  onexit () {
+    # ensure final stats are complete
+    python3 -m TaskStatusReporter --report-from-file ./stats
+  }
+  trap onexit EXIT
+fi
+
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   timeout -s 2 ${TARGET_TIME} mozilla/merge.sh "$HOME/build/dist/bin/js"
