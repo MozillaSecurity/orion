@@ -43,7 +43,8 @@ then
   setup-aws-credentials
 fi
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+then
   function get-deadline () {
     tmp="$(mktemp -d)"
     retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
@@ -53,7 +54,8 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
     max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
     rm -rf "$tmp"
     run_end="$((started + max_run_time))"
-    if [[ $run_end -lt $deadline ]]; then
+    if [[ $run_end -lt $deadline ]]
+    then
       echo "$run_end"
     else
       echo "$deadline"
@@ -291,7 +293,10 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
 
   onexit () {
     # ensure final stats are complete
-    python3 -m TaskStatusReporter --report-from-file ./stats
+    if [[ -e ./stats ]]
+    then
+      python3 -m TaskStatusReporter --report-from-file ./stats
+    fi
   }
   trap onexit EXIT
 fi
