@@ -23,6 +23,8 @@ export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 # Install prefpicker
 retry python3 -m pip install git+https://github.com/MozillaSecurity/prefpicker.git
 
+# Install fuzzfetch
+retry python3 -m pip install git+https://github.com/MozillaSecurity/fuzzfetch.git
 # Fetch build
 fuzzfetch -a --fuzzing -n nightly
 
