@@ -42,7 +42,7 @@ git init gr.css.reports
   node node_modules/@mozillasecurity/gr.css/dist/gr.css.js ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
-    git commit -m "chore(grammar): update grammar" src/grammar.json
+    git commit -m "feat(grammar): update grammar" src/grammar.json
     retry git push origin HEAD:main
   fi
 )> /live.log 2>&1
