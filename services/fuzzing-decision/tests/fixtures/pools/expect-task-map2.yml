@@ -45,6 +45,8 @@ schedulerId: "-"
 scopes:
   - generic-worker:os-group:proj-fuzzing/windows-map2/Administrators
   - generic-worker:run-as-administrator:proj-fuzzing/windows-map2
+  - queue:route:notify.email.user1@mozilla.com.on-failed
+  - queue:route:notify.email.user4@mozilla.com.on-failed
   - scope4
   - secrets:get:project/fuzzing/decision
 tags: {}

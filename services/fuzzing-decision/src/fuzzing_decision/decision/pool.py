@@ -283,6 +283,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                     ),
                 )
             )
+
+        result.extend(f"queue:route:{route}" for route in self.routes)
+
         return result
 
     def build_resources(

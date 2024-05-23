@@ -526,6 +526,7 @@ def test_tasks(
             "parents": [],
             "platform": platform,
             "preprocess": None,
+            "routes": ["notify.email.test@example.com"],
             "schedule_start": None,
             "scopes": scopes,
             "tasks": 2,
@@ -578,13 +579,11 @@ def test_tasks(
                 "expires"
             )
         )
-        assert set(task["scopes"]) == set(
-            ["secrets:get:project/fuzzing/decision", *scopes]
-        )
-        # scopes are already asserted above
-        # - read the value for comparison instead of deleting the key, so the object is
-        #   printed in full on failure
-        scopes = task["scopes"]
+        assert set(task["scopes"]) == {
+            "secrets:get:project/fuzzing/decision",
+            *scopes,
+            *[f"queue:route:{route}" for route in task["routes"]],
+        }
         expected = {
             "dependencies": ["someTaskId"],
             "extra": {},
@@ -620,9 +619,9 @@ def test_tasks(
             "priority": "high",
             "provisionerId": "proj-fuzzing",
             "retries": 5,
-            "routes": [],
+            "routes": task["routes"],
             "schedulerId": "-",
-            "scopes": scopes,
+            "scopes": task["scopes"],
             "tags": {},
             "taskGroupId": "someTaskId",
             "workerType": f"{platform}-test",
