@@ -272,7 +272,7 @@ else
     mkdir -p corpus.add
     xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
     DAEMON_ARGS+=(
-      --nyx-add-corpus ./corpus.out/workdir/dump/seeds
+      --afl-add-corpus ./corpus.out/workdir/dump/seeds
     )
     source ./sharedir/config.sh
     S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
@@ -312,8 +312,8 @@ else
     --afl-log-pattern /logs/afl%d.log \
     --fuzzmanager \
     --max-runtime "$(get-target-time)" \
-    --nyx-async-corpus \
-    --nyx-instances "$NYX_INSTANCES" \
+    --afl-async-corpus \
+    --instances "$NYX_INSTANCES" \
     --nyx-log-pattern /logs/nyx%d.log \
     --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so \
     --s3-queue-upload \
