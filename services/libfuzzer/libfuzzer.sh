@@ -345,7 +345,7 @@ then
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" "${S3_QUEUE_UPLOAD_ARGS[@]}" \
     --fuzzmanager \
     --libfuzzer "${LIBFUZZER_AUTOREDUCE_ARGS[@]}" \
-    --libfuzzer-instances "$LIBFUZZER_INSTANCES" \
+    --instances "$LIBFUZZER_INSTANCES" \
     --stats "./stats" \
     --tool "${TOOLNAME:-libFuzzer-$FUZZER}" \
     "${HARNESS_EXT_ARGS[@]}" \
