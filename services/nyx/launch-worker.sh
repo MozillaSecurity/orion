@@ -211,7 +211,7 @@ then
   rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
   fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
   prefix="$(grep pathprefix cov-opt/firefox.fuzzmanagerconf | cut -d\  -f3-)"
-  python3 /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/postprocess-gcno.py lineclusters.json cov-opt "$prefix"
+  python3 /srv/repos/ipc-research/ipc-fuzzing/code-coverage/postprocess-gcno.py lineclusters.json cov-opt "$prefix"
   rm -rf cov-opt
 fi
 
@@ -332,7 +332,7 @@ if [[ $COVERAGE -eq 1 ]]
 then
   # Process coverage data
   prefix="$(grep pathprefix sharedir/firefox/firefox.fuzzmanagerconf | cut -d\  -f3-)"
-  python3 /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/nyx-code-coverage.py \
+  python3 /srv/repos/ipc-research/ipc-fuzzing/code-coverage/nyx-code-coverage.py \
     ./corpus.out/workdir/dump/ \
     ./lineclusters.json \
     "$prefix" \
