@@ -10,11 +10,14 @@ import json
 import re
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
+from dataclasses import dataclass
+from datetime import datetime
 from functools import wraps
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
+from dateutil.parser import isoparse
 from Reporter.Reporter import Reporter
 from taskcluster.helper import TaskclusterConfig
 
@@ -93,6 +96,53 @@ class CommonArgParser(ArgumentParser):
         self.set_defaults(log_level=INFO)
 
 
+@dataclass(frozen=True)
+class CrashEntry:
+    id: int
+    bucket: Optional[int]
+    tool: str
+    created: datetime
+    os: str
+    testcase_quality: int
+    shortSignature: str
+
+    @classmethod
+    def _from_result(cls, result: Dict[str, Any]) -> "CrashEntry":
+        assert isinstance(result["id"], int)
+        assert result["bucket"] is None or isinstance(result["bucket"], int)
+        assert isinstance(result["tool"], str)
+        assert isinstance(result["os"], str)
+        assert isinstance(result["testcase_quality"], int)
+        assert isinstance(result["shortSignature"], str)
+        return cls(
+            id=result["id"],
+            bucket=result["bucket"],
+            tool=result["tool"],
+            created=isoparse(result["created"]),
+            os=result["os"],
+            testcase_quality=result["testcase_quality"],
+            shortSignature=result["shortSignature"],
+        )
+
+
+@dataclass(frozen=True)
+class Bucket:
+    id: int
+    shortDescription: str
+    best_quality: int
+
+    @classmethod
+    def _from_result(cls, result: Dict[str, Any]) -> "Bucket":
+        assert isinstance(result["id"], int)
+        assert isinstance(result["shortDescription"], str)
+        assert isinstance(result["best_quality"], int)
+        return cls(
+            id=result["id"],
+            shortDescription=result["shortDescription"],
+            best_quality=result["best_quality"],
+        )
+
+
 class CrashManager(Reporter):
     """Class to manage access to CrashManager server."""
 
@@ -102,7 +152,7 @@ class CrashManager(Reporter):
         endpoint: str,
         query: Optional[Dict[str, Any]] = None,
         ordering: Optional[List[str]] = None,
-    ):
+    ) -> Iterator[Dict[str, Any]]:
         """Iterate over results possibly paginated by Django Rest Framework."""
         params: Optional[Dict[str, Any]] = {}
         if query is not None:
@@ -150,7 +200,7 @@ class CrashManager(Reporter):
         self,
         query: Optional[Dict[str, Any]] = None,
         ordering: Optional[List[str]] = None,
-    ):
+    ) -> Iterator[CrashEntry]:
         """List all CrashEntry objects.
 
         Arguments:
@@ -161,9 +211,10 @@ class CrashManager(Reporter):
         Yields:
             dict: Dict representation of CrashEntry
         """
-        yield from self._list_objs("crashes", query=query, ordering=ordering)
+        for result in self._list_objs("crashes", query=query, ordering=ordering):
+            yield CrashEntry._from_result(result)
 
-    def list_buckets(self, query: Optional[Dict[str, Any]] = None):
+    def list_buckets(self, query: Optional[Dict[str, Any]] = None) -> Iterator[Bucket]:
         """List all Bucket objects.
 
         Arguments:
@@ -173,7 +224,8 @@ class CrashManager(Reporter):
         Yields:
             dict: Dict representation of Bucket
         """
-        yield from self._list_objs("buckets", query=query)
+        for result in self._list_objs("buckets", query=query):
+            yield Bucket._from_result(result)
 
     @remote_checks
     def update_testcase_quality(self, crash_id: int, testcase_quality: int) -> None:
