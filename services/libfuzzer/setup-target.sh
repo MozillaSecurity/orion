@@ -15,7 +15,7 @@ source ~/.local/bin/common.sh
 
 FETCH_ARGS=(-o "$HOME" --fuzzing)
 
-if [[ -n "$JSRT" ]]
+if [[ -n "$JSRT" ]] && [[ -z "$COVERAGE" ]]
 then
   FETCH_ARGS+=(--debug)
 else
