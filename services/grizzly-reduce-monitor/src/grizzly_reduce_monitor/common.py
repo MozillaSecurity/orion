@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
+from json import loads
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
@@ -105,6 +106,7 @@ class CrashEntry:
     os: str
     testcase_quality: int
     shortSignature: str
+    env: Dict[str, str]
 
     @classmethod
     def _from_result(cls, result: Dict[str, Any]) -> "CrashEntry":
@@ -122,6 +124,7 @@ class CrashEntry:
             os=result["os"],
             testcase_quality=result["testcase_quality"],
             shortSignature=result["shortSignature"],
+            env=loads(result["env"] or "{}"),
         )
 
 

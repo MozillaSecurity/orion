@@ -38,7 +38,8 @@ TC_QUEUES = {
     # "android": "grizzly-reduce-worker-android",
     "linux": "grizzly-reduce-worker",
     # "macosx": "grizzly-reduce-worker-macos",
-    "windows": "grizzly-reduce-worker-windows",
+    "windows": "grizzly-reduce-worker-windows-ngpu",
+    "windows-gpu": "grizzly-reduce-worker-windows",
 }
 
 TOOL_LIST_SECRET = "project/fuzzing/grizzly-reduce-tool-list"
@@ -63,12 +64,13 @@ REDUCE_TASKS = {
 
 @dataclass(frozen=True)
 class ReducibleCrash:
-    crash: int
+    id: int
     bucket: Optional[int]
     tool: str
     description: str
     os: str
     quality: int
+    has_gpu: bool
 
 
 def _fuzzmanager_get_crashes(
@@ -158,12 +160,13 @@ def _fuzzmanager_get_crashes(
         ):
             assert crash.bucket
             yield ReducibleCrash(
-                crash=crash.id,
+                id=crash.id,
                 bucket=crash.bucket,
                 tool=crash.tool,
                 description=bucket_descs[crash.bucket],
                 os=crash.os,
                 quality=crash.testcase_quality,
+                has_gpu=crash.env.get("MOZ_FUZZ_HAS_GPU") == "1",
             )
 
     # get unbucketed crashes with specified quality
@@ -197,12 +200,13 @@ def _fuzzmanager_get_crashes(
         ):
             continue
         yield ReducibleCrash(
-            crash=crash.id,
+            id=crash.id,
             bucket=None,
             tool=crash.tool,
             description=crash.shortSignature,
             os=crash.os,
             quality=crash.testcase_quality,
+            has_gpu=crash.env.get("MOZ_FUZZ_HAS_GPU") == "1",
         )
 
 
@@ -328,18 +332,18 @@ class ReductionMonitor(ReductionWorkflow):
         return self._gw_image_artifact_tasks[namespace]
 
     def queue_reduction_task(
-        self, os_name: str, crash_id: int, no_repro_quality: Optional[int]
+        self, os_name: str, crash: ReducibleCrash, no_repro_quality: Optional[int]
     ) -> None:
         """Queue a reduction task in Taskcluster.
 
         Arguments:
             os_name: The OS to schedule the task for.
-            crash_id: The CrashManager crash ID to reduce.
+            crash: The CrashManager crash to reduce.
             no_repro_quality: testcase Quality to set in FM if crash doesn't repro
         """
         if self.dry_run:
             return None
-        dest_queue = TC_QUEUES[os_name]
+        dest_queue = TC_QUEUES[f"{os_name}-gpu" if crash.has_gpu else os_name]
         my_task_id = os.environ.get("TASK_ID")
         task_id = slugId()
         now = datetime.now(timezone.utc)
@@ -355,7 +359,7 @@ class ReductionMonitor(ReductionWorkflow):
             image_task_id = None
         task = yaml_load(
             REDUCE_TASKS[os_name].substitute(
-                crash_id=crash_id,
+                crash_id=crash.id,
                 created=stringDate(now),
                 deadline=stringDate(now + REDUCTION_DEADLINE),
                 description=DESCRIPTION,
@@ -379,8 +383,8 @@ class ReductionMonitor(ReductionWorkflow):
         except TaskclusterFailure as exc:
             LOG.error("Error creating task: %s", exc)
             return None
-        LOG.info("Marking %d Q4 (in progress)", crash_id)
-        CrashManager().update_testcase_quality(crash_id, Quality.REDUCING.value)
+        LOG.info("Marking %d Q4 (in progress)", crash.id)
+        CrashManager().update_testcase_quality(crash.id, Quality.REDUCING.value)
 
     def run(self) -> Optional[int]:
         start_time = time()
@@ -412,7 +416,7 @@ class ReductionMonitor(ReductionWorkflow):
         # get all crashes for Q=5 and project in tool_list
         queued = 0
         for sig, reduction in _get_unique_crashes(self.tool_list):
-            LOG.info("queuing %d for %s", reduction.crash, sig)
+            LOG.info("queuing %d for %s", reduction.id, sig)
             no_repro_quality = None
             if reduction.quality == Quality.UNREDUCED.value:
                 # perform first pass with generic platform reducer on Q5
@@ -431,11 +435,11 @@ class ReductionMonitor(ReductionWorkflow):
                 )
                 if not self.dry_run:
                     srv.update_testcase_quality(
-                        reduction.crash, Quality.NOT_REPRODUCIBLE.value
+                        reduction.id, Quality.NOT_REPRODUCIBLE.value
                     )
                 continue
             queued += 1
-            self.queue_reduction_task(os_name, reduction.crash, no_repro_quality)
+            self.queue_reduction_task(os_name, reduction, no_repro_quality)
         LOG.info(
             "finished polling FuzzManager (%s elapsed, %d tasks queued)",
             format_seconds(time() - start_time),
