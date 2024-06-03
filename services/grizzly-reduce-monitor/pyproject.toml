@@ -15,14 +15,9 @@ omit = [
     "*/.egg/*",
 ]
 
-[[tool.mypy.overrides]]
-module = [
-    "Reporter.*",
-    "grizzly.*",
-    "setuptools",
-    "taskcluster.*",
-]
+[tool.mypy]
 ignore_missing_imports = true
+show_error_codes = true
 
 [tool.pylint.format]
 max-line-length = 88
@@ -49,9 +44,11 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-ignore = []
 line-length = 88
-select = [
+target-version = "py38"
+
+[lint.select]
+ruff = [
     # flake8
     "E",
     "F",
@@ -63,7 +60,6 @@ select = [
     # includes yesqa
     "RUF",
 ]
-target-version = "py38"
 
-[tool.ruff.isort]
+[lint.isort]
 known-first-party = ["grizzly_reduce_monitor"]
