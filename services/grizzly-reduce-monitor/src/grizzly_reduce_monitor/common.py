@@ -42,7 +42,7 @@ def remote_checks(wrapped):
     """Decorator to perform error checks before using remote features"""
 
     @wraps(wrapped)
-    def decorator(self, *args: Any, **kwargs: Any):
+    def decorator(self: Reporter, *args: Any, **kwargs: Any) -> Any:
         if not self.serverProtocol:
             raise RuntimeError(
                 "Must specify serverProtocol (configuration property: serverproto) to "
