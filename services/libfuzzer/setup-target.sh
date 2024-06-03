@@ -13,7 +13,15 @@ source ~/.local/bin/common.sh
 
 # %<---[Target]---------------------------------------------------------------
 
-FETCH_ARGS=(-o "$HOME" --asan --fuzzing)
+FETCH_ARGS=(-o "$HOME" --fuzzing)
+
+if [[ -n "$JSRT" ]]
+then
+  FETCH_ARGS+=(--debug)
+else
+  FETCH_ARGS+=(--asan)
+fi
+
 if [[ "$COVERAGE" = 1 ]]
 then
   FETCH_ARGS+=(--coverage --build "$REVISION")
