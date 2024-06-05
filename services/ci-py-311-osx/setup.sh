@@ -4,7 +4,8 @@ set -e -x -o pipefail
 retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
 retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
-retry brew install --force-bottle openssl@3 python@3.11
+retry brew install --force-bottle --overwrite openssl@3 python@3.11
+retry brew postinstall python@3.11
 # shellcheck disable=SC2016
 sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python@3.11/libexec/bin:${HOMEBREW_PREFIX}/opt/python@3.11/bin:${HOMEBREW_PREFIX}/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/bin:,' homebrew/Library/Homebrew/cmd/shellenv.sh
 PATH="$HOMEBREW_PREFIX/opt/python@3.11/libexec/bin:$HOMEBREW_PREFIX/opt/python@3.11/bin:$HOMEBREW_PREFIX/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
