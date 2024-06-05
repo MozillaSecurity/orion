@@ -157,7 +157,9 @@ class CrashManager(Reporter):
         ordering: Optional[List[str]] = None,
     ) -> Iterator[Dict[str, Any]]:
         """Iterate over results possibly paginated by Django Rest Framework."""
-        params: Optional[Dict[str, Any]] = {}
+        params: Optional[Dict[str, Any]] = {
+            "ignore_toolfilter": 1,
+        }
         if query is not None:
             assert params is not None
             params["query"] = json.dumps(query)
