@@ -208,6 +208,7 @@ mkdir -p corpus.out
 if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]
 then
   mkdir -p corpus.out/workdir/dump
+  mkdir -p /covdata
   rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
   fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
   prefix="$(grep pathprefix cov-opt/firefox.fuzzmanagerconf | cut -d\  -f3-)"
@@ -332,6 +333,9 @@ if [[ $COVERAGE -eq 1 ]]
 then
   # Process coverage data
   prefix="$(grep pathprefix sharedir/firefox/firefox.fuzzmanagerconf | cut -d\  -f3-)"
+  cp ./corpus.out/workdir/dump/pcmap.dump /covdata/ || true
+  cp ./corpus.out/workdir/dump/covmap.dump /covdata/ || true
+  cp ./corpus.out/workdir/dump/modinfo.txt /covdata/ || true
   python3 /srv/repos/ipc-research/ipc-fuzzing/code-coverage/nyx-code-coverage.py \
     ./corpus.out/workdir/dump/ \
     ./lineclusters.json \
