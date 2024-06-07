@@ -131,3 +131,7 @@ properties:
   tasks:
     description: "Number of tasks to run"
     type: integer
+  worker:
+    description: "Taskcluster worker type"
+    type: string
+    pattern: "^d2g|docker|generic$"

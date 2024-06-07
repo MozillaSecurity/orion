@@ -34,7 +34,9 @@ class Provider(ABC):
         assert worker in self.imagesets, f"Missing worker {worker}"
         out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
-        if platform == "linux":
+        worker_impl = self.imagesets[worker]["workerImplementation"]
+        LOG.debug("got worker implementation: %s", worker_impl)
+        if platform == "linux" and worker_impl == "docker-worker":
             out.setdefault("dockerConfig", {})
             out.update(
                 {

@@ -65,6 +65,7 @@ def pool_data():
         "macros": {},
         "run_as_admin": False,
         "nested_virtualization": False,
+        "worker": "generic",
     }
 
 
@@ -156,6 +157,7 @@ def test_load_params_4(tmp_path, pool_data):
         "preprocess": None,
         "macros": {"PREPROC": "1"},
         "run_as_admin": False,
+        "worker": "generic",
     }
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:
         yaml.dump(pool_data, stream=test_cfg)

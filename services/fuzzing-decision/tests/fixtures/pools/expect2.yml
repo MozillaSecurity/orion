@@ -32,3 +32,4 @@ run_as_admin: false
 gpu: false
 demand: false
 nested_virtualization: false
+worker: docker

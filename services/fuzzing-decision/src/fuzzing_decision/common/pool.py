@@ -55,6 +55,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "routes": list,
         "scopes": list,
         "tasks": int,
+        "worker": str,
     }
 )
 # fields that must exist in every pool.yml
@@ -78,6 +79,7 @@ CPU_ALIASES = types.MappingProxyType(
 )
 PROVIDERS = frozenset(("aws", "gcp", "static"))
 ARCHITECTURES = frozenset(("x64", "arm64"))
+WORKERS = frozenset(("generic", "docker", "d2g"))
 
 
 def parse_size(size: str) -> float:
@@ -240,6 +242,7 @@ class CommonPoolConfiguration(abc.ABC):
         routes: list of taskcluster notification routes to enable on the target
         scopes: list of taskcluster scopes required by the target
         tasks: number of tasks to run (each with `cores_per_task`)
+        worker: TC worker type
     """
 
     FIELD_TYPES: types.MappingProxyType
@@ -399,6 +402,12 @@ class CommonPoolConfiguration(abc.ABC):
                 ",".join(PROVIDERS)
             )
             self.cloud = data["cloud"]
+        self.worker = None
+        if data.get("worker") is not None:
+            assert data["worker"] in WORKERS, "Invalid worker - use {}".format(
+                ",".join(WORKERS)
+            )
+            self.worker = data["worker"]
 
     @classmethod
     def from_file(
@@ -613,6 +622,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "schedule_start",
             "tasks",
             "run_as_admin",
+            "worker",
         )
         merge_dict_fields = ("artifacts", "macros")
         merge_list_fields = ("routes", "scopes")
@@ -711,6 +721,7 @@ class PoolConfigMap(CommonPoolConfiguration):
             "nested_virtualization",
             "platform",
             "schedule_start",
+            "worker",
         )
         not_allowed = ("preprocess",)
         pools = list(self.iterpools())

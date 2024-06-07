@@ -72,7 +72,10 @@ class MountArtifactResolver:
 
 def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     """Add image or mount to task payload, depending on platform."""
-    if config.platform in {"macos", "windows"}:
+    # generic-worker linux still uses docker images, but need to be loaded
+    # into podman, can't use mounts to do it
+    # TODO: should still have task dependency for indexed-image
+    if config.worker == "generic" and config.platform != "linux":
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
         task_id: Union[str, int]
@@ -99,9 +102,11 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
             }
         )
         task["dependencies"].append(task_id)
-    else:
+    elif config.worker in {"docker", "d2g"}:
         # `container` can be either a string or a dict, so can't template it
         task["payload"]["image"] = config.container
+    else:
+        raise NotImplementedError(f"{config.worker} / {config.platform} not supported")
 
 
 def add_capabilities_for_scopes(task: Dict[str, Any]) -> None:

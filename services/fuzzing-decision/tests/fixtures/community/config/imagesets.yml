@@ -3,6 +3,9 @@
 
 docker-worker:
   workerImplementation: docker-worker
+  aws:
+    amis:
+      us-west-1: ami-6789
   gcp:
     image: path/to/image
 

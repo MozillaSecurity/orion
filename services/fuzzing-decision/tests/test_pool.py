@@ -160,7 +160,14 @@ def _get_expected_role(
 
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("env", [(None), ({"someKey": "someValue"})])
-@pytest.mark.parametrize("platform", ["linux", "windows"])
+@pytest.mark.parametrize(
+    "platform, worker",
+    [
+        ("linux", "docker"),
+        ("linux", "d2g"),
+        ("windows", "generic"),
+    ],
+)
 @pytest.mark.parametrize("demand", [True, False])
 def test_aws_resources(
     env,
@@ -168,6 +175,7 @@ def test_aws_resources(
     mock_machines,
     platform,
     demand,
+    worker,
 ):
     conf = PoolConfiguration(
         "test",
@@ -181,7 +189,7 @@ def test_aws_resources(
             "demand": demand,
             "disk_size": "120g",
             "gpu": False,
-            "imageset": "generic-worker-A",
+            "imageset": "docker-worker" if worker == "docker" else "generic-worker-A",
             "macros": {},
             "max_run_time": "12h",
             "metal": False,
@@ -195,6 +203,7 @@ def test_aws_resources(
             "tasks": 3,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": worker,
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -207,7 +216,7 @@ def test_aws_resources(
                 {
                     "capacityPerInstance": 1,
                     "launchConfig": {
-                        "ImageId": "ami-1234",
+                        "ImageId": "ami-6789" if worker == "docker" else "ami-1234",
                         "InstanceType": "a2",
                         "Placement": {"AvailabilityZone": "us-west-1a"},
                         "SecurityGroupIds": ["sg-A"],
@@ -239,7 +248,7 @@ def test_aws_resources(
     if not demand:
         for config in expected["config"]["launchConfigs"]:
             config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
-    if platform == "linux":
+    if worker == "docker":
         expected["config"]["launchConfigs"][0]["workerConfig"].update(
             {
                 "dockerConfig": {
@@ -310,6 +319,7 @@ def test_gcp_resources(
             "tasks": 3,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": "docker",
         },
     )
     resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
@@ -530,6 +540,7 @@ def test_tasks(
             "tasks": 2,
             "run_as_admin": run_as_admin,
             "nested_virtualization": False,
+            "worker": "docker" if platform == "linux" else "generic",
         },
     )
 
@@ -799,6 +810,7 @@ def test_pool_map():
     assert set(cfg_map.scopes) == set()
     assert cfg_map.tasks is None
     assert cfg_map.nested_virtualization == expect.nested_virtualization
+    assert cfg_map.worker == expect.worker
 
     pools = list(cfg_map.iterpools())
     assert len(pools) == 1
@@ -826,6 +838,7 @@ def test_pool_map():
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
+    assert pool.worker == expect.worker
 
 
 def test_pool_map_admin(mocker):
@@ -913,6 +926,7 @@ def test_cycle_crons():
             "tasks": 2,
             "run_as_admin": False,
             "nested_virtualization": False,
+            "worker": "docker",
         },
     )
 
