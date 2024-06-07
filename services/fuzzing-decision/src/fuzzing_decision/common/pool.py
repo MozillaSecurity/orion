@@ -91,7 +91,7 @@ def parse_size(size: str) -> float:
     Returns:
         size with si prefix expanded
     """
-    match = re.match(r"\s*(\d+\.\d*|\.\d+|\d+)\s*([kmgt]?)b?\s*", size, re.IGNORECASE)
+    match = re.match(r"(\d+\.\d+|\d+)([kmgt]?)b?", size, re.IGNORECASE)
     assert match is not None, "size should be a number followed by optional si prefix"
     result = float(match.group(1))
     multiplier = {
@@ -116,7 +116,7 @@ def parse_time(time: str) -> int:
     result = 0
     got_anything = False
     while time:
-        match = re.match(r"\s*(\d+)\s*([wdhms]?)\s*(.*)", time, re.IGNORECASE)
+        match = re.match(r"(\d+)([wdhms]?)(.*)", time, re.IGNORECASE)
         assert match is not None, "time should be a number followed by optional unit"
         if match.group(2):
             multiplier = {

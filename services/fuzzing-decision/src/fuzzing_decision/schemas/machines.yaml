@@ -9,7 +9,7 @@ patternProperties:
     additionalProperties: false
     type: object
     patternProperties:
-      "^(x(86_)?64|arm64)$":
+      "^(x64|x86[_-]64|amd64|aarch64|arm64)$":
         description: "CPU Architecture"
         type: object
         patternProperties:
