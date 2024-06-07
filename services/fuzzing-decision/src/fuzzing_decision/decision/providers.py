@@ -34,9 +34,11 @@ class Provider(ABC):
         assert worker in self.imagesets, f"Missing worker {worker}"
         out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
+        # worker implementation might be generic-worker or docker-worker
+        # although we also support d2g (docker payload on generic worker)
+        # so check explicitly for the worker implementation declared
         worker_impl = self.imagesets[worker]["workerImplementation"]
-        LOG.debug("got worker implementation: %s", worker_impl)
-        if platform == "linux" and worker_impl == "docker-worker":
+        if worker_impl == "docker-worker":
             out.setdefault("dockerConfig", {})
             out.update(
                 {
