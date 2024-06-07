@@ -377,7 +377,6 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         scopes = decision_task["scopes"] + [
             "queue:create-task:highest:proj-fuzzing/ci",
-            "queue:create-task:highest:proj-fuzzing/ci-gw",
         ]
         decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
 
@@ -567,7 +566,6 @@ class PoolConfigMap(CommonPoolConfigMap):
 
         scopes = decision_task["scopes"] + [
             "queue:create-task:highest:proj-fuzzing/ci",
-            "queue:create-task:highest:proj-fuzzing/ci-gw",
         ]
         decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
 

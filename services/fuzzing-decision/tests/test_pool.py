@@ -130,7 +130,7 @@ def _get_expected_hook(platform="linux"):
             "schedulerId": "-",
             "scopes": [f"assume:hook-id:project-fuzzing/{platform}-test"],
             "tags": {},
-            "workerType": "ci-gw",
+            "workerType": "ci",
         },
         "triggerSchema": {},
     }
@@ -150,7 +150,6 @@ def _get_expected_role(
         "scopes": [
             "queue:cancel-task:-/*",
             "queue:create-task:highest:proj-fuzzing/ci",
-            "queue:create-task:highest:proj-fuzzing/ci-gw",
             f"queue:create-task:highest:proj-fuzzing/{platform}-test",
             "queue:scheduler-id:-",
             "secrets:get:project/fuzzing/decision",
