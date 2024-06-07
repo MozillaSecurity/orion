@@ -54,18 +54,18 @@ properties:
   cpu:
     description: "CPU architecture type"
     type: string
-    pattern: "^(x(86_)?64|arm64)$"
+    pattern: "^(x64|x86[_-]64|amd64|aarch64|arm64)$"
   cycle_time:
     description: "Maximum time before completely refreshing this pool"
     type: string
-    pattern: "^[0-9]+[sSmMhHdD]$"
+    pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
   demand:
     description: "Boolean indicating if task requires an on-demand instance"
     type: boolean
   disk_size:
     description: "Disk size"
     type: string
-    pattern: "^\\d*(.\\d+)?[kKmMgG]?$"
+    pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
   gpu:
     description: "Boolean indicating if task requires a GPU instance type"
     type: boolean
@@ -83,14 +83,14 @@ properties:
           - integer
   max_run_time:
     description: "Maximum time to run each instance"
-    pattern: "^\\d+h$"
+    pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
   metal:
     description: "Boolean indicating if task requires a bare metal instance type"
     type: boolean
   minimum_memory_per_core:
     description: "Minimum amount of memory per core"
     type: string
-    pattern: "^\\d*(.\\d+)?[kKmMgG]?$"
+    pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
   name:
     description: "Human description"
     type: string
@@ -111,7 +111,7 @@ properties:
   platform:
     description: "Platform type"
     type: string
-    pattern: "^([Ll]inux|[Ww]in(dows)?|[Mm]ac(os|osx)?|[Aa]ndroid)$"
+    pattern: "^(linux|windows|macos)$"
   preprocess:
     description: "A configuration item to run as part of the preprocess stage"
     type: string
@@ -134,4 +134,4 @@ properties:
   worker:
     description: "Taskcluster worker type"
     type: string
-    pattern: "^d2g|docker|generic$"
+    pattern: "^(d2g|docker|generic)$"
