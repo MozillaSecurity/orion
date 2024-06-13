@@ -29,9 +29,6 @@ get-tc-secret google-logging-creds /etc/google/auth/application_default_credenti
   }
   trap onexit EXIT
 
-  # set sysctls defined in setup.sh
-  sysctl --load /etc/sysctl.d/60-fuzzilli.conf
-
   su ubuntu -c "$0"
 else
   echo "Launching fuzzilli run."
