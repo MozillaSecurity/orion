@@ -552,6 +552,7 @@ class CISecretFile(CISecret):
         data = self.get_secret_data()
         if not isinstance(data, str):
             data = json_dumps(data)
+        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         Path(self.path).write_text(data)
 
 
