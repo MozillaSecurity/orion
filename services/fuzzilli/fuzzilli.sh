@@ -7,6 +7,8 @@ set -e
 set -x
 set -o pipefail
 
+# disable core dumps
+ulimit -c 0
 
 # shellcheck source=recipes/linux/common.sh
 source "$HOME/.local/bin/common.sh"
