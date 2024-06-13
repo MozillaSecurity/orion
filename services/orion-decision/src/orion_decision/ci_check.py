@@ -4,6 +4,7 @@
 """Checker for CI build matrix"""
 
 import argparse
+from itertools import chain
 from logging import getLogger
 from pathlib import Path
 
@@ -50,19 +51,46 @@ def check_matrix(args: argparse.Namespace) -> None:
             for task in rendered_taskcluster_yml.get("tasks", []):
                 # skip malformed tasks ...
                 # taskcluster_yml_validator will catch it
-                if (
-                    "payload" not in task
-                    or "image" not in task["payload"]
-                    or "command" not in task["payload"]
-                ):
+                if "payload" not in task:
+                    LOG.warning("no payload")
                     continue
 
-                # does it use orion-decision image and call ci-decision?
-                cmd = yaml_dump(task["payload"]["command"])
-                if (
-                    "orion-decision" not in yaml_dump(task["payload"]["image"])
-                    or "ci-decision" not in cmd
-                ):
+                if set(task["payload"]) >= {"command", "image"}:
+                    # docker-worker payload
+                    # does it use orion-decision image and call ci-decision?
+                    cmd = yaml_dump(task["payload"]["command"])
+                    if (
+                        "orion-decision" not in yaml_dump(task["payload"]["image"])
+                        or "ci-decision" not in cmd
+                    ):
+                        LOG.warning(
+                            "no orion-decision in payload image or "
+                            "ci-decision not in command"
+                        )
+                        continue
+
+                elif "command" in task["payload"]:
+                    cmd = yaml_dump(task["payload"]["command"])
+                    if not (
+                        any(
+                            "podman" in cmd
+                            for cmd in chain.from_iterable(task["payload"]["command"])
+                        )
+                        and any(
+                            "orion-decision" in cmd
+                            for cmd in chain.from_iterable(task["payload"]["command"])
+                        )
+                        and any(
+                            "ci-decision" in cmd
+                            for cmd in chain.from_iterable(task["payload"]["command"])
+                        )
+                    ):
+                        LOG.warning(
+                            "generic-worker payload not using podman & orion-decision?"
+                        )
+                        continue
+                else:
+                    LOG.warning("unrecognized worker payload")
                     continue
 
                 # does that job have a CI_MATRIX env var or pass --matrix? (fail if not)
