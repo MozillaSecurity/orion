@@ -345,7 +345,7 @@ def ci_launch() -> None:
             # skipping drive (parts[0]) and ignoring case
             # this only works on English machines ¯\_(ツ)_/¯
             and [pt.casefold() for pt in Path(p).resolve().parts[1:3]]
-            == ["users", "administrator"]
+            != ["users", "administrator"]
         )
     # fetch secrets
     LOG.info("Fetching %d secrets", len(args.job.secrets))
