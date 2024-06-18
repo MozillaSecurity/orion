@@ -38,6 +38,9 @@ chown user ld_preload_fuzz.so
 chown user fuzz.sh
 chown user stage2.sh
 
+echo "[!] disabling swap" | ./hcat
+swapoff -a
+
 echo "[!] switching user (root -> user)" | ./hcat
 su user -c "sh stage2.sh"
 
