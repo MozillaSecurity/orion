@@ -331,7 +331,22 @@ def ci_launch() -> None:
     """CI task entrypoint."""
     args = parse_ci_launch_args()
     configure_logging(level=args.log_level)
+    # copy environment and filter out `Administrator` paths
+    # which we shouldn't have access to
+    # this broke tox either in 4.15 or when some permission thing changed
+    # in the Windows AMI
     env = os_environ.copy()
+    if "PATH" in env:
+        env["PATH"] = ";".join(
+            p
+            for p in env["PATH"].split(";")
+            if p
+            # check if path starts with `\Users\Administrator\`
+            # skipping drive (parts[0]) and ignoring case
+            # this only works on English machines ¯\_(ツ)_/¯
+            and [pt.casefold() for pt in Path(p).resolve().parts[1:3]]
+            == ["users", "administrator"]
+        )
     # fetch secrets
     LOG.info("Fetching %d secrets", len(args.job.secrets))
     for secret in args.job.secrets:
