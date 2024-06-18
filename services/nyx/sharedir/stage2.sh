@@ -8,9 +8,6 @@ echo "[!] agent is running on the following OS:" | ./hcat
 lsb_release -a | ./hcat
 uname -a | ./hcat
 
-echo "[!] disabling swap" | ./hcat
-sudo swapoff -a
-
 echo "[!] requesting firefox from hypervisor" | ./hcat
 ./hget ff_files.sh ff_files.sh
 sh ff_files.sh
