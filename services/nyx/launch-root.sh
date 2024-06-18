@@ -82,5 +82,5 @@ trap onexit EXIT
 mkdir -p /covdata
 chown -R worker:worker /home/worker/sharedir
 chown root:worker /logs /covdata
-chmod 0775 /logs
+chmod 0775 /logs /covdata
 su worker -c "/home/worker/launch-worker.sh"
