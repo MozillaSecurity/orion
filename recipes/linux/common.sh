@@ -74,6 +74,11 @@ function apt-install-auto () {
   fi
 }
 
+# Follow redirects and resolve a url
+function resolve-url () {
+  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --head --write-out "%{url_effective}" "$@" -o /dev/null
+}
+
 # wrap curl with sane defaults
 function retry-curl () {
   curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
