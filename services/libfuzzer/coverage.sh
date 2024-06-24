@@ -19,6 +19,8 @@ source ~/.local/bin/common.sh
 export COVERAGE=1
 
 export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
+SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
+export SOURCE_URL
 
 if [[ -z "$REVISION" ]]; then
   REVISION="$(retry-curl --compressed "$ARTIFACT_ROOT/coverage-revision.txt")"
@@ -65,7 +67,7 @@ timeout --foreground -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh
 
 # %<---[Coverage]-------------------------------------------------------------
 
-retry-curl --compressed -O "$ARTIFACT_ROOT/source.zip"
+retry-curl --compressed -O "$SOURCE_URL"
 unzip source.zip
 
 # Collect coverage count data.
