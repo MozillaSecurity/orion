@@ -67,6 +67,8 @@ EOF
 
     mkdir -p /tests
 
+    # See https://github.com/koalaman/shellcheck/issues/2660
+    # shellcheck disable=SC2317
     function onexit () {
       echo "Waiting for logs to flush..." >&2
       sleep 15
@@ -95,6 +97,8 @@ else
 
     if [[ -z "$TASK_ID" ]]
     then
+      # See https://github.com/koalaman/shellcheck/issues/2660
+      # shellcheck disable=SC2317
       function onexit {
         disable-ec2-pool || true
       }
@@ -108,4 +112,13 @@ else
     echo "Launching LibFuzzer run."
     ./libfuzzer.sh
   fi
+fi
+
+exit_code=$?
+echo "returned $exit_code" >&2
+if [ "$exit_code" -eq 124 ]; then
+  # timeout coreutil exit code.
+  exit 0
+else
+  exit $exit_code
 fi
