@@ -75,6 +75,7 @@ case $build in
 esac
 
 # setup reporter
+echo "No report yet" > status.txt
 python3 -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
