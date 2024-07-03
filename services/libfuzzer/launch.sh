@@ -116,7 +116,7 @@ fi
 
 exit_code=$?
 echo "returned $exit_code" >&2
-if [ "$exit_code" -eq 124 ]; then
+if [[ "$exit_code" -eq 124 ]]; then
   # timeout coreutil exit code.
   exit 0
 else
