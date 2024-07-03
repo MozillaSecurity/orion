@@ -142,10 +142,6 @@ echo "returned $exit_code" >&2
 echo "sleeping so logs can flush" >&2
 sleep 15
 
-# Archive grizzly working directory
-# Excludes the target directory because on Windows it may contain open files
-7z a -tzip tmp_grizzly.zip AppData/Local/Temp/grizzly/* -x\!AppData/Local/Temp/grizzly/target/ || touch tmp_grizzly.zip
-
 case $exit_code in
   5)  # grizzly.common.utils.Exit
       # expected results not reproduced (opposite of SUCCESS)

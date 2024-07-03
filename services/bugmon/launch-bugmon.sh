@@ -77,8 +77,3 @@ case "$BUG_ACTION" in
     exit 1
     ;;
 esac >"$ARTIFACT_DEST/live.log" 2>&1
-
-# Record grizzly logs as an artifact
-if [[ -d /tmp/grizzly ]]; then
-  cp -r /tmp/grizzly "$ARTIFACT_DEST/tmp-grizzly"
-fi
