@@ -67,11 +67,6 @@ function onexit () {
   sleep 15
   killall -INT td-agent-bit || true
   sleep 15
-  if [[ -d /tmp/grizzly ]]
-  then
-    echo "Saving grizzly logs..." >&2
-    cp -r /tmp/grizzly /logs/tmp-grizzly
-  fi
 }
 trap onexit EXIT
 
