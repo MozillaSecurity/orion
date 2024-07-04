@@ -56,23 +56,40 @@ fi
 update-ec2-status "Setup: fetching build"
 
 # select build
-echo "Build types: ${BUILD_TYPES}"
-BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
-build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
-# download build
-case $build in
-  asan32)
-    # TEMPORARY workaround for frequent OOMs
-    export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
-    python3 -m fuzzfetch -n build --fuzzing --asan --cpu x86
-    ;;
-  debug32)
-    python3 -m fuzzfetch -n build --fuzzing --debug --cpu x86
-    ;;
-  *)
-    python3 -m fuzzfetch -n build --fuzzing "--$build"
-    ;;
-esac
+TARGET_BIN="./build/firefox"
+if [[ -n "$COVERAGE" ]]; then
+  export COVERAGE_FLAG="--coverage"
+  python3 -m fuzzfetch -n build --fuzzing --coverage
+  export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
+  SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
+  export SOURCE_URL
+
+  REVISION="$(retry-curl --compressed "$ARTIFACT_ROOT/coverage-revision.txt")"
+  export REVISION
+
+  export GCOV_PREFIX="$HOME/build"
+  GCOV_PREFIX_STRIP="$(grep pathprefix "${TARGET_BIN}.fuzzmanagerconf" | grep -E -o "/.+$" | tr -cd '/' | wc -c)"
+  export GCOV_PREFIX_STRIP
+else
+  export COVERAGE_FLAG=""
+  echo "Build types: ${BUILD_TYPES}"
+  BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
+  build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
+  # download build
+  case $build in
+    asan32)
+      # TEMPORARY workaround for frequent OOMs
+      export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
+      python3 -m fuzzfetch -n build --fuzzing --asan --cpu x86
+      ;;
+    debug32)
+      python3 -m fuzzfetch -n build --fuzzing --debug --cpu x86
+      ;;
+    *)
+      python3 -m fuzzfetch -n build --fuzzing "--$build"
+      ;;
+  esac
+fi
 
 # setup reporter
 echo "No report yet" > status.txt
@@ -91,4 +108,27 @@ done
 mkdir -p /tmp/site-scout/local-results
 
 update-ec2-status "Setup: launching site-scout"
-python3 -m site_scout ./build/firefox -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager -o /tmp/site-scout/local-results
+python3 -m site_scout "$TARGET_BIN" -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager -o /tmp/site-scout/local-results $COVERAGE_FLAG
+
+if [[ -n "$COVERAGE" ]]; then
+  retry-curl --compressed -O "$SOURCE_URL"
+  unzip source.zip
+
+  # Collect coverage count data.
+  RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
+      -t coveralls+ \
+      --commit-sha "$REVISION" \
+      --token NONE \
+      --guess-directory-when-missing \
+      --ignore-not-existing \
+      -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
+      -s "./mozilla-central-${REVISION}" \
+      > "./coverage.json"
+
+  # Submit coverage data.
+  python3 -m CovReporter \
+      --repository "mozilla-central" \
+      --description "site-scout (10k subset)" \
+      --tool "site-scout" \
+      --submit "./coverage.json"
+fi

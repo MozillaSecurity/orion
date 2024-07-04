@@ -7,6 +7,9 @@ set -e
 set -x
 set -o pipefail
 
+#### Install recipes
+/src/recipes/grcov.sh
+
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
 
