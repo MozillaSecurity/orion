@@ -343,7 +343,9 @@ class ReductionMonitor(ReductionWorkflow):
         """
         if self.dry_run:
             return None
-        dest_queue = TC_QUEUES[f"{os_name}-gpu" if crash.has_gpu else os_name]
+        dest_queue = TC_QUEUES.get(
+            f"{os_name}-gpu" if crash.has_gpu else os_name, os_name
+        )
         my_task_id = os.environ.get("TASK_ID")
         task_id = slugId()
         now = datetime.now(timezone.utc)
