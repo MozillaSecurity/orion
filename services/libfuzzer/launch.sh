@@ -83,14 +83,17 @@ EOF
   cd /src/guided-fuzzing-daemon
   retry git fetch origin main
   git reset --hard origin/main
-  python3 setup.py install
+  pip3 install .
   cd -
 
   su worker -s "$0"
 else
-  # get gcp fuzzdata credentials
-  mkdir -p ~/.config/gcloud
-  get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
+  if [[ -z "$NO_SECRETS" ]]
+  then
+    # get gcp fuzzdata credentials
+    mkdir -p ~/.config/gcloud
+    get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
+  fi
 
   if [[ $COVERAGE ]]
   then

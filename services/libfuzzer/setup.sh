@@ -45,6 +45,7 @@ packages=(
   nano
   openssh-client
   psmisc
+  python3-pip
   ripgrep
   screen
   software-properties-common
