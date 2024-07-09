@@ -332,6 +332,9 @@ if [[ $COVERAGE -eq 1 ]]
 then
   # Process coverage data
   prefix="$(grep pathprefix sharedir/firefox/firefox.fuzzmanagerconf | cut -d\  -f3-)"
+  if [[ -e ./corpus.out/0/covmap.dump ]]; then
+    cp ./corpus.out/0/covmap.dump ./corpus.out/workdir/dump
+  fi
   cp ./corpus.out/workdir/dump/pcmap.dump /covdata/ || true
   cp ./corpus.out/workdir/dump/covmap.dump /covdata/ || true
   cp ./corpus.out/workdir/dump/modinfo.txt /covdata/ || true
