@@ -149,7 +149,7 @@ def _get_expected_role(
         "roleId": f"hook-id:project-fuzzing/{platform}-test",
         "scopes": [
             "queue:cancel-task:-/*",
-            "queue:create-task:highest:proj-fuzzing/ci",
+            "queue:create-task:highest:proj-fuzzing/decision",
             f"queue:create-task:highest:proj-fuzzing/{platform}-test",
             "queue:scheduler-id:-",
             "secrets:get:project/fuzzing/decision",
