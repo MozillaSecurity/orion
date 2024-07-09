@@ -49,13 +49,8 @@ pkgs=(
   netcat-openbsd
   openssh-client
   psmisc
-  python3
   python3-dev
-  python3-distutils
-  python3-pip
-  python3-setuptools
-  python3-venv
-  python3-wheel
+  python3-minimal
   xvfb
   zstd
 )
@@ -63,6 +58,7 @@ pkgs=(
 sys-update
 apt-install-auto libblocksruntime-dev make
 sys-embed "${pkgs[@]}"
+retry-curl https://bootstrap.pypa.io/get-pip.py | python3 -
 
 mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
@@ -94,12 +90,14 @@ function git-clone-rev () {
 # build AFL++ w/ Nyx
 apt-install-auto libgtk-3-dev pax-utils python3-msgpack python3-jinja2 cpio bzip2
 pushd /srv/repos >/dev/null
-git-clone-rev https://github.com/AFLplusplus/AFLplusplus 0d164e4c1811c4d05f940f78e90fc56b661fb3b4
+git-clone-rev https://github.com/AFLplusplus/AFLplusplus 36db3428ab16156dd72196213d2a02a5eadaed11
 pushd AFLplusplus >/dev/null
 # WIP 2-byte chunked variant of honggfuzz custom mutator
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2eb9330772d30723ba122c.diff | git apply
-# Add optional handling of Nyx InvalidWriteToPayload event
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/52e19d35fac636f9ea4679d402b5eaabaa74aa0a.diff | git apply
+# llvm 19 fixes
+retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/a6e42d98d9d3e936dc74729f17ab1208d477c944.diff | git apply
+# Collect persistent coverage data and dump it at the end of the run
+retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/8fcca6fb410a6ece1a4cd2eb8a2cdeed4d4d9865.diff | git apply
 git apply << "EOF"
 diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
 index 5c2fcddb..2dde8ba1 100644
@@ -132,7 +130,7 @@ index 8585041e..6e526717 100644
  /* Do not change this unless you really know what you are doing. */
 
 EOF
-make afl-fuzz afl-showmap
+make -f GNUmakefile afl-fuzz afl-showmap CODE_COVERAGE=1
 pushd custom_mutators/honggfuzz >/dev/null
 make
 popd >/dev/null
@@ -166,6 +164,7 @@ retry git submodule update --depth 1 --single-branch capstone_v4
 retry git submodule update --depth 1 --single-branch libxdc
 export CAPSTONE_ROOT="$PWD/capstone_v4"
 export LIBXDC_ROOT="$PWD/libxdc"
+sed -i '/^LDFLAGS =$/d' libxdc/Makefile
 git apply << "EOF"
 diff --git a/nyx/hypercall/hypercall.c b/nyx/hypercall/hypercall.c
 index fa06af3201..47053472ed 100644
@@ -211,7 +210,7 @@ index fa06af3201..47053472ed 100644
      char *pattern = strstr(base_name, "XXXXXX");
 EOF
 popd >/dev/null
-./build_nyx_support.sh
+NO_CHECKOUT=1 ./build_nyx_support.sh
 popd >/dev/null
 find . -name .git -type d -exec rm -rf '{}' +
 find . -name \*.o -delete
