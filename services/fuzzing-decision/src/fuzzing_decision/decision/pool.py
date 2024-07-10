@@ -193,9 +193,7 @@ def cancel_tasks(worker_type: str) -> None:
     queue = taskcluster.get_service("queue")
 
     # cycle only hook fires after this limit
-    cycle_limit = datetime.utcnow().replace(tzinfo=timezone.utc) - timedelta(
-        days=CANCEL_TASK_DAYS
-    )
+    cycle_limit = datetime.now(timezone.utc) - timedelta(days=CANCEL_TASK_DAYS)
 
     # Get tasks by hook
     def iter_tasks_by_hook(hook_id: str):
@@ -421,7 +419,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         self, parent_task_id: str, env: Optional[Dict[str, str]] = None
     ) -> Generator[Tuple[str, Dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         preprocess_task_id = None
 
         preprocess = cast(PoolConfiguration, self.create_preprocess())
@@ -599,7 +597,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         self, parent_task_id: str, env: Optional[Dict[str, str]] = None
     ) -> Generator[Tuple[str, Dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         for pool in self.iterpools():
             assert pool.max_run_time is not None
