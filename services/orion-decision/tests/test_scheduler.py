@@ -3,11 +3,12 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion scheduler"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 
 import pytest
+from freezegun import freeze_time
 from pytest_mock import MockerFixture
 from taskcluster.utils import stringDate
 from yaml import safe_load as yaml_load
@@ -61,7 +62,7 @@ def test_mark_rebuild_01(mocker: MockerFixture) -> None:
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
     evt.commit_message = "/force-rebuild"
-    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     for svc in sched.services.values():
         assert svc.dirty
@@ -78,7 +79,7 @@ def test_mark_rebuild_02(mocker: MockerFixture) -> None:
     )
     evt.commit_message = ""
     evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
-    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     assert evt.list_changed_paths.call_count == 1
     assert sched.services["test1"].dirty
@@ -100,7 +101,7 @@ def test_mark_rebuild_03(mocker: MockerFixture) -> None:
     )
     evt.commit_message = "/force-rebuild=test3,test6"
     evt.list_changed_paths.return_value = [root / "recipes" / "linux" / "install.sh"]
-    sched = Scheduler(evt, None, "group", "scheduler", "secret", "branch")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "branch")
     sched.mark_services_for_rebuild()
     assert evt.list_changed_paths.call_count == 1
     assert sched.services["test1"].dirty
@@ -116,23 +117,23 @@ def test_create_01(mocker: MockerFixture) -> None:
     """test no task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
     evt.repo.git = mocker.Mock(
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
 
+@freeze_time()
 def test_create_02(mocker: MockerFixture) -> None:
     """test non-push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -143,7 +144,7 @@ def test_create_02(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -169,11 +170,12 @@ def test_create_02(mocker: MockerFixture) -> None:
     )
 
 
+@freeze_time()
 def test_create_03(mocker: MockerFixture) -> None:
     """test push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -186,7 +188,7 @@ def test_create_03(mocker: MockerFixture) -> None:
     evt.event_type = "push"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 2
@@ -234,11 +236,12 @@ def test_create_03(mocker: MockerFixture) -> None:
     assert push_task == push_expected
 
 
+@freeze_time()
 def test_create_04(mocker: MockerFixture) -> None:
     """test dependent tasks creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -249,7 +252,7 @@ def test_create_04(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.services["test2"].dirty = True
     sched.create_tasks()
@@ -302,7 +305,6 @@ def test_create_05(mocker: MockerFixture) -> None:
     """test no tasks are created for release event"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -310,7 +312,7 @@ def test_create_05(mocker: MockerFixture) -> None:
         return_value="\n".join(str(p) for p in root.glob("**/*"))
     )
     evt.event_type = "release"
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 0
@@ -320,7 +322,6 @@ def test_create_06(mocker: MockerFixture) -> None:
     """test no tasks are created for --dry-run"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -333,17 +334,18 @@ def test_create_06(mocker: MockerFixture) -> None:
     evt.branch = "push"
     evt.pull_request = None
     evt.http_url = "https://example.com"
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push", dry_run=True)
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push", dry_run=True)
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
 
+@freeze_time()
 def test_create_07(mocker: MockerFixture) -> None:
     """test PR doesn't create push task"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -354,7 +356,7 @@ def test_create_07(mocker: MockerFixture) -> None:
     evt.branch = "push"
     evt.http_url = "https://example.com"
     evt.pull_request = 1
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -380,6 +382,7 @@ def test_create_07(mocker: MockerFixture) -> None:
     )
 
 
+@freeze_time()
 @pytest.mark.parametrize(
     "ci1_dirty,svc1_dirty,svc2_dirty,expected_image",
     [
@@ -407,7 +410,7 @@ def test_create_08(
     """test "test" tasks creation with dirty ci image"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services06"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -419,7 +422,7 @@ def test_create_08(
     evt.fetch_ref = "fetch"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["testci1"].dirty = ci1_dirty
     sched.services["svc1"].dirty = svc1_dirty
     sched.services["svc2"].dirty = svc2_dirty
@@ -503,11 +506,12 @@ def test_create_08(
     assert task3 == expected3
 
 
+@freeze_time()
 def test_create_09(mocker: MockerFixture) -> None:
     """test recipe test task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -518,7 +522,7 @@ def test_create_09(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test5"].dirty = True
     sched.services["test6"].dirty = True
     sched.services.recipes["withdep.sh"].dirty = True
@@ -588,11 +592,12 @@ def test_create_09(mocker: MockerFixture) -> None:
     assert task3 == expected3
 
 
+@freeze_time()
 def test_create_10(mocker: MockerFixture) -> None:
     """test msys task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services11"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -603,7 +608,7 @@ def test_create_10(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["msys-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -629,11 +634,12 @@ def test_create_10(mocker: MockerFixture) -> None:
     )
 
 
+@freeze_time()
 def test_create_11(mocker: MockerFixture) -> None:
     """test homebrew task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services11"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -644,7 +650,7 @@ def test_create_11(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["brew-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -670,11 +676,12 @@ def test_create_11(mocker: MockerFixture) -> None:
     )
 
 
+@freeze_time()
 def test_create_12(mocker: MockerFixture) -> None:
     """test test task non-creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services11"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -686,7 +693,7 @@ def test_create_12(mocker: MockerFixture) -> None:
     evt.fetch_ref = "fetch"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test-svc"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 1
@@ -722,7 +729,6 @@ def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
     """test push in PR task creation skipped"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
@@ -735,7 +741,7 @@ def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
     evt.branch = branch
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, now, "group", "scheduler", "secret", "push")
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == tasks

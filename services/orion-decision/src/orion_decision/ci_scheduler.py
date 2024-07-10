@@ -4,7 +4,7 @@
 """Scheduler for CI tasks"""
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 from itertools import chain
 from json import dumps as json_dump
 from logging import getLogger
@@ -60,7 +60,6 @@ class CIScheduler:
         self,
         project_name: str,
         github_event: GithubEvent,
-        now: datetime,
         task_group: str,
         scheduler_id: str,
         matrix: Dict[str, Any],
@@ -71,7 +70,6 @@ class CIScheduler:
         Arguments:
             project_name: Project name to be used in task metadata.
             github_event: Github event that triggered this run.
-            now: Taskcluster time when decision was triggered.
             task_group: Task group to create tasks in.
             scheduler_id: TC scheduler ID to create tasks in.
             matrix: CI job matrix
@@ -80,7 +78,7 @@ class CIScheduler:
         """
         self.project_name = project_name
         self.github_event = github_event
-        self.now = now
+        self.now = datetime.now(timezone.utc)
         self.task_group = task_group
         self.scheduler_id = scheduler_id
         self.dry_run = dry_run
@@ -262,7 +260,6 @@ class CIScheduler:
             sched = cls(
                 args.project_name,
                 evt,
-                args.now,
                 args.task_group,
                 scheduler_id,
                 args.matrix,

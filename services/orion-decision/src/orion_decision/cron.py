@@ -4,10 +4,9 @@
 """Scheduler for periodic rebuild of Orion tasks"""
 
 from argparse import Namespace
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 from os import getenv
-from typing import Optional
 
 from dateutil.parser import isoparse
 from taskcluster.exceptions import TaskclusterRestFailure
@@ -38,7 +37,6 @@ class CronScheduler(Scheduler):
     def __init__(
         self,
         repo: GitRepo,
-        now: Optional[datetime],
         task_group: str,
         scheduler_id: str,
         docker_secret: str,
@@ -50,7 +48,6 @@ class CronScheduler(Scheduler):
 
         Arguments:
             repo: The Orion repo containing services.
-            now: The time to calculate task times from.
             task_group: The taskGroupID to add created tasks to.
             scheduler_id: TC scheduler ID to create tasks in.
             docker_secret: The Taskcluster secret name holding Docker Hub creds.
@@ -58,7 +55,7 @@ class CronScheduler(Scheduler):
             dry_run: Don't actually queue tasks in Taskcluster.
         """
         self.repo = repo
-        self.now = now
+        self.now = datetime.now(timezone.utc)
         self.task_group = task_group
         self.scheduler_id = scheduler_id
         self.docker_secret = docker_secret
@@ -96,7 +93,6 @@ class CronScheduler(Scheduler):
         queue = Taskcluster.get_service("queue")
         # for each service, check taskcluster index
         #   any service that would expire before next run, should be rebuilt
-        assert self.now is not None
         next_run = self.now + CRON_PERIOD
         for svc in self.services.values():
             if svc.dirty:
@@ -158,7 +154,6 @@ class CronScheduler(Scheduler):
             # create the scheduler
             sched = cls(
                 repo,
-                args.now,
                 args.task_group,
                 scheduler_id,
                 args.docker_hub_secret,

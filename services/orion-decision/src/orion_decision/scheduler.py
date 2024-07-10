@@ -5,12 +5,12 @@
 
 import argparse
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import getLogger
 from os import getenv
 from pathlib import Path
 from string import Template
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Set, Union
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -66,7 +66,6 @@ class Scheduler:
     def __init__(
         self,
         github_event: GithubEvent,
-        now: Optional[datetime],
         task_group: str,
         scheduler_id: str,
         docker_secret: str,
@@ -77,7 +76,6 @@ class Scheduler:
 
         Arguments:
             github_event: The event that triggered this decision.
-            now: The time to calculate task times from.
             task_group: The taskGroupID to add created tasks to.
             scheduler_id: TC scheduler ID to create tasks in.
             docker_secret: The Taskcluster secret name holding Docker Hub creds.
@@ -85,7 +83,7 @@ class Scheduler:
             dry_run: Don't actually queue tasks in Taskcluster.
         """
         self.github_event = github_event
-        self.now = now
+        self.now = datetime.now(timezone.utc)
         self.task_group = task_group
         self.scheduler_id = scheduler_id
         self.docker_secret = docker_secret
@@ -178,7 +176,6 @@ class Scheduler:
     def _create_build_task(
         self, service, dirty_dep_tasks, test_tasks, service_build_tasks
     ):
-        assert self.now is not None
         if isinstance(service, ServiceMsys):
             task_template = MSYS_TASK
             build_task = yaml_load(
@@ -258,7 +255,6 @@ class Scheduler:
         return task_id
 
     def _create_push_task(self, service, service_build_tasks):
-        assert self.now is not None
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -313,7 +309,6 @@ class Scheduler:
                     "namespace": f"project.fuzzing.orion.{image}.{self._push_branch()}",
                 }
             image["path"] = f"public/{test.image}.tar.zst"
-        assert self.now is not None
         test_task = yaml_load(
             TEST_TASK.substitute(
                 deadline=stringDate(self.now + DEADLINE),
@@ -360,7 +355,6 @@ class Scheduler:
         dockerfile = service_path / f"Dockerfile-{recipe.file.stem}"
         if not dockerfile.is_file():
             dockerfile = service_path / "Dockerfile"
-        assert self.now is not None
         test_task = yaml_load(
             RECIPE_TEST_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -529,7 +523,6 @@ class Scheduler:
             # create the scheduler
             sched = cls(
                 evt,
-                args.now,
                 args.task_group,
                 scheduler_id,
                 args.docker_hub_secret,
