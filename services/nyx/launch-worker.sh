@@ -140,6 +140,7 @@ fi
 # setup sharedir
 
 export AFL_NYX_HANDLE_INVALID_WRITE=1
+export AFL_SKIP_BIN_CHECK=1
 
 ASAN_OPTIONS=\
 abort_on_error=true:\
