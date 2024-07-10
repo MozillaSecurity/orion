@@ -5,7 +5,6 @@
 
 import argparse
 import sys
-from datetime import datetime
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import chdir, getenv
@@ -15,7 +14,6 @@ from shutil import which
 from subprocess import run
 from typing import List, Optional
 
-from dateutil.parser import isoparse
 from yaml import safe_load as yaml_load
 
 from .ci_check import check_matrix
@@ -103,13 +101,6 @@ def _define_decision_args(parser: argparse.ArgumentParser) -> None:
         "--scheduler",
         default=None,
         help="Create tasks with this scheduler ID (default: fetch from TaskCluster).",
-    )
-    parser.add_argument(
-        "--now",
-        default=getenv("TASKCLUSTER_NOW", datetime.utcnow().isoformat()),
-        type=isoparse,
-        help="Time reference to calculate task timestamps from ('now' according "
-        "to Taskcluster).",
     )
     parser.add_argument(
         "--dry-run",

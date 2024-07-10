@@ -3,12 +3,13 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion CI scheduler"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from json import dumps as json_dump
 from pathlib import Path
 from typing import Optional
 
 import pytest
+from freezegun import freeze_time
 from pytest_mock import MockerFixture
 from taskcluster.utils import stringDate
 from yaml import safe_load as yaml_load
@@ -53,7 +54,6 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
     """test no CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     evt = mocker.Mock(
         branch="dev",
         event_type="push",
@@ -61,11 +61,12 @@ def test_ci_create_01(mocker: MockerFixture) -> None:
     )
     evt.repo.refs.return_value = {}
     mocker.patch("orion_decision.ci_scheduler.CIMatrix", autospec=True)
-    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
+    sched = CIScheduler("test", evt, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 0
 
 
+@freeze_time()
 @pytest.mark.parametrize("matrix_artifact", (None, "file", "dir"))
 @pytest.mark.parametrize("job_artifact", (None, "file", "dir"))
 @pytest.mark.parametrize("matrix_secret", (None, "env", "key", "deploy", "file"))
@@ -85,7 +86,8 @@ def test_ci_create_02(
     index = mocker.Mock()
     index.findTask.return_value = {"taskId": "gw-task"}
     taskcluster.get_service.side_effect = lambda x: {"index": index, "queue": queue}[x]
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
+    mocker.patch("orion_decision.ci_scheduler.datetime.now", return_value=now)
     evt = mocker.Mock(
         branch="dev",
         event_type="push",
@@ -148,7 +150,7 @@ def test_ci_create_02(
         artifacts.append(art)
     mtx.return_value.secrets = secrets
     mtx.return_value.artifacts = artifacts
-    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
+    sched = CIScheduler("test", evt, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 1
     _, task = queue.createTask.call_args[0]
@@ -222,12 +224,13 @@ def test_ci_create_02(
     assert all(art.url in task["payload"]["env"]["CI_JOB"] for art in job.artifacts)
 
 
+@freeze_time()
 @pytest.mark.parametrize("previous_pass", [True, False])
 def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
     """test two stage CI task creation"""
     taskcluster = mocker.patch("orion_decision.ci_scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     evt = mocker.Mock(
         branch="dev",
         event_type="push",
@@ -261,7 +264,7 @@ def test_ci_create_03(mocker: MockerFixture, previous_pass: bool) -> None:
     )
     mtx.return_value.jobs = [job1, job2]
     mtx.return_value.secrets = []
-    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
+    sched = CIScheduler("test", evt, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     task1_id, task1 = queue.createTask.call_args_list[0][0]
@@ -307,7 +310,6 @@ def test_ci_create_04(mocker: MockerFixture, branch: str, tasks: int) -> None:
     index = mocker.Mock()
     index.findTask.return_value = {"taskId": "msys-task"}
     taskcluster.get_service.side_effect = lambda x: {"index": index, "queue": queue}[x]
-    now = datetime.utcnow()
     evt = mocker.Mock(
         branch=branch,
         event_type="push",
@@ -332,6 +334,6 @@ def test_ci_create_04(mocker: MockerFixture, branch: str, tasks: int) -> None:
     )
     mtx.return_value.jobs = [job]
     mtx.return_value.secrets = []
-    sched = CIScheduler("test", evt, now, "group", "scheduler", {})
+    sched = CIScheduler("test", evt, "group", "scheduler", {})
     sched.create_tasks()
     assert queue.createTask.call_count == tasks

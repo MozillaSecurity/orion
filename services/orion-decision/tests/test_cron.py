@@ -3,12 +3,13 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for Orion cron scheduler"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from pathlib import Path
 from typing import Set
 
 import pytest
+from freezegun import freeze_time
 from pytest_mock import MockerFixture
 from taskcluster.exceptions import TaskclusterRestFailure
 from taskcluster.utils import stringDate
@@ -49,6 +50,7 @@ def test_cron_main(mocker: MockerFixture) -> None:
     assert create.call_count == 1
 
 
+@freeze_time()
 @pytest.mark.parametrize(
     "expired_svcs,missing_svcs,dirty_svcs",
     [
@@ -65,7 +67,7 @@ def test_cron_mark_rebuild(
     dirty_svcs: Set[str],
 ) -> None:
     """test mark_services_for_rebuild"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     taskcluster = mocker.patch("orion_decision.cron.Taskcluster", autospec=True)
     index = mocker.Mock()
     queue = mocker.Mock()
@@ -111,7 +113,6 @@ def test_cron_mark_rebuild(
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     sched = CronScheduler(
         repo,
-        now,
         "group",
         "scheduler",
         "secret",
@@ -127,14 +128,12 @@ def test_cron_create_01(mocker: MockerFixture) -> None:
     """test no task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
     repo.git = mocker.Mock(return_value="\n".join(str(p) for p in root.glob("**/*")))
     sched = CronScheduler(
         repo,
-        now,
         "group",
         "scheduler",
         "secret",
@@ -145,11 +144,12 @@ def test_cron_create_01(mocker: MockerFixture) -> None:
     assert queue.createTask.call_count == 0
 
 
+@freeze_time()
 def test_cron_create_02(mocker: MockerFixture) -> None:
     """test push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
@@ -157,7 +157,6 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
     repo.head.return_value = "commit"
     sched = CronScheduler(
         repo,
-        now,
         "group",
         "scheduler",
         "secret",
@@ -211,11 +210,12 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
     assert push_task == push_expected
 
 
+@freeze_time()
 def test_cron_create_03(mocker: MockerFixture) -> None:
     """test dependent tasks creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
@@ -223,7 +223,6 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
     repo.head.return_value = "commit"
     sched = CronScheduler(
         repo,
-        now,
         "group",
         "scheduler",
         "secret",
@@ -304,7 +303,6 @@ def test_cron_create_04(mocker: MockerFixture) -> None:
     """test no tasks are created for --dry-run"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
-    now = datetime.utcnow()
     root = FIXTURES / "services03"
     repo = mocker.Mock(spec=GitRepo.from_existing(root))
     repo.path = root
@@ -312,7 +310,6 @@ def test_cron_create_04(mocker: MockerFixture) -> None:
     repo.head.return_value = "commit"
     sched = CronScheduler(
         repo,
-        now,
         "group",
         "scheduler",
         "secret",
