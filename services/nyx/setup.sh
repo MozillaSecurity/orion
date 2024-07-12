@@ -98,6 +98,8 @@ retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/a6e42d98d9d3e936dc74729f17ab1208d477c944.diff | git apply
 # Collect persistent coverage data and dump it at the end of the run
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/8fcca6fb410a6ece1a4cd2eb8a2cdeed4d4d9865.diff | git apply
+# Fix for afl-showmap/cmin
+retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/c5acf3f137733b341b7337d7da47a5545943b457.diff | git apply
 git apply << "EOF"
 diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
 index 5c2fcddb..2dde8ba1 100644
