@@ -118,10 +118,10 @@ build="$(python -c "$BUILD_SELECT_SCRIPT")"
 # download build
 case $build in
   debug32)
-    fuzzfetch -n build --fuzzing --debug --cpu x86
+    retry fuzzfetch -n build --fuzzing --debug --cpu x86
     ;;
   *)
-    fuzzfetch -n build --fuzzing "--$build"
+    retry fuzzfetch -n build --fuzzing "--$build"
     ;;
 esac
 

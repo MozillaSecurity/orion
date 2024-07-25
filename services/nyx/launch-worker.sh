@@ -185,7 +185,7 @@ then
   fi
 
   # shellcheck disable=SC2086
-  fuzzfetch -n firefox ${FUZZFETCH_FLAGS-${default_args[@]}}
+  retry fuzzfetch -n firefox ${FUZZFETCH_FLAGS-${default_args[@]}}
 fi
 {
   find firefox/ -type d | sed 's/^/mkdir -p /'
@@ -210,7 +210,7 @@ if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]
 then
   mkdir -p corpus.out/workdir/dump
   rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
-  fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
+  retry fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
   prefix="$(grep pathprefix cov-opt/firefox.fuzzmanagerconf | cut -d\  -f3-)"
   python3 /srv/repos/ipc-research/ipc-fuzzing/code-coverage/postprocess-gcno.py lineclusters.json cov-opt "$prefix"
   rm -rf cov-opt
