@@ -3,7 +3,7 @@ set -e -x -o pipefail
 
 DST="${DST-/coverage-revision.txt}"
 
-fuzzfetch --coverage --fuzzing -a --dry-run 2>&1 | tee /dev/stderr | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
+retry fuzzfetch --coverage --fuzzing -a --dry-run 2>&1 | tee /dev/stderr | sed -n 's/.*> Changeset: \(.*\)/\1/p' > "$DST"
 
 # Validate that we got a proper revision
 

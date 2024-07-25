@@ -26,7 +26,7 @@ retry python3 -m pip install git+https://github.com/MozillaSecurity/prefpicker.g
 # Install fuzzfetch
 retry python3 -m pip install git+https://github.com/MozillaSecurity/fuzzfetch.git
 # Fetch build
-python3 -m fuzzfetch -a --fuzzing -n nightly
+retry python3 -m fuzzfetch -a --fuzzing -n nightly
 
 git init gr.css.reports
 (
