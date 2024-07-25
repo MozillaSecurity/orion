@@ -14,6 +14,5 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
     && retry apk add --no-cache bash curl \
     && retry pip install --disable-pip-version-check --no-cache-dir --progress-bar off fuzzfetch
 
-COPY recipes/linux/common.sh /root/common.sh
-COPY services/coverage-revision/launch.sh /root/launch.sh
+COPY recipes/linux/common.sh services/coverage-revision/launch.sh /root/
 CMD ["/root/launch.sh"]
