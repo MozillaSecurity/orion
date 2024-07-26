@@ -445,7 +445,7 @@ class CISecret(ABC):
         return json_dumps(self.serialize())
 
     @abstractmethod
-    def serialize(self) -> Dict[str, Optional[str]]:
+    def serialize(self) -> Dict[str, Optional[Union[bool, str]]]:
         """Return a JSON serializable copy of self."""
 
     @staticmethod
@@ -467,7 +467,13 @@ class CISecret(ABC):
         if obj["type"] == "env":
             return CISecretEnv(obj["secret"], obj["name"], key=obj.get("key"))
         if obj["type"] == "file":
-            return CISecretFile(obj["secret"], obj["path"], key=obj.get("key"))
+            return CISecretFile(
+                obj["secret"],
+                obj["path"],
+                key=obj.get("key"),
+                append=obj.get("append", False),
+                mask=obj.get("mask"),
+            )
         return CISecretKey(
             obj["secret"], hostname=obj.get("hostname"), key=obj.get("key")
         )
@@ -495,7 +501,7 @@ class CISecretEnv(CISecret):
         super().__init__(secret, key)
         self.name = name
 
-    def serialize(self) -> Dict[str, Optional[str]]:
+    def serialize(self) -> Dict[str, Optional[Union[bool, str]]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -518,20 +524,31 @@ class CISecretFile(CISecret):
         (see CISecret for attributes defined there)
     """
 
-    __slots__ = ("path",)
+    __slots__ = ("path", "append", "mask")
 
-    def __init__(self, secret: str, path: str, key: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        secret: str,
+        path: str,
+        key: Optional[str] = None,
+        append: bool = False,
+        mask: Optional[str] = None,
+    ) -> None:
         """Initialize CISecretFile object.
 
         Arguments:
             secret: Taskcluster namespace where the secret is held.
             path: Path where secret should be written to.
             key: Sub-key in the Taskcluster secret that contains the value.
+            append: Whether the file should be appended to, if it already exists.
+            mask: Permission mask to apply after writing file.
         """
         super().__init__(secret, key)
         self.path = path
+        self.append = append or False
+        self.mask = int(mask, 8) if mask is not None else None
 
-    def serialize(self) -> Dict[str, Optional[str]]:
+    def serialize(self) -> Dict[str, Optional[Union[bool, str]]]:
         """Return a JSON serializable copy of self.
 
         Returns:
@@ -542,6 +559,9 @@ class CISecretFile(CISecret):
             "key": self.key,
             "secret": self.secret,
             "path": self.path,
+            "append": self.append,
+            # serialize back to octal string as expected by schema
+            "mask": f"{self.mask:o}" if self.mask is not None else None,
         }
 
     def write(self) -> None:
@@ -552,8 +572,12 @@ class CISecretFile(CISecret):
         data = self.get_secret_data()
         if not isinstance(data, str):
             data = json_dumps(data)
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        Path(self.path).write_text(data)
+        dest = Path(self.path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with dest.open("a" if self.append else "w") as secret_fp:
+            secret_fp.write(data)
+        if self.mask is not None:
+            dest.chmod(self.mask)
 
 
 class CISecretKey(CISecret):
@@ -580,7 +604,7 @@ class CISecretKey(CISecret):
         super().__init__(secret, key)
         self.hostname = hostname
 
-    def serialize(self) -> Dict[str, Optional[str]]:
+    def serialize(self) -> Dict[str, Optional[Union[bool, str]]]:
         """Return a JSON serializable copy of self.
 
         Returns:
