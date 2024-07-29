@@ -13,7 +13,7 @@ source "${0%/*}/common.sh"
 
 #### Install rr
 
-REVISION=3bd9a30c65ed7d30b8fc9b1f04ad9c7b68449cff
+REVISION=0f13ad5a7c307c7d685c0b2e6c1abf378d64f832
 
 if is-arm64; then
   echo "[INFO] rr is currently not supported on any ARM architecture."
@@ -32,6 +32,7 @@ case "${1-install}" in
       gdb \
       git \
       libcapnp-dev \
+      libzstd-dev \
       ninja-build \
       pkg-config \
       python3-pexpect \
