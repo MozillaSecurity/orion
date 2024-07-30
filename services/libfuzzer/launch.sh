@@ -2,8 +2,6 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
-set -e
 set -x
 set -o pipefail
 
@@ -80,11 +78,16 @@ EOF
     trap onexit EXIT
   fi
 
-  cd /src/guided-fuzzing-daemon
-  retry git fetch origin main
-  git reset --hard origin/main
-  pip3 install .
-  cd -
+  if ! (
+    cd /src/guided-fuzzing-daemon &&
+    retry git fetch origin main &&
+    git reset --hard origin/main &&
+    pip3 install .
+  )
+    then
+    echo "Failed to install guided fuzzing daemon!"
+    exit 1
+  fi
 
   su worker -s "$0"
 else
@@ -119,7 +122,8 @@ fi
 
 exit_code=$?
 echo "returned $exit_code" >&2
-if [[ "$exit_code" -eq 124 ]]; then
+if [[ "$exit_code" -eq 124 ]]
+then
   # timeout coreutil exit code.
   exit 0
 else
