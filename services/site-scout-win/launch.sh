@@ -142,4 +142,13 @@ done
 mkdir -p "${TMP}/site-scout/local-results"
 
 status "Setup: launching site-scout"
-site-scout ./build/firefox.exe -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --url-limit "$URL_LIMIT" --jobs "$JOBS" --fuzzmanager -o "${TMP}/site-scout/local-results"
+site-scout ./build/firefox.exe \
+  -i ./active_lists/ \
+  --fuzzmanager \
+  --jobs "$JOBS" \
+  --memory-limit "$MEM_LIMIT" \
+  --runtime-limit "${RUNTIME_LIMIT-0}" \
+  --status-report status.txt \
+  --time-limit "$TIME_LIMIT" \
+  --url-limit "${URL_LIMIT-0}" \
+  -o "${TMP}/site-scout/local-results"

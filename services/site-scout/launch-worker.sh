@@ -108,7 +108,16 @@ done
 mkdir -p /tmp/site-scout/local-results
 
 update-ec2-status "Setup: launching site-scout"
-python3 -m site_scout "$TARGET_BIN" -i ./active_lists/ --status-report status.txt --time-limit "$TIME_LIMIT" --memory-limit "$MEM_LIMIT" --jobs "$JOBS" --url-limit "$URL_LIMIT" --fuzzmanager -o /tmp/site-scout/local-results $COVERAGE_FLAG
+python3 -m site_scout "$TARGET_BIN" \
+  -i ./active_lists/ \
+  --fuzzmanager \
+  --memory-limit "$MEM_LIMIT" \
+  --jobs "$JOBS" \
+  --runtime-limit "${RUNTIME_LIMIT-0}" \
+  --status-report status.txt \
+  --time-limit "$TIME_LIMIT" \
+  --url-limit "${URL_LIMIT-0}" \
+  -o /tmp/site-scout/local-results $COVERAGE_FLAG
 
 if [[ -n "$COVERAGE" ]]; then
   retry-curl --compressed -O "$SOURCE_URL"
@@ -116,19 +125,19 @@ if [[ -n "$COVERAGE" ]]; then
 
   # Collect coverage count data.
   RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
-      -t coveralls+ \
-      --commit-sha "$REVISION" \
-      --token NONE \
-      --guess-directory-when-missing \
-      --ignore-not-existing \
-      -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
-      -s "./mozilla-central-${REVISION}" \
-      > "./coverage.json"
+    -t coveralls+ \
+    --commit-sha "$REVISION" \
+    --token NONE \
+    --guess-directory-when-missing \
+    --ignore-not-existing \
+    -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
+    -s "./mozilla-central-${REVISION}" \
+    > "./coverage.json"
 
   # Submit coverage data.
   python3 -m CovReporter \
-      --repository "mozilla-central" \
-      --description "site-scout (10k subset)" \
-      --tool "site-scout" \
-      --submit "./coverage.json"
+    --repository "mozilla-central" \
+    --description "site-scout (10k subset)" \
+    --tool "site-scout" \
+    --submit "./coverage.json"
 fi
