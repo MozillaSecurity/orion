@@ -84,6 +84,27 @@ function retry-curl () {
   curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
+function get-deadline () {
+  if [[ -z "$TASK_ID" ]] || [[ -z "$RUN_ID" ]]; then
+    echo "error: get-deadline() is only supported on Taskcluster" >&2
+    exit 1
+  fi
+  tmp="$(mktemp -d)"
+  retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
+  retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json"
+  deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
+  started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
+  max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
+  rm -rf "$tmp"
+  run_end="$((started + max_run_time))"
+  if [[ $run_end -lt $deadline ]]
+  then
+    echo "$run_end"
+  else
+    echo "$deadline"
+  fi
+}
+
 function get-latest-github-release () {
   if [[ $# -ne 1 ]]
   then
