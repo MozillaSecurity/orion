@@ -27,21 +27,6 @@ then
   TARGET_TIME="$EC2SPOTMANAGER_CYCLETIME"
 elif [[ -n "$TASK_ID" ]]
 then
-  function get-deadline () {
-    tmp="$(mktemp -d)"
-    retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
-    retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json"
-    deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
-    started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
-    max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
-    rm -rf "$tmp"
-    run_end="$((started + max_run_time))"
-    if [[ $run_end -lt $deadline ]]; then
-      echo "$run_end"
-    else
-      echo "$deadline"
-    fi
-  }
   TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
 else
   TARGET_TIME=28800

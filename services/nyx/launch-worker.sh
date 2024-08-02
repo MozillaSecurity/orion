@@ -46,24 +46,6 @@ with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
 EOF
 }
 
-get-deadline () {
-  local tmp deadline started max_run_time run_end
-  tmp="$(mktemp -d)"
-  retry taskcluster api queue task "$TASK_ID" >"$tmp/task.json"
-  retry taskcluster api queue status "$TASK_ID" >"$tmp/status.json"
-  deadline="$(date --date "$(jshon -e status -e deadline -u <"$tmp/status.json")" +%s)"
-  started="$(date --date "$(jshon -e status -e runs -e "$RUN_ID" -e started -u <"$tmp/status.json")" +%s)"
-  max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
-  rm -rf "$tmp"
-  run_end="$((started + max_run_time))"
-  if [[ $run_end -lt $deadline ]]
-  then
-    echo "$run_end"
-  else
-    echo "$deadline"
-  fi
-}
-
 get-target-time () {
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
   then
