@@ -10,6 +10,21 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
+  # check if there is enough time to run
+  if [[ "$TARGET_DURATION" -le 600 ]]; then
+    echo "Not enough time remaining before deadline!"
+    exit 0
+  fi
+  if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
+    TARGET_DURATION="$RUNTIME_LIMIT"
+  fi
+else
+  # RUNTIME_LIMIT or no-limit
+  TARGET_DURATION="${RUNTIME_LIMIT-0}"
+fi
+
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
@@ -113,7 +128,7 @@ python3 -m site_scout "$TARGET_BIN" \
   --fuzzmanager \
   --memory-limit "$MEM_LIMIT" \
   --jobs "$JOBS" \
-  --runtime-limit "${RUNTIME_LIMIT-0}" \
+  --runtime-limit "$TARGET_DURATION" \
   --status-report status.txt \
   --time-limit "$TIME_LIMIT" \
   --url-limit "${URL_LIMIT-0}" \

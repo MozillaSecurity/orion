@@ -12,6 +12,42 @@ retry () {
 }
 retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
+function get-deadline () {
+  if [[ -z "$TASK_ID" ]] || [[ -z "$RUN_ID" ]]; then
+    echo "error: get-deadline() is only supported on Taskcluster" >&2
+    exit 1
+  fi
+  tmp="$(mktemp -d)"
+  retry-curl "$TASKCLUSTER_ROOT_URL/queue/v1/task/$TASK_ID" >"$tmp/task.json"
+  retry-curl "$TASKCLUSTER_ROOT_URL/queue/v1/task/$TASK_ID/status" >"$tmp/status.json"
+  deadline="$(date --date "$(python -c "import json,sys;print(json.load(sys.stdin)['status']['deadline'])" <"$tmp/status.json")" +%s)"
+  started="$(date --date "$(python -c "import json,sys;print(json.load(sys.stdin)['status']['runs'][$RUN_ID]['started'])" <"$tmp/status.json")" +%s)"
+  max_run_time="$(python -c "import json,sys;print(json.load(sys.stdin)['payload']['maxRunTime'])" <"$tmp/task.json")"
+  rm -rf "$tmp"
+  run_end="$((started + max_run_time))"
+  if [[ $run_end -lt $deadline ]]
+  then
+    echo "$run_end"
+  else
+    echo "$deadline"
+  fi
+}
+
+if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
+  # check if there is enough time to run
+  if [[ "$TARGET_DURATION" -le 600 ]]; then
+    echo "Not enough time remaining before deadline!"
+    exit 0
+  fi
+  if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
+    TARGET_DURATION="$RUNTIME_LIMIT"
+  fi
+else
+  # RUNTIME_LIMIT or no-limit
+  TARGET_DURATION="${RUNTIME_LIMIT-0}"
+fi
+
 status () {
   if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
     python -m TaskStatusReporter --report "$@" || true
@@ -147,7 +183,7 @@ site-scout ./build/firefox.exe \
   --fuzzmanager \
   --jobs "$JOBS" \
   --memory-limit "$MEM_LIMIT" \
-  --runtime-limit "${RUNTIME_LIMIT-0}" \
+  --runtime-limit "$TARGET_DURATION" \
   --status-report status.txt \
   --time-limit "$TIME_LIMIT" \
   --url-limit "${URL_LIMIT-0}" \
