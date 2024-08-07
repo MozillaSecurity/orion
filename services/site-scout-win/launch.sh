@@ -18,8 +18,8 @@ function get-deadline () {
     exit 1
   fi
   tmp="$(mktemp -d)"
-  retry-curl "$TASKCLUSTER_ROOT_URL/queue/v1/task/$TASK_ID" >"$tmp/task.json"
-  retry-curl "$TASKCLUSTER_ROOT_URL/queue/v1/task/$TASK_ID/status" >"$tmp/status.json"
+  retry-curl "$TASKCLUSTER_ROOT_URL/api/queue/v1/task/$TASK_ID" >"$tmp/task.json"
+  retry-curl "$TASKCLUSTER_ROOT_URL/api/queue/v1/task/$TASK_ID/status" >"$tmp/status.json"
   deadline="$(date --date "$(python -c "import json,sys;print(json.load(sys.stdin)['status']['deadline'])" <"$tmp/status.json")" +%s)"
   started="$(date --date "$(python -c "import json,sys;print(json.load(sys.stdin)['status']['runs'][$RUN_ID]['started'])" <"$tmp/status.json")" +%s)"
   max_run_time="$(python -c "import json,sys;print(json.load(sys.stdin)['payload']['maxRunTime'])" <"$tmp/task.json")"
