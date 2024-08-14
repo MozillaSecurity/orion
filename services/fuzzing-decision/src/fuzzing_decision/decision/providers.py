@@ -62,6 +62,7 @@ class Provider(ABC):
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
+                    "enableInteractive": True,
                     "wstAudience": "communitytc",
                     "wstServerURL": (
                         "https://community-websocktunnel.services.mozilla.com"
