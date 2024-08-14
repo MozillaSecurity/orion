@@ -33,11 +33,19 @@ function get-deadline () {
   fi
 }
 
+status () {
+  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
+    python -m TaskStatusReporter --report "$@" || true
+  fi
+}
+
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
   # check if there is enough time to run
   if [[ "$TARGET_DURATION" -le 600 ]]; then
-    echo "Not enough time remaining before deadline!"
+    # create required artifact directory to avoid task failure
+    mkdir -p "${TMP}/site-scout"
+    status "Not enough time remaining before deadline!"
     exit 0
   fi
   if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
@@ -47,12 +55,6 @@ else
   # RUNTIME_LIMIT or no-limit
   TARGET_DURATION="${RUNTIME_LIMIT-0}"
 fi
-
-status () {
-  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
-    python -m TaskStatusReporter --report "$@" || true
-  fi
-}
 
 set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
