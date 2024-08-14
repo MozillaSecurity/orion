@@ -14,7 +14,9 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
   # check if there is enough time to run
   if [[ "$TARGET_DURATION" -le 600 ]]; then
-    echo "Not enough time remaining before deadline!"
+    # create required artifact directory to avoid task failure
+    mkdir -p /tmp/site-scout
+    update-ec2-status "Not enough time remaining before deadline!"
     exit 0
   fi
   if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
