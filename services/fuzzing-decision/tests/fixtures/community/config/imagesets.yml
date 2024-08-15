@@ -14,6 +14,9 @@ generic-worker-A:
   aws:
     amis:
       us-west-1: ami-1234
+  azure:
+    images:
+      westus: azure-test-image
   gcp:
     image: path/to/gwimage
   workerConfig:

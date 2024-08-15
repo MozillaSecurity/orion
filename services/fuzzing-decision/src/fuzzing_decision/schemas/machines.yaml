@@ -4,7 +4,7 @@ description: "Cloud service machine mappings"
 type: object
 additionalProperties: false
 patternProperties:
-  "^(aws|gcp)$":
+  "^(aws|azure|gcp)$":
     description: "Cloud provider name"
     additionalProperties: false
     type: object

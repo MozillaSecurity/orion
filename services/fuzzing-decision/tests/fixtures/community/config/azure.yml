@@ -1,0 +1,5 @@
+---
+# Fake community GCP config
+
+subnets:
+  westus: azure-test-subnet

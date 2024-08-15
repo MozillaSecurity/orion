@@ -27,7 +27,7 @@ properties:
   cloud:
     description: "The cloud service where the task should run"
     type: string
-    pattern: "^aws|gcp|static$"
+    pattern: "^aws|azure|gcp|static$"
   command:
     description: "List of commands to run"
     type: array
