@@ -1,3 +1,4 @@
+---
 gcp:
   x64:
     base:
@@ -15,6 +16,11 @@ gcp:
       cpu: 1
       ram: 1
       metal: true
+azure:
+  x64:
+    standard:
+      cpu: 2
+      ram: 2
 aws:
   arm64:
     a1:

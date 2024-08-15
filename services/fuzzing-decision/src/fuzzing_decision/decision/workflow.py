@@ -20,7 +20,7 @@ from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
 from .pool import PoolConfigLoader, cancel_tasks
-from .providers import AWS, GCP, Static
+from .providers import AWS, GCP, Azure, Static
 
 LOG = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ class Workflow(CommonWorkflow):
         assert self.community_config_dir is not None
         clouds = {
             "aws": AWS(self.community_config_dir),
+            "azure": Azure(self.community_config_dir),
             "gcp": GCP(self.community_config_dir),
             "static": Static(),
         }

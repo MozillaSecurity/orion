@@ -12,7 +12,7 @@ import responses
 
 from fuzzing_decision.common import taskcluster
 from fuzzing_decision.common.pool import MachineTypes
-from fuzzing_decision.decision.providers import AWS, GCP
+from fuzzing_decision.decision.providers import AWS, GCP, Azure
 from fuzzing_decision.decision.workflow import Workflow
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -65,7 +65,7 @@ def mock_taskcluster_workflow():
 def mock_clouds():
     """Mock Cloud providers setup"""
     community = FIXTURES_DIR / "community"
-    return {"aws": AWS(community), "gcp": GCP(community)}
+    return {"aws": AWS(community), "azure": Azure(community), "gcp": GCP(community)}
 
 
 @pytest.fixture

@@ -77,7 +77,7 @@ CPU_ALIASES = types.MappingProxyType(
         "aarch64": "arm64",
     }
 )
-PROVIDERS = frozenset(("aws", "gcp", "static"))
+PROVIDERS = frozenset(("aws", "azure", "gcp", "static"))
 ARCHITECTURES = frozenset(("x64", "arm64"))
 WORKERS = frozenset(("generic", "docker", "d2g"))
 

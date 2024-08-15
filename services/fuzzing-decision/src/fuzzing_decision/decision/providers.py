@@ -153,11 +153,24 @@ class AWS(Provider):
         return result
 
 
-class Static(Provider):
-    """Fake provider for static machines not provisioned by Taskcluster"""
+class Azure(Provider):
+    """Azure Cloud provider config for Taskcluster"""
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, base_dir: Path) -> None:
+        # Load configuration from cloned community config
+        super().__init__(base_dir)
+        self.locations = self.load_locations(base_dir / "config" / "azure.yml")
+        LOG.info("Loaded Azure configuration")
+
+    def load_locations(self, path: Path) -> Dict[str, Any]:
+        """Load Azure regions from community tc file"""
+        data = yaml.safe_load(path.read_text())
+        assert "subnets" in data, "Missing subnets in Azure config"
+        return {location: subnet for location, subnet in data["subnets"].items()}
+
+    def get_images(self, worker: str):
+        assert worker in self.imagesets, f"Missing worker {worker}"
+        return self.imagesets[worker]["azure"]["images"]
 
     def build_launch_configs(
         self,
@@ -168,7 +181,53 @@ class Static(Provider):
         demand: bool,
         nested_virtualization: bool,
     ) -> List[Dict[str, Any]]:
-        return []
+        assert not nested_virtualization
+        # Load the Azure infos for that imageset
+        images = self.get_images(imageset)
+        worker_config = self.get_worker_config(imageset, platform)
+
+        result: List[Dict[str, Any]] = [
+            {
+                "capacityPerInstance": capacity,
+                "location": location,
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Windows",
+                        "caching": "ReadOnly",
+                        "createOption": "FromImage",
+                        "diffDiskSettings": {
+                            "option": "Local",
+                        },
+                    },
+                    "imageReference": {
+                        "id": images[location],
+                    },
+                },
+                "osProfile": {
+                    "windowsConfiguration": {
+                        "timeZone": "UTC",
+                        "enableAutomaticUpdates": False,
+                    },
+                },
+                "subnetId": subnet,
+                "hardwareProfile": {
+                    "vmSize": instance,
+                },
+                "workerConfig": worker_config,
+            }
+            for instance, capacity, az_blacklist in machines
+            for location, subnet in self.locations.items()
+            if location in images and location not in az_blacklist
+        ]
+        if not demand:
+            for config in result:
+                config.update(
+                    {
+                        "priority": "spot",
+                        "evictionPolicy": "Delete",
+                    }
+                )
+        return result
 
 
 class GCP(Provider):
@@ -246,3 +305,21 @@ class GCP(Provider):
                     }
                 )
         return result
+
+
+class Static(Provider):
+    """Fake provider for static machines not provisioned by Taskcluster"""
+
+    def __init__(self) -> None:
+        pass
+
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        disk_size: Union[int, str],
+        platform: str,
+        demand: bool,
+        nested_virtualization: bool,
+    ) -> List[Dict[str, Any]]:
+        return []
