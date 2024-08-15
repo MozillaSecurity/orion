@@ -359,7 +359,7 @@ def test_azure_resources(
                         "genericWorker": {
                             "config": {
                                 "anyKey": "anyValue",
-                                "deploymentId": "d82eac5c561913ee",
+                                "deploymentId": "cea469ea9eba172e",
                                 "wstAudience": "communitytc",
                                 "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
                             },
