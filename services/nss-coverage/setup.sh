@@ -26,9 +26,12 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 packages=(
   binutils
   curl
+  git
   gyp
   jshon
+  libboost-dev
   libgcc-9-dev
+  libsqlite3-dev
   libssl-dev
   libstdc++-9-dev
   libxml2
