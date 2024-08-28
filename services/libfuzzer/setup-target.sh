@@ -22,6 +22,8 @@ else
   FETCH_ARGS+=(--asan)
 fi
 
+FETCH_ARGS+=(--cpu "${CPU_ARCH:-$(uname -m)}")
+
 if [[ "$COVERAGE" = 1 ]]
 then
   FETCH_ARGS+=(--coverage --build "$REVISION")
