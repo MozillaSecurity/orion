@@ -25,6 +25,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 
 packages=(
   binutils
+  cmake
   curl
   git
   gyp
@@ -43,6 +44,7 @@ packages=(
   psmisc
   python-is-python3
   python3
+  python3-toml
   python3-yaml
   unzip
   zlib1g-dev

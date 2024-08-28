@@ -88,7 +88,7 @@ function clone-nssfuzz-corpus {
   local name="$1"
   shift 1
 
-  clone-corpus "nssfuzz-$name" \
+  clone-corpus "$name" \
                "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/public.zip"
 }
 
@@ -175,7 +175,7 @@ for target in "${!targets[@]}"; do
 
   update-ec2-status "[$(date -Iseconds)] running $name ($curr_target_n/$total_targets)"
   run-nssfuzz-target "$target" "$name"
-  ((cur_target++))
+  ((curr_target_n++))
 done
 
 # Build nss with tls fuzzing mode
@@ -191,7 +191,7 @@ for target in "${!tls_targets[@]}"; do
 
   update-ec2-status "[$(date -Iseconds)] running $target ($curr_target_n/$total_targets)"
   run-nssfuzz-target "$target" "$target"
-  ((cur_target++))
+  ((curr_target_n++))
 done
 
 # Build nss for cryptofuzz

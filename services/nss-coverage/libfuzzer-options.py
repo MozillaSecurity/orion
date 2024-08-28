@@ -4,15 +4,15 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import sys
-import tomllib
+import toml
 
 
 def main():
-    with open(sys.argv[1], "rb") as f:
-        toml = tomllib.load(f)
+    with open(sys.argv[1], "r") as f:
+        data = toml.load(f)
 
     print("\n".join(
-        map(lambda item: f"-{item[0]}={item[1]}", toml["libfuzzer"].items())))
+        map(lambda item: f"-{item[0]}={item[1]}", data["libfuzzer"].items())))
 
 
 if __name__ == "__main__":
