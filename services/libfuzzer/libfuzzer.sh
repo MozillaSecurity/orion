@@ -340,5 +340,5 @@ else
     --corpus-refresh "$HOME/workspace" \
     --stats "./stats" \
     --libfuzzer \
-    --build "$(dirname "$HOME/$TARGET_BIN")"
+    "$HOME/$TARGET_BIN"
 fi
