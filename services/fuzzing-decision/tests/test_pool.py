@@ -360,6 +360,7 @@ def test_azure_resources(
                             "config": {
                                 "anyKey": "anyValue",
                                 "deploymentId": "cea469ea9eba172e",
+                                "enableInteractive": True,
                                 "wstAudience": "communitytc",
                                 "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
                             },
