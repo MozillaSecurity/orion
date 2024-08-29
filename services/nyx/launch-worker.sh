@@ -238,14 +238,13 @@ then
     guided-fuzzing-daemon --list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project
     do
       time guided-fuzzing-daemon \
-        --bucket mozilla-aflfuzz --project "$project" \
-        --build ./sharedir/firefox \
+        --bucket mozilla-aflfuzz \
+        --project "$project" \
         --corpus-refresh ./corpus \
         "${DAEMON_ARGS[@]}"
     done
   else
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
-      --build ./sharedir/firefox \
       --corpus-refresh ./corpus \
       "${DAEMON_ARGS[@]}"
   fi
