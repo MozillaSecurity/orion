@@ -190,26 +190,26 @@ then
   # into a new corpus.
 
   # Generic parameters for S3
-  S3_PROJECT_ARGS+=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
+  S3_PROJECT_ARGS+=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
   # This option ensures that we synchronize local finds from/to S3 queues.
   # When generating coverage, it does not make sense to use this.
   if [[ -z "$COVERAGE" ]]
   then
-    S3_QUEUE_UPLOAD_ARGS+=(--s3-queue-upload)
+    S3_QUEUE_UPLOAD_ARGS+=(--queue-upload)
   fi
 
   # This can be used to download only a subset of corpus files for fuzzing
   CORPUS_DOWNLOAD_ARGS=()
   if [[ -n "$S3_CORPUS_SUBSET_SIZE" ]]
   then
-    CORPUS_DOWNLOAD_ARGS+=(--s3-corpus-download-size "$S3_CORPUS_SUBSET_SIZE")
+    CORPUS_DOWNLOAD_ARGS+=(--corpus-download-size "$S3_CORPUS_SUBSET_SIZE")
   fi
 
   if [[ -z "$S3_CORPUS_REFRESH" ]]
   then
     # Download the corpus from S3
-    run-afl-libfuzzer-daemon "${CORPUS_DOWNLOAD_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --s3-corpus-download corpora/
+    run-afl-libfuzzer-daemon "${CORPUS_DOWNLOAD_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --corpus-download corpora/
   fi
 elif [[ -n "$OSSFUZZ_PROJECT" ]]
 then
@@ -335,9 +335,9 @@ then
     "${HARNESS_EXT_ARGS[@]}" \
     --cmd "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
 else
-  update-ec2-status "Starting afl-libfuzzer-daemon with --s3-corpus-refresh" || true
+  update-ec2-status "Starting afl-libfuzzer-daemon with --corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
-    --s3-corpus-refresh "$HOME/workspace" \
+    --corpus-refresh "$HOME/workspace" \
     --stats "./stats" \
     --libfuzzer \
     --build "$(dirname "$HOME/$TARGET_BIN")"

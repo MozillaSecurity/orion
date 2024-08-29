@@ -228,25 +228,25 @@ DAEMON_ARGS=(
 )
 
 S3_PROJECT="${S3_PROJECT-Nyx-$NYX_FUZZER}"
-S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT")
+S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
 
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   update-status "starting corpus refresh"
   if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]
   then
-    guided-fuzzing-daemon --s3-list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project
+    guided-fuzzing-daemon --list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project
     do
       time guided-fuzzing-daemon \
-        --s3-bucket mozilla-aflfuzz --project "$project" \
+        --bucket mozilla-aflfuzz --project "$project" \
         --build ./sharedir/firefox \
-        --s3-corpus-refresh ./corpus \
+        --corpus-refresh ./corpus \
         "${DAEMON_ARGS[@]}"
     done
   else
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
       --build ./sharedir/firefox \
-      --s3-corpus-refresh ./corpus \
+      --corpus-refresh ./corpus \
       "${DAEMON_ARGS[@]}"
   fi
 else
@@ -258,7 +258,7 @@ else
       --afl-add-corpus ./corpus.out/workdir/dump/seeds
     )
     source ./sharedir/config.sh
-    S3_PROJECT_ARGS=(--s3-bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
+    S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
   elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]
   then
     nyx-ipc-manager --generic --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
@@ -279,7 +279,7 @@ else
   then
     # Download the corpus from S3
     update-status "downloading corpus"
-    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --s3-corpus-download ./corpus
+    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
   else
     mkdir -p corpus
   fi
@@ -299,7 +299,7 @@ else
     --instances "$NYX_INSTANCES" \
     --nyx-log-pattern /logs/nyx%d.log \
     --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so \
-    --s3-queue-upload \
+    --queue-upload \
     --tool "$S3_PROJECT" \
     "${DAEMON_ARGS[@]}" \
     -i ./corpus \
