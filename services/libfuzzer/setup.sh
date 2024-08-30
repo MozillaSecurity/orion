@@ -10,13 +10,10 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-#### Bootstrap Packages
-
-sys-update
-
 #### Install recipes
 
 cd "${0%/*}"
+./js32_deps.sh  # does the initial sys-update
 ./htop.sh
 ./fuzzfetch.sh
 ./prefpicker.sh
