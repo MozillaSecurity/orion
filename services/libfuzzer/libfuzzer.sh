@@ -340,5 +340,5 @@ else
     --corpus-refresh "$HOME/workspace" \
     --stats "./stats" \
     --libfuzzer \
-    "$HOME/$TARGET_BIN"
+    "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
 fi
