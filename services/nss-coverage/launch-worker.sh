@@ -43,7 +43,7 @@ export CC="$PWD/clang/bin/clang"
 export CXX="$PWD/clang/bin/clang++"
 $CC --version
 
-export CFLAGS="--coverage"
+export CFLAGS="--coverage -O2 -g"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="$CFLAGS"
 
@@ -59,7 +59,7 @@ fi
 # Clone cryptofuzz
 update-ec2-status "[$(date -Iseconds)] setup: cloning cryptofuzz"
 if [[ ! -d cryptofuzz ]]; then
-  retry git clone --depth 1 https://github.com/guidovranken/cryptofuzz.git
+  git-clone https://github.com/guidovranken/cryptofuzz.git
 fi
 
 COVRUNTIME=${COVRUNTIME-3600}
@@ -195,8 +195,8 @@ for target in "${!tls_targets[@]}"; do
 done
 
 # Build nss for cryptofuzz
-export CFLAGS="$CFLAGS -fsanitize=address,undefined,fuzzer-no-link -O2 -g"
-export CXXFLAGS="$CXXFLAGS -DCRYPTOFUZZ_NO_OPENSSL -fsanitize=address,undefined,fuzzer-no-link -D_GLIBCXX_DEBUG -O2 -g"
+export CFLAGS="$CFLAGS -fsanitize=address,undefined,fuzzer-no-link"
+export CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined,fuzzer-no-link -DCRYPTOFUZZ_NO_OPENSSL -D_GLIBCXX_DEBUG"
 
 update-ec2-status "[$(date -Iseconds)] building nss for cryptofuzz"
 cd nss

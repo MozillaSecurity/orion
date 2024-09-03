@@ -11,8 +11,8 @@ def main():
     with open(sys.argv[1], "r") as f:
         data = toml.load(f)
 
-    print("\n".join(
-        map(lambda item: f"-{item[0]}={item[1]}", data["libfuzzer"].items())))
+    for key, value in data["libfuzzer"].items():
+        print(f"-{key}={value}")
 
 
 if __name__ == "__main__":
