@@ -63,6 +63,7 @@ class Provider(ABC):
             out["genericWorker"]["config"].update(
                 {
                     "enableInteractive": True,
+                    "idleTimeoutSecs": 300,
                     "wstAudience": "communitytc",
                     "wstServerURL": (
                         "https://community-websocktunnel.services.mozilla.com"
