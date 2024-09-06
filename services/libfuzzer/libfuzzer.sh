@@ -227,11 +227,11 @@ elif [[ -n "$CORPORA" ]]
 then
   # Use a static corpus instead
   retry svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
+else
+  mkdir -p ./corpora
 fi
 
 CORPORA=./corpora/
-# ensure corpora folder exists, even if empty
-mkdir -p ./corpora
 
 # %<---[Tokens]---------------------------------------------------------------
 
@@ -308,7 +308,13 @@ then
 fi
 
 # shellcheck disable=SC2206
-LIBFUZZER_ARGS=($COMMON_LIBFUZZER_ARGS $LIBFUZZER_ARGS -entropic=1 $TOKENS $CORPORA)
+LIBFUZZER_ARGS=($COMMON_LIBFUZZER_ARGS $LIBFUZZER_ARGS -entropic=1 $TOKENS)
+# corpus is only used in the non-refresh case
+# otherwise GFD handles it
+if [[ -z "$S3_CORPUS_REFRESH" ]]
+then
+  LIBFUZZER_ARGS+=("$CORPORA")
+fi
 if [[ -z "$LIBFUZZER_INSTANCES" ]]
 then
   LIBFUZZER_INSTANCES=$(nproc)
