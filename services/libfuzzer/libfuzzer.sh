@@ -227,11 +227,11 @@ elif [[ -n "$CORPORA" ]]
 then
   # Use a static corpus instead
   retry svn export --force "$FUZZDATA_URL/$CORPORA" ./corpora/
-else
-  mkdir -p ./corpora
 fi
 
-CORPORA="./corpora/"
+CORPORA=./corpora/
+# ensure corpora folder exists, even if empty
+mkdir -p ./corpora
 
 # %<---[Tokens]---------------------------------------------------------------
 
