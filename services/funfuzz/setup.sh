@@ -43,6 +43,7 @@ packages=(
   openssh-client
   psmisc
   ripgrep
+  rsync
   screen
   software-properties-common
   unzip
