@@ -60,20 +60,6 @@ sys-embed "${packages[@]}"
 retry apt-get install -y -qq "${package_recommends[@]}"
 
 retry pip3 install python-dateutil
-(cd ~worker
- mkdir -p trees
- (cd trees
-  mkdir -p funfuzz
-  (cd funfuzz
-   git init .
-   git remote add -t master origin https://github.com/MozillaSecurity/funfuzz
-   retry git fetch --depth 1 --no-tags origin master HEAD
-   git reset --hard FETCH_HEAD
-   retry pip3 install -r requirements.txt
-   retry pip3 install -e .
-  )
- )
-)
 
 #### Base System Configuration
 

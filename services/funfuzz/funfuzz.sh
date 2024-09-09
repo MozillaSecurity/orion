@@ -10,6 +10,34 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+get-tc-secret deploy-fuzzing-shells-private ~/.ssh/id_rsa.fuzzing-shells-private
+
+# Setup Key Identities for private overlay
+cat >> ~/.ssh/config << EOF
+
+Host fuzzing-shells-private
+Hostname github.com
+IdentityFile "$HOME/.ssh/id_rsa.fuzzing-shells-private"
+EOF
+
+git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
+
+(cd ~worker
+ mkdir -p trees
+ (cd trees
+  mkdir -p funfuzz
+  (cd funfuzz
+   git init .
+   git remote add -t master origin https://github.com/MozillaSecurity/funfuzz
+   retry git fetch --depth 1 --no-tags origin master HEAD
+   git reset --hard FETCH_HEAD
+   rsync -rv --progress $HOME/fuzzing-shells-private/funfuzz/ .
+   retry pip3 install -r requirements.txt
+   retry pip3 install -e .
+  )
+ )
+)
+
 if [[ ! -e ~/.fuzzmanagerconf ]] && [[ -z "$NO_SECRETS" ]]
 then
   get-tc-secret fuzzmanagerconf ~/.fuzzmanagerconf
