@@ -106,6 +106,7 @@ dbgsym_packages=(
   libglu1-mesa
   libglvnd0
   libglx0
+  libspeechd2
 )
 
 sys-embed "${packages_with_recommends[@]}"
