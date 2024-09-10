@@ -35,20 +35,21 @@ packages=(
   curl
   creduce
   g++
-  g++-multilib
-  gcc-multilib
+  # 32 bit packages, now added in recipes/linux/js32_deps.sh
+  # g++-multilib
+  # gcc-multilib
   gdb
   git
   htop
   jshon
   lbzip2
   less
-  lib32z1
-  lib32z1-dev
+  # lib32z1
+  # lib32z1-dev
   libalgorithm-combinatorics-perl
   libbsd-resource-perl
   libc6-dbg
-  libc6-dbg:i386
+  # libc6-dbg:i386
   libio-prompt-perl
   libwww-mechanize-perl
   locales
