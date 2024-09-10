@@ -42,6 +42,7 @@ packages=(
   nano
   openssh-client
   psmisc
+  python3-pip
   ripgrep
   rsync
   screen
