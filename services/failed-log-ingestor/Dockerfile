@@ -6,7 +6,7 @@ FROM python:3.12-slim
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-COPY services/failed-task-ingestor /src
+COPY services/failed-log-ingestor /src
 
 RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; } \
     && retry pip install /src
