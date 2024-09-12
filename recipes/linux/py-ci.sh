@@ -45,7 +45,7 @@ clone () {
   git init "$path"
   cd "$path" || exit 1
   git remote add origin "$url"
-  retry git fetch -q --depth=1 origin "${FETCH_REF}"
+  retry git fetch -t -q --depth=1 origin "${FETCH_REF}"
   git -c advice.detachedHead=false checkout "${FETCH_REV}"
 }
 
