@@ -35,21 +35,15 @@ packages=(
   curl
   creduce
   g++
-  # 32 bit packages, now added in recipes/linux/js32_deps.sh
-  # g++-multilib
-  # gcc-multilib
   gdb
   git
   htop
   jshon
   lbzip2
   less
-  # lib32z1
-  # lib32z1-dev
   libalgorithm-combinatorics-perl
   libbsd-resource-perl
   libc6-dbg
-  # libc6-dbg:i386
   libio-prompt-perl
   libwww-mechanize-perl
   locales
@@ -80,6 +74,17 @@ retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 # Generate locales
 locale-gen en_US.utf8
+
+# Add 32 bit packages for x86-64 (unavailable for arm64)
+if ! is-arm64; then
+  packages+=(
+    lib32z1
+    lib32z1-dev
+    libc6-dbg:i386
+    g++-multilib
+    gcc-multilib
+  )
+fi
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868

@@ -12,14 +12,7 @@ set -o pipefail
 source "${0%/*}/common.sh"
 
 if ! is-arm64; then
-  echo "Not arm64. Installing 32 bit packages."
-  packages+=(
-        lib32z1
-        lib32z1-dev
-        libc6-dbg:i386
-        g++-multilib
-        gcc-multilib
-  )
+  echo "Not arm64. Installing 32 bit packages." >&2
   case "${1-install}" in
     install)
       dpkg --add-architecture i386
@@ -41,7 +34,7 @@ if ! is-arm64; then
       ;;
   esac
 else
-  echo "Is arm64. Skipping 32 bit packages."
+  echo "Is arm64. Skipping 32 bit packages." >&2
   sys-update
   apt-install-auto apt-utils
 fi
