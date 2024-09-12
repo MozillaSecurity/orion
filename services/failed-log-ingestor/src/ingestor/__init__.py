@@ -27,7 +27,10 @@ class Ingestor:
     dry_run: bool = False
 
     def run(self) -> int:
-        coll = Collector()
+        coll = Collector(
+            clientId=f"task-{self.task_id}-run-{self.run_id}",
+            tool=self.tool,
+        )
         queue = Taskcluster.get_service("queue")
         tc_redirect = queue.getArtifact(
             self.task_id, self.run_id, "public/logs/live.log"
