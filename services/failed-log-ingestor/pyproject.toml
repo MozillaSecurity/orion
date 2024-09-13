@@ -33,7 +33,7 @@ dependencies = [
 dev = ["pre-commit", "tox"]
 
 [project.scripts]
-ingestor = "ingestor:Ingestor.main"
+ingest = "ingestor:Ingestor.main"
 
 [project.urls]
 Homepage = "https://github.com/MozillaSecurity/orion"
