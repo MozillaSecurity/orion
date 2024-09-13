@@ -68,12 +68,6 @@ packages=(
   zip
   zstd
 )
-retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
-
-#### Base System Configuration
-
-# Generate locales
-locale-gen en_US.utf8
 
 # Add 32 bit packages for x86-64 (unavailable for arm64)
 if ! is-arm64; then
@@ -85,6 +79,13 @@ if ! is-arm64; then
     gcc-multilib
   )
 fi
+
+retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+#### Base System Configuration
+
+# Generate locales
+locale-gen en_US.utf8
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
