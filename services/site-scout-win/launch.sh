@@ -80,9 +80,9 @@ cat > td-agent-bit.conf << EOF
     DB.locking true
 
 [INPUT]
-  Name         winlog
-  Channels     Application,System
-  Interval_Sec 1
+    Name         winlog
+    Channels     Application,System
+    Interval_Sec 1
 
 [FILTER]
     Name rewrite_tag
