@@ -79,6 +79,11 @@ cat > td-agent-bit.conf << EOF
     DB td-grizzly-logs.pos
     DB.locking true
 
+[INPUT]
+  Name         winevtlog
+  Channels     Application,System
+  Interval_Sec 1
+
 [FILTER]
     Name rewrite_tag
     Match tail.*
