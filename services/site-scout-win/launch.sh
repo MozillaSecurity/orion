@@ -80,7 +80,7 @@ cat > td-agent-bit.conf << EOF
     DB.locking true
 
 [INPUT]
-  Name         winevtlog
+  Name         winlog
   Channels     Application,System
   Interval_Sec 1
 
