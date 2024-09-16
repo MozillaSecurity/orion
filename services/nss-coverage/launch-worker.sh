@@ -75,9 +75,16 @@ function clone-corpus {
   if [[ ! -d "$name" ]]; then
     mkdir "$name"
     cd "$name"
-    retry-curl -O "$url"
-    unzip public.zip
+
+    # There may be no OSS-Fuzz corpus yet for new fuzz targets
+    code=$(retry-curl --no-fail -w "%{http_code}" -O "$url")
+    if [[ $code -eq 200 ]]; then
+      unzip public.zip
+    else
+      echo "[nss-coverage] WARNING: failed to clone corpus for $name"
+    fi
     rm public.zip
+
     cd ..
   fi
 
