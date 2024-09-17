@@ -81,7 +81,7 @@ function clone-corpus {
     if [[ $code -eq 200 ]]; then
       unzip public.zip
     else
-      echo "[nss-coverage] WARNING: failed to clone corpus for $name"
+      echo "WARNING - cloning corpus for $name failed with code: $code" >&2
     fi
     rm public.zip
 
