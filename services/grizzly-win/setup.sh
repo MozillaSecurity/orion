@@ -114,6 +114,9 @@ retry python -m pip install \
   psutil \
   virtualenv
 
+mkdir -p .ssh
+retry ssh-keyscan github.com > .ssh/known_hosts
+
 rm -rf \
   msys64/mingw64/share/doc/ \
   msys64/mingw64/share/info/ \
@@ -127,4 +130,4 @@ cp -r orion/services/fuzzing-decision fuzzing-decision
 retry python -m pip install ./fuzzing-decision
 # Delete symlinks
 find msys64 -type l -delete
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip td-agent-bit
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip td-agent-bit .ssh

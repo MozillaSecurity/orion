@@ -85,9 +85,6 @@ class Workflow:
                 path.chmod(0o400)
                 LOG.info("Installed ssh private key")
 
-        with (ssh_path / "known_hosts").open("a") as hosts:
-            subprocess.check_call(["ssh-keyscan", "github.com"], stdout=hosts)
-
     def git_clone(
         self,
         url: Optional[str] = None,
