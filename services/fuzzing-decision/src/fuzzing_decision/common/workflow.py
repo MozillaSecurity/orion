@@ -8,6 +8,7 @@ import os
 import pathlib
 import subprocess
 import tempfile
+from time import sleep
 from typing import Any, Dict, Optional
 
 import yaml
@@ -15,6 +16,8 @@ import yaml
 from . import taskcluster
 
 LOG = logging.getLogger(__name__)
+RETRIES = 10
+RETRY_SLEEP = 30
 
 
 class Workflow:
@@ -115,7 +118,18 @@ class Workflow:
             cmd = ["git", "remote", "add", "origin", url]
             subprocess.check_output(cmd, cwd=str(path))
             cmd = ["git", "fetch", "-q", "origin", revision]
-            subprocess.check_output(cmd, cwd=str(path))
+            for _ in range(RETRIES - 1):
+                result = subprocess.run(cmd, cwd=str(path), stdout=subprocess.PIPE)
+                if result.returncode == 0:
+                    break
+                LOG.warning(
+                    "git fetch returned %d, retrying after %ds",
+                    result.returncode,
+                    RETRY_SLEEP,
+                )
+                sleep(RETRY_SLEEP)
+            else:
+                subprocess.check_output(cmd, cwd=str(path))
             cmd = ["git", "-c", "advice.detachedHead=false", "checkout", revision]
             subprocess.check_output(cmd, cwd=str(path))
             LOG.info(f"Using cloned config files in {path}")
