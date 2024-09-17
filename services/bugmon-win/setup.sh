@@ -89,6 +89,9 @@ retry python -m pip install \
 #### Create artifact directory
 mkdir bugmon-artifacts
 
+mkdir -p .ssh
+retry ssh-keyscan github.com > .ssh/known_hosts
+
 rm -rf \
   msys64/mingw64/share/doc/ \
   msys64/mingw64/share/info/ \
@@ -99,4 +102,4 @@ rm -rf \
 cp orion/services/bugmon-win/launch.sh .
 # Delete symlinks
 find msys64 -type l -delete
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip bugmon-artifacts
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 launch.sh pip bugmon-artifacts .ssh

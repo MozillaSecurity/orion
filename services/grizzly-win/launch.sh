@@ -110,10 +110,6 @@ IdentitiesOnly yes
 IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.bearspray
 EOF
 
-if [[ "$ADAPTER" = "reducer" ]]; then
-  ssh-keyscan github.com >> .ssh/known_hosts
-fi
-
 # Set up Google Cloud Logging creds
 if [[ "$ADAPTER" != "reducer" ]]; then
   mkdir -p "$APPDATA/gcloud"
