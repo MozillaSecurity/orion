@@ -194,7 +194,7 @@ cd ..
 # For each nssfuzz target with tls fuzzing mode, clone corpus & run
 for target in "${!tls_targets[@]}"; do
   update-ec2-status "[$(date -Iseconds)] cloning corpus for $target ($curr_target_n/$total_targets)"
-  clone-nssfuzz-corpus "$name"
+  clone-nssfuzz-corpus "$target"
 
   update-ec2-status "[$(date -Iseconds)] running $target ($curr_target_n/$total_targets)"
   run-nssfuzz-target "$target" "$target"
