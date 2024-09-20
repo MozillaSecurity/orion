@@ -1,0 +1,6 @@
+Host *
+UseRoaming no
+
+Host nss
+HostName github.com
+IdentityFile ~/.ssh/nss_fuzzing_corpus_deploy
