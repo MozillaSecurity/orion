@@ -9,11 +9,15 @@ from itertools import chain
 from logging import getLogger
 from pathlib import Path
 from platform import machine
+import copy
 from typing import Any, Dict, Generator, Iterable, List, Optional, Pattern, Set, Union
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
 
+from . import (
+    WORKER_TYPE,
+)
 from .git import GitRepo
 
 LOG = getLogger(__name__)
@@ -199,6 +203,7 @@ class Service:
         dirty: Whether or not this image needs to be rebuilt
         tests: Tests to run against this service
         root: Path where service is defined
+        archs: Dictionary of architectures and their CI workers
     """
 
     def __init__(
@@ -208,6 +213,7 @@ class Service:
         name: str,
         tests: List[ServiceTest],
         root: Path,
+        archs: Optional[Dict[Any, Any]] = None
     ) -> None:
         """Initialize a Service instance.
 
@@ -217,6 +223,7 @@ class Service:
             name: Image name (Docker tag)
             tests: Tests to run against this service
             root: Path where service is defined
+            archs: Dictionary of architectures and their CI workers
         """
         self.dockerfile = dockerfile
         self.context = context
@@ -228,6 +235,7 @@ class Service:
         self.dirty = False
         self.tests = tests
         self.root = root
+        self.archs = archs or {"amd64": WORKER_TYPE}
 
     @classmethod
     def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> "Service":
@@ -263,6 +271,7 @@ class Service:
             result = ServiceTestOnly(context, name, tests, metadata_path.parent)
         else:
             cpu = {"x86_64": "amd64"}.get(machine(), machine())
+            archs = copy.deepcopy(metadata["arch"])
             if (
                 "arch" in metadata
                 and cpu in metadata["arch"]
@@ -272,7 +281,7 @@ class Service:
             else:
                 dockerfile = metadata_path.parent / "Dockerfile"
             assert dockerfile.is_file()
-            result = cls(dockerfile, context, name, tests, metadata_path.parent)
+            result = cls(dockerfile, context, name, tests, metadata_path.parent, archs)
         result.service_deps |= set(metadata.get("force_deps", []))
         result.weak_deps |= set(metadata.get("force_dirty", []))
         return result
