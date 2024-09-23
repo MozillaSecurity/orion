@@ -223,6 +223,7 @@ class Scheduler:
                 )
             )
         else:
+            workers = {"amd64": WORKER_TYPE, "arm64": WORKER_TYPE_ARM64}
             build_task = yaml_load(
                 BUILD_TASK.substitute(
                     clone_url=self._clone_url(),
@@ -239,7 +240,7 @@ class Scheduler:
                     service_name=service.name,
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
-                    worker=service.archs[arch],
+                    worker=workers[arch],
                 )
             )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
@@ -474,7 +475,7 @@ class Scheduler:
 
                 if isinstance(obj, ServiceTestOnly):
                     assert obj.tests
-                    continue                
+                    continue
                 for arch in obj.archs:
                     build_tasks_created.add(
                         self._create_build_task(
