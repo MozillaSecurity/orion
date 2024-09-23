@@ -9,6 +9,7 @@ import logging
 import sys
 from os import getenv
 from pathlib import Path
+from platform import machine
 from shutil import rmtree
 from typing import List, Optional
 
@@ -34,6 +35,11 @@ class BuildArgs(CommonArgs):
             help="Path to the image tar to output (default: ARCHIVE_PATH)",
         )
         self.parser.add_argument(
+            "--arch",
+            default=getenv("ARCH", "amd64"),
+            help="Architecture for the image build",
+        )
+        self.parser.add_argument(
             "--build-tool",
             default=getenv("BUILD_TOOL"),
             help="Tool to use for building (img/dind) (default: BUILD_TOOL)",
@@ -53,7 +59,7 @@ class BuildArgs(CommonArgs):
         self.parser.add_argument(
             "--image",
             default=getenv("IMAGE_NAME"),
-            help="Docker image name (without repository, default: IMAGE_NAME)",
+            help="Docker image name (without registry, default: IMAGE_NAME)",
         )
         self.parser.add_argument(
             "--load-deps",
@@ -86,6 +92,9 @@ class BuildArgs(CommonArgs):
         if args.write is None:
             self.parser.error("--output (or ARCHIVE_PATH) is required!")
 
+        if args.arch is None:
+            self.parser.error("--arch (or ARCH) is required!")
+
         if args.build_tool is None:
             self.parser.error("--build-tool (or BUILD_TOOL) is required!")
 
@@ -104,6 +113,10 @@ class BuildArgs(CommonArgs):
 def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
+    base_tag = "latest"
+    arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(machine(), machine())
+    assert arch == args.arch
+    args.tag = [f"{args.git_revision}-{arch}", base_tag, f"{base_tag}-{arch}"]
     configure_logging(level=args.log_level)
     target = Target(args)
     if args.load_deps:
