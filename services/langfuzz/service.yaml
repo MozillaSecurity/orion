@@ -1,1 +1,6 @@
 name: langfuzz
+arch:
+  amd64:
+    ci-worker: WORKER_TYPE
+  arm64:
+    ci-worker: WORKER_TYPE_ARM64

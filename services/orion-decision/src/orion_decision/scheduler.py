@@ -24,6 +24,7 @@ from . import (
     PROVISIONER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_ARM64,
     WORKER_TYPE_BREW,
     WORKER_TYPE_MSYS,
     Taskcluster,
@@ -174,7 +175,7 @@ class Scheduler:
         self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
     def _create_build_task(
-        self, service, dirty_dep_tasks, test_tasks, service_build_tasks
+        self, service, dirty_dep_tasks, test_tasks, service_build_tasks, arch
     ):
         if isinstance(service, ServiceMsys):
             task_template = MSYS_TASK
@@ -238,7 +239,7 @@ class Scheduler:
                     service_name=service.name,
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
-                    worker=WORKER_TYPE,
+                    worker=service.archs[arch],
                 )
             )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
@@ -473,13 +474,13 @@ class Scheduler:
 
                 if isinstance(obj, ServiceTestOnly):
                     assert obj.tests
-                    continue
-
-                build_tasks_created.add(
-                    self._create_build_task(
-                        obj, dirty_dep_tasks, test_tasks, service_build_tasks
+                    continue                
+                for arch in obj.archs:
+                    build_tasks_created.add(
+                        self._create_build_task(
+                            obj, dirty_dep_tasks, test_tasks, service_build_tasks, arch
+                        )
                     )
-                )
                 if should_push:
                     push_tasks_created.add(
                         self._create_push_task(obj, service_build_tasks)

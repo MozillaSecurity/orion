@@ -9,6 +9,7 @@ import logging
 import sys
 from os import getenv
 from pathlib import Path
+from platform import machine
 from shutil import rmtree
 from typing import List, Optional
 
@@ -104,26 +105,14 @@ class BuildArgs(CommonArgs):
 def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
-    # TODO: remove and set arm/amd args properly (if more than just a tag)
-    args_arm64 = BuildArgs.parse_args(argv)
-    args_amd64 = BuildArgs.parse_args(argv)
-    args_arm64.tag = [args_arm64.git_revision, "latest-arm64"]
-    args_amd64.tag = [args_amd64.git_revision, "latest-amd64"]
-
-    configure_logging(level=args.log_level)  # TODO: split?
-    # target = Target(args)
-    target_arm64 = Target(args_arm64)
-    target_amd64 = Target(args_amd64)
-
-    if args.load_deps:  # TODO: split?
+    arch = 'amd64' if (arch := machine()) == 'x86_64' else arch
+    args.tag = [args.git_revision, f"latest-{arch}"]
+    configure_logging(level=args.log_level)
+    target = Target(args)
+    if args.load_deps:
         stage_deps(args)
     try:
-        # build_image(target, args)  # TODO: add args.tag = "latest-arm64" and amd64
-        build_image(target_arm64, args_amd64)
-        build_image(target_amd64, args_arm64)
-        # //TODO: add the 2 images to manifest
+        build_image(target, args)
     finally:
-        rmtree(target_arm64.dir)
-        rmtree(target_amd64.dir)
-
+        rmtree(target.dir)
     sys.exit(0)
