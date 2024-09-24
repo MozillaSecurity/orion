@@ -198,7 +198,7 @@ class Service:
         dirty: Whether or not this image needs to be rebuilt
         tests: Tests to run against this service
         root: Path where service is defined
-        archs: List of architectures (e.g. amd64, arm64)
+        archs: List of Linux architectures (e.g. amd64, arm64)
     """
 
     def __init__(
@@ -218,7 +218,7 @@ class Service:
             name: Image name (Docker tag)
             tests: Tests to run against this service
             root: Path where service is defined
-            archs: List of architectures (e.g. amd64, arm64)
+            archs: List of Linux architectures (e.g. amd64, arm64)
         """
         self.dockerfile = dockerfile
         self.context = context
