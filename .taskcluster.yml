@@ -31,6 +31,7 @@ tasks:
               podman run --rm -e TASK_ID -e RUN_ID -e TASKCLUSTER_ROOT_URL --add-host=taskcluster:127.0.0.1 --net=host
               -e TASKCLUSTER_PROXY_URL=http://localhost:80 -e DOCKER_HUB_SECRET -e GITHUB_EVENT -e GITHUB_ACTION -e TASKCLUSTER_NOW
               asuleimanov/orion-decision:latest decision -v
+              # TODO: change dockerhub repo back to mozillasecurity
       scopes:
         - docker-worker:capability:privileged
         - index:insert-task:project.fuzzing.orion.*
