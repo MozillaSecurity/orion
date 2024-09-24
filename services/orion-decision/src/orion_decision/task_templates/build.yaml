@@ -35,6 +35,6 @@ scopes:
   - "queue:scheduler-id:${scheduler}"
 metadata:
   description: "Build the docker image for ${service_name} tasks"
-  name: "Orion ${service_name} docker build"
+  name: "Orion ${service_name} docker build on ${worker}"
   owner: "${owner_email}"
   source: "${source_url}"
