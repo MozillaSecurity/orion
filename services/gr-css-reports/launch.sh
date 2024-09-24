@@ -8,9 +8,6 @@ source ~/.local/bin/common.sh
 
 get-tc-secret deploy-gr-css-reports .ssh/gr.css.reports_deploy
 
-GRCSS_TOKEN=$(get-tc-secret ci-git-token)
-export GRCSS_TOKEN
-
 npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
 
 set -x
