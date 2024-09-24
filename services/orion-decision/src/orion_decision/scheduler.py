@@ -48,6 +48,7 @@ HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
+ALL_ARCHS = ["amd64", "arm64"]
 
 
 class Scheduler:
@@ -175,7 +176,7 @@ class Scheduler:
         self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
     def _create_build_task(
-        self, service, dirty_dep_tasks, test_tasks, service_build_tasks, arch
+        self, service, dirty_dep_tasks, test_tasks, arch, service_build_tasks
     ):
         if isinstance(service, ServiceMsys):
             task_template = MSYS_TASK
@@ -404,7 +405,9 @@ class Scheduler:
         if self._skip_tasks():
             return None
         should_push = self._should_push()
-        service_build_tasks = {service: slugId() for service in self.services}
+        service_build_tasks = {
+            (service, arch): slugId() for service in self.services for arch in ALL_ARCHS
+        }
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
         build_tasks_created: Set[str] = set()
@@ -421,8 +424,9 @@ class Scheduler:
                     LOG.info("Service %s doesn't need to be rebuilt", obj.name)
                 continue
             dirty_dep_tasks = [
-                service_build_tasks[dep]
+                service_build_tasks[(dep, arch)]
                 for dep in obj.service_deps
+                for arch in obj.archs
                 if self.services[dep].dirty
             ]
             if is_svc:
@@ -430,11 +434,13 @@ class Scheduler:
                 dirty_test_dep_tasks = []
                 for test in obj.tests:
                     assert isinstance(test, ToxServiceTest)
-                    if (
-                        test.image in service_build_tasks
-                        and self.services[test.image].dirty
-                    ):
-                        dirty_test_dep_tasks.append(service_build_tasks[test.image])
+                    for arch in obj.archs:
+                        if (test.image, arch) in service_build_tasks and self.services[
+                            test.image
+                        ].dirty:
+                            dirty_test_dep_tasks.append(
+                                service_build_tasks[(test.image, arch)]
+                            )
             else:
                 dirty_test_dep_tasks = []
             dirty_recipe_test_tasks = [
@@ -448,10 +454,11 @@ class Scheduler:
             ) - build_tasks_created
             pending_deps |= set(dirty_recipe_test_tasks) - test_tasks_created
             if pending_deps:
-                if is_svc:
-                    task_id = service_build_tasks[obj.name]
-                else:
-                    task_id = recipe_test_tasks[obj.name]
+                for arch in obj.archs:
+                    if is_svc:
+                        task_id = service_build_tasks[(obj.name, arch)]
+                    else:
+                        task_id = recipe_test_tasks[obj.name]
 
                 LOG.debug(
                     "Can't create %s %s task %s before dependencies: %s",
@@ -468,9 +475,17 @@ class Scheduler:
                 assert isinstance(obj, Service)
                 for test in obj.tests:
                     assert isinstance(test, ToxServiceTest)
-                    task_id = self._create_svc_test_task(obj, test, service_build_tasks)
-                    test_tasks_created.add(task_id)
-                    test_tasks.append(task_id)
+                    for arch in obj.archs:
+                        task_id = self._create_svc_test_task(
+                            obj,
+                            test,
+                            {
+                                service: service_build_tasks[(service, arch)]
+                                for service in self.services
+                            },
+                        )
+                        test_tasks_created.add(task_id)
+                        test_tasks.append(task_id)
                 test_tasks.extend(dirty_recipe_test_tasks)
 
                 if isinstance(obj, ServiceTestOnly):
@@ -479,13 +494,27 @@ class Scheduler:
                 for arch in obj.archs:
                     build_tasks_created.add(
                         self._create_build_task(
-                            obj, dirty_dep_tasks, test_tasks, service_build_tasks, arch
+                            obj,
+                            dirty_dep_tasks,
+                            test_tasks,
+                            arch,
+                            {
+                                service: service_build_tasks[(service, arch)]
+                                for service in self.services
+                            },
                         )
                     )
                 if should_push:
-                    push_tasks_created.add(
-                        self._create_push_task(obj, service_build_tasks)
-                    )
+                    for arch in obj.archs:
+                        push_tasks_created.add(
+                            self._create_push_task(
+                                obj,
+                                {
+                                    service: service_build_tasks[(service, arch)]
+                                    for service in self.services
+                                },
+                            )
+                        )
             else:
                 test_tasks_created.add(
                     self._create_recipe_test_task(
