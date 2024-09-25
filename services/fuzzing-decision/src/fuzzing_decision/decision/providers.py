@@ -62,6 +62,7 @@ class Provider(ABC):
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
+                    "enableD2G": True,
                     "enableInteractive": True,
                     "wstAudience": "communitytc",
                     "wstServerURL": (
