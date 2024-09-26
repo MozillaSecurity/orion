@@ -48,7 +48,7 @@ HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
-ALL_ARCHS = ["amd64", "arm64"]
+WORKERS_ARCHS = {"amd64": WORKER_TYPE, "arm64": WORKER_TYPE_ARM64}
 
 
 class Scheduler:
@@ -224,7 +224,6 @@ class Scheduler:
                 )
             )
         else:
-            workers = {"amd64": WORKER_TYPE, "arm64": WORKER_TYPE_ARM64}
             build_task = yaml_load(
                 BUILD_TASK.substitute(
                     clone_url=self._clone_url(),
@@ -241,7 +240,8 @@ class Scheduler:
                     service_name=service.name,
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
-                    worker=workers[arch],
+                    worker=WORKERS_ARCHS[arch],
+                    arch=arch,
                 )
             )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
@@ -406,7 +406,9 @@ class Scheduler:
             return None
         should_push = self._should_push()
         service_build_tasks = {
-            (service, arch): slugId() for service in self.services for arch in ALL_ARCHS
+            (service, arch): slugId()
+            for service in self.services
+            for arch in WORKERS_ARCHS
         }
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
@@ -426,7 +428,7 @@ class Scheduler:
             dirty_dep_tasks = [
                 service_build_tasks[(dep, arch)]
                 for dep in obj.service_deps
-                for arch in obj.archs
+                for arch in getattr(obj, "archs", ["amd64"])
                 if self.services[dep].dirty
             ]
             if is_svc:

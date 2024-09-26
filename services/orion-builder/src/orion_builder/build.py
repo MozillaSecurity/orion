@@ -105,7 +105,7 @@ class BuildArgs(CommonArgs):
 def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
-    arch = "amd64" if (arch := machine()) == "x86_64" else arch
+    arch = "amd64" if machine() == "x86_64" else machine()
     args.tag = [args.git_revision, f"latest-{arch}"]
     configure_logging(level=args.log_level)
     target = Target(args)
