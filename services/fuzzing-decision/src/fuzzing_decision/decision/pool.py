@@ -89,7 +89,7 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
         if len(suffixes) >= 2 and suffixes[-2] == ".tar":
             fmt = f"tar{suffixes[-1]}"
         else:
-            assert suffixes, "unabled to determine format from container path"
+            assert suffixes, "unable to determine format from container path"
             fmt = suffixes[-1][1:]
         task["payload"]["mounts"].append(
             {
@@ -314,6 +314,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         assert self.tasks is not None
         assert self.demand is not None
         assert self.nested_virtualization is not None
+        assert self.worker is not None
         config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
@@ -322,6 +323,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.platform,
                 self.demand,
                 self.nested_virtualization,
+                self.worker,
             ),
             "maxCapacity": (
                 # * 2 since Taskcluster seems to not reuse workers very quickly in some
@@ -511,6 +513,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         assert self.platform is not None
         assert self.demand is not None
         assert self.nested_virtualization is not None
+        assert self.worker is not None
         config: Dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
@@ -519,6 +522,7 @@ class PoolConfigMap(CommonPoolConfigMap):
                 self.platform,
                 self.demand,
                 self.nested_virtualization,
+                self.worker,
             ),
             "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
             "minCapacity": 0,

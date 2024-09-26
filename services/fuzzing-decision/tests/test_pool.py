@@ -247,6 +247,7 @@ def test_aws_resources(
     if not demand:
         for config in expected["config"]["launchConfigs"]:
             config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
+
     if worker == "docker":
         expected["config"]["launchConfigs"][0]["workerConfig"].update(
             {
@@ -273,6 +274,15 @@ def test_aws_resources(
                 },
             },
         )
+        if worker == "d2g":
+            expected["config"]["launchConfigs"][0]["workerConfig"]["genericWorker"][
+                "config"
+            ].update(
+                {
+                    "deploymentId": "1f70b54337d5cf18",
+                    "enableD2G": True,
+                }
+            )
 
     assert pool.to_json() == expected
 
