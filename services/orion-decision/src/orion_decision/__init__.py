@@ -22,6 +22,7 @@ OWNER_EMAIL = "truber@mozilla.com"
 PROVISIONER_ID = "proj-fuzzing"
 SOURCE_URL = "https://github.com/MozillaSecurity/orion"
 WORKER_TYPE = "ci"
+WORKER_TYPE_ARM64 = "ci-arm64"
 WORKER_TYPE_MSYS = "ci-windows"
 WORKER_TYPE_BREW = "ci-osx"
 del os, relativedelta, timedelta, TaskclusterConfig
