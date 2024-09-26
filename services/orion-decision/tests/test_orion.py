@@ -37,12 +37,11 @@ def test_service_load01() -> None:
     assert not svc.dirty
 
 
-def test_service_load02(mocker: MockerFixture) -> None:
+def test_service_load02() -> None:
     """test that service is loaded from metadata"""
-    mocker.patch("orion_decision.orion.machine", autospec=True, return_value="monkey")
     root = FIXTURES / "services02"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
-    assert svc.dockerfile == root / "test" / "monkey" / "Dockerfile"
+    assert svc.dockerfile == root / "test" / "Dockerfile"
     assert svc.context == root
     assert svc.name == "test-image2"
     # these are calculated by `Services`, so should be clear
