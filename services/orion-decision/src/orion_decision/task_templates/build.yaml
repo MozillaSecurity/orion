@@ -17,6 +17,7 @@ payload:
     - "uname -a && exec build"
   env:
     ARCHIVE_PATH: /image.tar
+    ARCH: "${arch}"
     BUILD_TOOL: podman
     DOCKERFILE: "${dockerfile}"
     GIT_REPOSITORY: "${clone_url}"
@@ -34,6 +35,6 @@ scopes:
   - "queue:scheduler-id:${scheduler}"
 metadata:
   description: "Build the docker image for ${service_name} tasks"
-  name: "Orion ${service_name} docker build"
+  name: "Orion ${service_name} docker build on ${arch}"
   owner: "${owner_email}"
   source: "${source_url}"
