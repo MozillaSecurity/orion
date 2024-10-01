@@ -184,6 +184,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, push_task = queue.createTask.call_args_list[1][0]
@@ -204,6 +205,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            archs=str(["amd64"]),
         )
     )
     push_expected["dependencies"].append(build_task_id)
@@ -251,6 +253,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, task2 = queue.createTask.call_args_list[1][0]
@@ -293,6 +296,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task1_id)
