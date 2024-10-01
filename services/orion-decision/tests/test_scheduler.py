@@ -166,6 +166,7 @@ def test_create_02(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
 
@@ -210,6 +211,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, push_task = queue.createTask.call_args_list[1][0]
@@ -275,6 +277,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, task2 = queue.createTask.call_args_list[1][0]
@@ -295,6 +298,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected2["dependencies"].append(task1_id)
@@ -378,6 +382,7 @@ def test_create_07(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
 
@@ -449,6 +454,7 @@ def test_create_08(
                 source_url=SOURCE_URL,
                 task_group="group",
                 worker=WORKER_TYPE,
+                arch="amd64",
             )
         )
     svc = "svc1" if svc1_dirty else "svc2"
@@ -500,6 +506,7 @@ def test_create_08(
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task2_id)
@@ -546,6 +553,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     task2_id, task2 = queue.createTask.call_args_list[1][0]
@@ -586,6 +594,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task2_id)
