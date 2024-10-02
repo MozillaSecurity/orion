@@ -1,1 +1,4 @@
 name: langfuzz
+arch:
+  - amd64
+  - arm64
