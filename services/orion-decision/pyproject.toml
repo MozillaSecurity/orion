@@ -1,6 +1,42 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "orion-decision"
+requires-python = ">=3.8"
+description = "Scheduler for Orion tasks"
+license = {text = "MPL 2.0"}
+maintainers = [
+    {name = "Mozilla Fuzzing Team", email = "fuzzing@mozilla.com"},
+]
+dynamic = ["readme"]
+dependencies = [
+    "dockerfile-parse",
+    "json-e",
+    "jsonschema>=4.18.0",
+    "python-dateutil",
+    "pyyaml>=5.4",
+    "taskcluster",
+    "aiohttp>=3.9.0b0; python_version >= '3.12'",
+]
+version = "0.0.1"
+
+[project.optional-dependencies]
+dev = ["tox"]
+
+[project.scripts]
+ci-check = "orion_decision.cli:ci_check"
+ci-decision = "orion_decision.cli:ci_main"
+ci-launch = "orion_decision.cli:ci_launch"
+cron-decision = "orion_decision.cli:cron_main"
+decision = "orion_decision.cli:main"
+orion-check = "orion_decision.cli:check"
+
+[project.urls]
+Homepage = "https://github.com/MozillaSecurity/orion"
+Issues = "https://github.com/MozillaSecurity/orion/issues"
+Repository = "https://github.com/MozillaSecurity/orion.git"
 
 [tool.black]
 target-version = ["py38"]
@@ -71,3 +107,10 @@ select = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["orion_decision"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["orion_decision"]
