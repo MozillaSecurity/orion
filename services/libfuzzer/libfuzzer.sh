@@ -43,12 +43,14 @@ then
   setup-aws-credentials
 fi
 
+get-target-time () {
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
 then
-  TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
+  echo $(($(get-deadline) - $(date +%s) - 5 * 60))
 else
-  TARGET_TIME=$((10 * 365 * 24 * 3600))
+  echo $((10 * 365 * 24 * 3600))
 fi
+}
 
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
@@ -160,9 +162,9 @@ FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
   if [[ -n "$XPCRT" ]]
   then
-    xvfb-run timeout --foreground -s 2 ${TARGET_TIME} guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+    xvfb-run timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
   else
-    timeout --foreground -s 2 ${TARGET_TIME} guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+    timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
   fi
 
 }
