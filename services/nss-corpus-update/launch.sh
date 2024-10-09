@@ -64,9 +64,6 @@ unzip top-1m-incl-subdomains.csv.zip
 
 shuf -n "${NUM_RAND_HOSTS-5000}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.txt
 
-rm -f top-1m.csv
-rm -f top-1m-incl-subdomains.csv.zip
-
 # Run collection scripts
 mkdir -p nss-new-corpus
 mkdir -p nss-new-corpus-minimized
@@ -100,9 +97,6 @@ for directory in nss-new-corpus/*; do
     dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$name-no_fuzzer_mode-corpus" "$directory"
 done
 
-# Free up disk space
-rm -rf nss-new-corpus
-
 # Setup gcloud
 mkdir -p ~/.config/gcloud
 get-tc-secret ossfuzz-gutils ~/.config/gcloud/application_default_credentials.json raw
@@ -112,7 +106,4 @@ echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/applic
 for directory in nss-new-corpus-minimized/*; do
     name="$(basename "$directory" "-corpus")"
     gsutil -m cp "$directory/*" "gs://nss-corpus.clusterfuzz-external.appspot.com/libFuzzer/nss_$name"
-
-    # Free up disk space
-    rm -rf "$directory"
 done
