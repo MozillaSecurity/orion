@@ -499,11 +499,11 @@ class Scheduler:
             ) - build_tasks_created
             pending_deps |= set(dirty_recipe_test_tasks) - test_tasks_created
             if pending_deps:
-                for arch in obj.archs:
-                    if is_svc:
+                if is_svc:
+                    for arch in obj.archs:
                         task_id = service_build_tasks[(obj.name, arch)]
-                    else:
-                        task_id = recipe_test_tasks[obj.name]
+                else:
+                    task_id = recipe_test_tasks[obj.name]
 
                 LOG.debug(
                     "Can't create %s %s task %s before dependencies: %s",
