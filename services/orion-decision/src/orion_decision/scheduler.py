@@ -264,6 +264,7 @@ class Scheduler:
                 clone_url=self._clone_url(),
                 commit=self._commit(),
                 deadline=stringDate(self.now + DEADLINE),
+                expires=stringDate(self.now + ARTIFACTS_EXPIRE),
                 docker_secret=self.docker_secret,
                 max_run_time=int(MAX_RUN_TIME.total_seconds()),
                 now=stringDate(self.now),
