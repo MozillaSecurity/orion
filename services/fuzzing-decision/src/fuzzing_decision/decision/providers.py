@@ -27,10 +27,13 @@ class Provider(ABC):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        worker_type: str,
     ) -> List[Dict[str, Any]]:
         raise NotImplementedError()
 
-    def get_worker_config(self, worker: str, platform: str) -> Dict[str, Any]:
+    def get_worker_config(
+        self, worker: str, platform: str, worker_type: str
+    ) -> Dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
         out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
@@ -69,6 +72,8 @@ class Provider(ABC):
                     ),
                 }
             )
+            if worker_type == "d2g":
+                out["genericWorker"]["config"]["enableD2G"] = True
 
             # Add a deploymentId by hashing the config
             payload = json.dumps(out, sort_keys=True).encode("utf-8")
@@ -120,11 +125,12 @@ class AWS(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        worker_type: str,
     ) -> List[Dict[str, Any]]:
         assert not nested_virtualization
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
-        worker_config = self.get_worker_config(imageset, platform)
+        worker_config = self.get_worker_config(imageset, platform, worker_type)
 
         result: List[Dict[str, Any]] = [
             {
@@ -180,11 +186,12 @@ class Azure(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        worker_type: str,
     ) -> List[Dict[str, Any]]:
         assert not nested_virtualization
         # Load the Azure infos for that imageset
         images = self.get_images(imageset)
-        worker_config = self.get_worker_config(imageset, platform)
+        worker_config = self.get_worker_config(imageset, platform, worker_type)
 
         result: List[Dict[str, Any]] = [
             {
@@ -252,6 +259,7 @@ class GCP(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        worker_type: str,
     ) -> List[Dict[str, Any]]:
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
@@ -259,7 +267,7 @@ class GCP(Provider):
             "gcp" in self.imagesets[imageset]
         ), f"No GCP implementation for imageset {imageset}"
         source_image = self.imagesets[imageset]["gcp"]["image"]
-        worker_config = self.get_worker_config(imageset, platform)
+        worker_config = self.get_worker_config(imageset, platform, worker_type)
 
         result = [
             {
@@ -321,5 +329,6 @@ class Static(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        worker_type: str,
     ) -> List[Dict[str, Any]]:
         return []

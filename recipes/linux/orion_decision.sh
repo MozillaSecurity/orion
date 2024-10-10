@@ -55,7 +55,7 @@ case "${1-install}" in
 
     if [[ "$EDIT" = "1" ]]
     then
-      retry "$PY3" -m pip install --no-build-isolation -e "$SRCDIR"
+      retry "$PY3" -m pip install -e "$SRCDIR"
     else
       retry "$PY3" -m pip install "$SRCDIR"
     fi
