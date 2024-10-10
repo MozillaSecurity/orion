@@ -280,7 +280,8 @@ class Scheduler:
             )
         )
         for arch in archs:
-            LOG.info(f"Combine task: adding dependency {service.name} on {arch}")
+            LOG.info("Combine task: adding build tasks dependencies")
+            LOG.info(f"Dependency: {service_build_tasks[(service.name, arch)]}")
             combine_task["dependencies"].append(
                 service_build_tasks[(service.name, arch)]
             )
