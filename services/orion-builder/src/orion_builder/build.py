@@ -9,6 +9,7 @@ import logging
 import sys
 from os import getenv
 from pathlib import Path
+from platform import machine
 from shutil import rmtree
 from typing import List, Optional
 
@@ -53,7 +54,7 @@ class BuildArgs(CommonArgs):
         self.parser.add_argument(
             "--image",
             default=getenv("IMAGE_NAME"),
-            help="Docker image name (without repository, default: IMAGE_NAME)",
+            help="Docker image name (without registry, default: IMAGE_NAME)",
         )
         self.parser.add_argument(
             "--load-deps",
@@ -104,6 +105,9 @@ class BuildArgs(CommonArgs):
 def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
+    arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(machine(), machine())
+    # TODO: assert arch = $ARCH passed in scheduler.py:create_tasks()?
+    args.tag = [args.git_revision, f"latest-{arch}"]
     configure_logging(level=args.log_level)
     target = Target(args)
     if args.load_deps:

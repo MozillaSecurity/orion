@@ -24,6 +24,7 @@ from . import (
     PROVISIONER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_ARM64,
     WORKER_TYPE_BREW,
     WORKER_TYPE_MSYS,
     Taskcluster,
@@ -44,9 +45,11 @@ TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
 HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
+COMBINE_TASK = Template((TEMPLATES / "combine.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
+WORKERS_ARCHS = {"amd64": WORKER_TYPE, "arm64": WORKER_TYPE_ARM64}
 
 
 class Scheduler:
@@ -174,7 +177,7 @@ class Scheduler:
         self.services.mark_changed_dirty(self.github_event.list_changed_paths())
 
     def _create_build_task(
-        self, service, dirty_dep_tasks, test_tasks, service_build_tasks
+        self, service, dirty_dep_tasks, test_tasks, arch, service_build_tasks
     ):
         if isinstance(service, ServiceMsys):
             task_template = MSYS_TASK
@@ -238,7 +241,8 @@ class Scheduler:
                     service_name=service.name,
                     source_url=SOURCE_URL,
                     task_group=self.task_group,
-                    worker=WORKER_TYPE,
+                    worker=WORKERS_ARCHS[arch],
+                    arch=arch,
                 )
             )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
@@ -254,7 +258,49 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_push_task(self, service, service_build_tasks):
+    def _create_combine_task(self, service, archs, service_build_tasks):
+        combine_task = yaml_load(
+            COMBINE_TASK.substitute(
+                clone_url=self._clone_url(),
+                commit=self._commit(),
+                deadline=stringDate(self.now + DEADLINE),
+                expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                docker_secret=self.docker_secret,
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                scheduler=self.scheduler_id,
+                service_name=service.name,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                task_index=self._build_index(service.name),
+                worker=WORKER_TYPE,
+                archs=archs,
+            )
+        )
+        for arch in archs:
+            LOG.info("Combine task: adding build tasks dependencies")
+            LOG.info(f"Dependency: {service_build_tasks[(service.name, arch)]}")
+            combine_task["dependencies"].append(
+                service_build_tasks[(service.name, arch)]
+            )
+        task_id = slugId()
+        LOG.info(
+            "%s task %s: %s",
+            self._create_str,
+            task_id,
+            combine_task["metadata"]["name"],
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, combine_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating combine task: %s", exc)
+                raise
+        return task_id
+
+    def _create_push_task(self, service, arch, service_build_tasks):
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -272,9 +318,10 @@ class Scheduler:
                 task_group=self.task_group,
                 task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
+                arch=arch,
             )
         )
-        push_task["dependencies"].append(service_build_tasks[service.name])
+        push_task["dependencies"].append(service_build_tasks[(service.name, arch)])
         task_id = slugId()
         LOG.info(
             "%s task %s: %s", self._create_str, task_id, push_task["metadata"]["name"]
@@ -402,10 +449,15 @@ class Scheduler:
         if self._skip_tasks():
             return None
         should_push = self._should_push()
-        service_build_tasks = {service: slugId() for service in self.services}
+        service_build_tasks = {
+            (service, arch): slugId()
+            for service in self.services
+            for arch in WORKERS_ARCHS
+        }
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
         build_tasks_created: Set[str] = set()
+        combine_tasks_created: Set[str] = set()
         push_tasks_created: Set[str] = set()
         to_create = sorted(
             self.services.recipes.values(), key=lambda x: x.name
@@ -419,8 +471,9 @@ class Scheduler:
                     LOG.info("Service %s doesn't need to be rebuilt", obj.name)
                 continue
             dirty_dep_tasks = [
-                service_build_tasks[dep]
+                service_build_tasks[(dep, arch)]
                 for dep in obj.service_deps
+                for arch in getattr(obj, "archs", ["amd64"])
                 if self.services[dep].dirty
             ]
             if is_svc:
@@ -428,11 +481,13 @@ class Scheduler:
                 dirty_test_dep_tasks = []
                 for test in obj.tests:
                     assert isinstance(test, ToxServiceTest)
-                    if (
-                        test.image in service_build_tasks
-                        and self.services[test.image].dirty
-                    ):
-                        dirty_test_dep_tasks.append(service_build_tasks[test.image])
+                    for arch in obj.archs:
+                        if (test.image, arch) in service_build_tasks and self.services[
+                            test.image
+                        ].dirty:
+                            dirty_test_dep_tasks.append(
+                                service_build_tasks[(test.image, arch)]
+                            )
             else:
                 dirty_test_dep_tasks = []
             dirty_recipe_test_tasks = [
@@ -447,7 +502,8 @@ class Scheduler:
             pending_deps |= set(dirty_recipe_test_tasks) - test_tasks_created
             if pending_deps:
                 if is_svc:
-                    task_id = service_build_tasks[obj.name]
+                    for arch in obj.archs:
+                        task_id = service_build_tasks[(obj.name, arch)]
                 else:
                     task_id = recipe_test_tasks[obj.name]
 
@@ -466,24 +522,59 @@ class Scheduler:
                 assert isinstance(obj, Service)
                 for test in obj.tests:
                     assert isinstance(test, ToxServiceTest)
-                    task_id = self._create_svc_test_task(obj, test, service_build_tasks)
-                    test_tasks_created.add(task_id)
-                    test_tasks.append(task_id)
+                    for arch in obj.archs:
+                        task_id = self._create_svc_test_task(
+                            obj,
+                            test,
+                            {
+                                service: service_build_tasks[(service, arch)]
+                                for service in self.services
+                            },
+                        )
+                        test_tasks_created.add(task_id)
+                        test_tasks.append(task_id)
                 test_tasks.extend(dirty_recipe_test_tasks)
 
                 if isinstance(obj, ServiceTestOnly):
                     assert obj.tests
                     continue
-
-                build_tasks_created.add(
-                    self._create_build_task(
-                        obj, dirty_dep_tasks, test_tasks, service_build_tasks
+                for arch in obj.archs:
+                    build_tasks_created.add(
+                        self._create_build_task(
+                            obj,
+                            dirty_dep_tasks,
+                            test_tasks,
+                            arch,
+                            {
+                                service: service_build_tasks[(service, arch)]
+                                for service in self.services
+                            },
+                        )
                     )
-                )
+                if len(obj.archs) > 1:
+                    LOG.info(f"Create combine task for builds: {service_build_tasks}")
+                    combine_tasks_created.add(
+                        self._create_combine_task(
+                            obj,
+                            obj.archs,
+                            {
+                                service: service_build_tasks[(service, arch)]
+                                for service in self.services
+                            },
+                        )
+                    )
                 if should_push:
-                    push_tasks_created.add(
-                        self._create_push_task(obj, service_build_tasks)
-                    )
+                    for arch in obj.archs:
+                        push_tasks_created.add(
+                            self._create_push_task(
+                                obj,
+                                arch,
+                                {
+                                    service: service_build_tasks[(service, arch)]
+                                    for service in self.services
+                                },
+                            )
+                        )
             else:
                 test_tasks_created.add(
                     self._create_recipe_test_task(
@@ -493,10 +584,11 @@ class Scheduler:
                     )
                 )
         LOG.info(
-            "%s %d test tasks, %d build tasks and %d push tasks",
+            "%s %d test tasks, %d build tasks, %d combine tasks and %d push tasks",
             self._created_str,
             len(test_tasks_created),
             len(build_tasks_created),
+            len(combine_tasks_created),
             len(push_tasks_created),
         )
 

@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from platform import machine
 from typing import Any, Dict, Generator, Iterable, List, Optional, Pattern, Set, Union
 
 from dockerfile_parse import DockerfileParser
@@ -199,6 +198,7 @@ class Service:
         dirty: Whether or not this image needs to be rebuilt
         tests: Tests to run against this service
         root: Path where service is defined
+        archs: List of Linux architectures (e.g. amd64, arm64)
     """
 
     def __init__(
@@ -208,6 +208,7 @@ class Service:
         name: str,
         tests: List[ServiceTest],
         root: Path,
+        archs: Optional[List[str]] = None,
     ) -> None:
         """Initialize a Service instance.
 
@@ -217,6 +218,7 @@ class Service:
             name: Image name (Docker tag)
             tests: Tests to run against this service
             root: Path where service is defined
+            archs: List of Linux architectures (e.g. amd64, arm64)
         """
         self.dockerfile = dockerfile
         self.context = context
@@ -228,6 +230,7 @@ class Service:
         self.dirty = False
         self.tests = tests
         self.root = root
+        self.archs = archs or ["amd64"]
 
     @classmethod
     def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> "Service":
@@ -262,17 +265,10 @@ class Service:
         elif metadata.get("type") == "test":
             result = ServiceTestOnly(context, name, tests, metadata_path.parent)
         else:
-            cpu = {"x86_64": "amd64"}.get(machine(), machine())
-            if (
-                "arch" in metadata
-                and cpu in metadata["arch"]
-                and "dockerfile" in metadata["arch"][cpu]
-            ):
-                dockerfile = metadata_path.parent / metadata["arch"][cpu]["dockerfile"]
-            else:
-                dockerfile = metadata_path.parent / "Dockerfile"
+            dockerfile = metadata_path.parent / "Dockerfile"
             assert dockerfile.is_file()
-            result = cls(dockerfile, context, name, tests, metadata_path.parent)
+            archs = metadata["arch"] if "arch" in metadata else ["amd64"]
+            result = cls(dockerfile, context, name, tests, metadata_path.parent, archs)
         result.service_deps |= set(metadata.get("force_deps", []))
         result.weak_deps |= set(metadata.get("force_dirty", []))
         return result

@@ -14,15 +14,15 @@ payload:
   command:
     - "sh"
     - "-c"
-    - "uname -a && exec build"
+    - "exec combine"
   env:
     ARCHIVE_PATH: /image.tar
     BUILD_TOOL: podman
-    DOCKERFILE: "${dockerfile}"
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
-    LOAD_DEPS: "${load_deps}"
+    SERVICE_NAME: "${service_name}"
+    ARCH: "${archs}" #TODO: check if all archs were passed from scheduler.py
   capabilities:
     privileged: true
   # TODO: change back to mozillasecurity once approved
@@ -34,7 +34,8 @@ scopes:
   - "docker-worker:capability:privileged"
   - "queue:scheduler-id:${scheduler}"
 metadata:
-  description: "Build the docker image for ${service_name} tasks"
-  name: "Orion ${service_name} docker build on ${arch}"
+  description: "Combine all docker images for ${service_name} into a multiarch image"
+  name: "Orion ${service_name} builds combined into multiarch image"
   owner: "${owner_email}"
   source: "${source_url}"
+
