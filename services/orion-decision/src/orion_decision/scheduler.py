@@ -280,6 +280,7 @@ class Scheduler:
             )
         )
         for arch in archs:
+            LOG.info(f"Combine task: adding dependency {service.name} on {arch}")
             combine_task["dependencies"].append(
                 service_build_tasks[(service.name, arch)]
             )
@@ -550,6 +551,7 @@ class Scheduler:
                         )
                     )
                 if len(obj.archs) > 1:
+                    LOG.info(f"Create combine task for builds: {service_build_tasks}")
                     combine_tasks_created.add(
                         self._create_combine_task(
                             obj,
