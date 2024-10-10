@@ -70,13 +70,6 @@ class CombineArgs(CommonArgs):
         super().sanity_check(args)
         args.tag = [args.git_revision, "latest"]
 
-        if not args.load_deps:
-            load_deps_env = getenv("LOAD_DEPS")
-            if load_deps_env is None or load_deps_env not in {"0", "1"}:
-                self.parser.error("LOAD_DEPS must be 0/1")
-            if load_deps_env == "1":
-                args.load_deps = True
-
         if args.write is None:
             self.parser.error("--output (or ARCHIVE_PATH) is required!")
 
@@ -89,11 +82,6 @@ class CombineArgs(CommonArgs):
         if args.image is None:
             self.parser.error("--image (or IMAGE_NAME) is required!")
 
-        if args.load_deps and args.task_id is None:
-            self.parser.error(
-                "--task-id (or TASK_ID) is required to load dependency artifacts!"
-            )
-
 
 def main(argv: Optional[List[str]] = None) -> None:
     """Combine entrypoint. Does not return."""
@@ -103,6 +91,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     archs = args.archs
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
+    print(f"Starting the task to combine {service_name} images for archs: {archs}")
 
     # 1. Load all archs images into podman
     tool = Podman()
