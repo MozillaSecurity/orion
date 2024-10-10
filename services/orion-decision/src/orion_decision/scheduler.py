@@ -272,7 +272,6 @@ class Scheduler:
                 provisioner=PROVISIONER_ID,
                 scheduler=self.scheduler_id,
                 service_name=service.name,
-                skip_docker=f"{isinstance(service, (ServiceHomebrew, ServiceMsys)):d}",
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
                 task_index=self._build_index(service.name),

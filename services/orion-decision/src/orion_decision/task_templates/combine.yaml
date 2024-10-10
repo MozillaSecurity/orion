@@ -18,13 +18,11 @@ payload:
   env:
     ARCHIVE_PATH: /image.tar
     BUILD_TOOL: podman
-    DOCKERFILE: "${dockerfile}"
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
     SERVICE_NAME: "${service_name}"
     ARCH: "${archs}" #TODO: check if all archs were passed from scheduler.py
-    LOAD_DEPS: "${load_deps}"
   capabilities:
     privileged: true
   # TODO: change back to mozillasecurity once approved
