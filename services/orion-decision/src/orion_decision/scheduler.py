@@ -10,7 +10,7 @@ from logging import getLogger
 from os import getenv
 from pathlib import Path
 from string import Template
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set, Tuple, Union
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -246,7 +246,7 @@ class Scheduler:
                 )
             )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
-        task_id = service_build_tasks[service.name]
+        task_id = service_build_tasks[(service.name, arch)]
         LOG.info(
             "%s task %s: %s", self._create_str, task_id, build_task["metadata"]["name"]
         )
@@ -265,7 +265,6 @@ class Scheduler:
                 commit=self._commit(),
                 deadline=stringDate(self.now + DEADLINE),
                 expires=stringDate(self.now + ARTIFACTS_EXPIRE),
-                docker_secret=self.docker_secret,
                 max_run_time=int(MAX_RUN_TIME.total_seconds()),
                 now=stringDate(self.now),
                 owner_email=OWNER_EMAIL,
@@ -274,13 +273,12 @@ class Scheduler:
                 service_name=service.name,
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
-                task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
                 archs=archs,
             )
         )
+        LOG.info(f"Combine task: choosing build tasks from {service_build_tasks}")
         for arch in archs:
-            LOG.info("Combine task: adding build tasks dependencies")
             LOG.info(f"Dependency: {service_build_tasks[(service.name, arch)]}")
             combine_task["dependencies"].append(
                 service_build_tasks[(service.name, arch)]
@@ -338,17 +336,18 @@ class Scheduler:
         self,
         service: Service,
         test: ToxServiceTest,
-        service_build_tasks: Dict[str, str],
+        service_build_tasks: Dict[Tuple[str, str], str],
+        arch: str,
     ):
         image: Union[str, Dict[str, str]] = test.image
         deps = []
-        if image in service_build_tasks:
+        if (image, arch) in service_build_tasks:
             if self.services[image].dirty:
                 assert isinstance(image, str)
-                deps.append(service_build_tasks[image])
+                deps.append(service_build_tasks[(image, arch)])
                 image = {
                     "type": "task-image",
-                    "taskId": service_build_tasks[image],
+                    "taskId": service_build_tasks[(image, arch)],
                 }
             else:
                 image = {
@@ -524,12 +523,7 @@ class Scheduler:
                     assert isinstance(test, ToxServiceTest)
                     for arch in obj.archs:
                         task_id = self._create_svc_test_task(
-                            obj,
-                            test,
-                            {
-                                service: service_build_tasks[(service, arch)]
-                                for service in self.services
-                            },
+                            obj, test, service_build_tasks, arch
                         )
                         test_tasks_created.add(task_id)
                         test_tasks.append(task_id)
@@ -541,39 +535,18 @@ class Scheduler:
                 for arch in obj.archs:
                     build_tasks_created.add(
                         self._create_build_task(
-                            obj,
-                            dirty_dep_tasks,
-                            test_tasks,
-                            arch,
-                            {
-                                service: service_build_tasks[(service, arch)]
-                                for service in self.services
-                            },
+                            obj, dirty_dep_tasks, test_tasks, arch, service_build_tasks
                         )
                     )
                 if len(obj.archs) > 1:
                     LOG.info(f"Create combine task for builds: {service_build_tasks}")
                     combine_tasks_created.add(
-                        self._create_combine_task(
-                            obj,
-                            obj.archs,
-                            {
-                                service: service_build_tasks[(service, arch)]
-                                for service in self.services
-                            },
-                        )
+                        self._create_combine_task(obj, obj.archs, service_build_tasks)
                     )
                 if should_push:
                     for arch in obj.archs:
                         push_tasks_created.add(
-                            self._create_push_task(
-                                obj,
-                                arch,
-                                {
-                                    service: service_build_tasks[(service, arch)]
-                                    for service in self.services
-                                },
-                            )
+                            self._create_push_task(obj, arch, service_build_tasks)
                         )
             else:
                 test_tasks_created.add(
