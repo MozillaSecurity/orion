@@ -6,6 +6,7 @@
 
 import argparse
 import sys
+from logging import getLogger
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
@@ -18,6 +19,8 @@ from taskboot.docker import Podman
 from taskboot.utils import download_artifact, load_artifacts
 
 from .cli import CommonArgs
+
+LOG = getLogger(__name__)
 
 
 class CombineArgs(CommonArgs):
@@ -45,15 +48,15 @@ class CombineArgs(CommonArgs):
             help="Architectures to be included in the multiarch image",
         )
         self.parser.add_argument(
+            "--service-name",
+            action="append",
+            default=getenv("SERVICE_NAME"),  # should bring service.name from scheduler
+            help="Name of the service of the multiarch image",
+        )
+        self.parser.add_argument(
             "--image",
             default=getenv("IMAGE_NAME"),
             help="Docker image name (without repository, default: IMAGE_NAME)",
-        )
-        self.parser.add_argument(
-            "--load-deps",
-            action="store_true",
-            help="Pull all images build in dependency tasks into the image store."
-            " (default: LOAD_DEPS)",
         )
         self.parser.add_argument(
             "--registry",
@@ -79,6 +82,9 @@ class CombineArgs(CommonArgs):
         if args.archs is None:
             self.parser.error("--archs is required!")
 
+        if args.service_name is None:
+            self.parser.error("--service-name is required!")
+
         if args.image is None:
             self.parser.error("--image (or IMAGE_NAME) is required!")
 
@@ -88,7 +94,14 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     args = CombineArgs.parse_args(argv)
     service_name = args.service_name
-    archs = args.archs
+
+    if isinstance(args.archs, list):  # TODO: remove
+        LOG.info(f"YAML array worked: {args.archs}")
+        archs = args.archs
+    else:
+        LOG.info(f"YAML array failed, converting from string: {args.archs}")
+        archs = args.archs.strip("[]").replace("'", "").split(", ")
+
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
     print(f"Starting the task to combine {service_name} images for archs: {archs}")
