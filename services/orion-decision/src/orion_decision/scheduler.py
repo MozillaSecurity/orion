@@ -45,6 +45,7 @@ TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 BUILD_TASK = Template((TEMPLATES / "build.yaml").read_text())
 MSYS_TASK = Template((TEMPLATES / "build_msys.yaml").read_text())
 HOMEBREW_TASK = Template((TEMPLATES / "build_homebrew.yaml").read_text())
+COMBINE_TASK = Template((TEMPLATES / "combine.yaml").read_text())
 PUSH_TASK = Template((TEMPLATES / "push.yaml").read_text())
 TEST_TASK = Template((TEMPLATES / "test.yaml").read_text())
 RECIPE_TEST_TASK = Template((TEMPLATES / "recipe_test.yaml").read_text())
@@ -257,6 +258,48 @@ class Scheduler:
                 raise
         return task_id
 
+    def _create_combine_task(self, service, service_build_tasks):
+        combine_task = yaml_load(
+            COMBINE_TASK.substitute(
+                clone_url=self._clone_url(),
+                commit=self._commit(),
+                deadline=stringDate(self.now + DEADLINE),
+                expires=stringDate(self.now + ARTIFACTS_EXPIRE),
+                max_run_time=int(MAX_RUN_TIME.total_seconds()),
+                now=stringDate(self.now),
+                owner_email=OWNER_EMAIL,
+                provisioner=PROVISIONER_ID,
+                scheduler=self.scheduler_id,
+                service_name=service.name,
+                source_url=SOURCE_URL,
+                task_group=self.task_group,
+                worker=WORKER_TYPE,
+                archs=str(service.archs),
+            )
+        )
+        for arch in service.archs:
+            LOG.debug(
+                "Adding combine task dependency: %s",
+                service_build_tasks[(service.name, arch)],
+            )
+            combine_task["dependencies"].append(
+                service_build_tasks[(service.name, arch)]
+            )
+        task_id = slugId()
+        LOG.info(
+            "%s task %s: %s",
+            self._create_str,
+            task_id,
+            combine_task["metadata"]["name"],
+        )
+        if not self.dry_run:
+            try:
+                Taskcluster.get_service("queue").createTask(task_id, combine_task)
+            except TaskclusterFailure as exc:  # pragma: no cover
+                LOG.error("Error creating combine task: %s", exc)
+                raise
+        return task_id
+
     def _create_push_task(self, service, service_build_tasks):
         push_task = yaml_load(
             PUSH_TASK.substitute(
@@ -414,6 +457,7 @@ class Scheduler:
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
         build_tasks_created: Set[str] = set()
+        combine_tasks_created: Dict[str, str] = {}
         push_tasks_created: Set[str] = set()
         to_create = sorted(
             self.services.recipes.values(), key=lambda x: x.name
@@ -496,7 +540,10 @@ class Scheduler:
                             obj, dirty_dep_tasks, test_tasks, arch, service_build_tasks
                         )
                     )
-
+                if len(obj.archs) > 1:
+                    combine_tasks_created[obj.name] = self._create_combine_task(
+                        obj, service_build_tasks
+                    )
                 if should_push:
                     push_tasks_created.add(
                         self._create_push_task(obj, service_build_tasks)
@@ -510,10 +557,11 @@ class Scheduler:
                     )
                 )
         LOG.info(
-            "%s %d test tasks, %d build tasks and %d push tasks",
+            "%s %d test tasks, %d build tasks, %d combine tasks and %d push tasks",
             self._created_str,
             len(test_tasks_created),
             len(build_tasks_created),
+            len(combine_tasks_created),
             len(push_tasks_created),
         )
 
