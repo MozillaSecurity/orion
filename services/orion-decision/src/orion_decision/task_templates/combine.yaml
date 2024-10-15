@@ -22,7 +22,7 @@ payload:
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
     SERVICE_NAME: "${service_name}"
-    ARCHS: "${archs}" #TODO: check if all archs were passed from scheduler.py
+    ARCHS: "${archs}"
   capabilities:
     privileged: true
   # TODO: change back to mozillasecurity once approved

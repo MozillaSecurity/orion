@@ -1,0 +1,4 @@
+name: test1
+arch:
+  - amd64
+  - arm64

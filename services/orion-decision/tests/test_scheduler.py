@@ -765,7 +765,7 @@ def test_create_14(mocker: MockerFixture) -> None:
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
     now = datetime.now(timezone.utc)
-    root = FIXTURES / "services03"
+    root = FIXTURES / "services12"
     evt = mocker.Mock(spec=GithubEvent())
     evt.repo.path = root
     evt.repo.git = mocker.Mock(
@@ -775,10 +775,8 @@ def test_create_14(mocker: MockerFixture) -> None:
     evt.branch = "main"
     evt.http_url = "https://example.com"
     evt.pull_request = None
-    sched = Scheduler(evt, "group", "scheduler", "secret", "push")  # TODO: push?
-    sched.services["test1"].dirty = True  # TODO: how to differentiate?
-    sched.services["test2"].dirty = True  # since IRL service name will
-    sched.services["test3"].dirty = True  # be same for build tasks 1 and 2)
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
+    sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 3
     task1_id, task1 = queue.createTask.call_args_list[0][0]
@@ -787,7 +785,7 @@ def test_create_14(mocker: MockerFixture) -> None:
             clone_url="https://example.com",
             commit="commit",
             deadline=stringDate(now + DEADLINE),
-            dockerfile="test1/Dockerfile",
+            dockerfile="Dockerfile",
             expires=stringDate(now + ARTIFACTS_EXPIRE),
             load_deps="0",
             max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -808,7 +806,7 @@ def test_create_14(mocker: MockerFixture) -> None:
             clone_url="https://example.com",
             commit="commit",
             deadline=stringDate(now + DEADLINE),
-            dockerfile="test2/Dockerfile",
+            dockerfile="Dockerfile",
             expires=stringDate(now + ARTIFACTS_EXPIRE),
             load_deps="0",
             max_run_time=int(MAX_RUN_TIME.total_seconds()),
@@ -816,7 +814,7 @@ def test_create_14(mocker: MockerFixture) -> None:
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
             scheduler="scheduler",
-            service_name="test2",
+            service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE_ARM64,
@@ -835,7 +833,7 @@ def test_create_14(mocker: MockerFixture) -> None:
             owner_email=OWNER_EMAIL,
             provisioner=PROVISIONER_ID,
             scheduler="scheduler",
-            service_name="test3",
+            service_name="test1",
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,

@@ -96,10 +96,10 @@ def main(argv: Optional[List[str]] = None) -> None:
     service_name = args.service_name
 
     if isinstance(args.archs, list):  # TODO: remove
-        LOG.info(f"YAML array worked: {args.archs}")
+        print(f"YAML array worked: {args.archs}")
         archs = args.archs
     else:
-        LOG.info(f"YAML array failed, converting from string: {args.archs}")
+        print(f"YAML array failed, converting from string: {args.archs}")
         archs = args.archs.strip("[]").replace("'", "").split(", ")
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
@@ -138,7 +138,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                 f"{args.registry}/mozillasecurity/{service_name}:latest-{arch}"
                 for arch in archs
             ]
-            + ["--output", f"{args.write}.tar"]
+            + ["--output", f"{args.write}"]
         )
         print(f"Save multiarch image result: {save_result}")
         zstd_compress(args.write)
