@@ -138,10 +138,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                 f"{args.registry}/mozillasecurity/{service_name}:latest-{arch}"
                 for arch in archs
             ]
-            + ["--output", f"{args.output}.tar"]
+            + ["--output", f"{args.write}.tar"]
         )
-        print(save_result)
-        zstd_compress(args.output)
+        print(f"Save multiarch image result: {save_result}")
+        zstd_compress(args.write)
     finally:
         rmtree(image_path)
     sys.exit(0)
