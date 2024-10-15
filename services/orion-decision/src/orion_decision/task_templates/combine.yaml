@@ -1,0 +1,40 @@
+taskGroupId: "${task_group}"
+dependencies: []
+created: "${now}"
+deadline: "${deadline}"
+provisionerId: "${provisioner}"
+schedulerId: "${scheduler}"
+workerType: "${worker}"
+payload:
+  artifacts:
+    "public/${service_name}.tar.zst":
+      expires: "${expires}"
+      path: /image.tar.zst
+      type: file
+  command:
+    - "sh"
+    - "-c"
+    - "exec combine"
+  env:
+    ARCHIVE_PATH: /image.tar
+    BUILD_TOOL: podman
+    GIT_REPOSITORY: "${clone_url}"
+    GIT_REVISION: "${commit}"
+    IMAGE_NAME: "mozillasecurity/${service_name}"
+    SERVICE_NAME: "${service_name}"
+    ARCHS: "${archs}"
+  capabilities:
+    privileged: true
+  image: "mozillasecurity/orion-builder:latest"
+  maxRunTime: !!int "${max_run_time}"
+routes:
+  - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
+scopes:
+  - "docker-worker:capability:privileged"
+  - "queue:scheduler-id:${scheduler}"
+metadata:
+  description: "Combine all docker images for ${service_name} into a multiarch image"
+  name: "Orion ${service_name} builds combined into multiarch image"
+  owner: "${owner_email}"
+  source: "${source_url}"
+
