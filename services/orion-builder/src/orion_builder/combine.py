@@ -16,7 +16,7 @@ from typing import List, Optional
 import taskcluster
 from taskboot.config import Configuration
 from taskboot.docker import Podman
-from taskboot.utils import download_artifact, load_artifacts
+from taskboot.utils import download_artifact, load_artifacts, zstd_compress
 
 from .cli import CommonArgs
 
@@ -50,7 +50,7 @@ class CombineArgs(CommonArgs):
         self.parser.add_argument(
             "--service-name",
             action="append",
-            default=getenv("SERVICE_NAME"),  # should bring service.name from scheduler
+            default=getenv("SERVICE_NAME"),
             help="Name of the service of the multiarch image",
         )
         self.parser.add_argument(
@@ -138,9 +138,10 @@ def main(argv: Optional[List[str]] = None) -> None:
                 f"{args.registry}/mozillasecurity/{service_name}:latest-{arch}"
                 for arch in archs
             ]
-            + ["--output", f"{service_name}.tar"]  # TODO: check this artifact on TC
+            + ["--output", f"{args.output}.tar"]
         )
         print(save_result)
+        zstd_compress(args.output)
     finally:
         rmtree(image_path)
     sys.exit(0)
