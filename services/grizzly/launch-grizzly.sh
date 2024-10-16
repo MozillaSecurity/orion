@@ -70,6 +70,9 @@ function onexit () {
 }
 trap onexit EXIT
 
+# disable ASLR for TSan
+sysctl -w kernel.randomize_va_space=0
+
 wait_token="$(su worker -c "rwait create")"
 su worker -c "/home/worker/launch-grizzly-worker.sh '$wait_token'"
 
