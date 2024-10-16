@@ -1,9 +1,5 @@
 name: orion-decision
 tests:
-  - name: python 3.8 unittests
-    type: tox
-    image: ci-py-38
-    toxenv: py38
   - name: python 3.9 unittests
     type: tox
     image: ci-py-39
@@ -22,5 +18,5 @@ tests:
     toxenv: py312
   - name: lint
     type: tox
-    image: ci-py-38
+    image: ci-py-39
     toxenv: lint

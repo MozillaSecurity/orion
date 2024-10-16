@@ -2,5 +2,5 @@ name: grizzly
 tests:
   - name: lint
     type: tox
-    image: ci-py-38
+    image: ci-py-39
     toxenv: lint
