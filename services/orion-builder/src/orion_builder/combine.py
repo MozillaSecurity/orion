@@ -5,8 +5,9 @@
 
 
 import argparse
+import logging
 import sys
-from logging import getLogger
+from json import loads
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
@@ -18,9 +19,9 @@ from taskboot.config import Configuration
 from taskboot.docker import Podman
 from taskboot.utils import download_artifact, load_artifacts, zstd_compress
 
-from .cli import CommonArgs
+from .cli import CommonArgs, configure_logging
 
-LOG = getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 class CombineArgs(CommonArgs):
@@ -45,6 +46,7 @@ class CombineArgs(CommonArgs):
             "--archs",
             action="append",
             default=getenv("ARCHS", ["amd64"]),
+            type=loads,
             help="Architectures to be included in the multiarch image",
         )
         self.parser.add_argument(
@@ -95,12 +97,17 @@ def main(argv: Optional[List[str]] = None) -> None:
     args = CombineArgs.parse_args(argv)
     service_name = args.service_name
 
+    configure_logging(level=args.log_level)
+    LOG.info("Checking archs list from payload")
+
     if isinstance(args.archs, list):  # TODO: remove
-        print(f"YAML array worked: {args.archs}")
+        print(f"ARCHS list deserialized: {args.archs}")
         archs = args.archs
-    else:
-        print(f"YAML array failed, converting from string: {args.archs}")
+    elif isinstance(args.archs, str):
         archs = args.archs.strip("[]").replace("'", "").split(", ")
+        print(f"YAML array failed, converting from string {args.archs} to {archs}")
+    else:
+        LOG.error("ARCHS is not a list or string: ", args.archs)
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
@@ -119,7 +126,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         for task_id, artifact_name in artifacts_ids:
             img = download_artifact(queue, task_id, artifact_name, image_path)
             # load images into the podman image store
-            load_result = tool.run(
+            tool.run(
                 [
                     "load",
                     "--input",
@@ -127,7 +134,6 @@ def main(argv: Optional[List[str]] = None) -> None:
                 ],
                 text=True,  # TODO: check
             )
-            print(load_result)
             img.unlink()
         # TODO: some checks that loaded artifacts = images for specified archs
 
