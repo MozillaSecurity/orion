@@ -62,4 +62,7 @@ function onexit () {
 }
 trap onexit EXIT
 
+# disable ASLR for TSan
+sysctl -w kernel.randomize_va_space=0
+
 su worker -c "/home/worker/launch-worker.sh"
