@@ -1,3 +1,0 @@
-name: ci-py-38
-force_dirty:
-  - orion-decision
