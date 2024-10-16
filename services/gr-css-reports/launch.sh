@@ -13,7 +13,7 @@ npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
 set -x
 chmod 0400 .ssh/*_deploy
 
-export CI=1
+export CI=true
 export EMAIL=nobody@community-tc.services.mozilla.com
 export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 
@@ -33,10 +33,9 @@ git init gr.css.reports
   git -c advice.detachedHead=false checkout origin/main
   # Ignore the lockfile when installing both to ensure we have the latest
   # version of gr.css and gr.css.generator
-  retry npm i --no-package-lock --no-progress --no-save
-  retry npm i --no-package-lock --no-progress @mozillasecurity/gr.css --no-save
+  retry npm i
   python3 -m prefpicker browser-fuzzing.yml prefs.js
-  node node_modules/@mozillasecurity/gr.css/dist/gr.css.js ~/nightly/firefox src/grammar.json -p prefs.js &&
+  npx @mozillasecurity/gr.css ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
     git commit -m "feat(grammar): update grammar" src/grammar.json
