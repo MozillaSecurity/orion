@@ -90,16 +90,10 @@ function git-clone-rev () {
 # build AFL++ w/ Nyx
 apt-install-auto libgtk-3-dev pax-utils python3-msgpack python3-jinja2 cpio bzip2
 pushd /srv/repos >/dev/null
-git-clone-rev https://github.com/AFLplusplus/AFLplusplus 36db3428ab16156dd72196213d2a02a5eadaed11
+git-clone-rev https://github.com/AFLplusplus/AFLplusplus 78b7e14c73baacf1d88b3c03955e78f5080d17ba
 pushd AFLplusplus >/dev/null
 # WIP 2-byte chunked variant of honggfuzz custom mutator
 retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/1b611bb30c14724f0f2eb9330772d30723ba122c.diff | git apply
-# llvm 19 fixes
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/a6e42d98d9d3e936dc74729f17ab1208d477c944.diff | git apply
-# Collect persistent coverage data and dump it at the end of the run
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/8fcca6fb410a6ece1a4cd2eb8a2cdeed4d4d9865.diff | git apply
-# Fix for afl-showmap/cmin
-retry-curl https://github.com/AFLplusplus/AFLplusplus/commit/c5acf3f137733b341b7337d7da47a5545943b457.diff | git apply
 git apply << "EOF"
 diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
 index 5c2fcddb..2dde8ba1 100644
