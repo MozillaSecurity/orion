@@ -4,6 +4,7 @@
 """Tests for Orion cron scheduler"""
 
 from datetime import datetime, timedelta, timezone
+from json import dumps
 from logging import getLogger
 from pathlib import Path
 from typing import Set
@@ -167,6 +168,8 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     build_task_id, build_task = queue.createTask.call_args_list[0][0]
+    print(f"AS: build task and id {queue.createTask.call_args_list}")
+    print(f"AS 2: build task and id {queue.createTask.call_args_list}")
     assert build_task == yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
@@ -184,6 +187,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, push_task = queue.createTask.call_args_list[1][0]
@@ -204,6 +208,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            archs=dumps(["amd64"]),
         )
     )
     push_expected["dependencies"].append(build_task_id)
@@ -251,6 +256,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, task2 = queue.createTask.call_args_list[1][0]
@@ -271,6 +277,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            archs=dumps(["amd64"]),
         )
     )
     expected2["dependencies"].append(task1_id)
@@ -293,6 +300,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task1_id)

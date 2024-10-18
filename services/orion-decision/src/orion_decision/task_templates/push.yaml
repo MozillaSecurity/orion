@@ -8,6 +8,7 @@ workerType: "${worker}"
 payload:
   command: [push]
   env:
+    ARCHS: ${archs}
     BUILD_TOOL: podman
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
