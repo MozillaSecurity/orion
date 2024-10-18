@@ -300,7 +300,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_push_task(self, service, service_build_tasks):
+    def _create_push_task(self, service, dependency_task):
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -318,9 +318,10 @@ class Scheduler:
                 task_group=self.task_group,
                 task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
+                archs=str(service.archs),
             )
         )
-        push_task["dependencies"].append(service_build_tasks[service.name])
+        push_task["dependencies"].append(dependency_task)
         task_id = slugId()
         LOG.info(
             "%s task %s: %s", self._create_str, task_id, push_task["metadata"]["name"]
@@ -545,9 +546,16 @@ class Scheduler:
                         obj, service_build_tasks
                     )
                 if should_push:
-                    push_tasks_created.add(
-                        self._create_push_task(obj, service_build_tasks)
-                    )
+                    if len(obj.archs) > 1:
+                        push_tasks_created.add(
+                            self._create_push_task(obj, combine_tasks_created[obj.name])
+                        )
+                    else:
+                        push_tasks_created.add(
+                            self._create_push_task(
+                                obj, service_build_tasks[(obj.name, obj.archs[0])]
+                            )
+                        )
             else:
                 test_tasks_created.add(
                     self._create_recipe_test_task(
