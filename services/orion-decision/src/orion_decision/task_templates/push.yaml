@@ -8,18 +8,23 @@ workerType: "${worker}"
 payload:
   command: [push]
   env:
+    ARCHS: "${archs}"
     BUILD_TOOL: podman
     GIT_REPOSITORY: "${clone_url}"
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
+    SERVICE_NAME: "${service_name}"
     SKIP_DOCKER: "${skip_docker}"
     TASK_INDEX: ${task_index}
     TASKCLUSTER_SECRET: "${docker_secret}"
+  capabilities:
+    privileged: true
   features:
     taskclusterProxy: true
   image: "mozillasecurity/orion-builder:latest"
   maxRunTime: !!int "${max_run_time}"
 scopes:
+  - "docker-worker:capability:privileged"
   - "index:insert-task:project.fuzzing.orion.*"
   - "queue:scheduler-id:${scheduler}"
   - "secrets:get:${docker_secret}"
