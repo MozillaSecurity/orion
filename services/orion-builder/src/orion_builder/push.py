@@ -5,16 +5,23 @@
 
 
 import argparse
+import logging
 import sys
+from json import loads
 from os import getenv
+from pathlib import Path
+from subprocess import PIPE
+from tempfile import mkdtemp
 from typing import List, Optional
 
 import taskcluster
 from taskboot.config import Configuration
-from taskboot.push import push_artifacts
-from taskboot.utils import load_artifacts
+from taskboot.docker import Podman
+from taskboot.utils import download_artifact, load_artifacts
 
 from .cli import CommonArgs, configure_logging
+
+LOG = logging.getLogger(__name__)
 
 
 class PushArgs(CommonArgs):
@@ -28,10 +35,23 @@ class PushArgs(CommonArgs):
             push_tool="skopeo",
         )
         self.parser.add_argument(
+            "--archs",
+            action="append",
+            default=getenv("ARCHS", ["amd64"]),
+            type=loads,
+            help="Image archs to be pushed",
+        )
+        self.parser.add_argument(
             "--index",
             default=getenv("TASK_INDEX"),
             metavar="NAMESPACE",
             help="Publish task-id at the specified namespace",
+        )
+        self.parser.add_argument(
+            "--service-name",
+            action="append",
+            default=getenv("SERVICE_NAME"),
+            help="Name of the service of the multiarch image",
         )
         self.parser.add_argument(
             "--skip-docker",
@@ -64,6 +84,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         index = taskcluster.Index(config.get_taskcluster_options())
         tasks = load_artifacts(args.task_id, queue, "public/**.tar.*")
         assert len(tasks) == 1
+        LOG.info("Inserting into TC index task: ", tasks[0][0])
         index.insertTask(
             args.index,
             {
@@ -75,6 +96,74 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
 
     if not args.skip_docker:
-        push_artifacts(None, args)
+        config = Configuration(args)
+        tool = Podman()  # push_artifacts in push.py uses skopeo by default
+        tool.login(
+            config.docker["registry"],
+            config.docker["username"],
+            config.docker["password"],
+        )
+        queue = taskcluster.Queue(config.get_taskcluster_options())
+        artifacts_ids = load_artifacts(
+            args.task_id, queue, "public/**.tar.zst"
+        )  # must be a single build/combine artifact
+        artifact_id, artifact_name = artifacts_ids[0]
+        image_path = Path(mkdtemp(prefix="image-deps-"))
+        img = download_artifact(queue, artifact_id, artifact_name, image_path)
+
+        # 1. Load image/s artifact into the podman image store
+        load_result = tool.run(
+            [
+                "load",
+                "--input",
+                str(img),
+            ],
+            text=True,
+            stdout=PIPE,
+        )
+        LOG.info("Load result: ", load_result)
+        img.unlink()
+        service_name = args.service_name
+        MOZ_REPO = f"mozillasecurity/{service_name}"
+        AS_REPO = f"asuleimanov/{service_name}"
+
+        manifest_name = f"docker.io/{AS_REPO}:latest"
+        create_result = tool.run(
+            [
+                "manifest",
+                "create",
+                "--amend",
+                manifest_name,
+            ],
+            text=True,
+            stdout=PIPE,
+        )
+        LOG.info(f"Manifest created: {create_result}")
+        # 3. Podman manifest add images
+        for arch in args.archs:
+            add_result = tool.run(
+                [
+                    "manifest",
+                    "add",
+                    manifest_name,
+                    f"containers-storage:docker.io/{MOZ_REPO}:latest-{arch}",
+                ],
+                text=True,
+                stdout=PIPE,
+            )
+            LOG.info(f"{add_result = }")
+        # 4. Podman manifest push //TODO: in push.py
+        push_result = tool.run(
+            [
+                "manifest",
+                "push",
+                "--all",
+                manifest_name,
+                f"docker://{manifest_name}",
+            ],
+            text=True,
+            stdout=PIPE,
+        )
+        print(f"Push manifest result: {push_result}")
 
     sys.exit(0)

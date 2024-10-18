@@ -299,7 +299,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_push_task(self, service, arch, service_build_tasks):
+    def _create_push_task(self, service, dependency_task):
         push_task = yaml_load(
             PUSH_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -317,10 +317,10 @@ class Scheduler:
                 task_group=self.task_group,
                 task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
-                arch=arch,
+                archs=dumps(service.archs),
             )
         )
-        push_task["dependencies"].append(service_build_tasks[(service.name, arch)])
+        push_task["dependencies"].append(dependency_task)
         task_id = slugId()
         LOG.info(
             "%s task %s: %s", self._create_str, task_id, push_task["metadata"]["name"]
@@ -457,7 +457,7 @@ class Scheduler:
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         test_tasks_created: Set[str] = set()
         build_tasks_created: Set[str] = set()
-        combine_tasks_created: Set[str] = set()
+        combine_tasks_created: Dict[str, str] = {}
         push_tasks_created: Set[str] = set()
         to_create = sorted(
             self.services.recipes.values(), key=lambda x: x.name
@@ -541,13 +541,19 @@ class Scheduler:
                     )
                 if len(obj.archs) > 1:
                     LOG.info(f"Create combine task for builds: {service_build_tasks}")
-                    combine_tasks_created.add(
-                        self._create_combine_task(obj, obj.archs, service_build_tasks)
+                    combine_tasks_created[obj.name] = self._create_combine_task(
+                        obj, obj.archs, service_build_tasks
                     )
                 if should_push:
-                    for arch in obj.archs:
+                    if len(obj.archs) > 1:
                         push_tasks_created.add(
-                            self._create_push_task(obj, arch, service_build_tasks)
+                            self._create_push_task(obj, combine_tasks_created[obj.name])
+                        )
+                    else:
+                        push_tasks_created.add(
+                            self._create_push_task(
+                                obj, service_build_tasks[(obj.name, obj.archs[0])]
+                            )
                         )
             else:
                 test_tasks_created.add(
