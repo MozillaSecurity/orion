@@ -4,6 +4,7 @@
 """Tests for Orion cron scheduler"""
 
 from datetime import datetime, timedelta, timezone
+from json import dumps
 from logging import getLogger
 from pathlib import Path
 from typing import Set
@@ -207,7 +208,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
-            arch="amd64",
+            archs=dumps(["amd64"]),
         )
     )
     push_expected["dependencies"].append(build_task_id)
@@ -276,7 +277,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
-            arch="amd64",
+            archs=dumps(["amd64"]),
         )
     )
     expected2["dependencies"].append(task1_id)
