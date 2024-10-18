@@ -21,12 +21,14 @@ from orion_decision import (
     PROVISIONER_ID,
     SOURCE_URL,
     WORKER_TYPE,
+    WORKER_TYPE_ARM64,
     WORKER_TYPE_BREW,
     WORKER_TYPE_MSYS,
 )
 from orion_decision.git import GithubEvent
 from orion_decision.scheduler import (
     BUILD_TASK,
+    COMBINE_TASK,
     HOMEBREW_TASK,
     MSYS_TASK,
     PUSH_TASK,
@@ -166,6 +168,7 @@ def test_create_02(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
 
@@ -210,6 +213,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, push_task = queue.createTask.call_args_list[1][0]
@@ -230,6 +234,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     push_expected["dependencies"].append(build_task_id)
@@ -275,6 +280,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     _, task2 = queue.createTask.call_args_list[1][0]
@@ -295,6 +301,7 @@ def test_create_04(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected2["dependencies"].append(task1_id)
@@ -378,6 +385,7 @@ def test_create_07(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
 
@@ -449,6 +457,7 @@ def test_create_08(
                 source_url=SOURCE_URL,
                 task_group="group",
                 worker=WORKER_TYPE,
+                arch="amd64",
             )
         )
     svc = "svc1" if svc1_dirty else "svc2"
@@ -500,6 +509,7 @@ def test_create_08(
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task2_id)
@@ -546,6 +556,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     task2_id, task2 = queue.createTask.call_args_list[1][0]
@@ -586,6 +597,7 @@ def test_create_09(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
+            arch="amd64",
         )
     )
     expected3["dependencies"].append(task2_id)
@@ -745,3 +757,89 @@ def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == tasks
+
+
+@freeze_time()
+def test_create_14(mocker: MockerFixture) -> None:
+    """test combine task creation"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.now(timezone.utc)
+    root = FIXTURES / "services12"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.commit = "commit"
+    evt.branch = "main"
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 3
+    task1_id, task1 = queue.createTask.call_args_list[0][0]
+    assert task1 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+            arch="amd64",
+        )
+    )
+    task2_id, task2 = queue.createTask.call_args_list[1][0]
+    assert task2 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE_ARM64,
+            arch="arm64",
+        )
+    )
+    _, combine_task = queue.createTask.call_args_list[2][0]
+    combine_expected = yaml_load(
+        COMBINE_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+            archs=["amd64", "arm64"],
+        )
+    )
+    combine_expected["dependencies"].append(task1_id)
+    combine_expected["dependencies"].append(task2_id)
+    assert combine_task == combine_expected
