@@ -22,7 +22,8 @@ payload:
     GIT_REVISION: "${commit}"
     IMAGE_NAME: "mozillasecurity/${service_name}"
     SERVICE_NAME: "${service_name}"
-    ARCHS: ${archs}
+    ARCHS: "${archs}"
+    ARCHSTRING: "${archs}"
   capabilities:
     privileged: true
   # TODO: change back to mozillasecurity once approved

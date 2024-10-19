@@ -6,7 +6,6 @@
 import argparse
 import re
 from datetime import datetime, timezone
-from json import dumps
 from logging import getLogger
 from os import getenv
 from pathlib import Path
@@ -275,7 +274,7 @@ class Scheduler:
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
                 worker=WORKER_TYPE,
-                archs=str(dumps(archs)),
+                archs=archs,
             )
         )
         LOG.info("Combine task: choosing builds from %s", repr(service_build_tasks))
@@ -317,7 +316,7 @@ class Scheduler:
                 task_group=self.task_group,
                 task_index=self._build_index(service.name),
                 worker=WORKER_TYPE,
-                archs=str(dumps(service.archs)),
+                archs=str(service.archs),
             )
         )
         push_task["dependencies"].append(dependency_task)

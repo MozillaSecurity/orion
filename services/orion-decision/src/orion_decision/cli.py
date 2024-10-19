@@ -126,7 +126,8 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     parser.add_argument(
         "--push-branch",
-        default=getenv("PUSH_BRANCH", "master"),
+        # default=getenv("PUSH_BRANCH", "master"),
+        default="add-arm64",
         help="Push to Docker Hub if push event is on this branch " "(default: master).",
     )
     parser.add_argument(

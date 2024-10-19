@@ -34,13 +34,23 @@ class PushArgs(CommonArgs):
             exclude_filter=None,
             push_tool="skopeo",
         )
-        self.parser.add_argument(
-            "--archs",
-            action="append",
-            default=getenv("ARCHS", ["amd64"]),
-            type=loads,
-            help="Image archs to be pushed",
-        )
+        try:
+            self.parser.add_argument(
+                "--archs",
+                action="append",
+                default=getenv("ARCHS", ["amd64"]),
+                type=loads,
+                help="Architectures to be included in the multiarch image",
+            )
+        except Exception as e:
+            print("Could not load archs with json: ", e)
+            self.parser.add_argument(
+                "--archs",
+                action="append",
+                default=getenv("ARCHS", ["amd64"]),
+                help="Architectures to be included in the multiarch image",
+            )
+
         self.parser.add_argument(
             "--index",
             default=getenv("TASK_INDEX"),
@@ -98,11 +108,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     if not args.skip_docker:
         config = Configuration(args)
         tool = Podman()  # push_artifacts in push.py uses skopeo by default
-        tool.login(
-            config.docker["registry"],
-            config.docker["username"],
-            config.docker["password"],
-        )
+
         queue = taskcluster.Queue(config.get_taskcluster_options())
         artifacts_ids = load_artifacts(
             args.task_id, queue, "public/**.tar.zst"
@@ -110,6 +116,16 @@ def main(argv: Optional[List[str]] = None) -> None:
         artifact_id, artifact_name = artifacts_ids[0]
         image_path = Path(mkdtemp(prefix="image-deps-"))
         img = download_artifact(queue, artifact_id, artifact_name, image_path)
+
+        if isinstance(args.archs, list):  # TODO: remove
+            print(f"ARCHS list deserialized: {args.archs}")
+            archs = args.archs
+        elif isinstance(args.archs, str):
+            print(f"{args.archs = }")
+            archs = args.archs.strip("[]").replace("'", "").split(", ")
+            print(f"YAML array failed, converting from string {args.archs} to {archs}")
+        else:
+            LOG.error("ARCHS is not a list or string: ", args.archs)
 
         # 1. Load image/s artifact into the podman image store
         load_result = tool.run(
@@ -127,7 +143,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         MOZ_REPO = f"mozillasecurity/{service_name}"
         AS_REPO = f"asuleimanov/{service_name}"
 
-        manifest_name = f"docker.io/{AS_REPO}:latest"
+        manifest_name = f"docker.io/{AS_REPO}:latest"  # TODO: change to MOZ
         create_result = tool.run(
             [
                 "manifest",
@@ -140,7 +156,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         LOG.info(f"Manifest created: {create_result}")
         # 3. Podman manifest add images
-        for arch in args.archs:
+        for arch in archs:
             add_result = tool.run(
                 [
                     "manifest",
@@ -152,7 +168,12 @@ def main(argv: Optional[List[str]] = None) -> None:
                 stdout=PIPE,
             )
             LOG.info(f"{add_result = }")
-        # 4. Podman manifest push //TODO: in push.py
+        # 4. Podman manifest push
+        tool.login(
+            config.docker["registry"],
+            config.docker["username"],
+            config.docker["password"],
+        )
         push_result = tool.run(
             [
                 "manifest",

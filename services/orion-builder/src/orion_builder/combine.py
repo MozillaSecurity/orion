@@ -22,6 +22,7 @@ from taskboot.utils import download_artifact, load_artifacts, zstd_compress
 from .cli import CommonArgs, configure_logging
 
 LOG = logging.getLogger(__name__)
+json_failed = False
 
 
 class CombineArgs(CommonArgs):
@@ -42,12 +43,23 @@ class CombineArgs(CommonArgs):
             help="Tool for combining builds into multiarch image (default: BUILD_TOOL)",
             choices={"podman", "docker"},
         )
+        global json_failed
+        try:
+            self.parser.add_argument(
+                "--archs",
+                action="append",
+                default=getenv("ARCHS", ["amd64"]),
+                type=loads,
+                help="Architectures to be included in the multiarch image",
+            )
+        except Exception as e:
+            print("Could not load archs with json: ", e)
+            json_failed = True
         self.parser.add_argument(
-            "--archs",
+            "--archstring",
             action="append",
-            default=getenv("ARCHS", ["amd64"]),
-            type=loads,
-            help="Architectures to be included in the multiarch image",
+            default=getenv("ARCHSTRING", ["amd64"]),
+            help="Archs (for debugging), to be parsed as string, not json",
         )
         self.parser.add_argument(
             "--service-name",
@@ -100,14 +112,18 @@ def main(argv: Optional[List[str]] = None) -> None:
     configure_logging(level=args.log_level)
     LOG.info("Checking archs list from payload")
 
-    if isinstance(args.archs, list):  # TODO: remove
-        print(f"ARCHS list deserialized: {args.archs}")
-        archs = args.archs
-    elif isinstance(args.archs, str):
-        archs = args.archs.strip("[]").replace("'", "").split(", ")
-        print(f"YAML array failed, converting from string {args.archs} to {archs}")
+    if json_failed:
+        if isinstance(args.archstring, list):  # TODO: remove
+            print(f"ARCHS list deserialized: {args.archstring}")
+            archs = args.archstring
+        elif isinstance(args.archstring, str):
+            print(f"{args.archstring = }")
+            archs = args.archstring.strip("[]").replace("'", "").split(", ")
+            print(f"YAML list fail, making from string {args.archstring} to {archs}")
+        else:
+            LOG.error("ARCHS is not a list or string: ", args.archstring)
     else:
-        LOG.error("ARCHS is not a list or string: ", args.archs)
+        archs = args.archs
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
@@ -132,7 +148,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                     "--input",
                     str(img),
                 ],
-                text=True,  # TODO: check
+                text=True,
             )
             img.unlink()
         # TODO: some checks that loaded artifacts = images for specified archs

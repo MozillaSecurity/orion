@@ -4,7 +4,6 @@
 """Tests for Orion scheduler"""
 
 from datetime import datetime, timezone
-from json import dumps
 from pathlib import Path
 from typing import Dict
 
@@ -838,7 +837,7 @@ def test_create_14(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
-            archs=dumps(["amd64", "arm64"]),
+            archs=["amd64", "arm64"],
         )
     )
     combine_expected["dependencies"].append(build_task1_id)
@@ -868,8 +867,6 @@ def test_create_15(mocker: MockerFixture) -> None:
     sched.services["test1"].dirty = True
     sched.create_tasks()
     assert queue.createTask.call_count == 4
-    print(f"\n {queue.createTask.call_args_list[0][0]=} \n \n")
-    print(f"\n {queue.createTask.call_args_list[1]=} \n \n")
 
     build_task_id, build_task = queue.createTask.call_args_list[0][0]
     build_task1_id, build_task1 = queue.createTask.call_args_list[0][0]
@@ -930,7 +927,7 @@ def test_create_15(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
-            archs=dumps(["amd64", "arm64"]),
+            archs=["amd64", "arm64"],
         )
     )
     combine_expected["dependencies"].append(build_task1_id)
@@ -954,9 +951,8 @@ def test_create_15(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
-            archs=dumps(["amd64", "arm64"]),
+            archs=str(["amd64", "arm64"]),
         )
     )
-    print(f"{push_task=} \n\n {push_expected=}")
     push_expected["dependencies"].append(combine_task_id)
     assert push_task == push_expected
