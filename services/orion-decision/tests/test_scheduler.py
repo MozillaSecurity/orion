@@ -175,7 +175,7 @@ def test_create_02(mocker: MockerFixture) -> None:
 
 @freeze_time()
 def test_create_03(mocker: MockerFixture) -> None:
-    """test push task creation"""
+    """test push task creation for single arch"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
     now = datetime.now(timezone.utc)
@@ -234,6 +234,7 @@ def test_create_03(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            archs=["amd64"],
         )
     )
     push_expected["dependencies"].append(build_task_id)
@@ -842,3 +843,116 @@ def test_create_14(mocker: MockerFixture) -> None:
     combine_expected["dependencies"].append(build_task1_id)
     combine_expected["dependencies"].append(build_task2_id)
     assert combine_task == combine_expected
+
+
+@freeze_time()
+def test_create_15(mocker: MockerFixture) -> None:
+    """test push task creation for multiple archs"""
+    taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
+    queue = taskcluster.get_service.return_value
+    now = datetime.now(timezone.utc)
+    root = FIXTURES / "services12"
+    evt = mocker.Mock(spec=GithubEvent())
+    evt.repo.path = root
+    evt.repo.git = mocker.Mock(
+        return_value="\n".join(str(p) for p in root.glob("**/*"))
+    )
+    evt.repo.refs.return_value = {}
+    evt.commit = "commit"
+    evt.branch = "push"
+    evt.event_type = "push"
+    evt.http_url = "https://example.com"
+    evt.pull_request = None
+    sched = Scheduler(evt, "group", "scheduler", "secret", "push")
+    sched.services["test1"].dirty = True
+    sched.create_tasks()
+    assert queue.createTask.call_count == 4
+
+    build_task_id, build_task = queue.createTask.call_args_list[0][0]
+    build_task1_id, build_task1 = queue.createTask.call_args_list[0][0]
+    assert build_task1 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+            arch="amd64",
+        )
+    )
+    build_task2_id, build_task2 = queue.createTask.call_args_list[1][0]
+    assert build_task2 == yaml_load(
+        BUILD_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="0",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE_ARM64,
+            arch="arm64",
+        )
+    )
+    combine_task_id, combine_task = queue.createTask.call_args_list[2][0]
+    combine_expected = yaml_load(
+        COMBINE_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+            archs=str(["amd64", "arm64"]),
+        )
+    )
+    combine_expected["dependencies"].append(build_task1_id)
+    combine_expected["dependencies"].append(build_task2_id)
+    assert combine_task == combine_expected
+    _, push_task = queue.createTask.call_args_list[3][0]
+    push_expected = yaml_load(
+        PUSH_TASK.substitute(
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            docker_secret="secret",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="test1",
+            skip_docker="0",
+            source_url=SOURCE_URL,
+            task_group="group",
+            task_index="project.fuzzing.orion.test1.push",
+            worker=WORKER_TYPE,
+            archs=str(["amd64", "arm64"]),
+        )
+    )
+    push_expected["dependencies"].append(combine_task_id)
+    assert push_task == push_expected
