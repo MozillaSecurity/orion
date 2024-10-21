@@ -7,7 +7,7 @@
 import argparse
 import logging
 import sys
-from json import loads
+from ast import literal_eval
 from os import getenv
 from pathlib import Path
 from subprocess import PIPE
@@ -34,23 +34,12 @@ class PushArgs(CommonArgs):
             exclude_filter=None,
             push_tool="skopeo",
         )
-        try:
-            self.parser.add_argument(
-                "--archs",
-                action="append",
-                default=getenv("ARCHS", ["amd64"]),
-                type=loads,
-                help="Architectures to be included in the multiarch image",
-            )
-        except Exception as e:
-            print("Could not load archs with json: ", e)
-            self.parser.add_argument(
-                "--archs",
-                action="append",
-                default=getenv("ARCHS", ["amd64"]),
-                help="Architectures to be included in the multiarch image",
-            )
-
+        self.parser.add_argument(
+            "--archs",
+            action="append",
+            default=getenv("ARCHS", ["amd64"]),
+            help="Architectures to be included in the multiarch image",
+        )
         self.parser.add_argument(
             "--index",
             default=getenv("TASK_INDEX"),
@@ -121,9 +110,13 @@ def main(argv: Optional[List[str]] = None) -> None:
             print(f"ARCHS list deserialized: {args.archs}")
             archs = args.archs
         elif isinstance(args.archs, str):
-            print(f"{args.archs = }")
-            archs = args.archs.strip("[]").replace("'", "").split(", ")
-            print(f"YAML array failed, converting from string {args.archs} to {archs}")
+            try:
+                archs = literal_eval(args.archs)
+            except Exception as e:
+                print("Eval failed: ", e)
+                print("Converting string manually")
+                archs = args.archs.strip("[]").replace("'", "").split(", ")
+            print(f"YAML list fail, making from string {args.archs} to {archs}")
         else:
             LOG.error("ARCHS is not a list or string: ", args.archs)
 
