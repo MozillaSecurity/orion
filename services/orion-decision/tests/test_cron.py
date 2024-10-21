@@ -274,6 +274,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             task_group="group",
             task_index="project.fuzzing.orion.test1.push",
             worker=WORKER_TYPE,
+            archs=str(["amd64"]),
         )
     )
     expected2["dependencies"].append(task1_id)
