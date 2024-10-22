@@ -7,10 +7,10 @@
 import argparse
 import logging
 import sys
-from ast import literal_eval
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
+from subprocess import PIPE
 from tempfile import mkdtemp
 from typing import List, Optional
 
@@ -18,6 +18,7 @@ import taskcluster
 from taskboot.config import Configuration
 from taskboot.docker import Podman
 from taskboot.utils import download_artifact, load_artifacts, zstd_compress
+from yaml import safe_load as yaml_load
 
 from .cli import CommonArgs, configure_logging
 
@@ -45,6 +46,7 @@ class CombineArgs(CommonArgs):
         self.parser.add_argument(
             "--archs",
             action="append",
+            type=yaml_load,
             default=getenv("ARCHS", ["amd64"]),
             help="Architectures to be included in the multiarch image",
         )
@@ -94,54 +96,46 @@ def main(argv: Optional[List[str]] = None) -> None:
     """Combine entrypoint. Does not return."""
 
     args = CombineArgs.parse_args(argv)
+    # configure_logging(level=args.log_level)
+    configure_logging(level=0)  # for debugging
+
     service_name = args.service_name
-
-    configure_logging(level=args.log_level)
-    LOG.info("Checking archs list from payload")
-
-    if isinstance(args.archs, list):  # TODO: remove
-        print(f"ARCHS list deserialized: {args.archs}")
-        archs = args.archs
-    elif isinstance(args.archs, str):
-        try:
-            archs = literal_eval(args.archs)
-        except Exception as e:
-            print("Eval failed: ", e)
-            print("Converting string manually")
-            archs = args.archs.strip("[]").replace("'", "").split(", ")
-        print(f"YAML list fail, making from string {args.archs} to {archs}")
-    else:
-        LOG.error("ARCHS is not a list or string: ", args.archs)
+    archs = args.archs
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
-    print(f"Starting the task to combine {service_name} images for archs: {archs}")
+    LOG.info(f"Starting the task to combine {service_name} images for archs: {archs}")
 
-    # 1. Load all archs images into podman
     tool = Podman()
     # retrieve image archives from dependency tasks to /images
     image_path = Path(mkdtemp(prefix="image-deps-"))
     try:
-        config = Configuration(argparse.Namespace(secret=None, config=None))
-        queue = taskcluster.Queue(config.get_taskcluster_options())
+        existing_images = tool.list_images()
+        LOG.debug("Existing images before loading: %s", existing_images)
 
         artifacts_ids = load_artifacts(args.task_id, queue, "public/**.tar.zst")
-
         for task_id, artifact_name in artifacts_ids:
             img = download_artifact(queue, task_id, artifact_name, image_path)
             # load images into the podman image store
-            tool.run(
+            load_result = tool.run(
                 [
                     "load",
                     "--input",
                     str(img),
                 ],
                 text=True,
+                stdout=PIPE,
             )
-            img.unlink()
-        # TODO: some checks that loaded artifacts = images for specified archs
+            LOG.info(f"Loaded: {load_result}")
 
-        # 2. Save loaded images into a single multiarch .tar
+        existing_images = tool.list_images()
+        LOG.debug("Existing images after loading: %s", existing_images)
+        assert all(
+            f"latest-{arch}" in [image["tag"] for image in existing_images]
+            for arch in archs
+        ), "Could not find scheduled archs in local tags"
+
+        # save loaded images into a single multiarch .tar
         save_result = tool.run(
             ["save", "--multi-image-archive"]
             + [
@@ -150,8 +144,10 @@ def main(argv: Optional[List[str]] = None) -> None:
             ]
             + ["--output", f"{args.write}"]
         )
-        print(f"Save multiarch image result: {save_result}")
+        LOG.info(f"Save multiarch image result: {save_result}")
         zstd_compress(args.write)
+    except Exception as e:
+        LOG.error("Failed to load/save images: %s", e)
     finally:
         rmtree(image_path)
     sys.exit(0)
