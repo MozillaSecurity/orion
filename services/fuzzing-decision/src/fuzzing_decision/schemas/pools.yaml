@@ -34,20 +34,47 @@ properties:
     items:
       type: string
   container:
-    type: object
-    additionalProperties: false
-    properties:
-      namespace:
-        type: string
-      path:
-        type: string
-      type:
-        type: string
-        pattern: "^indexed-image$"
-    required:
-      - type
-      - namespace
-      - path
+    oneOf:
+      - type: string
+      - type: object
+        additionalProperties: false
+        properties:
+          name:
+            type: string
+          type:
+            type: string
+            pattern: "^docker-image$"
+        required:
+          - type
+          - name
+      - type: object
+        additionalProperties: false
+        properties:
+          namespace:
+            type: string
+          path:
+            type: string
+          type:
+            type: string
+            pattern: "^indexed-image$"
+        required:
+          - type
+          - namespace
+          - path
+      - type: object
+        additionalProperties: false
+        properties:
+          taskId:
+            type: string
+          path:
+            type: string
+          type:
+            type: string
+            pattern: "^task-image$"
+        required:
+          - type
+          - taskId
+          - path
   cores_per_task:
     description: "Number of cores per task"
     type: integer
