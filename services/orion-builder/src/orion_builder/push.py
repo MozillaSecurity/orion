@@ -7,9 +7,9 @@
 import argparse
 import logging
 import sys
-from ast import literal_eval
 from os import getenv
 from pathlib import Path
+from shutil import rmtree
 from subprocess import PIPE
 from tempfile import mkdtemp
 from typing import List, Optional
@@ -18,6 +18,7 @@ import taskcluster
 from taskboot.config import Configuration
 from taskboot.docker import Podman
 from taskboot.utils import download_artifact, load_artifacts
+from yaml import safe_load as yaml_load
 
 from .cli import CommonArgs, configure_logging
 
@@ -37,6 +38,7 @@ class PushArgs(CommonArgs):
         self.parser.add_argument(
             "--archs",
             action="append",
+            type=yaml_load,
             default=getenv("ARCHS", ["amd64"]),
             help="Architectures to be included in the multiarch image",
         )
@@ -69,20 +71,27 @@ class PushArgs(CommonArgs):
                 "--task-id (or TASK_ID) is required to load dependency artifacts!"
             )
 
+        if args.archs is None:
+            self.parser.error("--archs is required!")
+
+        if args.service_name is None:
+            self.parser.error("--service-name is required!")
+
 
 def main(argv: Optional[List[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)
 
+    config = Configuration(argparse.Namespace(secret=None, config=None))
+    queue = taskcluster.Queue(config.get_taskcluster_options())
+    index = taskcluster.Index(config.get_taskcluster_options())
+    tasks = load_artifacts(args.task_id, queue, "public/**.tar.*")
+    assert len(tasks) == 1
+
     # manually add the task to the TC index.
     # do this now and not via route on the build task so that post-build tests can run
     if args.index is not None:
-        config = Configuration(argparse.Namespace(secret=None, config=None))
-        queue = taskcluster.Queue(config.get_taskcluster_options())
-        index = taskcluster.Index(config.get_taskcluster_options())
-        tasks = load_artifacts(args.task_id, queue, "public/**.tar.*")
-        assert len(tasks) == 1
         LOG.info("Inserting into TC index task: ", tasks[0][0])
         index.insertTask(
             args.index,
@@ -95,89 +104,96 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
 
     if not args.skip_docker:
-        config = Configuration(args)
-        tool = Podman()  # push_artifacts in push.py uses skopeo by default
-
-        queue = taskcluster.Queue(config.get_taskcluster_options())
-        artifacts_ids = load_artifacts(
-            args.task_id, queue, "public/**.tar.zst"
-        )  # must be a single build/combine artifact
-        artifact_id, artifact_name = artifacts_ids[0]
-        image_path = Path(mkdtemp(prefix="image-deps-"))
-        img = download_artifact(queue, artifact_id, artifact_name, image_path)
-
-        if isinstance(args.archs, list):  # TODO: remove
-            print(f"ARCHS list deserialized: {args.archs}")
+        try:
+            service_name = args.service_name
             archs = args.archs
-        elif isinstance(args.archs, str):
-            try:
-                archs = literal_eval(args.archs)
-            except Exception as e:
-                print("Eval failed: ", e)
-                print("Converting string manually")
-                archs = args.archs.strip("[]").replace("'", "").split(", ")
-            print(f"YAML list fail, making from string {args.archs} to {archs}")
-        else:
-            LOG.error("ARCHS is not a list or string: ", args.archs)
 
-        # 1. Load image/s artifact into the podman image store
-        load_result = tool.run(
-            [
-                "load",
-                "--input",
-                str(img),
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-        LOG.info("Load result: ", load_result)
-        img.unlink()
-        service_name = args.service_name
-        MOZ_REPO = f"mozillasecurity/{service_name}"
-        AS_REPO = f"asuleimanov/{service_name}"
+            image_path = Path(mkdtemp(prefix="image-deps-"))
+            artifact_id, artifact_name = tasks[0]
+            img = download_artifact(queue, artifact_id, artifact_name, image_path)
 
-        manifest_name = f"docker.io/{AS_REPO}:latest"  # TODO: change to MOZ
-        create_result = tool.run(
-            [
-                "manifest",
-                "create",
-                "--amend",
-                manifest_name,
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-        LOG.info(f"Manifest created: {create_result}")
-        # 3. Podman manifest add images
-        for arch in archs:
-            add_result = tool.run(
+            tool = Podman()
+            existing_images = tool.list_images()
+            LOG.debug("Existing images before loading: %s", existing_images)
+
+            # 1. Load image/s artifact into the podman image store
+            load_result = tool.run(
                 [
-                    "manifest",
-                    "add",
-                    manifest_name,
-                    f"containers-storage:docker.io/{MOZ_REPO}:latest-{arch}",
+                    "load",
+                    "--input",
+                    str(img),
                 ],
                 text=True,
                 stdout=PIPE,
             )
-            LOG.info(f"{add_result = }")
-        # 4. Podman manifest push
-        tool.login(
-            config.docker["registry"],
-            config.docker["username"],
-            config.docker["password"],
-        )
-        push_result = tool.run(
-            [
-                "manifest",
-                "push",
-                "--all",
-                manifest_name,
-                f"docker://{manifest_name}",
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-        print(f"Push manifest result: {push_result}")
 
+            LOG.info(f"Loaded: {load_result}")
+            existing_images = tool.list_images()
+            LOG.debug("Existing images after loading: %s", existing_images)
+            assert all(
+                f"latest-{arch}" in [image["tag"] for image in existing_images]
+                for arch in archs
+            ), "Could not find scheduled archs in local tags"
+
+            MOZ_REPO = f"mozillasecurity/{service_name}"
+            AS_REPO = f"asuleimanov/{service_name}"
+
+            # 2. Create the podman manifest list
+            manifest_name = f"docker.io/{AS_REPO}:latest"  # TODO: change to MOZ
+            create_result = tool.run(
+                [
+                    "manifest",
+                    "create",
+                    "--amend",
+                    manifest_name,
+                ],
+                text=True,
+                stdout=PIPE,
+            )
+            LOG.info(f"Manifest created: {create_result}")
+
+            # 3. Add the loaded images to the manifest
+            inspect_result = tool.run(
+                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            )
+            LOG.debug("Manifest before adding images: %s", inspect_result)
+            for arch in archs:
+                add_result = tool.run(
+                    [
+                        "manifest",
+                        "add",
+                        manifest_name,
+                        f"containers-storage:docker.io/{MOZ_REPO}:latest-{arch}",
+                    ],
+                    text=True,
+                    stdout=PIPE,
+                )
+                LOG.info(f"Added: {add_result}")
+            inspect_result = tool.run(
+                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            )
+            LOG.debug("Manifest after adding images: %s", inspect_result)
+
+            # 4. Push the manifest (with images) to docker.io
+            tool.login(  # forced test push must break here (since no AS creds)
+                config.docker["registry"],
+                config.docker["username"],
+                config.docker["password"],
+            )
+            push_result = tool.run(
+                [
+                    "manifest",
+                    "push",
+                    "--all",
+                    manifest_name,
+                    f"docker://{manifest_name}",
+                ],
+                text=True,
+                stdout=PIPE,
+            )
+            LOG.info(f"Push manifest result: {push_result}")
+        except Exception as e:
+            LOG.error("Failed to load/push images: %s", e)
+        finally:
+            rmtree(image_path)
     sys.exit(0)

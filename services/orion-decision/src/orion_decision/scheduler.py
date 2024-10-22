@@ -277,9 +277,8 @@ class Scheduler:
                 archs=archs,
             )
         )
-        LOG.info("Combine task: choosing builds from %s", repr(service_build_tasks))
         for arch in archs:
-            LOG.info(f"Dependency: {service_build_tasks[(service.name, arch)]}")
+            LOG.info(f"Combine dependency: {service_build_tasks[(service.name, arch)]}")
             combine_task["dependencies"].append(
                 service_build_tasks[(service.name, arch)]
             )
@@ -539,10 +538,10 @@ class Scheduler:
                         )
                     )
                 if len(obj.archs) > 1:
-                    LOG.info(f"Create combine task for builds: {service_build_tasks}")
                     combine_tasks_created[obj.name] = self._create_combine_task(
                         obj, obj.archs, service_build_tasks
                     )
+                should_push = True  # TODO: remove (after testing push task)
                 if should_push:
                     if len(obj.archs) > 1:
                         push_tasks_created.add(
