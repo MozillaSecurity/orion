@@ -101,6 +101,7 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     service_name = args.service_name
     archs = args.archs
+    base_tag = "pr521"  # TODO: change back to latest in master
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
@@ -131,7 +132,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         existing_images = tool.list_images()
         LOG.debug("Existing images after loading: %s", existing_images)
         assert all(
-            f"latest-{arch}" in [image["tag"] for image in existing_images]
+            f"{base_tag}-{arch}" in [image["tag"] for image in existing_images]
             for arch in archs
         ), "Could not find scheduled archs in local tags"
 
@@ -139,7 +140,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         save_result = tool.run(
             ["save", "--multi-image-archive"]
             + [
-                f"{args.registry}/mozillasecurity/{service_name}:latest-{arch}"
+                f"{args.registry}/mozillasecurity/{service_name}:{base_tag}-{arch}"
                 for arch in archs
             ]
             + ["--output", f"{args.write}"]

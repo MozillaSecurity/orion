@@ -82,6 +82,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)
+    base_tag = "pr521"  # TODO: change back to latest in master
 
     config = Configuration(argparse.Namespace(secret=None, config=None))
     queue = taskcluster.Queue(config.get_taskcluster_options())
@@ -91,7 +92,8 @@ def main(argv: Optional[List[str]] = None) -> None:
 
     # manually add the task to the TC index.
     # do this now and not via route on the build task so that post-build tests can run
-    if args.index is not None:
+    # if args.index is not None:
+    if False:  # TODO: remove in master
         LOG.info("Inserting into TC index task: ", tasks[0][0])
         index.insertTask(
             args.index,
@@ -131,15 +133,14 @@ def main(argv: Optional[List[str]] = None) -> None:
             existing_images = tool.list_images()
             LOG.debug("Existing images after loading: %s", existing_images)
             assert all(
-                f"latest-{arch}" in [image["tag"] for image in existing_images]
+                f"{base_tag}-{arch}" in [image["tag"] for image in existing_images]
                 for arch in archs
             ), "Could not find scheduled archs in local tags"
 
             MOZ_REPO = f"mozillasecurity/{service_name}"
-            AS_REPO = f"asuleimanov/{service_name}"
 
             # 2. Create the podman manifest list
-            manifest_name = f"docker.io/{AS_REPO}:latest"  # TODO: change to MOZ
+            manifest_name = f"docker.io/{MOZ_REPO}:{base_tag}"
             create_result = tool.run(
                 [
                     "manifest",
@@ -163,7 +164,7 @@ def main(argv: Optional[List[str]] = None) -> None:
                         "manifest",
                         "add",
                         manifest_name,
-                        f"containers-storage:docker.io/{MOZ_REPO}:latest-{arch}",
+                        f"containers-storage:docker.io/{MOZ_REPO}:{base_tag}-{arch}",
                     ],
                     text=True,
                     stdout=PIPE,
@@ -175,7 +176,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             LOG.debug("Manifest after adding images: %s", inspect_result)
 
             # 4. Push the manifest (with images) to docker.io
-            tool.login(  # forced test push must break here (since no AS creds)
+            tool.login(
                 config.docker["registry"],
                 config.docker["username"],
                 config.docker["password"],

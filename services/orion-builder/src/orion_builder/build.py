@@ -113,9 +113,10 @@ class BuildArgs(CommonArgs):
 def main(argv: Optional[List[str]] = None) -> None:
     """Build entrypoint. Does not return."""
     args = BuildArgs.parse_args(argv)
+    base_tag = "pr521"  # TODO: change back to latest in master
     arch = {"x86_64": "amd64", "aarch64": "arm64"}.get(machine(), machine())
     assert arch == args.arch
-    args.tag = [args.git_revision, f"latest-{arch}"]
+    args.tag = [args.git_revision, f"{base_tag}-{arch}"]
     configure_logging(level=args.log_level)
     target = Target(args)
     if args.load_deps:
