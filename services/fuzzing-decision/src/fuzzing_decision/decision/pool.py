@@ -105,6 +105,11 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     elif config.worker in {"docker", "d2g"}:
         # `container` can be either a string or a dict, so can't template it
         task["payload"]["image"] = config.container
+        if (
+            isinstance(task["payload"]["image"], dict)
+            and task["payload"]["image"].get("type") == "task-image"
+        ):
+            task["dependencies"].append(task["payload"]["image"]["taskId"])
     else:
         raise NotImplementedError(f"{config.worker} / {config.platform} not supported")
 
