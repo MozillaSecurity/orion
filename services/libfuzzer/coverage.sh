@@ -63,7 +63,7 @@ export GCOV_PREFIX_STRIP
 
 # %<---[LibFuzzer]------------------------------------------------------------
 
-timeout --foreground -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh
+timeout --foreground -s 2 -k $((COVRUNTIME + 60)) "$COVRUNTIME" ./libfuzzer.sh || [[ $? -eq 124 ]]
 
 # %<---[Coverage]-------------------------------------------------------------
 
