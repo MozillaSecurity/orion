@@ -82,10 +82,10 @@ def main(argv: Optional[List[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     # configure_logging(level=args.log_level)  # TODO: change back
-    configure_logging(level=0)  # for debugging
+    configure_logging(level=10)  # for debugging
     base_tag = "pr521"  # TODO: change back to latest in master
 
-    config = Configuration(argparse.Namespace(secret=None, config=None))
+    config = Configuration(args)
     queue = taskcluster.Queue(config.get_taskcluster_options())
     index = taskcluster.Index(config.get_taskcluster_options())
     tasks = load_artifacts(args.task_id, queue, "public/**.tar.*")
