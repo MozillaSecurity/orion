@@ -112,86 +112,91 @@ def main(argv: Optional[List[str]] = None) -> None:
 
         tool = Podman()
         image_path = Path(mkdtemp(prefix="image-deps-"))
-        artifact_id, artifact_name = tasks[0]
-        img = download_artifact(queue, artifact_id, artifact_name, image_path)
+        task_id, artifact_name = tasks[0]
 
-        existing_images = tool.list_images()
-        LOG.debug("Existing images before loading: %s", existing_images)
+        try:
+            img = download_artifact(queue, task_id, artifact_name, image_path)
+            LOG.info(
+                "Task %s artifact %s downloaded to %s", task_id, artifact_name, img
+            )
+            existing_images = tool.list_images()
+            LOG.debug("Existing images before loading: %s", existing_images)
 
-        # 1. Load image/s artifact into the podman image store
-        load_result = tool.run(
-            [
-                "load",
-                "--input",
-                str(img),
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-
-        LOG.info(f"Loaded: {load_result}")
-        existing_images = tool.list_images()
-        LOG.debug("Existing images after loading: %s", existing_images)
-        assert all(
-            f"{base_tag}-{arch}" in [image["tag"] for image in existing_images]
-            for arch in archs
-        ), "Could not find scheduled archs in local tags"
-
-        MOZ_REPO = f"mozillasecurity/{service_name}"
-
-        # 2. Create the podman manifest list
-        manifest_name = f"docker.io/{MOZ_REPO}:{base_tag}"
-        create_result = tool.run(
-            [
-                "manifest",
-                "create",
-                "--amend",
-                manifest_name,
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-        LOG.info(f"Manifest created: {create_result}")
-
-        # 3. Add the loaded images to the manifest
-        inspect_result = tool.run(
-            ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
-        )
-        LOG.debug("Manifest before adding images: %s", inspect_result)
-        for arch in archs:
-            add_result = tool.run(
+            # 1. Load image/s artifact into the podman image store
+            load_result = tool.run(
                 [
-                    "manifest",
-                    "add",
-                    manifest_name,
-                    f"containers-storage:docker.io/{MOZ_REPO}:{base_tag}-{arch}",
+                    "load",
+                    "--input",
+                    str(img),
                 ],
                 text=True,
                 stdout=PIPE,
             )
-            LOG.info(f"Added: {add_result}")
-        inspect_result = tool.run(
-            ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
-        )
-        LOG.debug("Manifest after adding images: %s", inspect_result)
 
-        # 4. Push the manifest (with images) to docker.io
-        tool.login(
-            config.docker["registry"],
-            config.docker["username"],
-            config.docker["password"],
-        )
-        push_result = tool.run(
-            [
-                "manifest",
-                "push",
-                "--all",
-                manifest_name,
-                f"docker://{manifest_name}",
-            ],
-            text=True,
-            stdout=PIPE,
-        )
-        LOG.info(f"Push manifest result: {push_result}")
-        rmtree(image_path)
+            LOG.info(f"Loaded: {load_result}")
+            existing_images = tool.list_images()
+            LOG.debug("Existing images after loading: %s", existing_images)
+            assert all(
+                f"{base_tag}-{arch}" in [image["tag"] for image in existing_images]
+                for arch in archs
+            ), "Could not find scheduled archs in local tags"
+
+            MOZ_REPO = f"mozillasecurity/{service_name}"
+
+            # 2. Create the podman manifest list
+            manifest_name = f"docker.io/{MOZ_REPO}:{base_tag}"
+            create_result = tool.run(
+                [
+                    "manifest",
+                    "create",
+                    "--amend",
+                    manifest_name,
+                ],
+                text=True,
+                stdout=PIPE,
+            )
+            LOG.info(f"Manifest created: {create_result}")
+
+            # 3. Add the loaded images to the manifest
+            inspect_result = tool.run(
+                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            )
+            LOG.debug("Manifest before adding images: %s", inspect_result)
+            for arch in archs:
+                add_result = tool.run(
+                    [
+                        "manifest",
+                        "add",
+                        manifest_name,
+                        f"containers-storage:docker.io/{MOZ_REPO}:{base_tag}-{arch}",
+                    ],
+                    text=True,
+                    stdout=PIPE,
+                )
+                LOG.info(f"Added: {add_result}")
+            inspect_result = tool.run(
+                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            )
+            LOG.debug("Manifest after adding images: %s", inspect_result)
+
+            # 4. Push the manifest (with images) to docker.io
+            tool.login(
+                config.docker["registry"],
+                config.docker["username"],
+                config.docker["password"],
+            )
+            push_result = tool.run(
+                [
+                    "manifest",
+                    "push",
+                    "--all",
+                    manifest_name,
+                    f"docker://{manifest_name}",
+                ],
+                text=True,
+                stdout=PIPE,
+            )
+            LOG.info(f"Push manifest result: {push_result}")
+        finally:
+            rmtree(image_path)
     sys.exit(0)

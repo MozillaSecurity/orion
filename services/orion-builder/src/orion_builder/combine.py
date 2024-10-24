@@ -96,7 +96,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     """Combine entrypoint. Does not return."""
 
     args = CombineArgs.parse_args(argv)
-    # configure_logging(level=args.log_level)
+    # configure_logging(level=args.log_level)  # TODO: change back
     configure_logging(level=0)  # for debugging
 
     service_name = args.service_name
@@ -147,8 +147,6 @@ def main(argv: Optional[List[str]] = None) -> None:
         )
         LOG.info(f"Save multiarch image result: {save_result}")
         zstd_compress(args.write)
-    except Exception as e:
-        LOG.error("Failed to load/save images: %s", e)
     finally:
         rmtree(image_path)
     sys.exit(0)
