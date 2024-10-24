@@ -545,7 +545,6 @@ class Scheduler:
                     combine_tasks_created[obj.name] = self._create_combine_task(
                         obj, service_build_tasks
                     )
-                should_push = True  # TODO: remove (after testing push task)
                 if should_push:
                     if len(obj.archs) > 1:
                         push_tasks_created.add(
