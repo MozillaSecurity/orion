@@ -117,7 +117,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         try:
             img = download_artifact(queue, task_id, artifact_name, image_path)
             LOG.info(
-                "Task %s artifact %s downloaded to %s", task_id, artifact_name, img
+                "Task %s artifact %s downloaded to: %s", task_id, artifact_name, img
             )
             existing_images = tool.list_images()
             LOG.debug("Existing images before loading: %s", existing_images)

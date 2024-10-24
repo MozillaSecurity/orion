@@ -117,6 +117,9 @@ def main(argv: Optional[List[str]] = None) -> None:
         artifacts_ids = load_artifacts(args.task_id, queue, "public/**.tar.zst")
         for task_id, artifact_name in artifacts_ids:
             img = download_artifact(queue, task_id, artifact_name, image_path)
+            LOG.info(
+                "Task %s artifact %s downloaded to: %s", task_id, artifact_name, img
+            )
             # load images into the podman image store
             load_result = tool.run(
                 [
