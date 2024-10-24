@@ -258,7 +258,7 @@ class Scheduler:
                 raise
         return task_id
 
-    def _create_combine_task(self, service, archs, service_build_tasks):
+    def _create_combine_task(self, service, service_build_tasks):
         combine_task = yaml_load(
             COMBINE_TASK.substitute(
                 clone_url=self._clone_url(),
@@ -274,11 +274,14 @@ class Scheduler:
                 source_url=SOURCE_URL,
                 task_group=self.task_group,
                 worker=WORKER_TYPE,
-                archs=archs,
+                archs=str(service.archs),
             )
         )
-        for arch in archs:
-            LOG.info(f"Combine dependency: {service_build_tasks[(service.name, arch)]}")
+        for arch in service.archs:
+            LOG.debug(
+                "Adding combine task dependency: %s",
+                service_build_tasks[(service.name, arch)],
+            )
             combine_task["dependencies"].append(
                 service_build_tasks[(service.name, arch)]
             )
@@ -531,6 +534,7 @@ class Scheduler:
                 if isinstance(obj, ServiceTestOnly):
                     assert obj.tests
                     continue
+
                 for arch in obj.archs:
                     build_tasks_created.add(
                         self._create_build_task(
@@ -539,7 +543,7 @@ class Scheduler:
                     )
                 if len(obj.archs) > 1:
                     combine_tasks_created[obj.name] = self._create_combine_task(
-                        obj, obj.archs, service_build_tasks
+                        obj, service_build_tasks
                     )
                 should_push = True  # TODO: remove (after testing push task)
                 if should_push:

@@ -927,7 +927,7 @@ def test_create_15(mocker: MockerFixture) -> None:
             source_url=SOURCE_URL,
             task_group="group",
             worker=WORKER_TYPE,
-            archs=["amd64", "arm64"],
+            archs=str(["amd64", "arm64"]),
         )
     )
     combine_expected["dependencies"].append(build_task1_id)
