@@ -17,15 +17,17 @@ from yaml import safe_load as yaml_load
 
 from . import Taskcluster
 
-LANGUAGES = ["node", "python"]
+LANGUAGES = ["java", "node", "python"]
 PLATFORMS = ["linux", "windows", "macos"]
 VERSIONS = {
+    ("java", "linux"): ["11"],
     ("node", "linux"): ["14", "16", "18", "20"],
     ("python", "linux"): ["3.9", "3.10", "3.11", "3.12"],
     ("python", "windows"): ["3.9", "3.10", "3.11", "3.12"],
     ("python", "macos"): ["3.9", "3.10", "3.11", "3.12"],
 }
 IMAGES = {
+    ("java", "linux", "11"): "ci-java-11",
     ("node", "linux", "14"): "ci-node-14",
     ("node", "linux", "16"): "ci-node-16",
     ("node", "linux", "18"): "ci-node-18",
