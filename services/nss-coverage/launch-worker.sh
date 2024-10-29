@@ -70,11 +70,10 @@ function clone-corpus {
   shift 2
 
   mkdir -p corpus
-  cd corpus
-
+  pushd corpus
   if [[ ! -d "$name" ]]; then
     mkdir "$name"
-    cd "$name"
+    pushd "$name"
 
     # There may be no OSS-Fuzz corpus yet for new fuzz targets
     code=$(retry-curl --no-fail -w "%{http_code}" -O "$url")
@@ -85,10 +84,9 @@ function clone-corpus {
     fi
     rm public.zip
 
-    cd ..
+    popd
   fi
-
-  cd ..
+  popd
 }
 
 function clone-nssfuzz-corpus {
@@ -164,11 +162,27 @@ done
 total_targets=$(("${#targets[@]}" + "${#tls_targets[@]}"))
 curr_target_n=1
 
+# Build nss with tls fuzzing mode
+update-ec2-status "[$(date -Iseconds)] building nss with tls fuzzing mode ($curr_target_n/$total_targets have run)"
+pushd nss
+time ./build.sh -c -v --fuzz=tls --disable-tests
+popd
+
+# For each nssfuzz target with tls fuzzing mode, clone corpus & run
+for target in "${!tls_targets[@]}"; do
+  update-ec2-status "[$(date -Iseconds)] cloning corpus for $target ($curr_target_n/$total_targets)"
+  clone-nssfuzz-corpus "$target"
+
+  update-ec2-status "[$(date -Iseconds)] running $target ($curr_target_n/$total_targets)"
+  run-nssfuzz-target "$target" "$target"
+  ((curr_target_n++))
+done
+
 # Build nss w/o tls fuzzing mode
 update-ec2-status "[$(date -Iseconds)] building nss w/o tls fuzzing mode"
-cd nss
+pushd nss
 time ./build.sh -c -v --fuzz --disable-tests
-cd ..
+popd
 
 # For each nssfuzz target w/o tls fuzzing mode, clone corpus & run
 for target in "${!targets[@]}"; do
@@ -185,54 +199,28 @@ for target in "${!targets[@]}"; do
   ((curr_target_n++))
 done
 
-# Build nss with tls fuzzing mode
-update-ec2-status "[$(date -Iseconds)] building nss with tls fuzzing mode ($curr_target_n/$total_targets have run)"
-cd nss
-time ./build.sh -c -v --fuzz=tls --disable-tests
-cd ..
-
-# For each nssfuzz target with tls fuzzing mode, clone corpus & run
-for target in "${!tls_targets[@]}"; do
-  update-ec2-status "[$(date -Iseconds)] cloning corpus for $target ($curr_target_n/$total_targets)"
-  clone-nssfuzz-corpus "$target"
-
-  update-ec2-status "[$(date -Iseconds)] running $target ($curr_target_n/$total_targets)"
-  run-nssfuzz-target "$target" "$target"
-  ((curr_target_n++))
-done
-
-# Build nss for cryptofuzz
-export CFLAGS="$CFLAGS -fsanitize=address,undefined,fuzzer-no-link"
-export CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined,fuzzer-no-link -DCRYPTOFUZZ_NO_OPENSSL -D_GLIBCXX_DEBUG"
-
-update-ec2-status "[$(date -Iseconds)] building nss for cryptofuzz"
-cd nss
-time ./build.sh -c -v --fuzz --disable-tests
-cd ..
-
 # Generate cryptofuzz headers
-cd cryptofuzz
+pushd cryptofuzz
 ./gen_repository.py
-cd ..
 
 # Build cryptofuzz nss module
-NSS_NSPR_PATH="$(realpath .)"
-
-export NSS_NSPR_PATH
-export CXXFLAGS="$CXXFLAGS -I $NSS_NSPR_PATH/dist/public/nss -I $NSS_NSPR_PATH/dist/Debug/include/nspr -DCRYPTOFUZZ_NSS"
+export NSS_NSPR_PATH="$HOME"
+export CFLAGS="$CFLAGS -fsanitize=address,undefined,fuzzer-no-link"
+export CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined,fuzzer-no-link"
+export CXXFLAGS="$CXXFLAGS -I $NSS_NSPR_PATH/dist/public/nss -I $NSS_NSPR_PATH/dist/Debug/include/nspr -DCRYPTOFUZZ_NSS -DCRYPTOFUZZ_NO_OPENSSL"
 export LINK_FLAGS="$LINK_FLAGS -lsqlite3"
 
 update-ec2-status "[$(date -Iseconds)] building cryptofuzz nss module"
-cd cryptofuzz/modules/nss
+pushd modules/nss
 time make -j"$(nproc)"
-cd ../..
+popd
 
 # Build cryptofuzz
 export LIBFUZZER_LINK="-fsanitize=fuzzer"
 
 update-ec2-status "[$(date -Iseconds)] building cryptofuzz"
 time make -j"$(nproc)"
-cd ..
+popd
 
 # Clone cryptofuzz nss corpus
 update-ec2-status "[$(date -Iseconds)] cloning cryptofuzz nss corpus"
