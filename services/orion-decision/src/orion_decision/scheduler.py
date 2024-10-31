@@ -96,15 +96,13 @@ class Scheduler:
         assert self.github_event.repo is not None
         self.services = Services(self.github_event.repo)
 
-    def _build_index(self, svc_name: str) -> str:
-        if self.github_event.pull_request is not None:
-            build_index = (
-                f"project.fuzzing.orion.{svc_name}"
-                f".pull_request.{self.github_event.pull_request}"
-            )
-        else:
-            build_index = f"project.fuzzing.orion.{svc_name}.{self.github_event.branch}"
-        return build_index
+    def _build_index(self, svc_name: str, arch: str | None = None) -> str:
+        assert self.github_event.branch
+        parts = ["project", "fuzzing", "orion", svc_name]
+        if arch is not None:
+            parts.append(arch)
+        parts.append(self.github_event.branch)
+        return ".".join(parts)
 
     def _clone_url(self) -> str:
         return self.github_event.http_url
@@ -246,6 +244,10 @@ class Scheduler:
                     arch=arch,
                 )
             )
+            if self._should_push():
+                build_task["routes"].append(
+                    f"index.{self._build_index(service.name, arch)}"
+                )
         build_task["dependencies"].extend(dirty_dep_tasks + test_tasks)
         task_id = service_build_tasks[(service.name, arch)]
         LOG.info(

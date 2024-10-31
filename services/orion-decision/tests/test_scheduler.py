@@ -196,7 +196,7 @@ def test_create_03(mocker: MockerFixture) -> None:
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     build_task_id, build_task = queue.createTask.call_args_list[0][0]
-    assert build_task == yaml_load(
+    build_expected = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
             commit="commit",
@@ -216,6 +216,8 @@ def test_create_03(mocker: MockerFixture) -> None:
             arch="amd64",
         )
     )
+    build_expected["routes"].append("index.project.fuzzing.orion.test1.amd64.push")
+    assert build_task == build_expected
     _, push_task = queue.createTask.call_args_list[1][0]
     push_expected = yaml_load(
         PUSH_TASK.substitute(
@@ -870,7 +872,7 @@ def test_create_15(mocker: MockerFixture) -> None:
 
     build_task_id, build_task = queue.createTask.call_args_list[0][0]
     build_task1_id, build_task1 = queue.createTask.call_args_list[0][0]
-    assert build_task1 == yaml_load(
+    build_expected = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
             commit="commit",
@@ -890,8 +892,10 @@ def test_create_15(mocker: MockerFixture) -> None:
             arch="amd64",
         )
     )
+    build_expected["routes"].append("index.project.fuzzing.orion.test1.amd64.push")
+    assert build_task1 == build_expected
     build_task2_id, build_task2 = queue.createTask.call_args_list[1][0]
-    assert build_task2 == yaml_load(
+    build_expected = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
             commit="commit",
@@ -911,6 +915,8 @@ def test_create_15(mocker: MockerFixture) -> None:
             arch="arm64",
         )
     )
+    build_expected["routes"].append("index.project.fuzzing.orion.test1.arm64.push")
+    assert build_task2 == build_expected
     combine_task_id, combine_task = queue.createTask.call_args_list[2][0]
     combine_expected = yaml_load(
         COMBINE_TASK.substitute(
