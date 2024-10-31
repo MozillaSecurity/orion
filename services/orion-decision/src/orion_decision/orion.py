@@ -3,12 +3,15 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Orion service definitions"""
 
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, Generator, Iterable, List, Optional, Pattern, Set, Union
+from typing import Any, Pattern
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
@@ -20,7 +23,7 @@ LOG = getLogger(__name__)
 
 def file_glob(
     repo: GitRepo, path: Path, pattern: str = "**/*", relative: bool = False
-) -> Generator[Path, None, None]:
+) -> Iterator[Path]:
     """Run Path.glob for a given pattern, with filters applied.
     Only files are yielded, not directories. Any file that looks like
     it is in a test folder hierarchy (`tests`) will be skipped.
@@ -74,7 +77,7 @@ class ServiceTest(ABC):
     @abstractmethod
     def update_task(
         self,
-        task: Dict[str, Any],
+        task: dict[str, Any],
         clone_url: str,
         fetch_ref: str,
         commit: str,
@@ -91,7 +94,7 @@ class ServiceTest(ABC):
         """
 
     @classmethod
-    def check_fields(cls, defn: Dict[str, str], check_unknown: bool = True) -> None:
+    def check_fields(cls, defn: dict[str, str], check_unknown: bool = True) -> None:
         """Check a service test definition fields.
 
         Arguments:
@@ -109,7 +112,7 @@ class ServiceTest(ABC):
                 raise RuntimeError(f"Unknown test fields: '{extra!r}'")
 
     @staticmethod
-    def from_defn(defn: Dict[str, str]) -> "ToxServiceTest":
+    def from_defn(defn: dict[str, str]) -> ToxServiceTest:
         """Load a service test from the service.yaml metadata test subsection.
 
         Arguments:
@@ -151,7 +154,7 @@ class ToxServiceTest(ServiceTest):
 
     def update_task(
         self,
-        task: Dict[str, Any],
+        task: dict[str, Any],
         clone_url: str,
         fetch_ref: str,
         commit: str,
@@ -203,12 +206,12 @@ class Service:
 
     def __init__(
         self,
-        dockerfile: Optional[Path],
+        dockerfile: Path | None,
         context: Path,
         name: str,
-        tests: List[ServiceTest],
+        tests: list[ServiceTest],
         root: Path,
-        archs: Optional[List[str]] = None,
+        archs: list[str] | None = None,
     ) -> None:
         """Initialize a Service instance.
 
@@ -223,17 +226,17 @@ class Service:
         self.dockerfile = dockerfile
         self.context = context
         self.name = name
-        self.service_deps: Set[str] = set()
-        self.path_deps: Set[Path] = set()
-        self.recipe_deps: Set[str] = set()
-        self.weak_deps: Set[str] = set()
+        self.service_deps: set[str] = set()
+        self.path_deps: set[Path] = set()
+        self.recipe_deps: set[str] = set()
+        self.weak_deps: set[str] = set()
         self.dirty = False
         self.tests = tests
         self.root = root
         self.archs = archs or ["amd64"]
 
     @classmethod
-    def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> "Service":
+    def from_metadata_yaml(cls, metadata_path: Path, context: Path) -> Service:
         """Create a Service instance from a service.yaml metadata path.
 
         Arguments:
@@ -246,7 +249,7 @@ class Service:
         metadata = yaml_load(metadata_path.read_text())
         name = metadata["name"]
         LOG.info("Loading %s from %s", name, metadata_path)
-        tests: List[ServiceTest]
+        tests: list[ServiceTest]
         if "tests" in metadata:
             tests = [ServiceTest.from_defn(defn) for defn in metadata["tests"]]
         else:
@@ -319,7 +322,7 @@ class ServiceMsys(Service):
     """
 
     def __init__(
-        self, base: str, context: Path, name: str, tests: List[ServiceTest], root: Path
+        self, base: str, context: Path, name: str, tests: list[ServiceTest], root: Path
     ) -> None:
         """Initialize a ServiceMsys instance.
 
@@ -380,10 +383,10 @@ class Recipe:
             file: Location of the recipe
         """
         self.file = file
-        self.service_deps: Set[str] = set()
-        self.path_deps: Set[Path] = {file}
-        self.recipe_deps: Set[str] = set()
-        self.weak_deps: Set[str] = set()
+        self.service_deps: set[str] = set()
+        self.path_deps: set[Path] = {file}
+        self.recipe_deps: set[str] = set()
+        self.weak_deps: set[str] = set()
         self.dirty = False
 
     @property
@@ -409,7 +412,7 @@ class Services(dict):
         super().__init__()
         self.root = repo.path
         # scan files & recipes
-        self.recipes: Dict[str, Recipe] = {}
+        self.recipes: dict[str, Recipe] = {}
         self._file_re = self._scan_files(repo)
         # scan the context recursively to find services
         assert self.root is not None
@@ -436,7 +439,7 @@ class Services(dict):
             LOG.debug("found path: %s", file_strs[-1])
         return re.compile("|".join(re.escape(file) for file in file_strs))
 
-    def _find_path_depends(self, obj: Union[Recipe, Service], text: str) -> None:
+    def _find_path_depends(self, obj: Recipe | Service, text: str) -> None:
         """Search a file for path references.
 
         Arguments:
@@ -563,9 +566,7 @@ class Services(dict):
                 # search file for references to other files
                 self._find_path_depends(service, entry_text)
 
-        def _adjacent(
-            obj: Union[Recipe, Service]
-        ) -> Generator[Union[Recipe, Service], None, None]:
+        def _adjacent(obj: Recipe | Service) -> Iterator[Recipe | Service]:
             for rec in obj.recipe_deps:
                 yield self.recipes[rec]
             for svc in obj.service_deps:
@@ -581,9 +582,7 @@ class Services(dict):
 
         # check that there are no cycles in the dependency graph
         for start in chain(self.values(), self.recipes.values()):
-            stk: List[Optional[Generator[Union[Recipe, Service], None, None]]] = [
-                _adjacent(start)
-            ]
+            stk: list[Iterator[Recipe | Service] | None] = [_adjacent(start)]
             bkt = [start]
             while stk:
                 if stk[-1] is None:

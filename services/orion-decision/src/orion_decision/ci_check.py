@@ -3,7 +3,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Checker for CI build matrix"""
 
-import argparse
+from __future__ import annotations
+
+from argparse import Namespace
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
@@ -20,7 +22,7 @@ LOG = getLogger(__name__)
 EVENTS_PATH = Path(__file__).parent / "github_test_events"
 
 
-def check_matrix(args: argparse.Namespace) -> None:
+def check_matrix(args: Namespace) -> None:
     """Check whether the CI matrix found in .taskcluster.yml can be loaded.
 
     Raises if any error is found.
