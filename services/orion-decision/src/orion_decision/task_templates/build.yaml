@@ -29,7 +29,7 @@ payload:
   image: "mozillasecurity/orion-builder:latest"
   maxRunTime: !!int "${max_run_time}"
 routes:
-  - "index.project.fuzzing.orion.${service_name}.rev.${commit}"
+  - "index.project.fuzzing.orion.${service_name}.${arch}.rev.${commit}"
 scopes:
   - "docker-worker:capability:privileged"
   - "queue:scheduler-id:${scheduler}"

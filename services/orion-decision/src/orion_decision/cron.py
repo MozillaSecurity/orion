@@ -66,8 +66,12 @@ class CronScheduler(Scheduler):
         self.main_branch = branch
         self.services = Services(self.repo)
 
-    def _build_index(self, svc_name: str) -> str:
-        return f"project.fuzzing.orion.{svc_name}.{self.main_branch}"
+    def _build_index(self, svc_name: str, arch: str | None = None) -> str:
+        parts = ["project", "fuzzing", "orion", svc_name]
+        if arch is not None:
+            parts.append(arch)
+        parts.append(self.main_branch)
+        return ".".join(parts)
 
     def _clone_url(self) -> str:
         return self.clone_url
@@ -99,7 +103,7 @@ class CronScheduler(Scheduler):
         for svc in self.services.values():
             if svc.dirty:
                 continue
-            index_path = f"project.fuzzing.orion.{svc.name}.{self.main_branch}"
+            index_path = self._build_index(svc.name)
             rebuild = False
             try:
                 result = idx.findTask(index_path)

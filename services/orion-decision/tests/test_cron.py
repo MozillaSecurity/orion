@@ -167,7 +167,7 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
     sched.create_tasks()
     assert queue.createTask.call_count == 2
     build_task_id, build_task = queue.createTask.call_args_list[0][0]
-    assert build_task == yaml_load(
+    build_expected = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
             commit="commit",
@@ -187,6 +187,8 @@ def test_cron_create_02(mocker: MockerFixture) -> None:
             arch="amd64",
         )
     )
+    build_expected["routes"].append("index.project.fuzzing.orion.test1.amd64.push")
+    assert build_task == build_expected
     _, push_task = queue.createTask.call_args_list[1][0]
     push_expected = yaml_load(
         PUSH_TASK.substitute(
@@ -236,7 +238,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
     sched.create_tasks()
     assert queue.createTask.call_count == 4
     task1_id, task1 = queue.createTask.call_args_list[0][0]
-    assert task1 == yaml_load(
+    expected1 = yaml_load(
         BUILD_TASK.substitute(
             clone_url="https://example.com",
             commit="commit",
@@ -256,6 +258,8 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
             arch="amd64",
         )
     )
+    expected1["routes"].append("index.project.fuzzing.orion.test1.amd64.push")
+    assert task1 == expected1
     _, task2 = queue.createTask.call_args_list[1][0]
     expected2 = yaml_load(
         PUSH_TASK.substitute(
@@ -301,6 +305,7 @@ def test_cron_create_03(mocker: MockerFixture) -> None:
         )
     )
     expected3["dependencies"].append(task1_id)
+    expected3["routes"].append("index.project.fuzzing.orion.test2.amd64.push")
     assert task3 == expected3
 
 
