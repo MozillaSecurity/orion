@@ -24,8 +24,23 @@ cd "${0%/*}"
 # when run under Taskcluster
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 
+EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./fuzzfetch.sh
+./grcov.sh
+if ! is-arm64; then
+./llvm-symbolizer.sh
+fi
 ./taskcluster.sh
+
+# use Amazon Corretto OpenJDK
+retry-curl https://apt.corretto.aws/corretto.key | gpg --dearmor -o /etc/apt/keyrings/corretto.gpg
+echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list
+sys-update
+
+# setup maven
+mkdir /opt/maven
+retry-curl https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar -C /opt/maven --strip-components=1 -xz
+echo "PATH=\$PATH:/opt/maven/bin" >> /etc/bash.bashrc
 
 #### Bootstrap Packages
 
@@ -48,10 +63,8 @@ packages=(
   libwww-mechanize-perl
   locales
   mailutils
-  maven
   mercurial
   nano
-  openjdk-8-jdk
   openssh-client
   psmisc
   python-is-python3
@@ -78,9 +91,30 @@ if ! is-arm64; then
     g++-multilib
     gcc-multilib
   )
+else
+  # install llvm for llvm-symbolizer on arm64
+  packages+=(llvm-15)
 fi
 
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
+
+if is-arm64; then
+  update-alternatives --install \
+    /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-15     100 \
+    --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-15
+fi
+
+python_packages=(
+  google-cloud-storage
+  jsbeautifier
+)
+
+retry pip3 install "${python_packages[@]}"
+
+# use gcov-9
+./gcov-9.sh
+mv /usr/local/bin/gcov-9 /usr/local/bin/gcov
+rm /usr/bin/gcov
 
 #### Base System Configuration
 
