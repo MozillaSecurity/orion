@@ -3,7 +3,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Fixtures for Orion Decision tests"""
 
-from typing import Iterable
+from __future__ import annotations
+
+from collections.abc import Iterable
 from unittest import mock
 
 import pytest

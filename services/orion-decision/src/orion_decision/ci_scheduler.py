@@ -3,7 +3,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for CI tasks"""
 
-import argparse
+from __future__ import annotations
+
+from argparse import Namespace
 from datetime import datetime, timezone
 from itertools import chain
 from json import dumps as json_dump
@@ -11,7 +13,7 @@ from logging import getLogger
 from os import getenv
 from pathlib import Path
 from string import Template
-from typing import Any, Dict, List
+from typing import Any
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -62,7 +64,7 @@ class CIScheduler:
         github_event: GithubEvent,
         task_group: str,
         scheduler_id: str,
-        matrix: Dict[str, Any],
+        matrix: dict[str, Any],
         dry_run: bool = False,
     ) -> None:
         """Initialize a CIScheduler object.
@@ -105,7 +107,7 @@ class CIScheduler:
                         LOG.warning("Push in a PR branch. No CI tasks scheduled.")
                         return
         job_tasks = {id(job): slugId() for job in self.matrix.jobs}
-        prev_stage: List[str] = []
+        prev_stage: list[str] = []
         for stage in sorted({job.stage for job in self.matrix.jobs}):
             this_stage = []
             for job in self.matrix.jobs:
@@ -227,7 +229,7 @@ class CIScheduler:
             prev_stage = this_stage
 
     @classmethod
-    def main(cls, args: argparse.Namespace) -> int:
+    def main(cls, args: Namespace) -> int:
         """Decision procedure.
 
         Arguments:

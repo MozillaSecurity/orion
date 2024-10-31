@@ -3,6 +3,8 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for periodic rebuild of Orion tasks"""
 
+from __future__ import annotations
+
 from argparse import Namespace
 from datetime import datetime, timezone
 from logging import getLogger

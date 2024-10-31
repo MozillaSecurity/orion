@@ -3,14 +3,15 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Scheduler for Orion tasks"""
 
-import argparse
+from __future__ import annotations
+
 import re
+from argparse import Namespace
 from datetime import datetime, timezone
 from logging import getLogger
 from os import getenv
 from pathlib import Path
 from string import Template
-from typing import Dict, List, Set, Tuple, Union
 
 from taskcluster.exceptions import TaskclusterFailure
 from taskcluster.utils import slugId, stringDate
@@ -338,10 +339,10 @@ class Scheduler:
         self,
         service: Service,
         test: ToxServiceTest,
-        service_build_tasks: Dict[Tuple[str, str], str],
+        service_build_tasks: dict[tuple[str, str], str],
         arch: str,
     ):
-        image: Union[str, Dict[str, str]] = test.image
+        image: dict[str, str] | str = test.image
         deps = []
         if (image, arch) in service_build_tasks:
             if self.services[image].dirty:
@@ -396,7 +397,7 @@ class Scheduler:
         return task_id
 
     def _create_recipe_test_task(
-        self, recipe: Recipe, dep_tasks: List[str], recipe_test_tasks: Dict[str, str]
+        self, recipe: Recipe, dep_tasks: list[str], recipe_test_tasks: dict[str, str]
     ) -> str:
         assert self.services.root is not None
         service_path = self.services.root / "services" / "test-recipes"
@@ -460,11 +461,11 @@ class Scheduler:
         recipe_test_tasks = {recipe: slugId() for recipe in self.services.recipes}
         for recipe, task_id in recipe_test_tasks.items():
             LOG.debug("Task %s is a recipe test for %s", task_id, recipe)
-        test_tasks_created: Dict[Tuple[str, str], str] = {}
-        recipe_tasks_created: Set[str] = set()
-        build_tasks_created: Set[str] = set()
-        combine_tasks_created: Dict[str, str] = {}
-        push_tasks_created: Set[str] = set()
+        test_tasks_created: dict[tuple[str, str], str] = {}
+        recipe_tasks_created: set[str] = set()
+        build_tasks_created: set[str] = set()
+        combine_tasks_created: dict[str, str] = {}
+        push_tasks_created: set[str] = set()
         to_create = [
             (recipe, "amd64")
             for recipe in sorted(self.services.recipes.values(), key=lambda x: x.name)
@@ -595,7 +596,7 @@ class Scheduler:
         )
 
     @classmethod
-    def main(cls, args: argparse.Namespace) -> int:
+    def main(cls, args: Namespace) -> int:
         """Decision procedure.
 
         Arguments:

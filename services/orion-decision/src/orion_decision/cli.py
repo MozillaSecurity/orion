@@ -3,8 +3,10 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion scheduler"""
 
-import argparse
+from __future__ import annotations
+
 import sys
+from argparse import ArgumentParser, Namespace
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
 from os import chdir, getenv
@@ -12,7 +14,6 @@ from os import environ as os_environ
 from pathlib import Path
 from shutil import which
 from subprocess import run
-from typing import List, Optional
 
 from yaml import safe_load as yaml_load
 
@@ -41,7 +42,7 @@ def configure_logging(level: int = INFO) -> None:
         getLogger("urllib3").setLevel(INFO)
 
 
-def _define_logging_args(parser: argparse.ArgumentParser) -> None:
+def _define_logging_args(parser: ArgumentParser) -> None:
     log_levels = parser.add_mutually_exclusive_group()
     log_levels.add_argument(
         "--quiet",
@@ -64,7 +65,7 @@ def _define_logging_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _define_github_args(parser: argparse.ArgumentParser) -> None:
+def _define_github_args(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--github-event",
         default=getenv("GITHUB_EVENT", "{}"),
@@ -79,9 +80,7 @@ def _define_github_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _sanity_check_github_args(
-    parser: argparse.ArgumentParser, result: argparse.Namespace
-) -> None:
+def _sanity_check_github_args(parser: ArgumentParser, result: Namespace) -> None:
     if result.github_action is None:
         parser.error("--github-action (or GITHUB_ACTION) is required!")
 
@@ -91,7 +90,7 @@ def _sanity_check_github_args(
     assert all(isinstance(key, str) for key in result.github_event)
 
 
-def _define_decision_args(parser: argparse.ArgumentParser) -> None:
+def _define_decision_args(parser: ArgumentParser) -> None:
     parser.add_argument(
         "--task-group",
         default=getenv("TASK_ID"),
@@ -110,7 +109,7 @@ def _define_decision_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments.
 
     Arguments:
@@ -119,7 +118,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="decision")
+    parser = ArgumentParser(prog="decision")
     _define_logging_args(parser)
     _define_github_args(parser)
     _define_decision_args(parser)
@@ -140,7 +139,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return result
 
 
-def parse_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_check_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments for check.
 
     Arguments:
@@ -149,7 +148,7 @@ def parse_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="orion-check")
+    parser = ArgumentParser(prog="orion-check")
     _define_logging_args(parser)
     parser.add_argument(
         "repo",
@@ -165,7 +164,7 @@ def parse_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def parse_ci_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_ci_check_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments for CI check.
 
     Arguments:
@@ -174,7 +173,7 @@ def parse_ci_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="ci-check")
+    parser = ArgumentParser(prog="ci-check")
     _define_logging_args(parser)
     parser.add_argument(
         "changed",
@@ -185,7 +184,7 @@ def parse_ci_check_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def parse_ci_launch_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_ci_launch_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments for CI launch.
 
     Arguments:
@@ -194,7 +193,7 @@ def parse_ci_launch_args(argv: Optional[List[str]] = None) -> argparse.Namespace
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="ci-launch")
+    parser = ArgumentParser(prog="ci-launch")
     _define_logging_args(parser)
     parser.add_argument(
         "--fetch-ref",
@@ -230,7 +229,7 @@ def parse_ci_launch_args(argv: Optional[List[str]] = None) -> argparse.Namespace
     return result
 
 
-def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_ci_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments for CI.
 
     Arguments:
@@ -239,7 +238,7 @@ def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="ci-decision")
+    parser = ArgumentParser(prog="ci-decision")
     _define_logging_args(parser)
     _define_github_args(parser)
     _define_decision_args(parser)
@@ -275,7 +274,7 @@ def parse_ci_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return result
 
 
-def parse_cron_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def parse_cron_args(argv: list[str] | None = None) -> Namespace:
     """Parse command-line arguments for cron decision.
 
     Arguments:
@@ -284,7 +283,7 @@ def parse_cron_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     Returns:
         parsed result
     """
-    parser = argparse.ArgumentParser(prog="cron-decision")
+    parser = ArgumentParser(prog="cron-decision")
     _define_logging_args(parser)
     _define_decision_args(parser)
 
