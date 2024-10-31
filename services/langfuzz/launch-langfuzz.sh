@@ -55,6 +55,11 @@ EOF
 
 cd /home/ubuntu
 
+pushd /src/fuzzmanager >/dev/null
+  retry git fetch -q --depth 1 --no-tags origin master
+  git reset --hard origin/master
+popd >/dev/null
+
 # Checkout the configuration with bootstrap script
 retry git clone -v --depth 1 git@langfuzz-config:MozillaSecurity/langfuzz-config.git config
 

@@ -17,14 +17,33 @@ source "${0%/*}/taskgraph-m-c-latest.sh"
 
 case "${1-install}" in
   install)
-    apt-install-auto \
-      binutils \
-      ca-certificates \
-      curl \
-      zstd
+    pkgs=(
+      ca-certificates
+      curl
+    )
+    if is-arm64; then
+      pkgs+=(lbzip2)
+    else
+      pkgs+=(
+        binutils
+        zstd
+      )
+    fi
+    apt-install-auto "${pkgs[@]}"
 
-    retry-curl "$(resolve-tc grcov)" | zstdcat | tar -x -v --strip-components=1 -C /usr/local/bin
-    strip --strip-unneeded /usr/local/bin/grcov
+    if is-arm64; then
+      TMPD="$(mktemp -d -p. grcov.XXXXXXXXXX)"
+      pushd "$TMPD" >/dev/null
+        LATEST_VERSION=$(get-latest-github-release "mozilla/grcov")
+        retry-curl -O "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-aarch64-unknown-linux-gnu.tar.bz2"
+        tar -I lbzip2 -xf grcov-aarch64-unknown-linux-gnu.tar.bz2
+        install grcov /usr/local/bin/grcov
+      popd >/dev/null
+      rm -rf "$TMPD"
+    else
+      retry-curl "$(resolve-tc grcov)" | zstdcat | tar -x -v --strip-components=1 -C /usr/local/bin
+      strip --strip-unneeded /usr/local/bin/grcov
+    fi
     ;;
   test)
     grcov --help
