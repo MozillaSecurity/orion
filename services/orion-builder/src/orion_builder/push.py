@@ -93,7 +93,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     # manually add the task to the TC index.
     # do this now and not via route on the build task so that post-build tests can run
     if args.index is not None:
-        LOG.info("Inserting into TC index task: ", tasks[0][0])
+        LOG.info("Inserting into TC index task: %s", tasks[0][0])
         index.insertTask(
             args.index,
             {
