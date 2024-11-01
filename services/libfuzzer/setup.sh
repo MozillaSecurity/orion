@@ -21,6 +21,7 @@ cd "${0%/*}"
 ./gsutil.sh
 ./fluentbit.sh
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
+./llvm-symbolizer.sh
 ./nodejs.sh
 ./taskcluster.sh
 
@@ -37,7 +38,6 @@ packages=(
   libglu1-mesa
   libosmesa6
   libpci3
-  llvm-9
   locales
   nano
   openssh-client
@@ -53,6 +53,7 @@ packages=(
 package_recommends=(
   subversion
   ubuntu-restricted-addons
+  # used by oss-fuzz/infra/helper.py
   wget
 )
 
@@ -61,10 +62,6 @@ sys-embed "${packages[@]}"
 retry apt-get install -y -qq "${package_recommends[@]}"
 apt-install-depends firefox
 apt-get remove --purge -qq xul-ext-ubufox
-
-update-alternatives --install \
-  /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-9     100 \
-  --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-9
 
 #### Base System Configuration
 
