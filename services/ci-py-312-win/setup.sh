@@ -73,7 +73,6 @@ rm -rf \
   msys64/usr/share/man/
 cp -r orion/services/orion-decision orion-decision
 retry python -m pip install ./orion-decision
-cp orion/recipes/linux/py-ci.sh .
 # Delete symlinks
 find msys64 -type l -delete
-tar -jcvf msys2.tar.bz2 --hard-dereference msys64 py-ci.sh pip .ssh
+tar -jcvf msys2.tar.bz2 --hard-dereference msys64 pip .ssh

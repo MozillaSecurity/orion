@@ -49,7 +49,6 @@ SRCDIR=/src/orion-decision EDIT=1 "${0%/*}/orion_decision.sh"
 "${0%/*}/worker.sh"
 "${0%/*}/cleanup.sh"
 
-ln "${0%/*}/py-ci.sh" /home/worker/py-ci.sh
 mkdir /home/worker/.ssh
 retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
 
