@@ -53,6 +53,7 @@ packages=(
   gdb
   git
   htop
+  java-11-amazon-corretto-jdk
   jshon
   lbzip2
   less
