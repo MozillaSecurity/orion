@@ -16,16 +16,11 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     sys-embed \
-      python3 \
-      python3-setuptools \
-      zstd
+      python3
     apt-install-auto \
-      gcc \
-      python3-dev \
-      python3-pip \
-      python3-wheel
+      pipx
 
-    retry pip3 install gsutil
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install gsutil
     ;;
   test)
     gsutil version

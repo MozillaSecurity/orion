@@ -21,16 +21,13 @@ case "${1-install}" in
       python3 \
       zstd
     apt-install-auto \
-      curl \
-      gcc \
       git \
-      python3-dev \
-      python3-pip \
-      python3-setuptools \
-      python3-wheel
-    retry pip3 install awscli
+      pipx \
+      python3-venv
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install awscli
+    python3 -m venv /opt/venvs/pernosco
 
-    python_path="$(python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
+    python_path="$(/opt/venvs/pernosco/bin/python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
     TMPD="$(mktemp -d -p. pernosco.build.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
       git-clone "https://github.com/pernosco/pernosco-submit"
@@ -38,9 +35,13 @@ case "${1-install}" in
       cp pernosco-submit/pernosco-submit /usr/local/bin
     popd >/dev/null
     rm -rf "$TMPD"
+    sed -i '1 s,^.*$,#!/opt/venvs/pernosco/bin/python3,' /usr/local/bin/pernosco-submit
     chmod +x /usr/local/bin/pernosco-submit
     ;;
   test)
     pernosco-submit --help
+    aws --version
+    openssl version
+    zstdmt --version
     ;;
 esac

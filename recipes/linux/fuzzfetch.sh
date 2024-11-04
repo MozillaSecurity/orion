@@ -20,13 +20,9 @@ case "${1-install}" in
       lbzip2 \
       python3
     apt-install-auto \
-      gcc \
-      python3-dev \
-      python3-pip \
-      python3-setuptools \
-      python3-wheel
+      pipx
 
-    retry pip3 install fuzzfetch
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install fuzzfetch
     ;;
   test)
     fuzzfetch -h

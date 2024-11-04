@@ -14,25 +14,21 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     # assert that SRCDIR is set
-    [ -n "$SRCDIR" ]
+    [[ -n "$SRCDIR" ]]
 
     sys-embed \
       ca-certificates \
       git \
       openssh-client \
-      python3 \
-      python3-setuptools
+      python3
     apt-install-auto \
-      gcc \
-      python3-dev \
-      python3-pip \
-      python3-wheel
+      pipx
 
-    if [ "$EDIT" = "1" ]
+    if [[ "$EDIT" = "1" ]]
     then
-      retry pip3 install --no-build-isolation -e "$SRCDIR"
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e "$SRCDIR"
     else
-      retry pip3 install "$SRCDIR"
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "$SRCDIR"
     fi
     ;;
   test)
