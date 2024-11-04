@@ -16,17 +16,12 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     sys-embed \
-      git \
       python3
     apt-install-auto \
-      ca-certificates \
-      python3-pip \
-      python3-setuptools \
-      python3-wheel
+      git \
+      pipx
 
-    git-clone "https://github.com/MozillaSecurity/prefpicker.git"
-    cd prefpicker
-    pip install .
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install git+https://github.com/MozillaSecurity/prefpicker.git
     ;;
   test)
     prefpicker -h
