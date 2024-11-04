@@ -16,7 +16,7 @@ source ~/.local/bin/common.sh
 
 gcs-cat () {
 # gcs-cat bucket path
-python3 - "$1" "$2" << "EOF"
+/opt/pipx/venvs/guided-fuzzing-daemon/bin/python - "$1" "$2" << "EOF"
 import os
 import sys
 from google.cloud import storage

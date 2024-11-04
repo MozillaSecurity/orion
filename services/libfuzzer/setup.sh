@@ -7,6 +7,9 @@ set -e
 set -x
 set -o pipefail
 
+DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND
+
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
@@ -24,14 +27,21 @@ SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./llvm-symbolizer.sh
 ./nodejs.sh
 ./taskcluster.sh
+./worker.sh
 
 packages=(
   apt-utils
   binutils
   bzip2
+  chromium-codecs-ffmpeg-extra
   curl
   git
   gpg-agent
+  gstreamer1.0-gl
+  gstreamer1.0-libav
+  gstreamer1.0-plugins-base
+  gstreamer1.0-plugins-ugly
+  gstreamer1.0-vaapi
   jshon
   lbzip2
   less
@@ -41,32 +51,24 @@ packages=(
   locales
   nano
   openssh-client
+  pipx
   psmisc
-  python3-pip
   ripgrep
   screen
   software-properties-common
+  subversion
+  ubuntu-restricted-addons
   unzip
+  wget  # used by oss-fuzz/infra/helper.py
   xvfb
   zip
 )
-package_recommends=(
-  subversion
-  ubuntu-restricted-addons
-  # used by oss-fuzz/infra/helper.py
-  wget
-)
 
 sys-embed "${packages[@]}"
-# want recommends for these packages
-retry apt-get install -y -qq "${package_recommends[@]}"
 apt-install-depends firefox
 apt-get remove --purge -qq xul-ext-ubufox
 
 #### Base System Configuration
-
-# Generate locales
-locale-gen en_US.utf8
 
 # Ensure the machine uses core dumps with PID in the filename
 # https://github.com/moby/moby/issues/11740
@@ -108,9 +110,7 @@ git remote add origin "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 retry git fetch origin main
 git checkout main
 cd -
-# install then uninstall so only dependencies remain
-retry pip3 install google-cloud-storage /src/guided-fuzzing-daemon
-pip3 uninstall -y guided-fuzzing-daemon
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install /src/guided-fuzzing-daemon
 
 /home/worker/.local/bin/cleanup.sh
 

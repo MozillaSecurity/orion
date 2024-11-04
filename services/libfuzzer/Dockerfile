@@ -6,26 +6,18 @@ FROM ubuntu:22.04
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
-ENV LOGNAME         worker
-ENV HOSTNAME        taskcluster-worker
-ARG DEBIAN_FRONTEND=noninteractive
-
-RUN useradd -d /home/worker -s /bin/bash -m worker
-
 COPY recipes/linux/ /tmp/recipes/
 COPY services/libfuzzer/setup.sh /tmp/recipes/
 COPY services/fuzzing-decision /tmp/fuzzing-tc
 COPY base/linux/etc/pip.conf /etc/pip.conf
 RUN /tmp/recipes/setup.sh \
-    && rm -rf /tmp/recipes /tmp/fuzzing-tc
+  && rm -rf /tmp/recipes /tmp/fuzzing-tc
 
-COPY services/libfuzzer/launch.sh /home/worker/
-COPY services/libfuzzer/libfuzzer.sh /home/worker/
-COPY services/libfuzzer/coverage.sh /home/worker/
-COPY services/libfuzzer/setup-target.sh /home/worker/
-
-ENV LANG   en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+COPY services/libfuzzer/launch.sh \
+  services/libfuzzer/libfuzzer.sh \
+  services/libfuzzer/coverage.sh \
+  services/libfuzzer/setup-target.sh \
+  /home/worker/
 
 WORKDIR /home/worker
 ENTRYPOINT ["/usr/local/bin/fuzzing-pool-launch"]
