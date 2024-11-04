@@ -82,7 +82,7 @@ EOF
     cd /src/guided-fuzzing-daemon || exit 1
     retry git fetch origin main
     git reset --hard origin/main
-    pip3 install .
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx upgrade guided-fuzzing-daemon
   )
     then
     echo "Failed to install guided fuzzing daemon!"
