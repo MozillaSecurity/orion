@@ -15,7 +15,7 @@ retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[do
 
 status () {
   if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
-    python -m TaskStatusReporter --report "$@" || true
+    task-status-reporter --report "$@" || true
   fi
 }
 

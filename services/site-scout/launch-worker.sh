@@ -110,9 +110,9 @@ fi
 
 # setup reporter
 echo "No report yet" > status.txt
-python3 -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
+task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
-trap "kill $!; python3 -m TaskStatusReporter --report-from-file status.txt" EXIT
+trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # select URL collections
 mkdir active_lists
@@ -152,7 +152,7 @@ if [[ -n "$COVERAGE" ]]; then
     > "./coverage.json"
 
   # Submit coverage data.
-  python3 -m CovReporter \
+  cov-reporter \
     --repository "mozilla-central" \
     --description "site-scout (10k subset)" \
     --tool "site-scout" \
