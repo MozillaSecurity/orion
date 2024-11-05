@@ -11,8 +11,6 @@ COPY recipes/linux /src/recipes
 COPY services/ci-py-common/setup-linux.sh /src/recipes/setup.sh
 COPY services/orion-decision /src/orion-decision
 
-ARG DEBIAN_FRONTEND=noninteractive
-
 RUN /src/recipes/setup.sh
 
 USER worker

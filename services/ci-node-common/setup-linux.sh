@@ -17,38 +17,16 @@ export DEBIAN_FRONTEND=noninteractive
 sys-update
 
 packages=(
-  bzip2
+  ca-certificates
   curl
-  gcc
   git
   jshon
-  libc6-dev
-  libffi-dev
-  libssl-dev
-  make
   openssh-client
-  patch
-  xz-utils
+  python3
 )
 
 sys-update
 sys-embed "${packages[@]}"
-
-python -m venv /tmp/venv/pipx
-retry /tmp/venv/pipx/bin/pip install pipx
-PIPX_DEFAULT_PYTHON="$(which python)"
-export PIPX_DEFAULT_PYTHON
-
-py_packages=(
-  mercurial
-  poetry
-  pre-commit
-  tox
-)
-
-for pkg in "${py_packages[@]}"; do
-  retry /tmp/venv/pipx/bin/pipx install --global "$pkg"
-done
 
 retry-curl https://uploader.codecov.io/latest/linux/codecov -o /usr/local/bin/codecov
 chmod +x /usr/local/bin/codecov
