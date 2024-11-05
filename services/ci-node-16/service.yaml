@@ -1,3 +1,0 @@
-name: ci-node-16
-force_dirty:
-  - orion-decision
