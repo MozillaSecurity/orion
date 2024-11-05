@@ -108,13 +108,13 @@ export PATH=/opt/swift5/usr/bin:$PATH
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
 then
-  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+  task-status-reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 
   onexit () {
     # ensure final stats are complete
     if [[ -e ./stats ]]
     then
-      python3 -m TaskStatusReporter --report-from-file ./stats
+      task-status-reporter --report-from-file ./stats
     fi
   }
   trap onexit EXIT

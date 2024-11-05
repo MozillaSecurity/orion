@@ -129,7 +129,7 @@ function run-target {
 
   if [[ "$NO_REPORT" != "1" ]]; then
     # Submit coverage data
-    python3 -m CovReporter \
+    cov-reporter \
       --repository mozilla-central \
       --description "libFuzzer (nss-$name,rt=$COVRUNTIME)" \
       --tool "nss-$name" \

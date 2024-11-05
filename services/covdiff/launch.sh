@@ -54,6 +54,6 @@ git init covdiff
       --tool "covdiff"
       --submit "$HOME/report.json"
     )
-    python -m CovReporter "${COV_ARGS[@]}"
+    cov-reporter "${COV_ARGS[@]}"
   fi
 )> /live.log 2>&1

@@ -19,6 +19,7 @@ cd "${0%/*}"
 ./js32_deps.sh  # does the initial sys-update
 ./htop.sh
 ./fuzzfetch.sh
+./fuzzmanager.sh
 ./prefpicker.sh
 ./grcov.sh
 ./gsutil.sh

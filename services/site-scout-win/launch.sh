@@ -35,7 +35,7 @@ function get-deadline () {
 
 status () {
   if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
-    python -m TaskStatusReporter --report "$@" || true
+    task-status-reporter --report "$@" || true
   fi
 }
 
@@ -170,9 +170,9 @@ esac
 
 # setup reporter
 echo "No report yet" > status.txt
-python -m TaskStatusReporter --report-from-file status.txt --keep-reporting 60 &
+task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
-trap "kill $!; python -m TaskStatusReporter --report-from-file status.txt" EXIT
+trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # select URL collections
 mkdir active_lists

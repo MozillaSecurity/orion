@@ -366,17 +366,17 @@ function disable-ec2-pool () {
   if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
   then
     echo "Disabling EC2 pool $EC2SPOTMANAGER_POOLID" >&2
-    python3 -m EC2Reporter --disable "$EC2SPOTMANAGER_POOLID"
+    ec2-reporter --disable "$EC2SPOTMANAGER_POOLID"
   fi
 }
 
 function update-ec2-status () {
   if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
   then
-    python3 -m EC2Reporter --report "$@" || true
+    ec2-reporter --report "$@" || true
   elif [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]
   then
-    python3 -m TaskStatusReporter --report "$@" || true
+    task-status-reporter --report "$@" || true
   fi
 }
 
