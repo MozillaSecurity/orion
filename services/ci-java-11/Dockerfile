@@ -6,8 +6,6 @@ FROM debian:stable-slim
 
 LABEL maintainer Jesse Schwartzentruber <jschwartzentruber@mozilla.com>
 
-ARG DEBIAN_FRONTEND=noninteractive
-
 COPY recipes/linux /src/recipes
 COPY services/ci-java-11/setup.sh /src/recipes/setup.sh
 COPY services/orion-decision /src/orion-decision

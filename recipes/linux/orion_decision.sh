@@ -14,51 +14,34 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     # assert that SRCDIR is set
-    [ -n "$SRCDIR" ]
+    [[ -n "$SRCDIR" ]]
 
     sys-embed \
       ca-certificates \
       git \
       openssh-client
-    apt-install-auto \
-      gcc
 
-    # check if we don't have Python 3 at all
-    if ! which python3 >/dev/null
-    then
-      NEED_SYS_PY3=1
-    # check if we don't have Python 3.6+
-    elif python3 -c "import sys;sys.exit(sys.version_info >= (3, 6))"
-    then
-      # We'll try installing the Ubuntu Python 3
-      # If we have python3 and it's not new enough, it should be installed
-      # in /usr/local which will take precedence over the Ubuntu version.
-      [[ "$(dirname "$(readlink -e "$(which python3)")")" == "/usr/local/bin" ]]
-      NEED_SYS_PY3=1
-    else
-      NEED_SYS_PY3=0
+    if ! which python3 >/dev/null; then
+      sys-embed python3
+    fi
+    if ! python3 -c "import ensurepip" 2>/dev/null; then
+      apt-install-auto python3-venv
     fi
 
-    if [[ $NEED_SYS_PY3 -eq 1 ]]
-    then
-      PY3=/usr/bin/python3
-      sys-embed \
-        python3 \
-        python3-setuptools
-      apt-install-auto \
-        python3-dev \
-        python3-pip \
-        python3-wheel
-    else
-      PY3="$(which python3)"
-    fi
+    tmp="$(mktemp -d)"
+    python3 -m venv "$tmp"
+    retry "$tmp/bin/pip" install pipx
+    PIPX_DEFAULT_PYTHON="$(which python3)"
+    export PIPX_DEFAULT_PYTHON
 
     if [[ "$EDIT" = "1" ]]
     then
-      retry "$PY3" -m pip install -e "$SRCDIR"
+      retry "$tmp/bin/pipx" install --global -e "$SRCDIR"
     else
-      retry "$PY3" -m pip install "$SRCDIR"
+      retry "$tmp/bin/pipx" install --global "$SRCDIR"
     fi
+
+    rm -rf "$tmp"
     ;;
   test)
     decision --help

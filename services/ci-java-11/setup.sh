@@ -12,6 +12,8 @@ source "${0%/*}/common.sh"
 
 #### Bootstrap Packages
 
+export DEBIAN_FRONTEND=noninteractive
+
 sys-update
 apt-install-auto \
   ca-certificates \
@@ -34,11 +36,9 @@ echo ". /etc/environment" >> /etc/bash.bashrc
 sys-embed \
   git \
   java-11-amazon-corretto-jdk \
-  openssh-client \
-  pipx
+  openssh-client
 
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install /src/orion-decision
-
+SRCDIR=/src/orion-decision "${0%/*}/orion_decision.sh"
 "${0%/*}/worker.sh"
 mkdir /home/worker/.ssh
 retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
