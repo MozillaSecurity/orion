@@ -76,9 +76,16 @@ python nss/fuzz/config/collect_handshakes.py --nss-build ./dist/Debug \
 # Minimize w/o tls fuzzing mode
 for directory in nss-new-corpus/*; do
     name="$(basename "$directory" "-corpus")"
+    corpus="$name-corpus"
 
-    mkdir -p "nss-new-corpus-minimized/$name-corpus"
-    dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$name-corpus" "$directory"
+    # The same target is also compiled with tls fuzzing mode, append
+    # "-no_fuzzer_mode" to the corpus name.
+    if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
+        corpus="$name-no_fuzzer_mode-corpus"
+    fi
+
+    mkdir -p "nss-new-corpus-minimized/$corpus"
+    dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$corpus" "$directory"
 done
 
 # Build nss with tls fuzzing mode
@@ -89,12 +96,12 @@ popd
 # Minimize with tls fuzzing mode
 for directory in nss-new-corpus/*; do
     name="$(basename "$directory" "-corpus")"
-    if [[ ! -d "nss-fuzzing-corpus/$name-no_fuzzer_mode" ]]; then
-        continue
-    fi
+    corpus="$name-corpus"
 
-    mkdir -p "nss-new-corpus-minimized/$name-no_fuzzer_mode-corpus"
-    dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$name-no_fuzzer_mode-corpus" "$directory"
+    if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
+        mkdir -p "nss-new-corpus-minimized/$corpus"
+        dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$corpus" "$directory"
+    fi
 done
 
 # Setup gcloud
