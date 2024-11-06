@@ -15,7 +15,8 @@ export PATH=$PATH:/home/worker/.local/bin
 export ARTIFACT_DEST="/bugmon-artifacts"
 export TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
-retry-curl https://install.python-poetry.org | python3 - --version 1.7.0
+pipx install poetry==1.7.0
+pipx ensurepath
 git-clone https://github.com/MozillaSecurity/bugmon-tc.git ./bugmon-tc
 cd bugmon-tc
 poetry install

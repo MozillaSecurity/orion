@@ -14,13 +14,19 @@ source "${0%/*}/common.sh"
 cd "${0%/*}"
 ./js32_deps.sh
 ./pernosco_submit.sh
-sys-embed libc6-dbg:i386
+
+packages=(
+  libc6-dbg:i386
+  pipx
+)
+sys-embed "${packages[@]}"
+
 ./cleanup.sh
 
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
 
-#### Create aritfact directory
+#### Create artifact directory
 mkdir /bugmon-artifacts
 
 #### Fix ownership
