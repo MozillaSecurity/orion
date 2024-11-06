@@ -12,6 +12,7 @@ id
 ls -l /dev/kvm
 
 COVERAGE="${COVERAGE-0}"
+PATH="$PATH:$HOME/.local/bin"
 
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
