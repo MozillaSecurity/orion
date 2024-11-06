@@ -47,6 +47,7 @@ packages=(
   lbzip2
   less
   libglu1-mesa
+  libgtk-3-0
   libosmesa6
   libpci3
   locales
