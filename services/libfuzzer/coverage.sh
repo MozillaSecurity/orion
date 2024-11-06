@@ -15,6 +15,8 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+PATH="$PATH:$HOME/.local/bin"
+
 # Setup required coverage environment variables.
 export COVERAGE=1
 

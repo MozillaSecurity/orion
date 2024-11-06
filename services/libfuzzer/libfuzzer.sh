@@ -14,6 +14,8 @@ cd "$WORKDIR" || exit
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+PATH="$PATH:$HOME/.local/bin"
+
 gcs-cat () {
 # gcs-cat bucket path
 /opt/pipx/venvs/guided-fuzzing-daemon/bin/python - "$1" "$2" << "EOF"
