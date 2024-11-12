@@ -91,9 +91,9 @@ fi >> "$HOME/.fuzzmanagerconf"
 # Download our build
 if [[ $COVERAGE ]]
 then
-  retry python3 -m fuzzfetch --central --target js --coverage -n build
+  retry fuzzfetch --target js --coverage -n build
 else
-  retry python3 -m fuzzfetch --central --target js --debug --fuzzilli -n build
+  retry fuzzfetch --target js --debug --fuzzilli -n build
 fi
 
 cd fuzzilli
