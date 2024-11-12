@@ -30,11 +30,6 @@ persist: false
 persist-limit: 0
 EOF
 
-# Copy pernosco-shared to poetry python virtual env
-BASE_PY_PATH="$(python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
-POETRY_PY_PATH="$(poetry run python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
-cp -r "$BASE_PY_PATH/pernoscoshared" "$POETRY_PY_PATH"
-
 # Initialize the grizzly directory to avoid TC errors
 mkdir -p /tmp/grizzly
 
