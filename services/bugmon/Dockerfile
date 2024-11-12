@@ -10,6 +10,7 @@ ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
 ARG DEBIAN_FRONTEND=noninteractive
 
+COPY recipes/linux/ /src/recipes/
 COPY services/bugmon/setup.sh /src/recipes/setup-bugmon.sh
 
 RUN /src/recipes/setup-bugmon.sh
