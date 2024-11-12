@@ -21,7 +21,7 @@ sys-embed libc6-dbg:i386
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
 
-#### Create aritfact directory
+#### Create artifact directory
 mkdir /bugmon-artifacts
 
 #### Fix ownership
