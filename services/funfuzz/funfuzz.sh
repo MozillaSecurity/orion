@@ -31,7 +31,7 @@ git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
    git remote add -t master origin https://github.com/MozillaSecurity/funfuzz
    retry git fetch --depth 1 --no-tags origin master HEAD
    git reset --hard FETCH_HEAD
-   rsync -rv --progress $HOME/fuzzing-shells-private/funfuzz/ .
+   rsync -rv --progress "$HOME/fuzzing-shells-private/funfuzz/" .
    retry pip3 install -r requirements.txt
    retry pip3 install -e .
   )
@@ -111,7 +111,7 @@ function select-build () {
     build="${builds[n]}"
     if [[ ! -d "$BUILDS/$build" ]]
     then
-      flags=(--central --target js -o "$BUILDS" -n "$build")
+      flags=(--target js -o "$BUILDS" -n "$build")
       case "$build" in
         mc-32-debug)
           flags+=(--debug --cpu x86)
@@ -132,7 +132,7 @@ function select-build () {
           exit 1
           ;;
       esac
-      if python3 -m fuzzfetch "${flags[@]}"; then
+      if fuzzfetch "${flags[@]}"; then
         break
       else
         echo "failed to download $build! ... picking again in 10s" >&2
