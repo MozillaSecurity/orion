@@ -33,7 +33,7 @@ JITTESTS=/home/ubuntu/gecko-dev/js/src/jit-test/
 JSTESTS=/home/ubuntu/gecko-dev/js/src/tests/
 
 # Fetch a build for timeout testing later
-retry python -m fuzzfetch --target js --debug -n debug64
+retry fuzzfetch --target js --debug -n debug64
 LD_LIBRARY_PATH="$(pwd)/debug64/dist/bin"
 export LD_LIBRARY_PATH
 
