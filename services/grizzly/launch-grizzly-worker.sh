@@ -36,7 +36,11 @@ chmod 0600 .fuzzmanagerconf
 # Get Cloud Storage credentials
 if [[ "$ADAPTER" != "reducer" ]]; then
   mkdir -p ~/.config/gcloud
-  get-tc-secret google-cloud-storage-creds ~/.config/gcloud/application_default_credentials.json raw
+  if [[ "$ADAPTER" = "crashxp" ]]; then
+    get-tc-secret ci-gcs-crashxp-data ~/.config/gcloud/application_default_credentials.json raw
+  else
+    get-tc-secret google-cloud-storage-creds ~/.config/gcloud/application_default_credentials.json raw
+  fi
 fi
 
 # only clone if it wasn't already mounted via docker run -v
