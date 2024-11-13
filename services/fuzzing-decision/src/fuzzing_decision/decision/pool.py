@@ -431,13 +431,12 @@ class PoolConfiguration(CommonPoolConfiguration):
 
         preprocess = cast(PoolConfiguration, self.create_preprocess())
         if preprocess is not None:
+            assert preprocess.cycle_time is not None
             assert preprocess.max_run_time is not None
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
-                    deadline=stringDate(
-                        now + timedelta(seconds=preprocess.max_run_time)
-                    ),
+                    deadline=stringDate(now + timedelta(seconds=preprocess.cycle_time)),
                     description=DESCRIPTION.replace("\n", "\\n"),
                     expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=preprocess.max_run_time,
@@ -456,13 +455,14 @@ class PoolConfiguration(CommonPoolConfiguration):
             preprocess_task_id = slugId()
             yield preprocess_task_id, task
 
+        assert self.cycle_time is not None
         assert self.max_run_time is not None
         assert self.tasks is not None
         for i in range(1, self.tasks + 1):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
-                    deadline=stringDate(now + timedelta(seconds=self.max_run_time)),
+                    deadline=stringDate(now + timedelta(seconds=self.cycle_time)),
                     description=DESCRIPTION.replace("\n", "\\n"),
                     expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=self.max_run_time,
@@ -609,13 +609,14 @@ class PoolConfigMap(CommonPoolConfigMap):
         now = datetime.now(timezone.utc)
 
         for pool in self.iterpools():
+            assert pool.cycle_time is not None
             assert pool.max_run_time is not None
             assert pool.tasks is not None
             for i in range(1, pool.tasks + 1):
                 task = yaml.safe_load(
                     FUZZING_TASK.substitute(
                         created=stringDate(now),
-                        deadline=stringDate(now + timedelta(seconds=pool.max_run_time)),
+                        deadline=stringDate(now + timedelta(seconds=pool.cycle_time)),
                         description=DESCRIPTION.replace("\n", "\\n"),
                         expires=stringDate(fromNow("4 weeks", now)),
                         max_run_time=pool.max_run_time,
