@@ -13,6 +13,7 @@ import requests
 from Collector.Collector import Collector
 from FTB.ProgramConfiguration import ProgramConfiguration
 from FTB.Signatures.CrashInfo import CrashInfo
+from taskcluster.exceptions import TaskclusterRestFailure
 from taskcluster.helper import TaskclusterConfig
 
 LOG = getLogger("ingestor")
@@ -63,7 +64,19 @@ class Ingestor:
             worker_settings["generic-worker"]["go-os"],
             worker_settings["generic-worker"]["version"],
         )
-        crash = CrashInfo.fromRawCrashData(stdout=[], stderr=log, configuration=pc)
+        try:
+            tc_redirect = queue.getArtifact(
+                self.task_id, self.run_id, "project/fuzzing/private/logs/live.log"
+            )
+        except TaskclusterRestFailure:
+            LOG.exception("Private log artifact failure, skipping")
+            crash_data = None
+        else:
+            response = requests.get(tc_redirect["url"], timeout=180)
+            crash_data = response.text.splitlines()
+        crash = CrashInfo.fromRawCrashData(
+            stdout=[], stderr=log, auxCrashData=crash_data, configuration=pc
+        )
         metadata = {
             "instance-type": worker_settings["instance-type"],
             "worker-pool": pool,
