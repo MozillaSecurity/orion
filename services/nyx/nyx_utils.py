@@ -10,12 +10,11 @@ import psutil
 from google.cloud import storage
 
 
-def ncpu():
+def ncpu() -> None:
     print(psutil.cpu_count(logical=False))
 
 
-
-def gcs_cat():
+def gcs_cat() -> None:
     parser = ArgumentParser(prog="gcs-cat")
     parser.add_argument("bucket")
     parser.add_argument("path")
