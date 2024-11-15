@@ -20,9 +20,17 @@ case "${1-install}" in
       lbzip2 \
       python3
     apt-install-auto \
+      git \
       pipx
 
-    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install fuzzfetch
+    if [[ "$EDIT" = "1" ]]
+    then
+      cd "${DESTDIR-/home/worker}"
+      git-clone https://github.com/MozillaSecurity/fuzzfetch fuzzfetch
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./fuzzfetch
+    else
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/fuzzfetch"
+    fi
     ;;
   test)
     fuzzfetch -h

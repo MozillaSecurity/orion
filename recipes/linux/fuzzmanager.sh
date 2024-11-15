@@ -22,7 +22,7 @@ case "${1-install}" in
       git \
       pipx
 
-    if [ "$EDIT" = "1" ]
+    if [[ "$EDIT" = "1" ]]
     then
       cd "${DESTDIR-/home/worker}"
       git-clone https://github.com/MozillaSecurity/FuzzManager fuzzmanager
