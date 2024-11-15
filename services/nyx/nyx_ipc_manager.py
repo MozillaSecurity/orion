@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
@@ -11,17 +13,20 @@ from argparse import REMAINDER, ArgumentParser
 from pathlib import Path, PurePosixPath
 from random import choice, randint
 from subprocess import TimeoutExpired, check_call, run
-from typing import Dict, List, Optional, Set, TextIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from io import TextIOBase
 
 
 def run_generic(
-    args: List[str],
+    args: list[str],
     bindir: Path,
     cache_path: Path,
     min_msg_size: int,
-    ignore_message_types: Set[str],
+    ignore_message_types: set[str],
     timeout: int,
-) -> Dict[str, int]:
+) -> dict[str, int]:
     unique_msgs = {}
 
     env = os.environ.copy()
@@ -54,7 +59,7 @@ def run_generic(
         # PBackgroundIDBFactory::Msg_PBackgroundIDBDatabaseConstructor Size: 576
         errlines = out.splitlines()
         errlines.extend(err.splitlines())
-        maybe_too_small: Set[str] = set()
+        maybe_too_small: set[str] = set()
         for errline in errlines:
             if "[OnIPCMessage]" in errline and "unknown IPC msg name" not in errline:
                 components = errline.split(" ")
@@ -86,11 +91,11 @@ def run_generic(
 def run_mochitest_local(
     bindir: Path,
     testenv: Path,
-    mochitest_args: List[str],
+    mochitest_args: list[str],
     mochitest_cache_path: Path,
     min_msg_size: int,
-    ignore_message_types: Set[str],
-) -> Dict[str, int]:
+    ignore_message_types: set[str],
+) -> dict[str, int]:
     args = [
         str(testenv / "venv" / "bin" / "python"),
         "-u",
@@ -119,8 +124,8 @@ def run_file_local(
     local_file: Path,
     local_file_cache_path: Path,
     min_msg_size: int,
-    ignore_message_types,
-) -> Dict[str, int]:
+    ignore_message_types: set[str],
+) -> dict[str, int]:
     prefs_file = sharedir / "prefs.js"
     firefox_path = bindir / "firefox"
 
@@ -139,7 +144,7 @@ def run_file_local(
     )
 
 
-def add_nyx_env_vars(fd: TextIO):
+def add_nyx_env_vars(fd: TextIOBase) -> None:
     """Add env vars prefixed MOZ_FUZZ_ to config.sh which is
     passed through to the QEMU target.
     """
@@ -156,9 +161,9 @@ def run_afl(
     afldir: Path,
     sharedir: Path,
     runtime: int,
-    custom_mutator: Optional[str],
+    custom_mutator: str | None,
     debug: bool,
-):
+) -> None:
     env = os.environ.copy()
 
     # env["AFL_NO_UI"] = "1"
@@ -203,7 +208,7 @@ def run_afl(
         shutil.rmtree(afldir)
 
 
-def main(args: Optional[List[str]] = None) -> int:
+def main(args: list[str] | None = None) -> int:
     """Command line options."""
 
     # setup argparser
@@ -329,7 +334,7 @@ def main(args: Optional[List[str]] = None) -> int:
         with opts.single_ignore_messages.open() as fd:
             ignore_message_types |= {line.strip() for line in fd}
 
-    mochitest_dir: Optional[Path] = None
+    mochitest_dir: Path | None = None
     if opts.mochitest is not None:
         if opts.mochitest == "plain":
             mochitest_dir = testenv / "tests" / "mochitest" / "tests"

@@ -2,21 +2,21 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-target-version = ["py38"]
-
-[[tool.mypy.overrides]]
-module = [
-    "setuptools",
-]
+[tool.mypy]
 ignore_missing_imports = true
+strict = true
+show_error_codes = true
+warn_unused_ignores = false
 
 [tool.pylint.format]
 max-line-length = 88
 
 [tool.ruff]
-ignore = []
 line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+ignore = []
 select = [
     # flake8
     "E",
@@ -29,4 +29,3 @@ select = [
     # includes yesqa
     "RUF",
 ]
-target-version = "py38"
