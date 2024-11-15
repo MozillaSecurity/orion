@@ -12,39 +12,12 @@ id
 ls -l /dev/kvm
 
 COVERAGE="${COVERAGE-0}"
-PATH="$PATH:$HOME/.local/bin"
 
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon
-do
-  pushd "/srv/repos/$r" >/dev/null
-  retry git fetch --depth=1 --no-tags origin HEAD
-  git reset --hard FETCH_HEAD
-  retry pip3 install -U .
-  popd >/dev/null
-done
-
 update-status () {
   update-ec2-status "[$(date -Is)] $*"
-}
-
-gcs-cat () {
-# gcs-cat bucket path
-python3 - "$1" "$2" << "EOF"
-import os
-import sys
-from google.cloud import storage
-
-client = storage.Client()
-bucket = client.bucket(sys.argv[1])
-
-blob = bucket.blob(sys.argv[2])
-print(f"Downloading gs://{sys.argv[1]}/{sys.argv[2]}", file=sys.stderr)
-with os.fdopen(sys.stdout.fileno(), "wb", closefd=False) as stdout:
-    blob.download_to_file(stdout)
-EOF
 }
 
 get-target-time () {
@@ -82,7 +55,7 @@ fi
 if [[ ! -e ~/firefox.img ]]
 then
   update-status "downloading firefox.img"
-  time gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
+  time nyx-gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
 
 # clone ipc-fuzzing & build harness/tools
@@ -217,7 +190,7 @@ fi
 
 if [[ -z "$NYX_INSTANCES" ]]
 then
-  NYX_INSTANCES="$(python3 -c "import psutil; print(psutil.cpu_count(logical=False))")"
+  NYX_INSTANCES="$(nyx-ncpu)"
 fi
 
 DAEMON_ARGS=(

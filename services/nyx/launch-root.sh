@@ -59,6 +59,14 @@ export SKIP_RUST=1
 source "/srv/repos/setup/clang.sh"
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
+for r in fuzzfetch FuzzManager prefpicker guided-fuzzing-daemon
+do
+  pushd "/srv/repos/$r" >/dev/null
+  retry git fetch --depth=1 --no-tags origin HEAD
+  git reset --hard FETCH_HEAD
+  popd >/dev/null
+done
+
 # setup kvm device
 kvm_gid="$(stat -c%g /dev/kvm)"
 kvm_grp="$({ grep ":$kvm_gid:" /etc/group || true; } | cut -d: -f1)"
