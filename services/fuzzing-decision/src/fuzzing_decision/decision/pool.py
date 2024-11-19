@@ -436,7 +436,12 @@ class PoolConfiguration(CommonPoolConfiguration):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
-                    deadline=stringDate(now + timedelta(seconds=preprocess.cycle_time)),
+                    deadline=stringDate(
+                        now
+                        + min(
+                            timedelta(days=5), timedelta(seconds=preprocess.cycle_time)
+                        )
+                    ),
                     description=DESCRIPTION.replace("\n", "\\n"),
                     expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=preprocess.max_run_time,
@@ -462,7 +467,9 @@ class PoolConfiguration(CommonPoolConfiguration):
             task = yaml.safe_load(
                 FUZZING_TASK.substitute(
                     created=stringDate(now),
-                    deadline=stringDate(now + timedelta(seconds=self.cycle_time)),
+                    deadline=stringDate(
+                        now + min(timedelta(days=5), timedelta(seconds=self.cycle_time))
+                    ),
                     description=DESCRIPTION.replace("\n", "\\n"),
                     expires=stringDate(fromNow("4 weeks", now)),
                     max_run_time=self.max_run_time,
@@ -616,7 +623,10 @@ class PoolConfigMap(CommonPoolConfigMap):
                 task = yaml.safe_load(
                     FUZZING_TASK.substitute(
                         created=stringDate(now),
-                        deadline=stringDate(now + timedelta(seconds=pool.cycle_time)),
+                        deadline=stringDate(
+                            now
+                            + min(timedelta(days=5), timedelta(seconds=pool.cycle_time))
+                        ),
                         description=DESCRIPTION.replace("\n", "\\n"),
                         expires=stringDate(fromNow("4 weeks", now)),
                         max_run_time=pool.max_run_time,
