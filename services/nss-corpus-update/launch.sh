@@ -55,7 +55,7 @@ popd
 pushd nss
 # Can't use `--disable-tests` here, because we need the tstclnt for the
 # handshake collection script
-./build.sh -c -v --fuzz
+./build.sh -c -v --fuzz --gtests-corpus
 popd
 
 # Get list of hosts to collect handshakes
@@ -68,10 +68,14 @@ shuf -n "${NUM_RAND_HOSTS-5000}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.t
 mkdir -p nss-new-corpus
 mkdir -p nss-new-corpus-minimized
 
+# Collect handshakes from random domains
 python nss/fuzz/config/collect_handshakes.py --nss-build ./dist/Debug \
                                              --hosts ./hosts.txt \
                                              --threads 5 \
                                              --output ./nss-new-corpus
+# Collect handshakes from the existing ssl gtests
+./nss/mach tests ssl_gtests
+cp -r ./tests_results/security/*/ssl_gtests/*-corpus ./nss-new-corpus
 
 # Minimize w/o tls fuzzing mode
 for directory in nss-new-corpus/*; do
