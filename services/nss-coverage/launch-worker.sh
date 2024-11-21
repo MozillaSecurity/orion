@@ -229,6 +229,6 @@ clone-corpus "cryptofuzz" \
 
 # Run cryptofuzz
 update-ec2-status "[$(date -Iseconds)] running cryptofuzz"
-run-target "cryptofuzz/cryptofuzz" "cryptofuzz"
+run-target "cryptofuzz/cryptofuzz" "cryptofuzz" --force-module=nss
 
 update-ec2-status "[$(date -Iseconds)] done"
