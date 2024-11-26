@@ -59,7 +59,7 @@ fi
 # Clone cryptofuzz
 update-ec2-status "[$(date -Iseconds)] setup: cloning cryptofuzz"
 if [[ ! -d cryptofuzz ]]; then
-  git-clone https://github.com/guidovranken/cryptofuzz.git
+  git-clone https://github.com/MozillaSecurity/cryptofuzz.git
 fi
 
 COVRUNTIME=${COVRUNTIME-3600}
