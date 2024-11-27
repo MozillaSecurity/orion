@@ -18,7 +18,8 @@ case "${1-install}" in
     sys-embed \
       ca-certificates \
       lbzip2 \
-      python3
+      python3 \
+      xz-utils
     apt-install-auto \
       git \
       pipx

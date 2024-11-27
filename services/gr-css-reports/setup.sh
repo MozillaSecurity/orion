@@ -7,6 +7,13 @@ set -e
 set -x
 set -o pipefail
 
+# shellcheck source=recipes/linux/common.sh
+source "${0%/*}/common.sh"
+
+# Install deps
+sys-update
+"${0%/*}/fuzzfetch.sh"
+
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
 

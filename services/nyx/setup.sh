@@ -49,6 +49,7 @@ pkgs=(
   psmisc
   python3
   xvfb
+  xz-utils
   zstd
 )
 
