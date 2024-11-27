@@ -52,6 +52,7 @@ packages=(
   ubuntu-restricted-addons
   vulkan-validationlayers
   wget
+  xz-utils
   zip
   zstd
 )
