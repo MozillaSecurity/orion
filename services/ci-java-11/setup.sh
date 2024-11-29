@@ -17,10 +17,13 @@ export DEBIAN_FRONTEND=noninteractive
 sys-update
 apt-install-auto \
   ca-certificates \
-  curl \
   gpg \
   gpg-agent \
   lsb-release
+sys-embed \
+  curl \
+  git \
+  openssh-client
 
 retry-curl https://apt.corretto.aws/corretto.key | gpg --dearmor -o /etc/apt/keyrings/corretto.gpg
 echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list
@@ -33,10 +36,7 @@ echo ". /etc/environment" >> /etc/bash.bashrc
 
 #### Install recipes
 
-sys-embed \
-  git \
-  java-11-amazon-corretto-jdk \
-  openssh-client
+sys-embed java-11-amazon-corretto-jdk
 
 SRCDIR=/src/orion-decision "${0%/*}/orion_decision.sh"
 "${0%/*}/worker.sh"
