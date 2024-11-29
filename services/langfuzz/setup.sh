@@ -61,6 +61,7 @@ packages=(
   libbsd-resource-perl
   libc6-dbg
   libio-prompt-perl
+  libnspr4
   libwww-mechanize-perl
   locales
   mailutils
