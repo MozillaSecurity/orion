@@ -21,7 +21,7 @@ export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 retry python3 -m pip install git+https://github.com/MozillaSecurity/prefpicker.git
 
 # Fetch build
-retry python3 -m fuzzfetch -a --fuzzing -n nightly
+retry fuzzfetch -a --fuzzing -n nightly
 
 git init gr.css.reports
 (
