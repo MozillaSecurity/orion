@@ -47,8 +47,8 @@ filterwarnings = [
 line-length = 88
 target-version = "py38"
 
-[lint.select]
-ruff = [
+[tool.ruff.lint]
+select = [
     # flake8
     "E",
     "F",
@@ -61,5 +61,5 @@ ruff = [
     "RUF",
 ]
 
-[lint.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["grizzly_reduce_monitor"]
