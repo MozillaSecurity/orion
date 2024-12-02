@@ -45,8 +45,10 @@ filterwarnings = [
 ]
 
 [tool.ruff]
-ignore = []
 line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
 select = [
     # flake8
     "E",
@@ -59,7 +61,6 @@ select = [
     # includes yesqa
     "RUF",
 ]
-target-version = "py38"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["orion_builder"]
