@@ -114,7 +114,11 @@ EOF
 if [[ "$ADAPTER" != "reducer" ]]; then
   mkdir -p "$APPDATA/gcloud"
   set +x
-  retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
+  if [[ "$ADAPTER" = "crashxp" ]]; then
+    retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/ci-gcs-crashxp-data" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
+  else
+    retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
+  fi
   set -x
 fi
 
