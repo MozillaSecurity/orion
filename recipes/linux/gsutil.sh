@@ -20,10 +20,7 @@ case "${1-install}" in
     apt-install-auto \
       pipx
 
-    # Pin the pyopenssl version as gsutil is currently broken with
-    # the most recent version, see:
-    # https://github.com/GoogleCloudPlatform/gsutil/issues/1820
-    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install gsutil --pip-args "pyopenssl==24.2.1"
+    PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install gsutil
     ;;
   test)
     gsutil version
