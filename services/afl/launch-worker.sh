@@ -73,7 +73,7 @@ IdentityFile ~/.ssh/id_rsa.fuzzing-shells-private
 EOF
 fi
 
-TOOLNAME="${TOOLNAME:-AFL-$FUZZER}"
+TOOLNAME="${TOOLNAME:-AFL++-$FUZZER}"
 if [[ -n "$JSRT" ]]
 then
   if [[ ! -e fuzzing-shells-private ]]
