@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orion-nyx-utils"
+requires-python = ">=3.9"
+dependencies = [
+    "google-cloud-storage",
+    "psutil",
+]
+dynamic = ["version"]
+
+[project.scripts]
+ncpu = "nyx_utils:ncpu"
+gcs-cat = "nyx_utils:gcs_cat"
+
+[tool.setuptools]
+py-modules = ["nyx_utils"]
