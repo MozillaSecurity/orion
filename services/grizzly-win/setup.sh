@@ -6,7 +6,10 @@ retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; 
 retry-curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
+# NOTE: GCC & make are required for Radamsa
 retry pacman --noconfirm -S \
+  gcc \
+  make \
   mingw-w64-x86_64-curl \
   openssh \
   p7zip \
@@ -18,6 +21,19 @@ retry pacman --noconfirm -S \
 pacman --noconfirm -Scc
 killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
+
+# Checkout Radamsa
+git init radamsa
+cd radamsa
+git remote add origin https://gitlab.com/akihe/radamsa.git
+retry git fetch -q --depth 1 --no-tags origin HEAD
+git -c advice.detachedHead=false checkout FETCH_HEAD
+# Build Radamsa
+make
+make install
+cd ..
+# Remove packages required to build Radamsa
+pacman --noconfirm -Rs gcc make
 
 # get nuget
 retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
