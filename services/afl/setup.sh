@@ -68,8 +68,8 @@ sys-embed "${pkgs[@]}"
 apt-install-depends firefox
 apt-mark auto xul-ext-ubufox
 
-mkdir -p /home/worker/.ssh /home/worker/.local/bin
-retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
+mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
 
 DESTDIR=/srv/repos EDIT=1 ./fuzzmanager.sh
 DESTDIR=/srv/repos EDIT=1 ./fuzzfetch.sh
