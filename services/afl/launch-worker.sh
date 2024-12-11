@@ -142,6 +142,7 @@ DAEMON_ARGS=(
   --afl-timeout "${AFL_TIMEOUT-30000}"
   --afl
   --stats ./stats
+  --memory-limit "${MEMORY_LIMIT:-0}"
   "$TARGET_BIN"
 )
 
