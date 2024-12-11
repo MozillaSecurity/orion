@@ -62,7 +62,7 @@ onexit () {
 }
 trap onexit EXIT
 
-afl-system-config || true
+/opt/afl-instrumentation/bin/afl-system-config || true
 
 chown root:worker /logs
 chmod 0775 /logs
