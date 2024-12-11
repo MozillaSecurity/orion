@@ -62,6 +62,8 @@ onexit () {
 }
 trap onexit EXIT
 
+afl-system-config || true
+
 chown root:worker /logs
 chmod 0775 /logs
 su worker -c "/home/worker/launch-worker.sh"
