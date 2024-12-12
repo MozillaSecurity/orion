@@ -25,10 +25,6 @@ do
   popd >/dev/null
 done
 
-update-status () {
-  update-ec2-status "[$(date -Is)] $*"
-}
-
 get-target-time () {
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
   then
