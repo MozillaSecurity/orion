@@ -11,5 +11,4 @@ retry fuzzfetch --coverage --fuzzing -a --dry-run 2>&1 | tee /dev/stderr | sed -
 [[ -s "$DST" ]]
 
 ## Download revision source so coverage tasks can fetch from here
-retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 12 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 retry-curl "https://hg.mozilla.org/mozilla-central/archive/$(cat "$DST").zip" -o /source.zip
