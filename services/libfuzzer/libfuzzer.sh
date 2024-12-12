@@ -45,15 +45,6 @@ then
   setup-aws-credentials
 fi
 
-get-target-time () {
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-then
-  echo $(($(get-deadline) - $(date +%s) - 5 * 60))
-else
-  echo $((10 * 365 * 24 * 3600))
-fi
-}
-
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
 then
@@ -332,7 +323,7 @@ fi
 
 if [[ -z "$S3_CORPUS_REFRESH" ]]
 then
-  update-ec2-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES instances" || true
+  update-status "Starting afl-libfuzzer-daemon with $LIBFUZZER_INSTANCES instances" || true
   # Run LibFuzzer
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" "${S3_QUEUE_UPLOAD_ARGS[@]}" \
     --fuzzmanager \
@@ -343,7 +334,7 @@ then
     "${HARNESS_EXT_ARGS[@]}" \
     "$HOME/$TARGET_BIN" "${TARGET_ARGS[@]}" "${LIBFUZZER_ARGS[@]}"
 else
-  update-ec2-status "Starting afl-libfuzzer-daemon with --corpus-refresh" || true
+  update-status "Starting afl-libfuzzer-daemon with --corpus-refresh" || true
   run-afl-libfuzzer-daemon "${S3_PROJECT_ARGS[@]}" \
     --corpus-refresh "$HOME/workspace" \
     --stats "./stats" \
