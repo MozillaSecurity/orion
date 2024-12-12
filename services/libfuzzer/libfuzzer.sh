@@ -45,15 +45,6 @@ then
   setup-aws-credentials
 fi
 
-get-target-time () {
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-then
-  echo $(($(get-deadline) - $(date +%s) - 5 * 60))
-else
-  echo $((10 * 365 * 24 * 3600))
-fi
-}
-
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z "$NO_SECRETS" ]]
 then

@@ -25,21 +25,6 @@ do
   popd >/dev/null
 done
 
-get-target-time () {
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-  then
-    result=$(($(get-deadline) - $(date +%s) - 5 * 60))
-  else
-    result=$((10 * 365 * 24 * 3600))
-  fi
-  if [[ $result -lt $((5 * 60)) ]]
-  then
-    echo "Not enough time to run!" >&2
-    exit 1
-  fi
-  echo $result
-}
-
 # setup AWS credentials to use S3
 setup-aws-credentials
 

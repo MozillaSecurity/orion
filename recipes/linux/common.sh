@@ -105,6 +105,16 @@ function get-deadline () {
   fi
 }
 
+# Get the task deadline.
+# If running locally, return a date far in the future to prevent expiration.
+get-target-time () {
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+    echo $(($(get-deadline) - $(date +%s) - 5 * 60))
+  else
+    echo $((10 * 365 * 24 * 3600))
+  fi
+}
+
 function get-latest-github-release () {
   if [[ $# -ne 1 ]]
   then

@@ -16,15 +16,6 @@ COVERAGE="${COVERAGE-0}"
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-get-target-time () {
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-  then
-    echo $(($(get-deadline) - $(date +%s) - 5 * 60))
-  else
-    echo $((10 * 365 * 24 * 3600))
-  fi
-}
-
 # get Cloud Storage credentials
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
