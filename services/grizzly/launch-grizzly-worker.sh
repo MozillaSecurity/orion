@@ -45,7 +45,7 @@ fi
 
 # only clone if it wasn't already mounted via docker run -v
 if [ ! -d /src/bearspray ]; then
-  update-ec2-status "Setup: cloning bearspray"
+  update-status "Setup: cloning bearspray"
 
   # Get deployment key from TC
   get-tc-secret deploy-bearspray .ssh/id_ecdsa.bearspray
@@ -62,10 +62,10 @@ if [ ! -d /src/bearspray ]; then
   git-clone git@bearspray:MozillaSecurity/bearspray.git /src/bearspray
 fi
 
-update-ec2-status "Setup: installing bearspray"
+update-status "Setup: installing bearspray"
 retry python3 -m pip install --user --no-build-isolation -e /src/bearspray
 
-update-ec2-status "Setup: launching bearspray"
+update-status "Setup: launching bearspray"
 
 export GCOV=/usr/local/bin/gcov-9
 

@@ -7,7 +7,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/taskgraph-m-c-latest.sh"
 
 # install clang from firefox-ci
-update-ec2-status "[$(date -Iseconds)] setup: installing clang"
+update-status "setup: installing clang"
 clang_ver="$(resolve-tc-alias clang)"
 compiler_ver="x64-compiler-rt-${clang_ver/clang-/}"
 retry-curl "$(resolve-tc "$clang_ver")" | zstdcat | tar -x -C /opt
@@ -40,7 +40,7 @@ $CC --version
 
 if [[ "$SKIP_RUST" != "1" ]]; then
   # install rust from firefox-ci
-  update-ec2-status "[$(date -Iseconds)] setup: installing rust"
+  update-status "setup: installing rust"
   retry-curl "$(resolve-tc rust)" | zstdcat | tar -x -C /opt
   if [[ "$SKIP_PROFILE" != "1" ]]; then
     cat << "EOF" >> /etc/profile

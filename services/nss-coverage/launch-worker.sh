@@ -26,13 +26,13 @@ if [[ ! -e .fuzzmanagerconf ]] && [[ "$NO_REPORT" != "1" ]]; then
   chmod 0600 .fuzzmanagerconf
 fi
 
-update-ec2-status "[$(date -Iseconds)] setup: getting revisions"
+update-status "setup: getting revisions"
 REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 NSS_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/security/nss/TAG-INFO")"
 NSPR_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/nsprpub/TAG-INFO")"
 
 if [[ ! -d clang ]]; then
-  update-ec2-status "[$(date -Iseconds)] setup: installing clang"
+  update-status "setup: installing clang"
   clang_ver="$(resolve-tc-alias clang)"
   compiler_ver="x64-compiler-rt-${clang_ver/clang-/}"
   retry-curl "$(resolve-tc "$clang_ver")" | zstdcat | tar -x
@@ -48,7 +48,7 @@ export CXXFLAGS="$CFLAGS"
 export LDFLAGS="$CFLAGS"
 
 # Clone nss/nspr
-update-ec2-status "[$(date -Iseconds)] setup: cloning nss"
+update-status "setup: cloning nss"
 if [[ ! -d nspr ]]; then
   retry hg clone -r "$NSPR_TAG" https://hg.mozilla.org/projects/nspr
 fi
@@ -57,7 +57,7 @@ if [[ ! -d nss ]]; then
 fi
 
 # Clone cryptofuzz
-update-ec2-status "[$(date -Iseconds)] setup: cloning cryptofuzz"
+update-status "setup: cloning cryptofuzz"
 if [[ ! -d cryptofuzz ]]; then
   git-clone https://github.com/MozillaSecurity/cryptofuzz.git
 fi
@@ -163,23 +163,23 @@ total_targets=$(("${#targets[@]}" + "${#tls_targets[@]}"))
 curr_target_n=1
 
 # Build nss with tls fuzzing mode
-update-ec2-status "[$(date -Iseconds)] building nss with tls fuzzing mode ($curr_target_n/$total_targets have run)"
+update-status "building nss with tls fuzzing mode ($curr_target_n/$total_targets have run)"
 pushd nss
 time ./build.sh -c -v --fuzz=tls --disable-tests
 popd
 
 # For each nssfuzz target with tls fuzzing mode, clone corpus & run
 for target in "${!tls_targets[@]}"; do
-  update-ec2-status "[$(date -Iseconds)] cloning corpus for $target ($curr_target_n/$total_targets)"
+  update-status "cloning corpus for $target ($curr_target_n/$total_targets)"
   clone-nssfuzz-corpus "$target"
 
-  update-ec2-status "[$(date -Iseconds)] running $target ($curr_target_n/$total_targets)"
+  update-status "running $target ($curr_target_n/$total_targets)"
   run-nssfuzz-target "$target" "$target"
   ((curr_target_n++))
 done
 
 # Build nss w/o tls fuzzing mode
-update-ec2-status "[$(date -Iseconds)] building nss w/o tls fuzzing mode"
+update-status "building nss w/o tls fuzzing mode"
 pushd nss
 time ./build.sh -c -v --fuzz --disable-tests
 popd
@@ -191,10 +191,10 @@ for target in "${!targets[@]}"; do
     name="$name-no_fuzzer_mode"
   fi
 
-  update-ec2-status "[$(date -Iseconds)] cloning corpus for $name ($curr_target_n/$total_targets)"
+  update-status "cloning corpus for $name ($curr_target_n/$total_targets)"
   clone-nssfuzz-corpus "$name"
 
-  update-ec2-status "[$(date -Iseconds)] running $name ($curr_target_n/$total_targets)"
+  update-status "running $name ($curr_target_n/$total_targets)"
   run-nssfuzz-target "$target" "$name"
   ((curr_target_n++))
 done
@@ -210,7 +210,7 @@ export CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined,fuzzer-no-link"
 export CXXFLAGS="$CXXFLAGS -I $NSS_NSPR_PATH/dist/public/nss -I $NSS_NSPR_PATH/dist/Debug/include/nspr -DCRYPTOFUZZ_NSS -DCRYPTOFUZZ_NO_OPENSSL"
 export LINK_FLAGS="$LINK_FLAGS -lsqlite3"
 
-update-ec2-status "[$(date -Iseconds)] building cryptofuzz nss module"
+update-status "building cryptofuzz nss module"
 pushd modules/nss
 time make -j"$(nproc)"
 popd
@@ -218,17 +218,17 @@ popd
 # Build cryptofuzz
 export LIBFUZZER_LINK="-fsanitize=fuzzer"
 
-update-ec2-status "[$(date -Iseconds)] building cryptofuzz"
+update-status "building cryptofuzz"
 time make -j"$(nproc)"
 popd
 
 # Clone cryptofuzz nss corpus
-update-ec2-status "[$(date -Iseconds)] cloning cryptofuzz nss corpus"
+update-status "cloning cryptofuzz nss corpus"
 clone-corpus "cryptofuzz" \
              "https://storage.googleapis.com/cryptofuzz-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/cryptofuzz_cryptofuzz-nss/public.zip"
 
 # Run cryptofuzz
-update-ec2-status "[$(date -Iseconds)] running cryptofuzz"
+update-status "running cryptofuzz"
 run-target "cryptofuzz/cryptofuzz" "cryptofuzz" --force-module=nss
 
-update-ec2-status "[$(date -Iseconds)] done"
+update-status "done"
