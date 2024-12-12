@@ -16,10 +16,6 @@ COVERAGE="${COVERAGE-0}"
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-update-status () {
-  update-ec2-status "[$(date -Is)] $*"
-}
-
 get-target-time () {
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
   then

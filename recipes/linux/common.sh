@@ -370,6 +370,11 @@ function disable-ec2-pool () {
   fi
 }
 
+# Include timestamp in status message.
+update-status () {
+  update-ec2-status "[$(date -Is)] $*"
+}
+
 function update-ec2-status () {
   if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
   then
