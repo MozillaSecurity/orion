@@ -30,7 +30,8 @@ for file in nss/fuzz/options/*; do
     mkdir -p "nss-fuzzing-corpus/$name"
     pushd "nss-fuzzing-corpus/$name"
 
-    code=$(retry-curl --no-fail -w "%{http_code}" -o /tmp/public.zip "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/public.zip")
+    code=$(retry-curl --no-fail -w "%{http_code}" -o /tmp/public.zip \
+            "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/public.zip")
     if [[ $code -eq 200 ]]; then
       rm -rf ./*
       unzip /tmp/public.zip
@@ -51,12 +52,32 @@ if [[ "$(git status -s)" ]]; then
 fi
 popd
 
-# Build nss w/o tls fuzzing mode
+# Build nss for corpus collection
 pushd nss
-# Can't use `--disable-tests` here, because we need the tstclnt for the
-# handshake collection script
-./build.sh -c -v --fuzz --gtests-corpus
+./build.sh -c -v
 popd
+
+# Install frida
+export PATH=$PATH:/home/worker/.local/bin
+pipx install nss/fuzz/config/frida_corpus
+
+# Create corpus directories
+mkdir -p ./nss-fuzzing-corpus-new
+mkdir -p ./nss-fuzzing-corpus-new-and-minimized
+
+# Replace all binaries with frida wrapper
+for binary in ./dist/Debug/bin/*; do
+    mv "$binary" "${binary}_bin"
+    cat > "$binary" <<EOF
+#!/usr/bin/env bash
+frida-corpus \
+    --script $PWD/nss/fuzz/config/frida_corpus/hooks.js \
+    --nss-build $PWD/dist/Debug/ \
+    --program $PWD/${binary}_bin \
+    --output $PWD/nss-fuzzing-corpus-new -- \$@
+EOF
+    chmod +x "$binary"
+done
 
 # Get list of hosts to collect handshakes
 retry-curl -L -O https://tranco-list.eu/top-1m-incl-subdomains.csv.zip
@@ -64,23 +85,27 @@ unzip top-1m-incl-subdomains.csv.zip
 
 shuf -n "${NUM_RAND_HOSTS-5000}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.txt
 
-# Run collection scripts
-mkdir -p nss-new-corpus
-mkdir -p nss-new-corpus-minimized
+# Collect corpus from tstclnt with random domains
+cat hosts.txt | xargs -P 5 -I {} bash -c \
+    "readarray -t arguments < <(python ./nss/fuzz/config/tstclnt_arguments.py) && \
+     dist/Debug/bin/tstclnt -o -D -Q -b -h {} \${arguments[@]}"
 
-# Collect handshakes from random domains
-python nss/fuzz/config/collect_handshakes.py --nss-build ./dist/Debug \
-                                             --hosts ./hosts.txt \
-                                             --threads 5 \
-                                             --output ./nss-new-corpus
-# Collect handshakes from the existing ssl gtests
-./nss/mach tests ssl_gtests
-cp -r ./tests_results/security/*/ssl_gtests/*-corpus ./nss-new-corpus
+# Collect corpus from tests
+pushd nss/tests
+DOMSUF="localdomain" HOST="localhost" \
+NSS_TESTS="bogo cert gtests sdr smine ssl ssl_gtests" \
+NSS_CYCLES="standard" ./all.sh || true
+popd
+
+# Build nss w/o tls fuzzing mode
+pushd nss
+./build.sh -c -v --fuzz --disable-tests
+popd
 
 # Minimize w/o tls fuzzing mode
-for directory in nss-new-corpus/*; do
-    name="$(basename "$directory" "-corpus")"
-    corpus="$name-corpus"
+for directory in nss-fuzzing-corpus-new/*; do
+    name="$(basename "$directory")"
+    corpus="$name"
 
     # The same target is also compiled with tls fuzzing mode, append
     # "-no_fuzzer_mode" to the corpus name.
@@ -88,8 +113,9 @@ for directory in nss-new-corpus/*; do
         corpus="$name-no_fuzzer_mode-corpus"
     fi
 
-    mkdir -p "nss-new-corpus-minimized/$corpus"
-    dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$corpus" "$directory"
+    mkdir -p "nss-fuzzing-corpus-new-and-minimized/$corpus"
+    dist/Debug/bin/nssfuzz-"$name" -merge=1 \
+        "./nss-fuzzing-corpus-new-and-minimized/$corpus" "$directory"
 done
 
 # Build nss with tls fuzzing mode
@@ -98,13 +124,14 @@ pushd nss
 popd
 
 # Minimize with tls fuzzing mode
-for directory in nss-new-corpus/*; do
-    name="$(basename "$directory" "-corpus")"
-    corpus="$name-corpus"
+for directory in nss-fuzzing-corpus-new/*; do
+    name="$(basename "$directory")"
+    corpus="$name"
 
     if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
-        mkdir -p "nss-new-corpus-minimized/$corpus"
-        dist/Debug/bin/nssfuzz-"$name" -merge=1 "./nss-new-corpus-minimized/$corpus" "$directory"
+        mkdir -p "nss-fuzzing-corpus-new-and-minimized/$corpus"
+        dist/Debug/bin/nssfuzz-"$name" -merge=1 \
+            "./nss-fuzzing-corpus-new-and-minimized/$corpus" "$directory"
     fi
 done
 
@@ -114,7 +141,9 @@ get-tc-secret ossfuzz-gutils ~/.config/gcloud/application_default_credentials.js
 echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" > .boto
 
 # Upload to gcloud bucket
-for directory in nss-new-corpus-minimized/*; do
-    name="$(basename "$directory" "-corpus")"
-    gsutil -m cp "$directory/*" "gs://nss-corpus.clusterfuzz-external.appspot.com/libFuzzer/nss_$name"
+for directory in nss-fuzzing-corpus-new-and-minimized/*; do
+    name="$(basename "$directory")"
+
+    gsutil -m cp "$directory/*" \
+        "gs://nss-corpus.clusterfuzz-external.appspot.com/libFuzzer/nss_$name"
 done

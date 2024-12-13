@@ -18,13 +18,14 @@ sys-update
 
 cd "${0%/*}"
 ./taskcluster.sh
-PIP_BREAK_SYSTEM_PACKAGES=1 ./gsutil.sh
+./gsutil.sh
 
 packages=(
     binutils
     clang
     curl
     git
+    golang
     gyp
     jshon
     libclang-rt-dev
@@ -34,6 +35,7 @@ packages=(
     mercurial
     ninja-build
     openssh-client
+    pipx
     python-is-python3
     python3
     strace
