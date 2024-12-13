@@ -18,13 +18,14 @@ sys-update
 
 cd "${0%/*}"
 ./taskcluster.sh
-PIP_BREAK_SYSTEM_PACKAGES=1 ./gsutil.sh
+./gsutil.sh
 
 packages=(
     binutils
     clang
     curl
     git
+    golang
     gyp
     jshon
     libclang-rt-dev
@@ -42,6 +43,14 @@ packages=(
 )
 
 sys-embed "${packages[@]}"
+
+py_packages=(
+    frida
+)
+
+for pkg in "${py_packages[@]}"; do
+  retry PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "$pkg"
+done
 
 #### Base System Configuration
 
