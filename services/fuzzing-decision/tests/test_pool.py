@@ -279,8 +279,10 @@ def test_aws_resources(
                 "config"
             ].update(
                 {
+                    "d2gConfig": {
+                        "enableD2G": True,
+                    },
                     "deploymentId": "1f70b54337d5cf18",
-                    "enableD2G": True,
                 }
             )
 
