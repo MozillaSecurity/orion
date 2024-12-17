@@ -73,7 +73,8 @@ class Provider(ABC):
                 }
             )
             if worker_type == "d2g":
-                out["genericWorker"]["config"]["enableD2G"] = True
+                out["genericWorker"]["config"].setdefault("d2gConfig", {})
+                out["genericWorker"]["config"]["d2gConfig"]["enableD2G"] = True
 
             # Add a deploymentId by hashing the config
             payload = json.dumps(out, sort_keys=True).encode("utf-8")
