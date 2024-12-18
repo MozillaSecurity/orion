@@ -92,9 +92,7 @@ fi
 # setup target
 
 ASAN_OPTIONS=\
-abort_on_error=true:\
-allocator_may_return_null=true:\
-detect_leaks=0:\
+abort_on_error=1:\
 hard_rss_limit_mb=4096:\
 log_path=/tmp/data.log:\
 max_allocation_size_mb=3073:\
