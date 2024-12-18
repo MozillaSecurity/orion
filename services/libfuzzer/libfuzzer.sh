@@ -194,7 +194,11 @@ then
   # into a new corpus.
 
   # Generic parameters for S3
+  if [[ "${USE_GCS:-0}" = "1" ]]; then
+  S3_PROJECT_ARGS+=(--bucket guided-fuzzing-data --provider GCS --project "$S3_PROJECT")
+  else
   S3_PROJECT_ARGS+=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
+  fi
 
   # This option ensures that we synchronize local finds from/to S3 queues.
   # When generating coverage, it does not make sense to use this.
