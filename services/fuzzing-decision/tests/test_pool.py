@@ -282,7 +282,7 @@ def test_aws_resources(
                     "d2gConfig": {
                         "enableD2G": True,
                     },
-                    "deploymentId": "1f70b54337d5cf18",
+                    "deploymentId": "cca78a595ad491be",
                 }
             )
 
