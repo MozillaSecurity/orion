@@ -123,13 +123,13 @@ update-status "preparing to launch guided-fuzzing-daemon"
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
 then
-  python3 -m TaskStatusReporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
+  task-status-reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 
   onexit () {
     # ensure final stats are complete
     if [[ -e ./stats ]]
     then
-      python3 -m TaskStatusReporter --report-from-file ./stats
+      task-status-reporter --report-from-file ./stats
     fi
   }
   trap onexit EXIT
@@ -203,7 +203,7 @@ if [[ $COVERAGE -eq 1 ]]
 then
   # TODO: coverage.json
   # Submit coverage data.
-  python3 -m CovReporter \
+  cov-reporter \
     --repository mozilla-central \
     --description "$S3_PROJECT" \
     --tool "$TOOLNAME" \
