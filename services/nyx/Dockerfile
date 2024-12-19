@@ -10,6 +10,7 @@ COPY \
     services/nyx/build_afl.sh \
     services/nyx/clang.sh \
     /srv/repos/setup/
+COPY services/nyx/patches/ /srv/repos/setup/patches/
 RUN /srv/repos/setup/build_afl.sh
 
 FROM ubuntu:22.04

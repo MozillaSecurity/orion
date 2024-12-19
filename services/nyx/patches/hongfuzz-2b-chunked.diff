@@ -1,0 +1,178 @@
+diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
+index 5c2fcddb..83ae5fc7 100644
+--- a/custom_mutators/honggfuzz/Makefile
++++ b/custom_mutators/honggfuzz/Makefile
+@@ -1,11 +1,14 @@
+
+-CFLAGS = -O3 -funroll-loops -fPIC -Wl,-Bsymbolic
++CFLAGS = -O3 -funroll-loops -fPIC -fblocks -lBlocksRuntime -Wl,-Bsymbolic
+
+-all: honggfuzz-mutator.so
++all: honggfuzz-mutator.so honggfuzz-2b-chunked-mutator.so
+
+ honggfuzz-mutator.so:	honggfuzz.c input.h mangle.c ../../src/afl-performance.c
+ 	$(CC) $(CFLAGS) -I../../include -I. -shared -o honggfuzz-mutator.so honggfuzz.c mangle.c ../../src/afl-performance.c
+
++honggfuzz-2b-chunked-mutator.so:	honggfuzz.c input.h mangle.c ../../src/afl-performance.c
++	$(CC) $(CFLAGS) -DHONGGFUZZ_2B_CHUNKED -I../../include -I. -shared -o honggfuzz-2b-chunked-mutator.so honggfuzz.c mangle.c ../../src/afl-performance.c
++
+ update:
+ 	@# seriously? --unlink is a dud option? sigh ...
+ 	rm -f mangle.c mangle.h honggfuzz.h
+diff --git a/custom_mutators/honggfuzz/honggfuzz.c b/custom_mutators/honggfuzz/honggfuzz.c
+index 0dd59aee..02e93575 100644
+--- a/custom_mutators/honggfuzz/honggfuzz.c
++++ b/custom_mutators/honggfuzz/honggfuzz.c
+@@ -112,6 +112,142 @@ uint8_t afl_custom_queue_get(void *data, const uint8_t *filename) {
+
+ /* here we run the honggfuzz mutator, which is really good */
+
++#ifdef HONGGFUZZ_2B_CHUNKED
++typedef uint16_t chunk_size;
++const chunk_size chunk_size_mask = 0x7ff;
++
++typedef struct fuzz_packet {
++  chunk_size size;
++  uint16_t mut;
++  uint8_t* buf;
++} fuzz_packet_t;
++
++void read_fuzz_packets(uint8_t *buf, size_t buf_size, fuzz_packet_t* out, size_t* out_size, size_t max_packets) {
++  size_t remain = buf_size;
++  uint8_t* cur = buf;
++  *out_size = 0;
++
++  while(1) {
++    if (remain < sizeof(chunk_size) + 1) {
++      // Minimum length required to proceed
++      return;
++    }
++
++    if (*out_size >= max_packets) {
++      return;
++    }
++
++    out[*out_size].mut = 0;
++    out[*out_size].size = *(chunk_size*)cur & chunk_size_mask; // Only interpret lower bits for size
++    cur += sizeof(chunk_size); remain -= sizeof(chunk_size);
++
++    if (remain < out[*out_size].size) {
++      // Truncate last input, if remaining data too small
++      out[*out_size].size = remain;
++    }
++
++    out[*out_size].buf = cur;
++    cur += out[*out_size].size; remain -= out[*out_size].size;
++
++    *out_size += 1;
++  }
++}
++
++size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_size,
++                       u8 **out_buf, uint8_t *add_buf, size_t add_buf_size,
++                       size_t max_size) {
++
++  fuzz_packet_t packet_out[64];
++  size_t packet_size = 0;
++
++  fuzz_packet_t packet_out_add[64];
++  size_t packet_size_add = 0;
++
++  read_fuzz_packets(buf, buf_size, packet_out, &packet_size, 64);
++
++  if (!packet_size) {
++    *out_buf = buf;
++    return buf_size;
++  }
++
++  if (add_buf) {
++    read_fuzz_packets(add_buf, add_buf_size, packet_out_add, &packet_size_add, 64);
++  }
++
++  int num_mutations = rand() % 5 + 1;
++
++
++  for (int i = 0; i < num_mutations; ++i) {
++    if (add_buf && packet_size_add > 0 && (rand() % 2)) {
++      // Splice one index
++      packet_out[rand() % packet_size].mut = 1;
++    } else {
++      // Mutate one index
++      packet_out[rand() % packet_size].mut = 2;
++    }
++  }
++
++  size_t written = 0;
++
++  *out_buf = data->mutator_buf;
++  uint8_t* cur = data->mutator_buf;
++
++  for (size_t idx = 0; idx < packet_size; ++idx) {
++    chunk_size* size_out = (chunk_size*)cur;
++
++    if (packet_out[idx].mut == 1) {
++      // Splice
++      size_t splice_idx = rand() % packet_size_add;
++
++      if (written + sizeof(chunk_size) + packet_out_add[splice_idx].size >= max_size) {
++        return written;
++      }
++
++      memcpy(cur + sizeof(chunk_size), packet_out_add[splice_idx].buf, packet_out_add[splice_idx].size);
++      *size_out = packet_out_add[splice_idx].size;
++    } else {
++      if (written + sizeof(chunk_size) + packet_out[idx].size >= max_size) {
++        return written;
++      }
++
++      memcpy(cur + sizeof(chunk_size), packet_out[idx].buf, packet_out[idx].size);
++      if (packet_out[idx].mut == 2) {
++        // Mutate
++        run.dynfile->data = data->mutator_buf + sizeof(chunk_size);
++        run.dynfile->size = packet_out[idx].size;
++
++        queue_input = run.dynfile->data;
++        queue_input_size = run.dynfile->size;
++
++	run.global->mutate.maxInputSz = MAX_FILE - written - sizeof(chunk_size);
++
++	mangle_mangleContent(&run, NUMBER_OF_MUTATIONS);
++
++	// Truncate output
++	if (run.dynfile->size > chunk_size_mask) {
++		run.dynfile->size = chunk_size_mask;
++	}
++
++	if (run.dynfile->data != data->mutator_buf + sizeof(chunk_size)) {
++		abort();
++	}
++
++        packet_out[idx].size = run.dynfile->size;
++      }
++
++      *size_out = packet_out[idx].size;
++    }
++
++    cur += *size_out + sizeof(chunk_size);
++    written += *size_out + sizeof(chunk_size);
++  }
++
++  /* return size of mutated data */
++  return written;
++}
++
++#else
++
+ size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_size,
+                        u8 **out_buf, uint8_t *add_buf, size_t add_buf_size,
+                        size_t max_size) {
+@@ -132,6 +268,8 @@ size_t afl_custom_fuzz(my_mutator_t *data, uint8_t *buf, size_t buf_size,
+
+ }
+
++#endif
++
+ /**
+  * Deinitialize everything
+  *
+
