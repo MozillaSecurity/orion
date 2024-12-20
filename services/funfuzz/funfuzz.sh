@@ -150,10 +150,10 @@ screen -d -m -L -S funfuzz
 if [[ -z "$COVERAGE" ]]
 then
   nprocs="${NPROCS-$(python3 -c "import os;print(len(os.sched_getaffinity(0)))")}"
-  update-ec2-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
+  update-status "$(echo -e "About to start fuzzing $nprocs\n  with target time $TARGET_TIME\n  and jsfunfuzz timeout of $JS_SHELL_DEFAULT_TIMEOUT ...")" || true
 else
   nprocs="${NPROCS-1}"
-  update-ec2-status "$(echo -e "About to start coverage $nprocs\n  with target time $TARGET_TIME ...")" || true
+  update-status "$(echo -e "About to start coverage $nprocs\n  with target time $TARGET_TIME ...")" || true
 fi
 echo "[$(date)] launching $nprocs processes..."
 for (( i=1; i<=nprocs; i++ ))

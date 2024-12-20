@@ -10,10 +10,6 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /src/recipes/common.sh
 
-function tc-get-secret () {
-  TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$1"
-}
-
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]] ; then
   TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
 else
@@ -21,12 +17,12 @@ else
 fi
 
 # Get the deploy key for langfuzz-config from Taskcluster
-tc-get-secret deploy-langfuzz-config | jshon -e secret -e key -u > /root/.ssh/id_rsa.langfuzz-config
+get-tc-secret deploy-langfuzz-config > /root/.ssh/id_rsa.langfuzz-config
 chmod 0600 /root/.ssh/id_rsa.*
 
 # Config and run the logging service
 mkdir -p /etc/google/auth /var/lib/td-agent-bit/pos
-tc-get-secret google-logging-creds | jshon -e secret -e key > /etc/google/auth/application_default_credentials.json
+get-tc-secret google-logging-creds > /etc/google/auth/application_default_credentials.json
 chmod 0600 /etc/google/auth/application_default_credentials.json
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 

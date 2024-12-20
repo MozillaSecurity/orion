@@ -12,6 +12,6 @@ function stats () {
   df -h
 }
 while true; do
-  update-ec2-status "$(stats)" || true
+  update-status "$(stats)" || true
   sleep 60
 done

@@ -11,10 +11,6 @@ set -x
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
-update-status () {
-  update-ec2-status "[$(date -Is)] $*"
-}
-
 # %<---[Target]---------------------------------------------------------------
 
 FETCH_ARGS=(-o "$HOME" --afl --fuzzing)

@@ -16,7 +16,7 @@ if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   if [[ "$TARGET_DURATION" -le 600 ]]; then
     # create required artifact directory to avoid task failure
     mkdir -p /tmp/site-scout
-    update-ec2-status "Not enough time remaining before deadline!"
+    update-status "Not enough time remaining before deadline!"
     exit 0
   fi
   if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
@@ -47,13 +47,13 @@ setup-fuzzmanager-hostname
 chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
-update-ec2-status "Setup: installing site-scout"
+update-status "Setup: installing site-scout"
 retry python3 -m pip install fuzzfetch git+https://github.com/MozillaSecurity/site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v
 if [[ ! -d /src/site-scout-private ]]; then
-  update-ec2-status "Setup: cloning site-scout-private"
+  update-status "Setup: cloning site-scout-private"
 
   # Get deployment key from TC
   get-tc-secret deploy-site-scout-private .ssh/id_ecdsa.site-scout-private
@@ -70,7 +70,7 @@ if [[ ! -d /src/site-scout-private ]]; then
   git-clone git@site-scout-private:MozillaSecurity/site-scout-private.git /src/site-scout-private
 fi
 
-update-ec2-status "Setup: fetching build"
+update-status "Setup: fetching build"
 
 # select build
 TARGET_BIN="./build/firefox"
@@ -124,7 +124,7 @@ done
 # create directory for launch failure results
 mkdir -p /tmp/site-scout/local-results
 
-update-ec2-status "Setup: launching site-scout"
+update-status "Setup: launching site-scout"
 python3 -m site_scout "$TARGET_BIN" \
   -i ./active_lists/ \
   --fuzzmanager \
