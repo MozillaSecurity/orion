@@ -264,7 +264,7 @@ def test_aws_resources(
                 "genericWorker": {
                     "config": {
                         "anyKey": "anyValue",
-                        "deploymentId": "cea469ea9eba172e",
+                        "deploymentId": "d82eac5c561913ee",
                         "wstAudience": "communitytc",
                         "wstServerURL": (
                             "https://community-websocktunnel.services.mozilla.com"
@@ -281,7 +281,7 @@ def test_aws_resources(
                     "d2gConfig": {
                         "enableD2G": True,
                     },
-                    "deploymentId": "cca78a595ad491be",
+                    "deploymentId": "37b8e91ebdf4f8c2",
                 }
             )
 
@@ -370,7 +370,7 @@ def test_azure_resources(
                         "genericWorker": {
                             "config": {
                                 "anyKey": "anyValue",
-                                "deploymentId": "cea469ea9eba172e",
+                                "deploymentId": "d82eac5c561913ee",
                                 "wstAudience": "communitytc",
                                 "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
                             },
