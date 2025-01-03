@@ -7,11 +7,13 @@
 import argparse
 import logging
 import sys
+from functools import wraps
 from os import getenv
 from pathlib import Path
 from shutil import rmtree
-from subprocess import PIPE
+from subprocess import PIPE, CalledProcessError
 from tempfile import mkdtemp
+from time import sleep
 from typing import List, Optional
 
 import taskcluster
@@ -23,6 +25,24 @@ from yaml import safe_load as yaml_load
 from .cli import CommonArgs, configure_logging
 
 LOG = logging.getLogger(__name__)
+
+
+def retry_call(f, retries=5, initial_delay=5):
+    """Retry a call to subprocess.* which raises CalledProcessError."""
+
+    @wraps(f)
+    def wrapper(*args, **kwds):
+        delay = initial_delay
+        for _ in range(retries):
+            try:
+                return f(*args, **kwds)
+            except CalledProcessError:
+                LOG.warning("call failed: %s, retrying in %ds...", args, delay)
+                sleep(delay)
+                delay *= 2
+        return f(*args, **kwds)
+
+    return wrapper
 
 
 class PushArgs(CommonArgs):
@@ -117,8 +137,7 @@ def main(argv: Optional[List[str]] = None) -> None:
             LOG.info(
                 "Task %s artifact %s downloaded to: %s", task_id, artifact_name, img
             )
-            existing_images = tool.list_images()
-            LOG.debug("Existing images before loading: %s", existing_images)
+            LOG.debug("Existing images before loading: %s", tool.list_images())
 
             # 1. Load image/s artifact into the podman image store
             load_result = tool.run(
@@ -166,10 +185,12 @@ def main(argv: Optional[List[str]] = None) -> None:
             LOG.info(f"Manifest created: {create_result}")
 
             # 3. Add the loaded images to the manifest
-            inspect_result = tool.run(
-                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            LOG.debug(
+                "Manifest before adding images: %s",
+                tool.run(
+                    ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+                ).stdout,
             )
-            LOG.debug("Manifest before adding images: %s", inspect_result)
             for arch in archs:
                 add_result = tool.run(
                     [
@@ -182,18 +203,21 @@ def main(argv: Optional[List[str]] = None) -> None:
                     stdout=PIPE,
                 )
                 LOG.info(f"Added: {add_result}")
-            inspect_result = tool.run(
-                ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+            LOG.debug(
+                "Manifest after adding images: %s",
+                tool.run(
+                    ["manifest", "inspect", manifest_name], text=True, stdout=PIPE
+                ).stdout,
             )
-            LOG.debug("Manifest after adding images: %s", inspect_result)
 
             # 4. Push the manifest (with images) to docker.io
-            tool.login(
+            retry_call(tool.login)(
                 config.docker["registry"],
                 config.docker["username"],
                 config.docker["password"],
             )
-            push_result = tool.run(
+
+            push_result = retry_call(tool.run)(
                 [
                     "manifest",
                     "push",
