@@ -6,11 +6,11 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-get-tc-secret project/fuzzing/deploy-domino-web-tests >.ssh/id_ecdsa.domino_web_tests
+get-tc-secret project/fuzzing/deploy-domino-web-tests .ssh/id_ecdsa.domino_web_tests
 ln -s id_ecdsa.domino_web_tests .ssh/id_ecdsa
-get-tc-secret project/fuzzing/deploy-domino >.ssh/id_rsa.domino
-get-tc-secret project/fuzzing/deploy-gridl >.ssh/id_rsa.gridl
-get-tc-secret project/fuzzing/deploy-octo-private >.ssh/id_rsa.octo
+get-tc-secret project/fuzzing/deploy-domino .ssh/id_rsa.domino
+get-tc-secret project/fuzzing/deploy-gridl .ssh/id_rsa.gridl
+get-tc-secret project/fuzzing/deploy-octo-private .ssh/id_rsa.octo
 set -x
 chmod 0400 .ssh/id_*
 

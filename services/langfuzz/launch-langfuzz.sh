@@ -17,13 +17,11 @@ else
 fi
 
 # Get the deploy key for langfuzz-config from Taskcluster
-get-tc-secret deploy-langfuzz-config > /root/.ssh/id_rsa.langfuzz-config
-chmod 0600 /root/.ssh/id_rsa.*
+get-tc-secret deploy-langfuzz-config /root/.ssh/id_rsa.langfuzz-config
 
 # Config and run the logging service
 mkdir -p /etc/google/auth /var/lib/td-agent-bit/pos
-get-tc-secret google-logging-creds > /etc/google/auth/application_default_credentials.json
-chmod 0600 /etc/google/auth/application_default_credentials.json
+get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
 function onexit () {
