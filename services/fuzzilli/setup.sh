@@ -29,6 +29,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
 ./llvm-symbolizer.sh
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx inject fuzzmanager boto
 
 #### Bootstrap Packages
 

@@ -120,6 +120,9 @@ then
   trap onexit EXIT
 fi
 
+# ensure fuzzilli daemon uses python in fuzzmanager venv
+. /opt/pipx/venvs/fuzzmanager/bin/activate
+
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   timeout -s 2 ${TARGET_TIME} mozilla/merge.sh "$HOME/build/dist/bin/js"
