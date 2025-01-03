@@ -107,7 +107,7 @@ function get-deadline () {
 
 # Get the task deadline.
 # If running locally, return a date far in the future to prevent expiration.
-get-target-time () {
+function get-target-time () {
   if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
     echo $(($(get-deadline) - $(date +%s) - 5 * 60))
   else
@@ -381,7 +381,7 @@ function disable-ec2-pool () {
 }
 
 # Include timestamp in status message.
-update-status () {
+function update-status () {
   update-ec2-status "[$(date -Is)] $*"
 }
 
