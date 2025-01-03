@@ -114,6 +114,13 @@ task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
+# enable page interactions
+if [[ -n "$EXPLORE" ]]; then
+  export EXPLORE_FLAG="--explore"
+else
+  export EXPLORE_FLAG=""
+fi
+
 # select URL collections
 mkdir active_lists
 for LIST in $URL_LISTS
@@ -127,6 +134,7 @@ mkdir -p /tmp/site-scout/local-results
 update-status "Setup: launching site-scout"
 python3 -m site_scout "$TARGET_BIN" \
   -i ./active_lists/ \
+  $EXPLORE_FLAG \
   --fuzzmanager \
   --memory-limit "$MEM_LIMIT" \
   --jobs "$JOBS" \
