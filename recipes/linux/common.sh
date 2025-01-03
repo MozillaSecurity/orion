@@ -76,12 +76,16 @@ function apt-install-auto () {
 
 # Follow redirects and resolve a url
 function resolve-url () {
-  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --head --write-out "%{url_effective}" "$@" -o /dev/null
+  # disable http/2 because we frequently see this on firefox-ci:
+  # curl: (92) HTTP/2 stream 0 was not closed cleanly: INTERNAL_ERROR (err 2)
+  # which curl will not retry because it is caused by buggy server/load balancer
+  curl --http1.1 --connect-timeout 25 --fail --location --retry 5 --show-error --silent --head --write-out "%{url_effective}" "$@" -o /dev/null
 }
 
 # wrap curl with sane defaults
 function retry-curl () {
-  curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
+  # see comment on for --http1.1 in resolve-url above
+  curl --http1.1 --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
 function get-deadline () {
