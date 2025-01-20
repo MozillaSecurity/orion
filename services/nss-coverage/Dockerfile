@@ -16,7 +16,6 @@ COPY recipes/linux/ /src/recipes/
 COPY services/fuzzing-decision /src/fuzzing-tc
 COPY services/nss-coverage/setup.sh /src/recipes/setup-nss-coverage.sh
 COPY \
-    services/nss-coverage/libfuzzer-options.py \
     services/nss-coverage/merge-coverage.py \
     services/nss-coverage/nspr_map.json \
     services/nss-coverage/launch-worker.sh \
