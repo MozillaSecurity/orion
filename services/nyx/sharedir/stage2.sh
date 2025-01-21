@@ -16,13 +16,16 @@ echo "[!] requesting config.sh" | ./hcat
 ./hget config.sh config.sh
 . ./config.sh
 
-if [ -z "$MOCHITEST_ARGS" ]; then
-  echo "[!] requesting ${NYX_PAGE-page.zip} from hypervisor" | ./hcat
-  ./hget_bulk "${NYX_PAGE-page.zip}" page.zip
-  echo "[!] unpacking ${NYX_PAGE-page.zip}" | ./hcat
-  unzip "${NYX_PAGE-page.zip}" | ./hcat
-  ln -s "${NYX_PAGE_HTMLNAME-caniuse.html}" fuzz.html
-else
+echo "[!] NYX_FUZZER: $NYX_FUZZER" | ./hcat
+if [ "$(expr "$NYX_FUZZER" : '^Domino')" -gt 0 ]
+then
+  echo "[!] requesting extra files from hypervisor" | ./hcat
+  ./hget ext_files.sh ext_files.sh
+  sh ext_files.sh
+fi
+
+if [ -n "$MOCHITEST_ARGS" ]
+then
   echo "[!] requesting testenv.txz from hypervisor" | ./hcat
   ./hget_bulk testenv.txz testenv.txz
   echo "[!] requesting tools.txz from hypervisor" | ./hcat
@@ -31,6 +34,18 @@ else
   tar xf testenv.txz
   echo "[!] unpacking tools.txz" | ./hcat
   tar xf tools.txz -C tests/bin/
+elif [ "$(expr "$NYX_FUZZER" : '^Domino')" -gt 0 ]
+then
+  cat >> fuzz.html << EOF
+<!DOCTYPE html>
+<meta http-equiv="refresh" content="0; url=http://localhost:8080/nyx_landing.html">
+EOF
+else
+  echo "[!] requesting ${NYX_PAGE-page.zip} from hypervisor" | ./hcat
+  ./hget_bulk "${NYX_PAGE-page.zip}" page.zip
+  echo "[!] unpacking ${NYX_PAGE-page.zip}" | ./hcat
+  unzip "${NYX_PAGE-page.zip}" | ./hcat
+  ln -s "${NYX_PAGE_HTMLNAME-caniuse.html}" fuzz.html
 fi
 
 echo "[!] agent is running in the following path:" | ./hcat
@@ -53,6 +68,12 @@ echo "[!] Creating firefox profile" | ./hcat
 LD_LIBRARY_PATH="/home/user/firefox" \
 /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
+
+if [ "$(expr "$NYX_FUZZER" : '^Domino')" -gt 0 ]
+then
+  echo "[!] starting domino web service ($STRATEGY)" | ./hcat
+  node /home/user/domino/lib/bin/server.js --is-nyx --strategy "$STRATEGY" &
+fi
 
 echo "[!] starting firefox" | ./hcat
 ./hget launch.sh launch.sh
