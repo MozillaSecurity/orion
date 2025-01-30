@@ -25,9 +25,9 @@ PLATFORMS = ["linux", "windows", "macos"]
 VERSIONS = {
     ("java", "linux"): ["11"],
     ("node", "linux"): ["18", "20"],
-    ("python", "linux"): ["3.9", "3.10", "3.11", "3.12"],
-    ("python", "windows"): ["3.9", "3.10", "3.11", "3.12"],
-    ("python", "macos"): ["3.9", "3.10", "3.11", "3.12"],
+    ("python", "linux"): ["3.9", "3.10", "3.11", "3.12", "3.13"],
+    ("python", "windows"): ["3.9", "3.10", "3.11", "3.12", "3.13"],
+    ("python", "macos"): ["3.9", "3.10", "3.11", "3.12", "3.13"],
 }
 IMAGES = {
     ("java", "linux", "11"): "ci-java-11",
@@ -37,14 +37,17 @@ IMAGES = {
     ("python", "linux", "3.10"): "ci-py-310",
     ("python", "linux", "3.11"): "ci-py-311",
     ("python", "linux", "3.12"): "ci-py-312",
+    ("python", "linux", "3.13"): "ci-py-313",
     ("python", "windows", "3.9"): "ci-py-39-win",
     ("python", "windows", "3.10"): "ci-py-310-win",
     ("python", "windows", "3.11"): "ci-py-311-win",
     ("python", "windows", "3.12"): "ci-py-312-win",
+    ("python", "windows", "3.13"): "ci-py-313-win",
     ("python", "macos", "3.9"): "ci-py-39-osx",
     ("python", "macos", "3.10"): "ci-py-310-osx",
     ("python", "macos", "3.11"): "ci-py-311-osx",
     ("python", "macos", "3.12"): "ci-py-312-osx",
+    ("python", "macos", "3.13"): "ci-py-313-osx",
 }
 LOG = getLogger(__name__)
 
