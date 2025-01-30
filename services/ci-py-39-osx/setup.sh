@@ -4,10 +4,17 @@ set -e -x -o pipefail
 retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="${i+1}"; done; "$@"; }
 retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
-retry brew install --force-bottle openssl@3 python@3.9
+PYTHON_VERSION=3.9.21
+STANDALONE_RELEASE=20250115
+PYTHON_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${STANDALONE_RELEASE}/cpython-${PYTHON_VERSION}+${STANDALONE_RELEASE}-x86_64-apple-darwin-install_only_stripped.tar.gz"
+
+mkdir -p "$HOMEBREW_PREFIX/opt"
+retry-curl "$PYTHON_URL" | tar -C "$HOMEBREW_PREFIX/opt" -xvz
+rm -rf "$HOMEBREW_PREFIX"/opt/python/lib/tcl* "$HOMEBREW_PREFIX"/opt/python/lib/tk* "$HOMEBREW_PREFIX"/opt/python/share
+
 # shellcheck disable=SC2016
-sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python@3.9/libexec/bin:${HOMEBREW_PREFIX}/opt/python@3.9/bin:${HOMEBREW_PREFIX}/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/bin:,' homebrew/Library/Homebrew/cmd/shellenv.sh
-PATH="$HOMEBREW_PREFIX/opt/python@3.9/libexec/bin:$HOMEBREW_PREFIX/opt/python@3.9/bin:$HOMEBREW_PREFIX/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/bin:$PATH"
+sed -i '' 's,export PATH=\\",&${HOMEBREW_PREFIX}/opt/python/bin:,' homebrew/Library/Homebrew/cmd/shellenv.sh
+PATH="$HOMEBREW_PREFIX/opt/python/bin:$PATH"
 
 # configure pip
 mkdir -p pip
