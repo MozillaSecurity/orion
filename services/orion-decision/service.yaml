@@ -16,6 +16,10 @@ tests:
     type: tox
     image: ci-py-312
     toxenv: py312
+  - name: python 3.13 unittests
+    type: tox
+    image: ci-py-313
+    toxenv: py313
   - name: lint
     type: tox
     image: ci-py-39
