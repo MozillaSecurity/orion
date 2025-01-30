@@ -18,7 +18,7 @@ pacman --noconfirm -Rs psmisc
 retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get python
-VER=3.11.6
+VER=3.11.9
 retry nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"
 rm -rf msys64/opt/python
 mkdir -p msys64/opt
