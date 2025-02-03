@@ -110,7 +110,7 @@ for directory in nss-fuzzing-corpus-new/*; do
     # The same target is also compiled with tls fuzzing mode, append
     # "-no_fuzzer_mode" to the corpus name.
     if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
-        corpus="$name-no_fuzzer_mode-corpus"
+        corpus="$name-no_fuzzer_mode"
     fi
 
     mkdir -p "nss-fuzzing-corpus-new-and-minimized/$corpus"
