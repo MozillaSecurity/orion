@@ -42,6 +42,7 @@ packages=(
   libc6-dbg
   libdbus-glib-1-2
   libglu1-mesa
+  libnss3-tools
   libosmesa6
   libpulse0
   p7zip-full
