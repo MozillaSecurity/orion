@@ -88,7 +88,7 @@ shuf -n "${NUM_RAND_HOSTS-5000}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.t
 # Collect corpus from tstclnt with random domains
 cat hosts.txt | xargs -P 5 -I {} bash -c \
     "readarray -t arguments < <(python ./nss/fuzz/config/tstclnt_arguments.py) && \
-     dist/Debug/bin/tstclnt -o -D -Q -b -h {} \${arguments[@]}"
+     (dist/Debug/bin/tstclnt -o -D -Q -b -h {} \${arguments[@]} || true)"
 
 # Collect corpus from tests
 pushd nss/tests
