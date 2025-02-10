@@ -62,40 +62,12 @@ if [[ ! -d cryptofuzz ]]; then
   git-clone https://github.com/MozillaSecurity/cryptofuzz.git
 fi
 
+# Setup gcloud
+mkdir -p ~/.config/gcloud
+get-tc-secret ossfuzz-gutils ~/.config/gcloud/application_default_credentials.json raw
+echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" > .boto
+
 COVRUNTIME=${COVRUNTIME-3600}
-
-function clone-corpus {
-  local name=$1
-  local url=$2
-  shift 2
-
-  mkdir -p corpus
-  pushd corpus
-  if [[ ! -d "$name" ]]; then
-    mkdir "$name"
-    pushd "$name"
-
-    # There may be no OSS-Fuzz corpus yet for new fuzz targets
-    code=$(retry-curl --no-fail -w "%{http_code}" -O "$url")
-    if [[ $code -eq 200 ]]; then
-      unzip public.zip
-    else
-      echo "WARNING - cloning corpus for $name failed with code: $code" >&2
-    fi
-    rm public.zip
-
-    popd
-  fi
-  popd
-}
-
-function clone-nssfuzz-corpus {
-  local name="$1"
-  shift 1
-
-  clone-corpus "$name" \
-               "https://storage.googleapis.com/nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/public.zip"
-}
 
 function run-target {
   local target="$1"
@@ -137,66 +109,56 @@ function run-target {
   fi
 }
 
-function run-nssfuzz-target {
-  local target="$1"
-  local name="$2"
-  shift 2
-
-  readarray -t options < <(python libfuzzer-options.py nss/fuzz/options/"$name".options)
-  run-target "dist/Debug/bin/nssfuzz-$target" "$name" "${options[@]}"
-}
-
-declare -A targets=()
-declare -A tls_targets=()
-
-for file in nss/fuzz/options/*; do
-  name="$(basename "$file" .options)"
-  if [[ "$name" =~ -no_fuzzer_mode$ ]]; then
-    tls_targets["${name%-no_fuzzer_mode}"]=1
-    continue
-  fi
-
-  targets["$name"]=1
-done
-
-total_targets=$(("${#targets[@]}" + "${#tls_targets[@]}"))
-curr_target_n=1
-
-# Build nss with tls fuzzing mode
-update-status "building nss with tls fuzzing mode ($curr_target_n/$total_targets have run)"
-pushd nss
-time ./build.sh -c -v --fuzz=tls --disable-tests
-popd
-
-# For each nssfuzz target with tls fuzzing mode, clone corpus & run
-for target in "${!tls_targets[@]}"; do
-  update-status "cloning corpus for $target ($curr_target_n/$total_targets)"
-  clone-nssfuzz-corpus "$target"
-
-  update-status "running $target ($curr_target_n/$total_targets)"
-  run-nssfuzz-target "$target" "$target"
-  ((curr_target_n++))
-done
-
 # Build nss w/o tls fuzzing mode
 update-status "building nss w/o tls fuzzing mode"
 pushd nss
 time ./build.sh -c -v --fuzz --disable-tests
 popd
 
-# For each nssfuzz target w/o tls fuzzing mode, clone corpus & run
-for target in "${!targets[@]}"; do
-  name="$target"
-  if [[ -n "${tls_targets[$target]:-}" ]]; then
-    name="$name-no_fuzzer_mode"
+for fuzzer in dist/Debug/bin/nssfuzz-*; do
+  file="$(basename "$fuzzer")"
+  name="${file#nssfuzz-}"
+
+  if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
+    name="${name}-no_fuzzer_mode"
   fi
 
-  update-status "cloning corpus for $name ($curr_target_n/$total_targets)"
-  clone-nssfuzz-corpus "$name"
+  update-status "cloning corpus for target $name"
+  mkdir -p "./corpus/$name"
+  pushd "./corpus/$name"
+  gsutil cp "gs://nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/latest.zip" .
+  unzip latest.zip
+  rm latest.zip
+  popd
 
-  update-status "running $name ($curr_target_n/$total_targets)"
-  run-nssfuzz-target "$target" "$name"
-  ((curr_target_n++))
+  update-status "running target $name"
+  readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
+  run-target "$fuzzer" "$name" "${options[@]}"
+done
+
+# Build nss with tls fuzzing mode
+update-status "building nss with tls fuzzing mode"
+pushd nss
+time ./build.sh -c -v --fuzz=tls --disable-tests
+popd
+
+for fuzzer in dist/Debug/bin/nssfuzz-*; do
+  file="$(basename "$fuzzer")"
+  name="${file#nssfuzz-}"
+
+  if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
+    update-status "cloning corpus for target $name"
+    mkdir -p "./corpus/$name"
+    pushd "./corpus/$name"
+    gsutil -m cp "gs://nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/latest.zip" .
+    unzip latest.zip
+    rm latest.zip
+    popd
+
+    update-status "running target $name"
+    readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
+    run-target "$fuzzer" "$name" "${options[@]}"
+  fi
 done
 
 # Generate cryptofuzz headers
@@ -224,8 +186,13 @@ popd
 
 # Clone cryptofuzz nss corpus
 update-status "cloning cryptofuzz nss corpus"
-clone-corpus "cryptofuzz" \
-             "https://storage.googleapis.com/cryptofuzz-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/cryptofuzz_cryptofuzz-nss/public.zip"
+mkdir -p ./corpus/cryptofuzz
+
+pushd ./corpus/cryptofuzz
+retry-curl -O "https://storage.googleapis.com/cryptofuzz-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/cryptofuzz_cryptofuzz-nss/public.zip"
+unzip public.zip
+rm -f public.zip
+popd
 
 # Run cryptofuzz
 update-status "running cryptofuzz"
