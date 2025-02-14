@@ -41,7 +41,7 @@ retries: 5
 routes:
   - notify.email.user1@mozilla.com.on-failed
   - notify.email.user4@mozilla.com.on-failed
-schedulerId: "-"
+schedulerId: "test"
 scopes:
   - generic-worker:os-group:proj-fuzzing/windows-map2/Administrators
   - generic-worker:run-as-administrator:proj-fuzzing/windows-map2
