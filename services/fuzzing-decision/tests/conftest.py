@@ -23,6 +23,11 @@ def mock_email(mocker):
     mocker.patch("fuzzing_decision.decision.pool.OWNER_EMAIL", "fuzzing@allizom.org")
 
 
+@pytest.fixture(autouse=True)
+def mock_scheduler(mocker):
+    mocker.patch("fuzzing_decision.decision.pool.SCHEDULER_ID", "test")
+
+
 @pytest.fixture(scope="module")
 def appconfig():
     # this is copied from:
