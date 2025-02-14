@@ -5,7 +5,7 @@
 
 # Constants for our resources
 OWNER_EMAIL = "truber@mozilla.com"
-SCHEDULER_ID = "-"
+SCHEDULER_ID = "fuzzing"
 PROVISIONER_ID = "proj-fuzzing"
 WORKER_POOL_PREFIX = "proj-fuzzing"
 HOOK_PREFIX = "project-fuzzing"
