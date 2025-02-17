@@ -83,17 +83,17 @@ done
 retry-curl -L -O https://tranco-list.eu/top-1m-incl-subdomains.csv.zip
 unzip top-1m-incl-subdomains.csv.zip
 
-shuf -n "${NUM_RAND_HOSTS-5000}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.txt
+shuf -n "${NUM_RAND_HOSTS-1250}" top-1m.csv | awk -F"," '{ print $2 }' > hosts.txt
 
 # Collect corpus from tstclnt with random domains
-cat hosts.txt | xargs -P 5 -I {} bash -c \
+cat hosts.txt | tr -d "\r" | xargs -P 5 -I {} bash -c \
     "readarray -t arguments < <(python ./nss/fuzz/config/tstclnt_arguments.py) && \
-     (dist/Debug/bin/tstclnt -o -D -Q -b -h {} \${arguments[@]} || true)"
+     (timeout -k 3 3 dist/Debug/bin/tstclnt -o -D -Q -b -h {} \${arguments[@]} || true)"
 
 # Collect corpus from tests
 pushd nss/tests
 DOMSUF="localdomain" HOST="localhost" \
-NSS_TESTS="bogo cert gtests sdr smine ssl ssl_gtests" \
+NSS_TESTS="bogo cert gtests sdr smime ssl ssl_gtests" \
 NSS_CYCLES="standard" ./all.sh || true
 popd
 
