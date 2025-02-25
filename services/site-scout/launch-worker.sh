@@ -48,7 +48,7 @@ chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
 update-status "Setup: installing site-scout"
-retry python3 -m pip install git+https://github.com/MozillaSecurity/site-scout
+retry pipx install site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v
@@ -132,7 +132,7 @@ done
 mkdir -p /tmp/site-scout/local-results
 
 update-status "Setup: launching site-scout"
-python3 -m site_scout "$TARGET_BIN" \
+site-scout "$TARGET_BIN" \
   -i ./active_lists/ \
   $EXPLORE_FLAG \
   --fuzzmanager \
