@@ -7,8 +7,11 @@ set -e
 set -x
 set -o pipefail
 
+# required to run tools installed via pipx
+PATH=~/.local/bin:$PATH
+
 # shellcheck source=recipes/linux/common.sh
-source ~/.local/bin/common.sh
+source common.sh
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
   TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
