@@ -17,7 +17,7 @@ sys-update
 #### Install recipes
 /src/recipes/fuzzfetch.sh
 
-sys-embed ripgrep
+sys-embed ripgrep pipx
 
 # Cleanup grizzly scripts
 rm /home/worker/launch-grizzly*
