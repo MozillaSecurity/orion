@@ -48,7 +48,7 @@ chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
 update-status "Setup: installing site-scout"
-retry python3 -m pip install fuzzfetch git+https://github.com/MozillaSecurity/site-scout
+retry python3 -m pip install git+https://github.com/MozillaSecurity/site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v
@@ -76,7 +76,7 @@ update-status "Setup: fetching build"
 TARGET_BIN="./build/firefox"
 if [[ -n "$COVERAGE" ]]; then
   export COVERAGE_FLAG="--coverage"
-  retry python3 -m fuzzfetch -n build --fuzzing --coverage
+  retry fuzzfetch -n build --fuzzing --coverage
   export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
   SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
   export SOURCE_URL
@@ -97,13 +97,13 @@ else
     asan32)
       # TEMPORARY workaround for frequent OOMs
       export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
-      retry python3 -m fuzzfetch -n build --fuzzing --asan --cpu x86
+      retry fuzzfetch -n build --fuzzing --asan --cpu x86
       ;;
     debug32)
-      retry python3 -m fuzzfetch -n build --fuzzing --debug --cpu x86
+      retry fuzzfetch -n build --fuzzing --debug --cpu x86
       ;;
     *)
-      retry python3 -m fuzzfetch -n build --fuzzing "--$build"
+      retry fuzzfetch -n build --fuzzing "--$build"
       ;;
   esac
 fi

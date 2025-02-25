@@ -15,7 +15,7 @@ source "${0%/*}/common.sh"
 sys-update
 
 #### Install recipes
-/src/recipes/grcov.sh
+/src/recipes/fuzzfetch.sh
 
 sys-embed ripgrep
 
