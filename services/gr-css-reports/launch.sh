@@ -17,8 +17,9 @@ export CI=true
 export EMAIL=nobody@community-tc.services.mozilla.com
 export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
 
+export PATH=$PATH:/home/worker/.local/bin
 # Install prefpicker
-retry python3 -m pip install git+https://github.com/MozillaSecurity/prefpicker.git
+pipx install git+https://github.com/MozillaSecurity/prefpicker.git
 
 # Fetch build
 retry fuzzfetch -a --fuzzing -n nightly
@@ -32,7 +33,7 @@ git init gr.css.reports
   # Ignore the lockfile when installing both to ensure we have the latest
   # version of gr.css and gr.css.generator
   retry npm i
-  python3 -m prefpicker browser-fuzzing.yml prefs.js
+  prefpicker browser-fuzzing.yml prefs.js
   npx @mozillasecurity/gr.css ~/nightly/firefox src/grammar.json -p prefs.js &&
   npm test &&
   if ! git diff --quiet src/grammar.json; then
