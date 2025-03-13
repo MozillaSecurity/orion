@@ -226,7 +226,7 @@ def test_aws_resources(
                 }
             ],
             "lifecycle": {
-                "queueInactivityTimeout": 7200,
+                "queueInactivityTimeout": 300,
                 "registrationTimeout": 900,
                 "reregistrationTimeout": 345600,
             },
@@ -379,7 +379,7 @@ def test_azure_resources(
                 },
             ],
             "lifecycle": {
-                "queueInactivityTimeout": 7200,
+                "queueInactivityTimeout": 300,
                 "registrationTimeout": 900,
                 "reregistrationTimeout": 345600,
             },
@@ -546,7 +546,7 @@ def test_gcp_resources(
                 },
             ],
             "lifecycle": {
-                "queueInactivityTimeout": 7200,
+                "queueInactivityTimeout": 300,
                 "registrationTimeout": 900,
                 "reregistrationTimeout": 345600,
             },
