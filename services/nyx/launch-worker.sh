@@ -170,7 +170,6 @@ then
     setup-ssh-key "domino" "$HOME/.ssh/id_ecdsa.domino"
     git-clone git@domino:MozillaSecurity/domino.git
     pushd domino/ >/dev/null
-    git checkout nyx
     set +x
     npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)" &&
     set -x
