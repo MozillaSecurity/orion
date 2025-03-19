@@ -168,7 +168,7 @@ then
     update-status "installing domino"
     get-tc-secret deploy-domino ~/.ssh/id_ecdsa.domino
     setup_ssh_key "domino" "$HOME/.ssh/id_ecdsa.domino"
-    retry git clone git@domino:MozillaSecurity/domino.git
+    git-clone git@domino:MozillaSecurity/domino.git
     pushd domino/ >/dev/null
     git checkout nyx
     set +x
