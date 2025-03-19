@@ -16,6 +16,36 @@ COVERAGE="${COVERAGE-0}"
 # shellcheck source=recipes/linux/common.sh
 source "/srv/repos/setup/common.sh"
 
+# generate commands for copying a directory recursively and maintaining
+# executable permissions.
+function make-copy-commands() {
+    local dir="$1"
+    if [[ -z "$dir" ]]; then
+        echo "Usage: generate_commands <directory>"
+        return 1
+    fi
+
+    if [[ ! -d "$dir" ]]; then
+        echo "Error: Directory '$dir' does not exist."
+        return 1
+    fi
+
+    find "$dir" -type d | sed 's|^|mkdir -p |'
+    find "$dir" -type f | sed 's|.*|./hget_bulk & &|'
+    find "$dir" -type f -executable | sed 's|.*|chmod +x &|'
+}
+
+function setup-ssh-key() {
+    local host="$1"
+    local key_path="$2"
+    cat << EOF >> ~/.ssh/config
+Host $host
+HostName github.com
+IdentitiesOnly yes
+IdentityFile $key_path
+EOF
+}
+
 # get Cloud Storage credentials
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
@@ -45,33 +75,23 @@ then
   time nyx-gcs-cat guided-fuzzing-data ipc-fuzzing-vm/firefox.img.zst | zstd -do ~/firefox.img
 fi
 
+
+pushd /srv/repos/ipc-research
 # clone ipc-fuzzing & build harness/tools
-# get deployment key from TC
 if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]
 then
 update-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
-cat << EOF >> ~/.ssh/config
-
-Host ipc-fuzzing
-HostName github.com
-IdentitiesOnly yes
-IdentityFile ~/.ssh/id_ecdsa.ipc_fuzzing
-EOF
-pushd /srv/repos/ipc-research >/dev/null
+setup-ssh-key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
 git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
-cd ipc-fuzzing/userspace-tools
-else
-pushd /srv/repos/ipc-research/ipc-fuzzing >/dev/null
-retry git fetch --depth=1 --no-tags origin HEAD
-git reset --hard FETCH_HEAD
-cd userspace-tools
 fi
+pushd ipc-fuzzing/userspace-tools
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
 make clean htools_no_pt
 cd ../preload/harness
 make clean bin64/ld_preload_fuzz_no_pt.so
-popd >/dev/null
+popd >/dev/null # /srv/repos/ipc-research/
+popd >/dev/null # /home/worker/
 
 # create snapshot
 if [[ ! -d ~/snapshot ]]
@@ -89,7 +109,7 @@ ASAN_OPTIONS=\
 abort_on_error=true:\
 allocator_may_return_null=true:\
 detect_leaks=0:\
-hard_rss_limit_mb=4096:\
+hard_rss_limit_mb=8192:\
 log_path=/tmp/data.log:\
 max_allocation_size_mb=3073:\
 strip_path_prefix=/builds/worker/workspace/build/src/:\
@@ -130,11 +150,7 @@ then
   # shellcheck disable=SC2086
   retry fuzzfetch -n firefox ${FUZZFETCH_FLAGS-${default_args[@]}}
 fi
-{
-  find firefox/ -type d | sed 's/^/mkdir -p /'
-  find firefox/ -type f | sed 's/.*/.\/hget_bulk \0 \0/'
-  find firefox/ -type f -executable | sed 's/.*/chmod +x \0/'
-} > ff_files.sh
+make-copy-commands firefox/ > ff_files.sh
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 sed -i "s,\${COVERAGE},$COVERAGE," stage2.sh
@@ -144,7 +160,27 @@ cp /srv/repos/ipc-research/ipc-fuzzing/preload/harness/bin64/ld_preload_*.so .
 mkdir -p htools
 cp /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/bin64/h* htools
 cp htools/hget_no_pt .
-popd >/dev/null
+
+if [[ $NYX_FUZZER = Domino* ]]
+then
+  if [[ ! -d domino ]]
+  then
+    update-status "installing domino"
+    get-tc-secret deploy-domino ~/.ssh/id_ecdsa.domino
+    setup-ssh-key "domino" "$HOME/.ssh/id_ecdsa.domino"
+    git-clone git@domino:MozillaSecurity/domino.git
+    pushd domino/ >/dev/null
+    set +x
+    npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)" &&
+    set -x
+    npm install
+    popd >/dev/null # /home/worker/sharedir/
+  fi
+  make-copy-commands domino/ > ext_files.sh
+fi
+
+
+popd >/dev/null # /home/worker/
 
 mkdir -p corpus.out
 
@@ -222,8 +258,18 @@ else
   elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]
   then
     nyx-ipc-manager --generic --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
+  elif [[ "$NYX_FUZZER" == Domino* ]]
+  then
+    export STRATEGY="${NYX_FUZZER##*-}"
+    if [[ -z "$STRATEGY" ]]
+    then
+      echo "could not identify domino strategy from: $NYX_FUZZER" 1>&2
+      exit 2
+    fi
+    echo "export NYX_FUZZER=\"$NYX_FUZZER\"" > ./sharedir/config.sh
+    echo "export STRATEGY=\"${STRATEGY}\"" >> ./sharedir/config.sh
   else
-    echo "unknown $NYX_FUZZER" 1>&2
+    echo "unknown fuzzer! ($NYX_FUZZER)" 1>&2
     exit 2
   fi
 
