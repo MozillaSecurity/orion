@@ -18,7 +18,7 @@ source "/srv/repos/setup/common.sh"
 
 # generate commands for copying a directory recursively and maintaining
 # executable permissions.
-function make_copy_commands() {
+function make-copy-commands() {
     local dir="$1"
     if [[ -z "$dir" ]]; then
         echo "Usage: generate_commands <directory>"
@@ -35,7 +35,7 @@ function make_copy_commands() {
     find "$dir" -type f -executable | sed 's|.*|chmod +x &|'
 }
 
-function setup_ssh_key() {
+function setup-ssh-key() {
     local host="$1"
     local key_path="$2"
     cat << EOF >> ~/.ssh/config
@@ -82,7 +82,7 @@ if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]
 then
 update-status "installing ipc-fuzzing repo"
 get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
-setup_ssh_key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
+setup-ssh-key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
 git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
 fi
 pushd ipc-fuzzing/userspace-tools
@@ -150,7 +150,7 @@ then
   # shellcheck disable=SC2086
   retry fuzzfetch -n firefox ${FUZZFETCH_FLAGS-${default_args[@]}}
 fi
-make_copy_commands firefox/ > ff_files.sh
+make-copy-commands firefox/ > ff_files.sh
 sed -i "s,\${ASAN_OPTIONS},$ASAN_OPTIONS," stage2.sh
 sed -i "s,\${UBSAN_OPTIONS},$UBSAN_OPTIONS," stage2.sh
 sed -i "s,\${COVERAGE},$COVERAGE," stage2.sh
@@ -167,7 +167,7 @@ then
   then
     update-status "installing domino"
     get-tc-secret deploy-domino ~/.ssh/id_ecdsa.domino
-    setup_ssh_key "domino" "$HOME/.ssh/id_ecdsa.domino"
+    setup-ssh-key "domino" "$HOME/.ssh/id_ecdsa.domino"
     git-clone git@domino:MozillaSecurity/domino.git
     pushd domino/ >/dev/null
     git checkout nyx
@@ -177,7 +177,7 @@ then
     npm install
     popd >/dev/null # /home/worker/sharedir/
   fi
-  make_copy_commands domino/ > ext_files.sh
+  make-copy-commands domino/ > ext_files.sh
 fi
 
 
