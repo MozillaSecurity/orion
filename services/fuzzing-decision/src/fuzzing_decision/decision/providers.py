@@ -147,11 +147,12 @@ class AWS(Provider):
                     "InstanceType": instance,
                     "BlockDeviceMappings": [
                         {
+                            "DeviceName": "/dev/sda1",
                             "Ebs": {
                                 "VolumeSize": disk_size,
                                 "VolumeType": "gp3",
                                 "DeleteOnTermination": True,
-                            }
+                            },
                         }
                     ],
                 },

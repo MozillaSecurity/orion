@@ -217,6 +217,7 @@ def test_aws_resources(
                     "launchConfig": {
                         "BlockDeviceMappings": [
                             {
+                                "DeviceName": "/dev/sda1",
                                 "Ebs": {
                                     "DeleteOnTermination": True,
                                     "VolumeSize": 120,
