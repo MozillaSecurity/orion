@@ -3,7 +3,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, Iterable, List, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, List, Tuple
 
 import yaml
 
@@ -23,7 +23,7 @@ class Provider(ABC):
         self,
         imageset: str,
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
-        disk_size: Union[int, str],
+        disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
@@ -121,7 +121,7 @@ class AWS(Provider):
         self,
         imageset: str,
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
-        disk_size: Union[int, str],
+        disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
@@ -145,6 +145,16 @@ class AWS(Provider):
                         region["security_groups"]["no-inbound"]
                     ],
                     "InstanceType": instance,
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/sda1",
+                            "Ebs": {
+                                "VolumeSize": disk_size,
+                                "VolumeType": "gp3",
+                                "DeleteOnTermination": True,
+                            },
+                        }
+                    ],
                 },
                 "workerConfig": worker_config,
             }
@@ -182,7 +192,7 @@ class Azure(Provider):
         self,
         imageset: str,
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
-        disk_size: Union[int, str],
+        disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
@@ -255,7 +265,7 @@ class GCP(Provider):
         self,
         imageset: str,
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
-        disk_size: Union[int, str],
+        disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
@@ -325,7 +335,7 @@ class Static(Provider):
         self,
         imageset: str,
         machines: Iterable[Tuple[str, int, FrozenSet[str]]],
-        disk_size: Union[int, str],
+        disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
