@@ -215,6 +215,15 @@ def test_aws_resources(
                 {
                     "capacityPerInstance": 1,
                     "launchConfig": {
+                        "BlockDeviceMappings": [
+                            {
+                                "Ebs": {
+                                    "DeleteOnTermination": True,
+                                    "VolumeSize": 120,
+                                    "VolumeType": "gp3",
+                                },
+                            },
+                        ],
                         "ImageId": "ami-6789" if worker == "docker" else "ami-1234",
                         "InstanceType": "a2",
                         "Placement": {"AvailabilityZone": "us-west-1a"},
