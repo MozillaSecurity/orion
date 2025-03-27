@@ -218,10 +218,12 @@ fi
 
 DAEMON_ARGS=(
   --afl-binary-dir /srv/repos/AFLplusplus
-  --afl-timeout "${AFL_TIMEOUT-30000}"
+  --afl-log-pattern /logs/afl%d.log
   --nyx
+  --nyx-log-pattern /logs/nyx%d.log
   --sharedir ./sharedir
   --stats ./stats
+  --timeout "${AFL_TIMEOUT-30000}"
 )
 
 S3_PROJECT="${S3_PROJECT-Nyx-$NYX_FUZZER}"
@@ -230,6 +232,7 @@ S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   update-status "starting corpus refresh"
+  export AFL_PRINT_FILENAMES=1
   if [[ "$NYX_FUZZER" = "IPC_SingleMessage" ]]
   then
     guided-fuzzing-daemon --list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project
@@ -298,12 +301,10 @@ else
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
-    --afl-log-pattern /logs/afl%d.log \
     --fuzzmanager \
     --max-runtime "$(get-target-time)" \
     --afl-async-corpus \
     --instances "$NYX_INSTANCES" \
-    --nyx-log-pattern /logs/nyx%d.log \
     --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so \
     --queue-upload \
     --tool "$S3_PROJECT" \
