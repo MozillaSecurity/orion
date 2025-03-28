@@ -102,6 +102,9 @@ else
       export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
       retry fuzzfetch -n build --fuzzing --asan --cpu x86
       ;;
+    beta-asan)
+      retry fuzzfetch -n build --asan --branch beta
+      ;;
     debug32)
       retry fuzzfetch -n build --fuzzing --debug --cpu x86
       ;;
