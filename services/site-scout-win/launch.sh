@@ -164,10 +164,10 @@ case $build in
     retry fuzzfetch -n build --asan --branch beta
     ;;
   debug32)
-    retry fuzzfetch -n build --fuzzing --debug --cpu x86
+    retry fuzzfetch -n build --debug --cpu x86
     ;;
   *)
-    retry fuzzfetch -n build --fuzzing "--$build"
+    retry fuzzfetch -n build "--$build"
     ;;
 esac
 

@@ -79,7 +79,7 @@ update-status "Setup: fetching build"
 TARGET_BIN="./build/firefox"
 if [[ -n "$COVERAGE" ]]; then
   export COVERAGE_FLAG="--coverage"
-  retry fuzzfetch -n build --fuzzing --coverage
+  retry fuzzfetch -n build --coverage
   export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
   SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
   export SOURCE_URL
@@ -100,16 +100,16 @@ else
     asan32)
       # TEMPORARY workaround for frequent OOMs
       export ASAN_OPTIONS=malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64
-      retry fuzzfetch -n build --fuzzing --asan --cpu x86
+      retry fuzzfetch -n build --asan --cpu x86
       ;;
     beta-asan)
       retry fuzzfetch -n build --asan --branch beta
       ;;
     debug32)
-      retry fuzzfetch -n build --fuzzing --debug --cpu x86
+      retry fuzzfetch -n build --debug --cpu x86
       ;;
     *)
-      retry fuzzfetch -n build --fuzzing "--$build"
+      retry fuzzfetch -n build "--$build"
       ;;
   esac
 fi
