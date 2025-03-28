@@ -160,6 +160,9 @@ BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}
 build="$(python -c "$BUILD_SELECT_SCRIPT")"
 # download build
 case $build in
+  beta-asan)
+    retry fuzzfetch -n build --asan --branch beta
+    ;;
   debug32)
     retry fuzzfetch -n build --fuzzing --debug --cpu x86
     ;;
