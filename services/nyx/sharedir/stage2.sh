@@ -74,7 +74,7 @@ export AFL_IGNORE_PROBLEMS_COVERAGE=1
 export AFL_DEBUG=1
 export MOZ_FUZZ_COVERAGE="${COVERAGE:-}"
 
-echo "[!] Creating firefox profile" | ./hcat
+echo "[!] creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
 LD_LIBRARY_PATH="/home/user/firefox" \
 xvfb-run /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
@@ -98,8 +98,8 @@ ASAN_OPTIONS="${ASAN_OPTIONS:-}" \
 UBSAN_OPTIONS="${UBSAN_OPTIONS:-}" \
 xvfb-run ./launch.sh /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
 
-echo "[!] Debug output:" | ./hcat
+echo "[!] debug output:" | ./hcat
 cat /tmp/data.log* | ./hcat
-echo "[!] Debug output end" | ./hcat
+echo "[!] debug output end" | ./hcat
 
 ./hrelease
