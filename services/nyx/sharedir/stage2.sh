@@ -26,6 +26,13 @@ then
   bash ext_files.sh
 fi
 
+if [[ -n ${__AFL_PC_FILTER:-} ]]
+then
+  echo "[!] enabling afl symbol filtering" | ./hcat
+  ./hget target.symbols.txt target.symbols.txt
+  export AFL_PC_FILTER_FILE=/home/user/target.symbols.txt
+fi
+
 if [[ -n ${MOCHITEST_ARGS:-} ]]
 then
   echo "[!] requesting testenv.txz from hypervisor" | ./hcat
