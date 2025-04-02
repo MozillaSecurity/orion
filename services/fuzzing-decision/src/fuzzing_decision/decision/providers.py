@@ -62,6 +62,9 @@ class Provider(ABC):
             out.setdefault("genericWorker", {})
             out["genericWorker"].setdefault("config", {})
 
+            # Prevent generic worker from aborting the tasks
+            out["genericWorker"]["config"].setdefault("disableOOMProtection", True)
+
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
