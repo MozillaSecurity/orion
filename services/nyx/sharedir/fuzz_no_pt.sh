@@ -42,6 +42,6 @@ echo "[!] disabling swap" | ./hcat
 swapoff -a
 
 echo "[!] switching user (root -> user)" | ./hcat
-su user -c "sh stage2.sh"
+su user -c "bash stage2.sh"
 
 sleep 200000000
