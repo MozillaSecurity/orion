@@ -382,7 +382,6 @@ def test_azure_resources(
                             "config": {
                                 "anyKey": "anyValue",
                                 "deploymentId": "a5eafce3435543f1",
-                                "disableOOMProtection": True,
                                 "wstAudience": "communitytc",
                                 "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
                             },
