@@ -161,13 +161,17 @@ build="$(python -c "$BUILD_SELECT_SCRIPT")"
 # download build
 case $build in
   beta-asan)
+    # try to minimize OOMs
+    export ASAN_OPTIONS="malloc_context_size=20:rss_limit_heap_profile=false"
     retry fuzzfetch -n build --asan --branch beta
     ;;
   debug32)
-    retry fuzzfetch -n build --fuzzing --debug --cpu x86
+    retry fuzzfetch -n build --debug --cpu x86
     ;;
   *)
-    retry fuzzfetch -n build --fuzzing "--$build"
+    # try to minimize OOMs
+    export ASAN_OPTIONS="malloc_context_size=20:rss_limit_heap_profile=false"
+    retry fuzzfetch -n build "--$build"
     ;;
 esac
 
