@@ -151,15 +151,22 @@ export BUILD_DIR
 
 # %<---[Constants]------------------------------------------------------------
 
+
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon () {
-  if [[ -n "$XPCRT" ]]
+  TARGET_TIME=$(get-target-time)
+  if (( TARGET_TIME - 60 < 0 ))
   then
-    xvfb-run timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
-  else
-    timeout --foreground -s 2 "$(get-target-time)" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+    echo "Not enough time remaining ($TARGET_TIME) to start fuzzing."
+    exit 0
   fi
 
+  if [[ -n "$XPCRT" ]]
+  then
+    xvfb-run timeout --foreground -s 2 "$TARGET_TIME" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+  else
+    timeout --foreground -s 2 "$TARGET_TIME" guided-fuzzing-daemon "$@" || [[ $? -eq 124 ]]
+  fi
 }
 
 # IPC
