@@ -22,8 +22,9 @@ echo "[!] NYX_FUZZER: $NYX_FUZZER" | ./hcat
 if [[ $NYX_FUZZER == Domino* ]]
 then
   echo "[!] requesting extra files from hypervisor" | ./hcat
-  ./hget ext_files.sh ext_files.sh
-  bash ext_files.sh
+  ./hget nyx-server.py nyx-server.py
+  echo "[!] starting domino replay server" | ./hcat
+  python3 nyx-server.py &
 fi
 
 if [[ -n ${__AFL_PC_FILTER:-} ]]
@@ -79,12 +80,6 @@ echo "[!] creating firefox profile" | ./hcat
 LD_LIBRARY_PATH="/home/user/firefox" \
 xvfb-run /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
-
-if [[ $NYX_FUZZER == Domino* ]]
-then
-  echo "[!] starting domino web service ($STRATEGY)" | ./hcat
-  node /home/user/domino/lib/bin/server.js --is-nyx --strategy "$STRATEGY" &
-fi
 
 echo "[!] starting firefox" | ./hcat
 ./hget launch.sh launch.sh
