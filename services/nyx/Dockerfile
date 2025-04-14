@@ -11,6 +11,7 @@ COPY \
     services/nyx/clang.sh \
     /srv/repos/setup/
 COPY services/nyx/patches/ /srv/repos/setup/patches/
+COPY services/nyx/custom_mutators/ /srv/repos/setup/custom_mutators/
 RUN /srv/repos/setup/build_afl.sh
 
 FROM ubuntu:22.04

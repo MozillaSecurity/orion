@@ -161,8 +161,24 @@ mkdir -p htools
 cp /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/bin64/h* htools
 cp htools/hget_no_pt .
 
+if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]]
+then
+  python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so > libxul.symbols.txt
+  grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt > target.symbols.txt
+  echo "export __AFL_PC_FILTER=1" > config.sh
+fi
+
+popd >/dev/null # /home/worker/
+
 if [[ $NYX_FUZZER = Domino* ]]
 then
+  export STRATEGY="${NYX_FUZZER##*-}"
+    if [[ -z "$STRATEGY" ]]
+    then
+      echo "could not identify domino strategy from: $NYX_FUZZER" 1>&2
+      exit 2
+    fi
+
   if [[ ! -d domino ]]
   then
     update-status "installing domino"
@@ -174,19 +190,10 @@ then
     npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)" &&
     set -x
     npm install
-    popd >/dev/null # /home/worker/sharedir/
+    popd >/dev/null # /home/worker/
   fi
-  make-copy-commands domino/ > ext_files.sh
+  node domino/lib/bin/server.js --is-nyx --strategy "$STRATEGY" &
 fi
-
-if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]]
-then
-  python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so > libxul.symbols.txt
-  grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt > target.symbols.txt
-  echo "export __AFL_PC_FILTER=1" > config.sh
-fi
-
-popd >/dev/null # /home/worker/
 
 mkdir -p corpus.out
 
@@ -261,22 +268,22 @@ else
     xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
     DAEMON_ARGS+=(
       --afl-add-corpus ./corpus.out/workdir/dump/seeds
+      --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so
     )
     source ./sharedir/config.sh
     S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
   elif [[ "$NYX_FUZZER" = "IPC_Generic" ]]
   then
+    DAEMON_ARGS+=(
+      --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so
+    )
     nyx-ipc-manager --generic --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
   elif [[ "$NYX_FUZZER" == Domino* ]]
   then
-    export STRATEGY="${NYX_FUZZER##*-}"
-    if [[ -z "$STRATEGY" ]]
-    then
-      echo "could not identify domino strategy from: $NYX_FUZZER" 1>&2
-      exit 2
-    fi
+    export AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/web_service_mutator/web_service_mutator.so
+    export AFL_CUSTOM_MUTATOR_ONLY="1"
+    export AFL_DISABLE_TRIM="1"
     echo "export NYX_FUZZER=\"$NYX_FUZZER\"" >> ./sharedir/config.sh
-    echo "export STRATEGY=\"${STRATEGY}\"" >> ./sharedir/config.sh
   else
     echo "unknown fuzzer! ($NYX_FUZZER)" 1>&2
     exit 2
@@ -311,7 +318,6 @@ else
     --max-runtime "$(get-target-time)" \
     --afl-async-corpus \
     --instances "$NYX_INSTANCES" \
-    --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so \
     --queue-upload \
     --tool "$S3_PROJECT" \
     "${DAEMON_ARGS[@]}" \
