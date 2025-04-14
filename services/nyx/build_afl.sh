@@ -18,7 +18,10 @@ pkgs=(
   gcc
   git
   libblocksruntime-dev
+  libcurl4-openssl-dev
   libgtk-3-dev
+  libjson-c-dev
+  libssl-dev
   make
   patch
   pax-utils
@@ -64,6 +67,18 @@ git apply /srv/repos/setup/patches/increase-map-size.diff
 make -f GNUmakefile afl-fuzz afl-showmap CODE_COVERAGE=1
 pushd custom_mutators/honggfuzz >/dev/null
 make
+popd >/dev/null
+
+# web services custom mutator
+pushd custom_mutators >/dev/null
+for mutator in /srv/repos/setup/custom_mutators/*
+do
+  dir_name=$(basename "$mutator")
+  cp -r "$mutator" ./
+  pushd "$dir_name" >/dev/null
+  make
+  popd >/dev/null
+done
 popd >/dev/null
 
 pushd nyx_mode >/dev/null
