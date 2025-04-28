@@ -59,7 +59,7 @@ static uint8_t *base64_decode(const char *b64, size_t *out_len) {
     return NULL;
   }
 
-  int decoded_len = EVP_DecodeBlock(out, b64, len);
+  int decoded_len = EVP_DecodeBlock(out, (unsigned char *)b64, len);
   if (decoded_len < 0) {
     free(out);
     *out_len = 0;
