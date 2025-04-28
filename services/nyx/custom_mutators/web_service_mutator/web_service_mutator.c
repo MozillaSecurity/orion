@@ -18,7 +18,8 @@ struct memory {
   size_t size;
 };
 
-static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
+static size_t write_callback(void *ptr, size_t size, size_t nmemb,
+                             void *userdata) {
   size_t         realsize = size * nmemb;
   struct memory *mem = userdata;
 
@@ -94,7 +95,8 @@ static uint8_t *decode_buffer_field(json_object *input, size_t *decoded_len) {
 }
 
 static size_t mutate_buffer(MyMutator *data, uint8_t *input, size_t input_size,
-                     uint8_t *add_buf, size_t add_buf_size, size_t max_size) {
+                            uint8_t *add_buf, size_t add_buf_size,
+                            size_t max_size) {
   if (max_size > data->buf_size) {
     uint8_t *ptr = realloc(data->buf, max_size);
     if (!ptr) return 0;
@@ -150,7 +152,7 @@ static json_object *send_to_http_service(const uint8_t *buf, size_t len) {
 }
 
 static char *make_output_json(json_object *response, const uint8_t *mutated,
-                       size_t size) {
+                              size_t size) {
   json_object *output = json_object_new_object();
 
   if (response != NULL) {
@@ -164,6 +166,7 @@ static char *make_output_json(json_object *response, const uint8_t *mutated,
 
   return strdup(json_object_to_json_string(output));
 }
+
 MyMutator *afl_custom_init(afl_state_t *afl) {
   curl_global_init(CURL_GLOBAL_ALL);
   MyMutator *state = malloc(sizeof(MyMutator));
