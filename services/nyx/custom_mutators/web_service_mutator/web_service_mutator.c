@@ -70,7 +70,14 @@ static uint8_t *base64_decode(const char *b64, size_t *out_len) {
 }
 
 static json_object *parse_input_json(const uint8_t *buf, size_t len) {
-  json_object *jobj = json_tokener_parse((const char *)buf);
+  struct json_tokener *tok = json_tokener_new();
+  if (!tok) {
+    perror("json_tokener_new failed");
+    return NULL;
+  }
+
+  json_object *jobj = json_tokener_parse_ex(tok, (const char *)buf, len);
+  json_tokener_free(tok);
   return jobj;
 }
 
