@@ -1,5 +1,5 @@
-CC = gcc
-CFLAGS = -O3 -funroll-loops -fPIC -Wl,-Bsymbolic
+CC = clang
+CFLAGS = -Wall -Wextra -O3 -funroll-loops -fPIC -Wl,-Bsymbolic
 LDFLAGS = -lcurl -ljson-c -lssl -lcrypto
 INCLUDES = -I../../include/ -I./json -I/usr/include/json-c
 
