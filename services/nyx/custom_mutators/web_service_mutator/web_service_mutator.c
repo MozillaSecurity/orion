@@ -18,7 +18,7 @@ struct memory {
   size_t size;
 };
 
-size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
+static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
   size_t         realsize = size * nmemb;
   struct memory *mem = userdata;
 
@@ -37,7 +37,7 @@ size_t write_callback(void *ptr, size_t size, size_t nmemb, void *userdata) {
   return realsize;
 }
 
-char *base64_encode(const uint8_t *data, size_t len) {
+static char *base64_encode(const uint8_t *data, size_t len) {
   size_t out_len = 4 * ((len + 2) / 3);
   char  *out = malloc(out_len + 1);
   if (!out) {
@@ -45,12 +45,12 @@ char *base64_encode(const uint8_t *data, size_t len) {
     return NULL;
   }
 
-  int actual = EVP_EncodeBlock(out, data, len);
+  int actual = EVP_EncodeBlock((unsigned char *)out, data, len);
   out[actual] = '\0';
   return out;
 }
 
-uint8_t *base64_decode(const char *b64, size_t *out_len) {
+static uint8_t *base64_decode(const char *b64, size_t *out_len) {
   size_t   len = strlen(b64);
   uint8_t *out = malloc(len);
   if (!out) {
@@ -69,12 +69,12 @@ uint8_t *base64_decode(const char *b64, size_t *out_len) {
   return out;
 }
 
-json_object *parse_input_json(const uint8_t *buf, size_t len) {
+static json_object *parse_input_json(const uint8_t *buf, size_t len) {
   json_object *jobj = json_tokener_parse((const char *)buf);
   return jobj;
 }
 
-uint8_t *decode_buffer_field(json_object *input, size_t *decoded_len) {
+static uint8_t *decode_buffer_field(json_object *input, size_t *decoded_len) {
   json_object *buffer_obj;
   if (!json_object_object_get_ex(input, "buffer", &buffer_obj) ||
       json_object_get_type(buffer_obj) != json_type_string) {
@@ -86,7 +86,7 @@ uint8_t *decode_buffer_field(json_object *input, size_t *decoded_len) {
   return base64_decode(b64_str, decoded_len);
 }
 
-size_t mutate_buffer(MyMutator *data, uint8_t *input, size_t input_size,
+static size_t mutate_buffer(MyMutator *data, uint8_t *input, size_t input_size,
                      uint8_t *add_buf, size_t add_buf_size, size_t max_size) {
   if (max_size > data->buf_size) {
     uint8_t *ptr = realloc(data->buf, max_size);
@@ -101,8 +101,7 @@ size_t mutate_buffer(MyMutator *data, uint8_t *input, size_t input_size,
                     false, is_exploration, add_buf, add_buf_size, max_size);
 }
 
-json_object *send_to_http_service(const uint8_t *buf, size_t len,
-                                  MyMutator *data) {
+static json_object *send_to_http_service(const uint8_t *buf, size_t len) {
   CURL *curl = curl_easy_init();
   if (!curl) return NULL;
 
@@ -143,7 +142,7 @@ json_object *send_to_http_service(const uint8_t *buf, size_t len,
   return response_json;
 }
 
-char *make_output_json(json_object *response, const uint8_t *mutated,
+static char *make_output_json(json_object *response, const uint8_t *mutated,
                        size_t size) {
   json_object *output = json_object_new_object();
 
