@@ -164,7 +164,7 @@ static char *make_output_json(json_object *response, const uint8_t *mutated,
 
   return strdup(json_object_to_json_string(output));
 }
-MyMutator *afl_custom_init(afl_state_t *afl, unsigned int seed) {
+MyMutator *afl_custom_init(afl_state_t *afl) {
   curl_global_init(CURL_GLOBAL_ALL);
   MyMutator *state = malloc(sizeof(MyMutator));
   state->afl = afl;
@@ -209,7 +209,7 @@ size_t afl_custom_fuzz(MyMutator *data, uint8_t *buf, size_t buf_size,
     return 0;
   }
 
-  json_object *response = send_to_http_service(data->buf, mutated_size, data);
+  json_object *response = send_to_http_service(data->buf, mutated_size);
   if (!response) {
     perror("Failed to get a response from HTTP service");
     free(decoded);
