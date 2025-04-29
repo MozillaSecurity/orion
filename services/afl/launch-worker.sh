@@ -128,6 +128,8 @@ DAEMON_ARGS=(
 S3_PROJECT="${S3_PROJECT:-afl-$FUZZER}"
 S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJECT")
 
+export AFL_MAP_SIZE=8388608
+
 if [[ -n "$S3_CORPUS_REFRESH" ]]
 then
   update-status "starting corpus refresh"
@@ -159,7 +161,6 @@ else
 
   instance_count="${AFL_INSTANCES:-$(ncpu)}"
   unset AFL_INSTANCES
-  export AFL_MAP_SIZE=8388608
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time xvfb-run guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
