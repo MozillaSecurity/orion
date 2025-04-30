@@ -29,6 +29,7 @@ COPY \
     services/afl/pyproject.toml \
     services/nyx/nyx_utils.py \
     /srv/repos/nyx_utils/
+COPY services/afl/patches/ /home/worker/patches/
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/afl/launch-root.sh \
