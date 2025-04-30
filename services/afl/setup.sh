@@ -51,6 +51,7 @@ pkgs=(
   libosmesa6
   libpci3
   openssh-client
+  patch
   pipx
   psmisc
   screen
@@ -81,6 +82,9 @@ afl_ver="$(resolve-tc-alias afl-instrumentation)"
 retry-curl "$(resolve-tc "$afl_ver")" | zstdcat | tar -x -C /opt
 # shellcheck disable=SC2016
 echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >> /etc/bash.bashrc
+pushd /opt/afl-instrumentation/bin
+patch -p1 < /home/worker/patches/afl-cmin.patch
+popd >/dev/null
 
 cd ..
 su worker << EOF
