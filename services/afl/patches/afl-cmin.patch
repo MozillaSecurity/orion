@@ -42,7 +42,7 @@ index a88460a8..e43877ac 100755
      }
    }
  
-+  AFL_PRELOAD = ("AFL_PRELOAD" in ENVIRON) ? ENVIRON["AFL_PRELOAD"] " " : ""
++  AFL_PRELOAD = ("AFL_PRELOAD" in ENVIRON) ? "AFL_PRELOAD=" ENVIRON["AFL_PRELOAD"] " " : ""
 +
    if (0 != system( "test -d "in_dir )) {
      print "[-] Error: directory '"in_dir"' not found." > "/dev/stderr"
