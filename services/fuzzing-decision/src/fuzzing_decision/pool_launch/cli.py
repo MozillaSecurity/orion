@@ -32,6 +32,11 @@ def main(args: Optional[List[str]] = None) -> None:
         action="store_true",
         help="Load the configuration, but exit before executing the command.",
     )
+    parser.add_argument(
+        "--docker",
+        metavar="IMAGE",
+        help="Launch the fuzzer in given Docker image.",
+    )
     parser.add_argument("command", help="docker command-line", nargs=argparse.REMAINDER)
     parsed_args = parser.parse_args(args=args)
 
@@ -59,7 +64,7 @@ def main(args: Optional[List[str]] = None) -> None:
 
     if not parsed_args.dry_run:
         # Execute command
-        launcher.exec()
+        launcher.exec(in_docker=parsed_args.docker)
     else:
 
         def _quo_space(part):
@@ -68,10 +73,20 @@ def main(args: Optional[List[str]] = None) -> None:
             return part
 
         # Print what would have been executed
-        for key, env in launcher.environment.items():
-            if os.environ.get(key) != env:
-                logging.info("Env: %s=%s", key, _quo_space(env))
-        logging.info(
-            "Command: %s",
-            " ".join(_quo_space(arg) for arg in launcher.command),
-        )
+        if parsed_args.docker:
+            logging.info(
+                "Run: %s",
+                " ".join(
+                    _quo_space(arg)
+                    for arg in launcher.docker_cmd(parsed_args.docker, True)
+                ),
+            )
+
+        else:
+            for key, env in launcher.environment.items():
+                if os.environ.get(key) != env:
+                    logging.info("Env: %s=%s", key, _quo_space(env))
+            logging.info(
+                "Command: %s",
+                " ".join(_quo_space(arg) for arg in launcher.command),
+            )

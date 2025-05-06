@@ -70,13 +70,41 @@ class PoolLauncher(Workflow):
             self.environment[key] = value
         self.environment["FUZZING_POOL_NAME"] = pool_config.name
 
-    def exec(self) -> None:
+    def docker_cmd(self, image: str, expand: bool = False) -> List[str]:
+        cmd = [
+            "docker",
+            "run",
+            "--rm",
+            "-it",
+            "-e",
+            "TASKCLUSTER_ROOT_URL",
+            "-e",
+            "TASKCLUSTER_ACCESS_TOKEN",
+            "-e",
+            "TASKCLUSTER_CLIENT_ID",
+        ]
+
+        for key, env in self.environment.items():
+            if os.environ.get(key) != env:
+                if expand:
+                    cmd.extend(("-e", f"{key}={env}"))
+                else:
+                    cmd.extend(("-e", f"{key}"))
+
+        cmd.append(image)
+        cmd.extend(self.command)
+        return cmd
+
+    def exec(self, in_docker: str | None = None) -> None:
         assert self.command
 
         if system() == "Windows" and not Path(self.command[0]).is_file():
             binary = which(self.command[0])
             assert binary is not None, "Couldn't resolve script executable"
             self.command[0] = binary
+
+        if in_docker is not None:
+            self.command = self.docker_cmd(in_docker)
 
         if self.in_taskcluster:
             LOG.info(f"Creating private logs directory '{self.log_dir}/'")
