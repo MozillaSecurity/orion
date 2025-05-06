@@ -2,25 +2,19 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
 
 import abc
 import itertools
 import logging
-import pathlib
 import re
 import types
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import (
     Any,
-    Dict,
-    FrozenSet,
     Generator,
     Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
 )
 
 import dateutil.parser
@@ -140,7 +134,7 @@ def parse_time(time: str) -> int:
 class MachineTypes:
     """Database of all machine types available, by provider and architecture."""
 
-    def __init__(self, machines_data: Dict[str, Any]) -> None:
+    def __init__(self, machines_data: dict[str, Any]) -> None:
         for provider, provider_archs in machines_data.items():
             assert provider in PROVIDERS, f"unknown provider: {provider}"
             for arch, machines in provider_archs.items():
@@ -161,7 +155,7 @@ class MachineTypes:
         self._data = machines_data
 
     @classmethod
-    def from_file(cls, machines_yml: pathlib.Path) -> "MachineTypes":
+    def from_file(cls, machines_yml: Path) -> MachineTypes:
         assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
@@ -170,7 +164,7 @@ class MachineTypes:
 
     def zone_blacklist(
         self, provider: str, architecture: str, machine: str
-    ) -> FrozenSet[str]:
+    ) -> frozenset[str]:
         return frozenset(
             self._data[provider][architecture][machine].get("zone_blacklist", [])
         )
@@ -246,13 +240,13 @@ class CommonPoolConfiguration(abc.ABC):
     """
 
     FIELD_TYPES: types.MappingProxyType
-    REQUIRED_FIELDS: FrozenSet
+    REQUIRED_FIELDS: frozenset
 
     def __init__(
         self,
         pool_id: str,
-        data: Dict[str, Any],
-        base_dir: Optional[pathlib.Path] = None,
+        data: dict[str, Any],
+        base_dir: Path | None = None,
     ) -> None:
         LOG.debug(f"creating pool {pool_id}")
         extra = list(set(data) - set(self.FIELD_TYPES))
@@ -262,7 +256,7 @@ class CommonPoolConfiguration(abc.ABC):
 
         # "normal" fields
         self.pool_id = pool_id
-        self.base_dir = base_dir or pathlib.Path.cwd()
+        self.base_dir = base_dir or Path.cwd()
 
         # check that all fields are of the right type (or None)
         for field, cls in self.FIELD_TYPES.items():
@@ -355,7 +349,7 @@ class CommonPoolConfiguration(abc.ABC):
 
         # list fields
         # command is an overwriting field, null is allowed
-        self.command: Optional[List[str]]
+        self.command: list[str] | None
         if data.get("command") is not None:
             assert data["command"] is not None
             self.command = data["command"].copy()
@@ -380,7 +374,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.max_run_time = None
         if data.get("max_run_time") is not None:
             self.max_run_time = parse_time(str(data["max_run_time"]))
-        self.schedule_start: Optional[Union[datetime, str]] = None
+        self.schedule_start: datetime | str | None = None
         if data.get("schedule_start") is not None:
             if isinstance(data["schedule_start"], datetime):
                 assert data["schedule_start"] is not None
@@ -410,9 +404,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.worker = data["worker"]
 
     @classmethod
-    def from_file(
-        cls, pool_yml: pathlib.Path, **kwds: Any
-    ) -> "CommonPoolConfiguration":
+    def from_file(cls, pool_yml: Path, **kwds: Any) -> CommonPoolConfiguration:
         assert pool_yml.is_file()
         return cls(
             pool_yml.stem,
@@ -423,7 +415,7 @@ class CommonPoolConfiguration(abc.ABC):
 
     def get_machine_list(
         self, machine_types: MachineTypes
-    ) -> Iterable[Tuple[str, int, FrozenSet[str]]]:
+    ) -> Iterable[tuple[str, int, frozenset[str]]]:
         """
         Args:
             machine_types: database of all machine types
@@ -524,9 +516,9 @@ class PoolConfiguration(CommonPoolConfiguration):
     def __init__(
         self,
         pool_id: str,
-        data: Dict[str, Any],
-        base_dir: Optional[pathlib.Path] = None,
-        _flattened: Optional[Set[str]] = None,
+        data: dict[str, Any],
+        base_dir: Path | None = None,
+        _flattened: set[str] | None = None,
     ) -> None:
         super().__init__(pool_id, data, base_dir)
 
@@ -565,7 +557,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
 
-    def create_preprocess(self) -> Optional["PoolConfiguration"]:
+    def create_preprocess(self) -> PoolConfiguration | None:
         """
         Return a new PoolConfiguration based on the value of self.preprocess
         """
@@ -600,7 +592,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         result.name = f"{self.name} ({result.name})"
         return result
 
-    def _flatten(self, flattened: Optional[Set[str]]) -> None:
+    def _flatten(self, flattened: set[str] | None) -> None:
         overwriting_fields = (
             "cloud",
             "command",
@@ -697,8 +689,8 @@ class PoolConfigMap(CommonPoolConfiguration):
     def __init__(
         self,
         pool_id: str,
-        data: Dict[str, Any],
-        base_dir: Optional[pathlib.Path] = None,
+        data: dict[str, Any],
+        base_dir: Path | None = None,
     ) -> None:
         super().__init__(pool_id, data, base_dir)
 
@@ -762,7 +754,7 @@ class PoolConfigMap(CommonPoolConfiguration):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml: pathlib.Path):
+    def from_file(pool_yml: Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):
@@ -784,7 +776,7 @@ def test_main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", type=pathlib.Path, help="machines.yml")
+    parser.add_argument("input", type=Path, help="machines.yml")
     parser.add_argument(
         "--cpu", help="cpu architecture", choices=ARCHITECTURES, default="x64"
     )
