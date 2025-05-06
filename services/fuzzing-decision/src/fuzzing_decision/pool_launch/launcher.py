@@ -2,6 +2,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
 
 import os
 import sys
@@ -11,7 +12,7 @@ from pathlib import Path
 from platform import system
 from shutil import which
 from subprocess import call
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..common.pool import PoolConfigLoader
 from ..common.workflow import Workflow
@@ -23,14 +24,14 @@ class PoolLauncher(Workflow):
     """Launcher for a fuzzing pool, using docker parameters from a private repo."""
 
     def __init__(
-        self, command: List[str], pool_name: Optional[str], preprocess: bool = False
+        self, command: list[str], pool_name: str | None, preprocess: bool = False
     ) -> None:
         super().__init__()
 
-        self.apply: Optional[str]
+        self.apply: str | None
         self.command = command.copy()
         self.environment = os.environ.copy()
-        self.pool_name: Optional[str]
+        self.pool_name: str | None
         if pool_name is not None and "/" in pool_name:
             self.apply, self.pool_name = pool_name.split("/")
         else:
@@ -39,7 +40,7 @@ class PoolLauncher(Workflow):
         self.preprocess = preprocess
         self.log_dir = Path("/logs" if sys.platform == "linux" else "logs")
 
-    def clone(self, config: Dict[str, Any]) -> None:
+    def clone(self, config: dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
@@ -70,7 +71,7 @@ class PoolLauncher(Workflow):
             self.environment[key] = value
         self.environment["FUZZING_POOL_NAME"] = pool_config.name
 
-    def docker_cmd(self, image: str, expand: bool = False) -> List[str]:
+    def docker_cmd(self, image: str, expand: bool = False) -> list[str]:
         cmd = [
             "docker",
             "run",

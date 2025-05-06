@@ -2,6 +2,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
 
 import logging
 import math
@@ -10,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union, cast
+from typing import Any, Generator, cast
 
 import dateutil.parser
 import yaml
@@ -55,7 +56,7 @@ FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
 
 
 class MountArtifactResolver:
-    CACHE: Dict[str, int] = {}  # noqa: RUF012 cache of orion service -> taskId
+    CACHE: dict[str, int] = {}  # noqa: RUF012 cache of orion service -> taskId
 
     @classmethod
     def lookup_taskid(cls, namespace: str) -> int:
@@ -70,7 +71,7 @@ class MountArtifactResolver:
         return cls.CACHE[namespace]
 
 
-def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
+def add_task_image(task: dict[str, Any], config: PoolConfiguration) -> None:
     """Add image or mount to task payload, depending on platform."""
     # generic-worker linux still uses docker images, but need to be loaded
     # into podman, can't use mounts to do it
@@ -78,7 +79,7 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
     if config.worker == "generic" and config.platform != "linux":
         assert isinstance(config.container, dict)
         assert config.container["type"] != "docker-image"
-        task_id: Union[str, int]
+        task_id: str | int
         if config.container["type"] == "indexed-image":
             # need to resolve "image" to a task ID where the mount artifact is
             task_id = MountArtifactResolver.lookup_taskid(config.container["namespace"])
@@ -114,7 +115,7 @@ def add_task_image(task: Dict[str, Any], config: "PoolConfiguration") -> None:
         raise NotImplementedError(f"{config.worker} / {config.platform} not supported")
 
 
-def add_capabilities_for_scopes(task: Dict[str, Any]) -> None:
+def add_capabilities_for_scopes(task: dict[str, Any]) -> None:
     """Request capabilities to match the scopes specified by the task"""
     capabilities = task["payload"].setdefault("capabilities", {})
     scopes = set(task["scopes"])
@@ -131,10 +132,10 @@ def add_capabilities_for_scopes(task: Dict[str, Any]) -> None:
 
 
 def configure_task(
-    task: Dict[str, Any],
-    config: "PoolConfiguration",
+    task: dict[str, Any],
+    config: PoolConfiguration,
     now: datetime,
-    env: Optional[Dict[str, str]],
+    env: dict[str, str] | None,
 ) -> None:
     task["payload"]["artifacts"].update(
         config.artifact_map(stringDate(fromNow("4 weeks", now)))
@@ -268,7 +269,7 @@ class PoolConfiguration(CommonPoolConfiguration):
     def task_id(self) -> str:
         return f"{self.platform}-{self.pool_id}"
 
-    def get_scopes(self) -> List[str]:
+    def get_scopes(self) -> list[str]:
         result = self.scopes.copy()
 
         # for scope calculations, the real worker pool name must be used
@@ -298,10 +299,10 @@ class PoolConfiguration(CommonPoolConfiguration):
 
     def build_resources(
         self,
-        providers: Dict[str, Provider],
+        providers: dict[str, Provider],
         machine_types: MachineTypes,
-        env: Optional[Dict[str, str]] = None,
-    ) -> Generator[Union[WorkerPool, Hook, Role], None, None]:
+        env: dict[str, str] | None = None,
+    ) -> Generator[WorkerPool | Hook | Role, None, None]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -320,7 +321,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         assert self.demand is not None
         assert self.nested_virtualization is not None
         assert self.worker is not None
-        config: Dict[str, object] = {
+        config: dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
                 machines,
@@ -404,7 +405,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             scopes=scopes,
         )
 
-    def artifact_map(self, expires: str) -> Dict[str, Dict[str, str]]:
+    def artifact_map(self, expires: str) -> dict[str, dict[str, str]]:
         result = {}
         for local_path, value in self.artifacts.items():
             assert isinstance(value["url"], str)
@@ -423,8 +424,8 @@ class PoolConfiguration(CommonPoolConfiguration):
         return result
 
     def build_tasks(
-        self, parent_task_id: str, env: Optional[Dict[str, str]] = None
-    ) -> Generator[Tuple[str, Dict], None, None]:
+        self, parent_task_id: str, env: dict[str, str] | None = None
+    ) -> Generator[tuple[str, dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.now(timezone.utc)
         preprocess_task_id = None
@@ -498,10 +499,10 @@ class PoolConfigMap(CommonPoolConfigMap):
 
     def build_resources(
         self,
-        providers: Dict[str, Provider],
+        providers: dict[str, Provider],
         machine_types: MachineTypes,
         env=None,
-    ) -> Generator[Union[WorkerPool, Hook, Role], None, None]:
+    ) -> Generator[WorkerPool | Hook | Role, None, None]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -526,7 +527,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         assert self.demand is not None
         assert self.nested_virtualization is not None
         assert self.worker is not None
-        config: Dict[str, object] = {
+        config: dict[str, object] = {
             "launchConfigs": provider.build_launch_configs(
                 self.imageset,
                 machines,
@@ -610,8 +611,8 @@ class PoolConfigMap(CommonPoolConfigMap):
                 yield self.apply(parent)
 
     def build_tasks(
-        self, parent_task_id: str, env: Optional[Dict[str, str]] = None
-    ) -> Generator[Tuple[str, Dict], None, None]:
+        self, parent_task_id: str, env: dict[str, str] | None = None
+    ) -> Generator[tuple[str, dict], None, None]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.now(timezone.utc)
 
@@ -649,7 +650,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
 class PoolConfigLoader:
     @staticmethod
-    def from_file(pool_yml: Path) -> Union[PoolConfiguration, PoolConfigMap]:
+    def from_file(pool_yml: Path) -> PoolConfiguration | PoolConfigMap:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
         for cls in (PoolConfiguration, PoolConfigMap):

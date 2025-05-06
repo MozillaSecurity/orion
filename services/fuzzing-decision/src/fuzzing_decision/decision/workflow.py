@@ -2,14 +2,15 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
 
 import atexit
 import logging
-import pathlib
 import re
 import shutil
 import tempfile
-from typing import Any, Dict, List, Optional, Union
+from pathlib import Path
+from typing import Any
 
 import yaml
 from tcadmin.appconfig import AppConfig
@@ -31,13 +32,13 @@ class Workflow(CommonWorkflow):
     def __init__(self) -> None:
         super().__init__()
 
-        self.fuzzing_config_dir: Optional[pathlib.Path] = None
-        self.community_config_dir: Optional[pathlib.Path] = None
+        self.fuzzing_config_dir: Path | None = None
+        self.community_config_dir: Path | None = None
 
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
 
-    def configure(self, *args: Any, **kwds: Any) -> Optional[Dict[str, object]]:
+    def configure(self, *args: Any, **kwds: Any) -> dict[str, object] | None:
         config = super().configure(*args, **kwds)
         if config is None:
             raise Exception("Specify local_path XOR secret")
@@ -50,7 +51,7 @@ class Workflow(CommonWorkflow):
 
         local_path = appconfig.options.get("fuzzing_configuration")
         if local_path is not None:
-            local_path = pathlib.Path(local_path)
+            local_path = Path(local_path)
 
         # Configure workflow using tc-admin options
         workflow = cls()
@@ -68,7 +69,7 @@ class Workflow(CommonWorkflow):
         # Then generate all our Taskcluster resources
         workflow.generate(resources, config)
 
-    def clone(self, config: Dict[str, Any]) -> None:
+    def clone(self, config: dict[str, Any]) -> None:
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
@@ -76,7 +77,7 @@ class Workflow(CommonWorkflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
         self.community_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config: Dict[str, Any]) -> None:
+    def generate(self, resources, config: dict[str, Any]) -> None:
         # Setup resources manager to track only fuzzing instances
         for pattern in self.build_resources_patterns():
             resources.manage(pattern)
@@ -105,7 +106,7 @@ class Workflow(CommonWorkflow):
             pool_config = PoolConfigLoader.from_file(config_file)
             resources.update(pool_config.build_resources(clouds, machines, env))
 
-    def build_resources_patterns(self) -> Union[List[str], str]:
+    def build_resources_patterns(self) -> list[str] | str:
         """Build regex patterns to manage our resources"""
 
         # Load existing workerpools from community config
@@ -115,7 +116,7 @@ class Workflow(CommonWorkflow):
         community = yaml.safe_load(path_.read_text())
         assert "fuzzing" in community, "Missing fuzzing main key in community config"
 
-        def _suffix(data: Dict[str, Any], key: str) -> str:
+        def _suffix(data: dict[str, Any], key: str) -> str:
             existing = data.get(key, {})
             if not existing:
                 # Manage every resource possible
@@ -151,7 +152,7 @@ class Workflow(CommonWorkflow):
         self,
         pool_name: str,
         task_id: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         dry_run: bool = False,
     ) -> None:
         assert self.fuzzing_config_dir is not None

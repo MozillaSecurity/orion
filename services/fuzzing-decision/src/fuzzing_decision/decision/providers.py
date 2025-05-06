@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import hashlib
 import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, FrozenSet, Iterable, List, Tuple
+from typing import Any, Iterable
 
 import yaml
 
@@ -22,20 +24,20 @@ class Provider(ABC):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        machines: Iterable[tuple[str, int, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
         worker_type: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         raise NotImplementedError()
 
     def get_worker_config(
         self, worker: str, platform: str, worker_type: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
-        out: Dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
+        out: dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
 
         # worker implementation might be generic-worker or docker-worker
         # although we also support d2g (docker payload on generic worker)
@@ -100,7 +102,7 @@ class AWS(Provider):
         self.regions = self.load_regions(base_dir / "config" / "aws.yml")
         LOG.info("Loaded AWS configuration")
 
-    def load_regions(self, path: Path) -> Dict[str, Any]:
+    def load_regions(self, path: Path) -> dict[str, Any]:
         """Load AWS regions from community tc file"""
         aws = yaml.safe_load(path.read_text())
         assert "subnets" in aws, "Missing subnets in AWS config"
@@ -123,19 +125,19 @@ class AWS(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        machines: Iterable[tuple[str, int, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
         worker_type: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         assert not nested_virtualization
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform, worker_type)
 
-        result: List[Dict[str, Any]] = [
+        result: list[dict[str, Any]] = [
             {
                 "capacityPerInstance": capacity,
                 "region": region_name,
@@ -181,7 +183,7 @@ class Azure(Provider):
         self.locations = self.load_locations(base_dir / "config" / "azure.yml")
         LOG.info("Loaded Azure configuration")
 
-    def load_locations(self, path: Path) -> Dict[str, Any]:
+    def load_locations(self, path: Path) -> dict[str, Any]:
         """Load Azure regions from community tc file"""
         data = yaml.safe_load(path.read_text())
         assert "subnets" in data, "Missing subnets in Azure config"
@@ -193,7 +195,7 @@ class Azure(Provider):
 
     def get_worker_config(
         self, worker: str, platform: str, worker_type: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         result = super().get_worker_config(worker, platform, worker_type)
         # XXX: temporarily disabled for Azure pending imageset update
         if (
@@ -207,19 +209,19 @@ class Azure(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        machines: Iterable[tuple[str, int, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
         worker_type: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         assert not nested_virtualization
         # Load the Azure infos for that imageset
         images = self.get_images(imageset)
         worker_config = self.get_worker_config(imageset, platform, worker_type)
 
-        result: List[Dict[str, Any]] = [
+        result: list[dict[str, Any]] = [
             {
                 "capacityPerInstance": capacity,
                 "location": location,
@@ -280,13 +282,13 @@ class GCP(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        machines: Iterable[tuple[str, int, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
         worker_type: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
         assert (
@@ -350,11 +352,11 @@ class Static(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[Tuple[str, int, FrozenSet[str]]],
+        machines: Iterable[tuple[str, int, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
         nested_virtualization: bool,
         worker_type: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return []

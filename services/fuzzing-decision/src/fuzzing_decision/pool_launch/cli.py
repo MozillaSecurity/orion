@@ -2,18 +2,19 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
+
 import argparse
 import logging
 import os
 import shutil
-from typing import List, Optional
 
 from ..common.cli import build_cli_parser
 from ..common.util import onerror
 from .launcher import PoolLauncher
 
 
-def main(args: Optional[List[str]] = None) -> None:
+def main(args: list[str] | None = None) -> None:
     parser = build_cli_parser(prog="fuzzing-pool-launch")
     parser.add_argument(
         "--pool-name",

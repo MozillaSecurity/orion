@@ -2,14 +2,15 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+from __future__ import annotations
 
 import logging
 import os
-import pathlib
 import subprocess
 import tempfile
+from pathlib import Path
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 
@@ -30,11 +31,11 @@ class Workflow:
 
     def configure(
         self,
-        local_path: Optional[pathlib.Path] = None,
-        secret: Optional[str] = None,
-        fuzzing_git_repository: Optional[str] = None,
-        fuzzing_git_revision: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        local_path: Path | None = None,
+        secret: str | None = None,
+        fuzzing_git_repository: str | None = None,
+        fuzzing_git_revision: str | None = None,
+    ) -> dict[str, Any] | None:
         """Load configuration either from local file or Taskcluster secret"""
 
         if local_path is not None:
@@ -69,11 +70,11 @@ class Workflow:
 
         return config
 
-    def clone(self, config: Dict[str, str]) -> None:
+    def clone(self, config: dict[str, str]) -> None:
         """Clone remote repositories according to current setup"""
         assert isinstance(config, dict)
 
-        ssh_path = pathlib.Path("~/.ssh").expanduser()
+        ssh_path = Path("~/.ssh").expanduser()
         ssh_path.mkdir(mode=0o700, exist_ok=True)
 
         # Setup ssh private key if any
@@ -90,21 +91,21 @@ class Workflow:
 
     def git_clone(
         self,
-        url: Optional[str] = None,
-        path: Optional[pathlib.Path] = None,
-        revision: Optional[str] = None,
+        url: str | None = None,
+        path: Path | None = None,
+        revision: str | None = None,
         **kwargs: Any,
-    ) -> pathlib.Path:
+    ) -> Path:
         """Clone a configuration repository"""
 
         if path is not None:
-            path = pathlib.Path(path)
+            path = Path(path)
             # Use local path when available
             assert path.is_dir(), f"Invalid repo dir {path}"
             LOG.info(f"Using local configuration in {path}")
         elif url is not None:
             # Clone from remote repository
-            path = pathlib.Path(tempfile.mkdtemp(suffix=url[url.rindex("/") + 1 :]))
+            path = Path(tempfile.mkdtemp(suffix=url[url.rindex("/") + 1 :]))
 
             # Clone the configuration repository
             if revision is None:
