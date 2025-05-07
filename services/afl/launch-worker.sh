@@ -120,10 +120,13 @@ DAEMON_ARGS=(
   --afl-binary-dir /opt/afl-instrumentation/bin
   --afl-timeout "${AFL_TIMEOUT-30000}"
   --afl
+  --instances "${AFL_INSTANCES:-$(ncpu)}"
   --stats ./stats
   --memory-limit "${MEMORY_LIMIT:-0}"
   "$TARGET_BIN"
 )
+
+unset AFL_INSTANCES
 
 S3_PROJECT="${S3_PROJECT:-afl-$FUZZER}"
 S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJECT")
@@ -159,8 +162,6 @@ else
     echo "Hello world" > ./corpus/input0
   fi
 
-  instance_count="${AFL_INSTANCES:-$(ncpu)}"
-  unset AFL_INSTANCES
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time xvfb-run guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
@@ -168,7 +169,6 @@ else
     --fuzzmanager \
     --max-runtime "$(get-target-time)" \
     --afl-async-corpus \
-    --instances "$instance_count" \
     --queue-upload \
     --tool "$TOOLNAME" \
     --corpus-in ./corpus \
