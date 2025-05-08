@@ -93,9 +93,20 @@ if [[ "$COVERAGE" = 1 ]]; then
   export SOURCE_URL
   REVISION="$(retry-curl --compressed "$ARTIFACT_ROOT/coverage-revision.txt")"
   export REVISION
+
+  export AFL_FAST_CAL=1
 fi
 
 TARGET_BIN="$(./setup-target.sh)"
+JS="${JS:-0}"
+if [[ "$JS" = 1 ]] || [[ -n "$JSRT" ]]
+then
+  export GCOV_PREFIX="$HOME/js"
+else
+  export GCOV_PREFIX="$HOME/firefox"
+fi
+GCOV_PREFIX_STRIP="$(grep pathprefix "$HOME/${TARGET_BIN}.fuzzmanagerconf" | grep -E -o "/.+$" | tr -cd '/' | wc -c)"
+export GCOV_PREFIX_STRIP
 
 mkdir -p corpus.out
 
@@ -182,7 +193,20 @@ fi
 
 if [[ $COVERAGE -eq 1 ]]
 then
-  # TODO: coverage.json
+  retry-curl --compressed -O "$SOURCE_URL"
+  unzip source.zip
+
+  # Collect coverage count data.
+  RUST_BACKTRACE=1 grcov "$GCOV_PREFIX" \
+    -t coveralls+ \
+    --commit-sha "$REVISION" \
+    --token NONE \
+    --guess-directory-when-missing \
+    --ignore-not-existing \
+    -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
+    -s "./${REPO-mozilla-central}-$REVISION" \
+    > ./coverage.json
+
   # Submit coverage data.
   cov-reporter \
     --repository mozilla-central \
