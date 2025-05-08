@@ -18,7 +18,8 @@ FETCH_ARGS=(-o "$HOME" --afl --fuzzing)
 if [[ -n "$JSRT" ]] && [[ -z "$COVERAGE" ]]
 then
   FETCH_ARGS+=(--debug)
-else
+elif [[ -z "$COVERAGE" ]]
+then
   FETCH_ARGS+=(--asan)
 fi
 
