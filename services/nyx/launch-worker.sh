@@ -312,6 +312,11 @@ else
     echo "Hello world" > ./corpus/input0
   fi
 
+  if [[ $COVERAGE -eq 1 ]]
+  then
+    export AFL_FAST_CAL=1
+  fi
+
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
