@@ -197,11 +197,12 @@ fi
 
 mkdir -p corpus.out
 
+rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
+
 # download coverage opt build to calculate line-clusters
 if [[ $COVERAGE -eq 1 ]] && [[ ! -e lineclusters.json ]]
 then
   mkdir -p corpus.out/workdir/dump
-  rev="$(grep SourceStamp= sharedir/firefox/platform.ini | cut -d= -f2)"
   retry fuzzfetch -n cov-opt --fuzzing --coverage --build "$rev"
   prefix="$(grep pathprefix cov-opt/firefox.fuzzmanagerconf | cut -d\  -f3-)"
   python3 /srv/repos/ipc-research/ipc-fuzzing/code-coverage/postprocess-gcno.py lineclusters.json cov-opt "$prefix"
