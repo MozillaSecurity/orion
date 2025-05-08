@@ -161,7 +161,7 @@ mkdir -p htools
 cp /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/bin64/h* htools
 cp htools/hget_no_pt .
 
-if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]]
+if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]] && [[ -z $COVERAGE ]]
 then
   python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so > libxul.symbols.txt
   grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt > target.symbols.txt
