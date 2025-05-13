@@ -193,19 +193,6 @@ class Azure(Provider):
         assert worker in self.imagesets, f"Missing worker {worker}"
         return self.imagesets[worker]["azure"]["images"]
 
-    def get_worker_config(
-        self, worker: str, platform: str, worker_type: str
-    ) -> dict[str, Any]:
-        result = super().get_worker_config(worker, platform, worker_type)
-        # XXX: temporarily disabled for Azure pending imageset update
-        if (
-            "genericWorker" in result
-            and "config" in result["genericWorker"]
-            and "disableOOMProtection" in result["genericWorker"]["config"]
-        ):
-            del result["genericWorker"]["config"]["disableOOMProtection"]
-        return result
-
     def build_launch_configs(
         self,
         imageset: str,
