@@ -105,24 +105,6 @@ fi
 export AFL_NYX_HANDLE_INVALID_WRITE=1
 export AFL_SKIP_BIN_CHECK=1
 
-ASAN_OPTIONS=\
-abort_on_error=true:\
-allocator_may_return_null=true:\
-detect_leaks=0:\
-hard_rss_limit_mb=8192:\
-log_path=/tmp/data.log:\
-max_allocation_size_mb=3073:\
-strip_path_prefix=/builds/worker/workspace/build/src/:\
-symbolize=0:\
-$ASAN_OPTIONS
-ASAN_OPTIONS=${ASAN_OPTIONS//:/ }
-
-UBSAN_OPTIONS=\
-strip_path_prefix=/builds/worker/workspace/build/src/:\
-symbolize=0:\
-$UBSAN_OPTIONS
-UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
-
 NYX_PAGE="${NYX_PAGE-page.zip}"
 NYX_PAGE_HTMLNAME="${NYX_PAGE_HTMLNAME-caniuse.html}"
 
@@ -161,11 +143,40 @@ mkdir -p htools
 cp /srv/repos/ipc-research/ipc-fuzzing/userspace-tools/bin64/h* htools
 cp htools/hget_no_pt .
 
-if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]] && [[ -z $COVERAGE ]]
+# Set up ephemeral session variables
+rm -f session.sh && touch session.sh
+
+ASAN_OPTIONS=\
+abort_on_error=true:\
+allocator_may_return_null=true:\
+detect_leaks=0:\
+hard_rss_limit_mb=8192:\
+log_path=/tmp/data.log:\
+max_allocation_size_mb=3073:\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
+symbolize=0:\
+$ASAN_OPTIONS
+
+UBSAN_OPTIONS=\
+strip_path_prefix=/builds/worker/workspace/build/src/:\
+symbolize=0:\
+$UBSAN_OPTIONS
+
+{
+  echo "export ASAN_OPTIONS=\"${ASAN_OPTIONS}\""
+  echo "export UBSAN_OPTIONS=\"${UBSAN_OPTIONS}\""
+} >> session.sh
+
+if [[ $COVERAGE -eq 1 ]]
+then
+  echo "export MOZ_FUZZ_COVERAGE=1" >> session.sh
+fi
+
+if [[ -n "$AFL_PC_FILTER_FILE_REGEX" ]] && [[ $COVERAGE -ne 1 ]]
 then
   python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so > libxul.symbols.txt
   grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt > target.symbols.txt
-  echo "export __AFL_PC_FILTER=1" > config.sh
+  echo "export __AFL_PC_FILTER=1" >> session.sh
 fi
 
 popd >/dev/null # /home/worker/

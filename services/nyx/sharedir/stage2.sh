@@ -18,6 +18,10 @@ echo "[!] requesting config.sh" | ./hcat
 ./hget config.sh config.sh
 source ./config.sh
 
+echo "[!] requesting session.sh" | ./hcat
+./hget session.sh session.sh
+source ./session.sh
+
 echo "[!] NYX_FUZZER: $NYX_FUZZER" | ./hcat
 if [[ $NYX_FUZZER == Domino* ]]
 then
@@ -73,7 +77,6 @@ export AFL_MAP_SIZE=8388608
 export AFL_IGNORE_PROBLEMS=1
 export AFL_IGNORE_PROBLEMS_COVERAGE=1
 export AFL_DEBUG=1
-export MOZ_FUZZ_COVERAGE="${COVERAGE:-}"
 
 echo "[!] creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
@@ -89,8 +92,6 @@ export MOZ_FUZZ_LOG_IPC=1
 export NYX_AFL_PLUS_PLUS_MODE=ON
 export NYX_ASAN_EXECUTABLE=TRUE
 export NYX_NET_FUZZ_MODE=ON
-ASAN_OPTIONS="${ASAN_OPTIONS:-}" \
-UBSAN_OPTIONS="${UBSAN_OPTIONS:-}" \
 xvfb-run ./launch.sh /home/user/firefox/firefox-bin -P test --new-window "file:///home/user/fuzz.html" 2>&1 | ./hcat
 
 echo "[!] debug output:" | ./hcat
