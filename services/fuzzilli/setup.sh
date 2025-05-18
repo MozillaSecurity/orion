@@ -81,10 +81,9 @@ packages=(
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 # Install swift
-retry-curl https://download.swift.org/swift-5.10-release/ubuntu2004/swift-5.10-RELEASE/swift-5.10-RELEASE-ubuntu20.04.tar.gz | tar -xz
-mv swift-5* /opt/swift5
-
-echo "export PATH=/opt/swift5/usr/bin:$PATH" >> /home/ubuntu/.bashrc
+retry-curl "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz" | tar xz
+su - ubuntu -c "./swiftly init --quiet-shell-followup -y"
+echo ". /home/ubuntu/.local/share/swiftly/env.sh" >> /home/ubuntu/.bashrc
 
 #### Base System Configuration
 
