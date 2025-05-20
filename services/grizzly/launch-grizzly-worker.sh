@@ -33,6 +33,11 @@ EOF
 setup-fuzzmanager-hostname
 chmod 0600 .fuzzmanagerconf
 
+# add Android SDK to path
+if [[ -e ~/Android/Sdk ]]; then
+  PATH="$PATH:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/android-9"
+fi
+
 # Get Cloud Storage credentials
 if [[ "$ADAPTER" != "reducer" ]]; then
   mkdir -p ~/.config/gcloud
