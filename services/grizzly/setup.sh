@@ -14,6 +14,9 @@ source "${0%/*}/common.sh"
 
 sys-update
 
+apt-install-auto libeatmydata1
+echo /usr/lib/x86_64-linux-gnu/libeatmydata.so > /etc/ld.so.preload
+
 #### Install recipes
 
 cd "${0%/*}"
@@ -177,3 +180,5 @@ strip --strip-unneeded /usr/local/bin/minidump-stackwalk
 
 chown -R worker:worker /home/worker /src
 chmod 0777 /src
+
+rm /etc/ld.so.preload
