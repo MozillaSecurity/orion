@@ -82,7 +82,9 @@ retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 # Install swift
 retry-curl "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz" | tar xz
-su - ubuntu -c "./swiftly init --quiet-shell-followup -y"
+mv swiftly /home/ubuntu/
+chmod 755 /home/ubuntu/swiftly
+su - ubuntu -c "/home/ubuntu/swiftly init --quiet-shell-followup -y"
 echo ". /home/ubuntu/.local/share/swiftly/env.sh" >> /home/ubuntu/.bashrc
 
 #### Base System Configuration
