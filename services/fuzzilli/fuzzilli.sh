@@ -102,9 +102,6 @@ chmod +x mozilla/*.sh
 source "$HOME/.bashrc"
 
 echo "$PATH"
-ls -al /opt/swift5
-
-export PATH=/opt/swift5/usr/bin:$PATH
 
 if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
 then
