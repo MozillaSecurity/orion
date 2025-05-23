@@ -163,6 +163,7 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
 
+rm /etc/ld.so.preload
 /home/worker/.local/bin/cleanup.sh
 
 mkdir -p /home/worker/.ssh /root/.ssh
@@ -180,5 +181,3 @@ strip --strip-unneeded /usr/local/bin/minidump-stackwalk
 
 chown -R worker:worker /home/worker /src
 chmod 0777 /src
-
-rm /etc/ld.so.preload
