@@ -10,7 +10,6 @@ set -x
 source ~worker/.local/bin/common.sh
 
 sys-update
-sys-embed qemu-kvm
 apt-install-auto pipx
 
 PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install fxpoppet
