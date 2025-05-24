@@ -67,6 +67,12 @@ else
   git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
 
   rsync -rv --progress fuzzing-shells-private/fuzzilli/ fuzzilli/
+
+  if compgen -G "fuzzilli/*.patch" >/dev/null; then
+    cd fuzzilli
+    git apply ./*.patch
+    cd ..
+  fi
 fi
 
 # Copy over the S3Manager, we need it for the fuzzilli daemon
