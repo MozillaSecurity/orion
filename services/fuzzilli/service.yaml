@@ -1,1 +1,4 @@
 name: fuzzilli
+arch:
+  - amd64
+  - arm64

@@ -40,7 +40,6 @@ packages=(
   lbzip2
   less
   libc6-dbg
-  libc6-dbg:i386
   libc6-dev
   libgcc-11-dev
   locales
@@ -55,6 +54,11 @@ packages=(
   zip
   zstd
 )
+if ! is-arm64; then
+  packages+=(
+    libc6-dbg:i386
+  )
+fi
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 # Install swift
