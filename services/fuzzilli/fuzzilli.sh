@@ -18,11 +18,13 @@ if [[ -z $NO_SECRETS ]]; then
   setup-aws-credentials
 fi
 
-if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
-  TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
-else
-  TARGET_TIME=$((10 * 365 * 24 * 3600))
-fi
+fuzzilli-deadline () {
+  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+    echo "$(($(get-deadline) - $(date +%s) - 5 * 60))"
+  else
+    echo $((10 * 365 * 24 * 3600))
+  fi
+}
 
 # Get the deploy key for fuzzilli from Taskcluster
 if [[ $DIFFERENTIAL ]]; then
@@ -118,12 +120,12 @@ fi
 . /opt/pipx/venvs/fuzzmanager/bin/activate
 
 if [[ -n $S3_CORPUS_REFRESH ]]; then
-  timeout -s 2 ${TARGET_TIME} mozilla/merge.sh "$HOME/build/dist/bin/js"
+  timeout -s 2 "$(fuzzilli-deadline)" mozilla/merge.sh "$HOME/build/dist/bin/js"
 elif [[ $COVERAGE ]]; then
   mozilla/bootstrap.sh
-  timeout -s 2 ${TARGET_TIME} mozilla/coverage.sh "$HOME/build/dist/bin/js" "$HOME/build/"
+  timeout -s 2 "$(fuzzilli-deadline)" mozilla/coverage.sh "$HOME/build/dist/bin/js" "$HOME/build/"
 else
   mozilla/bootstrap.sh
   screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh "$HOME/build/dist/bin/js"
-  timeout -s 2 ${TARGET_TIME} mozilla/monitor.sh "$HOME/build/dist/bin/js" || [[ $? -eq 124 ]]
+  timeout -s 2 "$(fuzzilli-deadline)" mozilla/monitor.sh "$HOME/build/dist/bin/js" || [[ $? -eq 124 ]]
 fi
