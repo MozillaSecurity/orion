@@ -22,59 +22,36 @@ cd "${0%/*}"
 
 # this is used as the entrypoint to intercept stderr/stdout and save it to /logs/live.log
 # when run under Taskcluster
-EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
+SRCDIR=/srv/repos/fuzzing-decision ./fuzzing_tc.sh
 
-./fuzzfetch.sh
 ./taskcluster.sh
-./fuzzmanager.sh
 ./grcov.sh
 ./llvm-symbolizer.sh
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx inject fuzzmanager boto
 
 #### Bootstrap Packages
 
 packages=(
-  autoconf2.13
+  binutils
   ca-certificates
   curl
-  creduce
-  g++
-  g++-multilib
-  gcc-multilib
   gdb
   git
-  htop
   jshon
   lbzip2
   less
-  lib32z1
-  lib32z1-dev
-  libalgorithm-combinatorics-perl
-  libbsd-resource-perl
   libc6-dbg
   libc6-dbg:i386
-  libio-prompt-perl
-  libwww-mechanize-perl
+  libc6-dev
+  libgcc-11-dev
   locales
-  mailutils
-  maven
-  mercurial
-  nano
-  openjdk-8-jdk
   openssh-client
+  pipx
   psmisc
-  python-is-python3
-  python3-dev
-  python3-pip
-  python3-setuptools
-  python3-wheel
   rsync
   screen
   software-properties-common
   td-agent-bit
   unzip
-  valgrind
-  vim
   zip
   zstd
 )
@@ -113,9 +90,6 @@ mkdir -p /home/ubuntu/.local/bin
 cp "${0%/*}/common.sh" /home/ubuntu/.local/bin/common.sh
 printf "source ~/.local/bin/common.sh\n" >>/home/ubuntu/.bashrc
 
-# Cleanup
-"${0%/*}/cleanup.sh"
-
 mkdir -p /home/ubuntu/.ssh /root/.ssh
 chmod 0700 /home/ubuntu/.ssh /root/.ssh
 cat <<EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
@@ -125,4 +99,19 @@ IdentitiesOnly yes
 EOF
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/ubuntu/.ssh/known_hosts
 
-chown -R ubuntu:ubuntu /home/ubuntu
+DESTDIR=/srv/repos EDIT=1 ./fuzzmanager.sh
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx inject fuzzmanager boto
+DESTDIR=/srv/repos EDIT=1 ./fuzzfetch.sh
+
+chown -R ubuntu:ubuntu /home/ubuntu /srv/repos
+
+cd ..
+su ubuntu <<EOF
+source ./setup/common.sh
+git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
+EOF
+
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./guided-fuzzing-daemon
+
+# Cleanup
+"${0%/*}/cleanup.sh"

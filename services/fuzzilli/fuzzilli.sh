@@ -18,8 +18,8 @@ if [[ -z $NO_SECRETS ]]; then
   setup-aws-credentials
 fi
 
-fuzzilli-deadline () {
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+fuzzilli-deadline() {
+  if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
     echo "$(($(get-deadline) - $(date +%s) - 5 * 60))"
   else
     echo $((10 * 365 * 24 * 3600))
@@ -55,8 +55,6 @@ fi
 
 cd "$HOME"
 
-git-clone https://github.com/MozillaSecurity/FuzzManager/
-
 # Download our build
 if [[ $DIFFERENTIAL ]]; then
   git-clone git@fuzzilli:MozillaSecurity/fuzzilli-differential.git fuzzilli
@@ -73,8 +71,12 @@ else
   fi
 fi
 
-# Copy over the S3Manager, we need it for the fuzzilli daemon
-cp FuzzManager/misc/afl-libfuzzer/S3Manager.py fuzzilli/mozilla/
+for r in fuzzfetch fuzzmanager guided-fuzzing-daemon; do
+  pushd "/srv/repos/$r" >/dev/null
+  retry git fetch origin HEAD
+  git reset --hard FETCH_HEAD
+  popd >/dev/null
+done
 
 get-tc-secret fuzzmanagerconf "$HOME/.fuzzmanagerconf"
 cat >>"$HOME/.fuzzmanagerconf" <<EOF
@@ -100,7 +102,7 @@ fi
 cd fuzzilli
 chmod +x mozilla/*.sh
 
-source "$HOME/.bashrc"
+source "$HOME/.local/share/swiftly/env.sh"
 
 echo "$PATH"
 
@@ -116,16 +118,46 @@ if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   trap onexit EXIT
 fi
 
-# ensure fuzzilli daemon uses python in fuzzmanager venv
-. /opt/pipx/venvs/fuzzmanager/bin/activate
+args=(
+  --bucket mozilla-aflfuzz
+  --project "$S3_PROJECT"
+)
+
+if [[ -n $DIFFERENTIAL ]]; then
+  args+=(--differential)
+fi
+
+if [[ -n $WASM ]]; then
+  args+=(--wasm)
+fi
+
+if [[ -n $FAST_TIMEOUT ]]; then
+  args+=(--timeout=250)
+else
+  args+=(--timeout=2000)
+fi
 
 if [[ -n $S3_CORPUS_REFRESH ]]; then
-  timeout -s 2 "$(fuzzilli-deadline)" mozilla/merge.sh "$HOME/build/dist/bin/js"
-elif [[ $COVERAGE ]]; then
-  mozilla/bootstrap.sh
-  timeout -s 2 "$(fuzzilli-deadline)" mozilla/coverage.sh "$HOME/build/dist/bin/js" "$HOME/build/"
+  mkdir work
+  timeout -s 2 "$(fuzzilli-deadline)" guided-fuzzing-daemon --fuzzilli --debug --corpus-refresh work "${args[@]}" --build-dir ~/fuzzilli "$HOME/build/dist/bin/js" || true
 else
-  mozilla/bootstrap.sh
-  screen -t fuzzilli -dmSL fuzzilli mozilla/run.sh "$HOME/build/dist/bin/js"
-  timeout -s 2 "$(fuzzilli-deadline)" mozilla/monitor.sh "$HOME/build/dist/bin/js" || [[ $? -eq 124 ]]
+  mkdir -p "$HOME/results/corpus"
+
+  # Download corpus
+  guided-fuzzing-daemon --debug --corpus-download "$HOME/results/corpus" "${args[@]}"
+
+  # Download another corpus into ours
+  if [[ -n $S3_PROJECT_EXTRA ]]; then
+    guided-fuzzing-daemon --debug --corpus-download "$HOME/results/corpus" --bucket mozilla-aflfuzz --project "$S3_PROJECT_EXTRA"
+  fi
+
+  if [[ -z $DIFFERENTIAL ]]; then
+    args+=(--queue-upload)
+  fi
+
+  if [[ $COVERAGE ]]; then
+    timeout -s 2 "$(fuzzilli-deadline)" "$HOME/coverage.sh" "$HOME/build/dist/bin/js" "$HOME/build/"
+  else
+    guided-fuzzing-daemon "${args[@]}" --fuzzilli --fuzzmanager --max-runtime "$(fuzzilli-deadline)" --build-dir ~/fuzzilli --corpus-out "$HOME/results" "$HOME/build/dist/bin/js"
+  fi
 fi

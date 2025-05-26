@@ -13,12 +13,27 @@ ENV TASKCLUSTER_FUZZING_POOL unknown
 
 RUN useradd -d /home/ubuntu -s /bin/bash -m ubuntu
 
-COPY recipes/linux /src/recipes
-COPY services/fuzzing-decision /src/fuzzing-tc
-COPY services/fuzzilli/setup.sh /src/recipes/setup-fuzzilli.sh
-RUN /src/recipes/setup-fuzzilli.sh
-COPY services/fuzzilli/launch.sh /home/ubuntu/
-COPY services/fuzzilli/fuzzilli.sh /home/ubuntu/
+COPY \
+    recipes/linux/cleanup.sh \
+    recipes/linux/common.sh \
+    recipes/linux/fluentbit.sh \
+    recipes/linux/js32_deps.sh \
+    recipes/linux/grcov.sh \
+    recipes/linux/llvm-symbolizer.sh \
+    recipes/linux/fuzzfetch.sh \
+    recipes/linux/fuzzing_tc.sh \
+    recipes/linux/fuzzmanager.sh \
+    recipes/linux/taskcluster.sh \
+    recipes/linux/taskgraph-m-c-latest.sh \
+    services/fuzzilli/setup.sh \
+    /srv/repos/setup/
+COPY services/fuzzing-decision /srv/repos/fuzzing-decision
+
+RUN /srv/repos/setup/setup.sh
+COPY services/fuzzilli/coverage.sh \
+     services/fuzzilli/fuzzilli.sh \
+     services/fuzzilli/launch.sh \
+     /home/ubuntu/
 COPY services/fuzzilli/fluentbit.conf /etc/td-agent-bit/td-agent-bit.conf
 COPY services/fuzzilli/sysctl.conf /etc/sysctl.d/60-fuzzilli.conf
 
