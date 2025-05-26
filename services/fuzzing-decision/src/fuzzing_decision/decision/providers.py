@@ -67,6 +67,9 @@ class Provider(ABC):
             # Prevent generic worker from aborting the tasks
             out["genericWorker"]["config"].setdefault("disableOOMProtection", True)
 
+            # Increase max runtime to 3 days
+            out["genericWorker"]["config"]["maxTaskRunTime"] = parse_time("3d")
+
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
