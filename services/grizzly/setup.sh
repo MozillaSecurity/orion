@@ -90,13 +90,16 @@ packages_with_recommends=(
 )
 
 dbgsym_packages=(
+  # 2025-05-27: disabled because temporarily missing from dbgsym repo
+  # libglib2.0-0
+  # libwayland-egl1
+
   libcairo2
   libegl-mesa0
   libegl1
   libgl1
   libgl1-mesa-dri
   libglapi-mesa
-  libglib2.0-0
   libglu1-mesa
   libglvnd0
   libglx-mesa0
@@ -104,7 +107,6 @@ dbgsym_packages=(
   libgtk-3-0
   libosmesa6
   libspeechd2
-  libwayland-egl1
   mesa-va-drivers
   mesa-vdpau-drivers
   mesa-vulkan-drivers
