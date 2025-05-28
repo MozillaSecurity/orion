@@ -10,14 +10,13 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /home/ubuntu/.local/bin/common.sh
 
-if [[ "$(id -u)" = "0" ]]
-then
+if [[ "$(id -u)" == "0" ]]; then
   # Config and run the logging service
   mkdir -p /etc/google/auth /var/lib/td-agent-bit/pos
-get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
+  get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
   /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
-  function onexit () {
+  function onexit() {
     echo "Saving ~/work to /logs/work.tar.zst" >&2
     #tar -C /home/ubuntu -c work | zstd -f -o /logs/work.tar.zst
     #tar -c /home/ubuntu | zstd -f -o /logs/work.tar.zst

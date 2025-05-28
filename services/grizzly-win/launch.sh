@@ -2,30 +2,32 @@
 set -e -x -o pipefail
 PATH="$PWD/msys64/opt/node:$PATH"
 
-retry () {
+retry() {
   i=0
-  while [[ "$i" -lt 9 ]]; do
+  while [[ $i -lt 9 ]]; do
     "$@" && return
     sleep 30
-    i="$((i+1))"
+    i="$((i + 1))"
   done
   "$@"
 }
-retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
-status () {
-  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
+status() {
+  if [[ -n $TASKCLUSTER_FUZZING_POOL ]]; then
     task-status-reporter --report "$@" || true
   fi
 }
 
-powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
-powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || true
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || true
 
 set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
-cat > td-agent-bit.conf << EOF
+cat >td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       Off
     Log_File     $USERPROFILE\\td-agent-bit.log
@@ -83,7 +85,7 @@ set -x
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
-cat >> .fuzzmanagerconf << EOF
+cat >>.fuzzmanagerconf <<EOF
 sigdir = $USERPROFILE\\signatures
 tool = bearspray
 EOF
@@ -102,7 +104,7 @@ set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-bearspray" | python -c "import json,sys;open('.ssh/id_ecdsa.bearspray','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
 
-cat << EOF >> .ssh/config
+cat <<EOF >>.ssh/config
 
 Host bearspray
 HostName github.com
@@ -111,10 +113,10 @@ IdentityFile $USERPROFILE\\.ssh\\id_ecdsa.bearspray
 EOF
 
 # Set up Google Cloud Logging creds
-if [[ "$ADAPTER" != "reducer" ]]; then
+if [[ $ADAPTER != "reducer" ]]; then
   mkdir -p "$APPDATA/gcloud"
   set +x
-  if [[ "$ADAPTER" = "crashxp" ]]; then
+  if [[ $ADAPTER == "crashxp" ]]; then
     retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/ci-gcs-crashxp-data" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
   else
     retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-cloud-storage-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open(r'$APPDATA/gcloud/application_default_credentials.json','w'))"
@@ -143,12 +145,12 @@ echo "sleeping so logs can flush" >&2
 sleep 15
 
 case $exit_code in
-  5)  # grizzly.common.utils.Exit
-      # expected results not reproduced (opposite of SUCCESS)
+  5) # grizzly.common.utils.Exit
+    # expected results not reproduced (opposite of SUCCESS)
     exit 0
     ;;
-  4)  # grizzly.common.utils.LAUNCH_FAILURE
-      # unrelated target failure (browser startup crash, etc)
+  4) # grizzly.common.utils.LAUNCH_FAILURE
+    # unrelated target failure (browser startup crash, etc)
     exit 0
     ;;
   *)

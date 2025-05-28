@@ -61,7 +61,7 @@ locale-gen en_US.utf8
 
 #### Base Environment Configuration
 
-cat << 'EOF' >> /home/worker/.bashrc
+cat <<'EOF' >>/home/worker/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
@@ -74,17 +74,17 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
 
 /home/worker/.local/bin/cleanup.sh
 
 mkdir -p /home/worker/.ssh /root/.ssh
 chmod 0700 /home/worker/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config /home/worker/.ssh/config > /dev/null
+cat <<EOF | tee -a /root/.ssh/config /home/worker/.ssh/config >/dev/null
 Host *
 UseRoaming no
 EOF
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts >/dev/null
 
 chown -R worker:worker /home/worker
 chmod 0777 /src

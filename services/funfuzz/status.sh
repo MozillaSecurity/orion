@@ -6,7 +6,7 @@
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
-function stats () {
+function stats() {
   uptime
   free -m
   df -h

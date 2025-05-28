@@ -30,9 +30,9 @@ case "${1-install}" in
     python_path="$(/opt/venvs/pernosco/bin/python3 -c 'import distutils.sysconfig;print(distutils.sysconfig.get_python_lib())')"
     TMPD="$(mktemp -d -p. pernosco.build.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      git-clone "https://github.com/pernosco/pernosco-submit"
-      cp -r pernosco-submit/pernoscoshared "$python_path"
-      cp pernosco-submit/pernosco-submit /usr/local/bin
+    git-clone "https://github.com/pernosco/pernosco-submit"
+    cp -r pernosco-submit/pernoscoshared "$python_path"
+    cp pernosco-submit/pernosco-submit /usr/local/bin
     popd >/dev/null
     rm -rf "$TMPD"
     sed -i '1 s,^.*$,#!/opt/venvs/pernosco/bin/python3,' /usr/local/bin/pernosco-submit

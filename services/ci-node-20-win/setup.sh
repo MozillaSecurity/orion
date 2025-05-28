@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -e -x -o pipefail
 
-retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
-retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry() {
+  i=0
+  while [[ $i -lt 9 ]]; do
+    if "$@"; then return; else sleep 30; fi
+    i="$((i + 1))"
+  done
+  "$@"
+}
+retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -Sy \
@@ -29,7 +36,7 @@ node -v
 npm -v
 
 mkdir -p .ssh
-retry ssh-keyscan github.com > .ssh/known_hosts
+retry ssh-keyscan github.com >.ssh/known_hosts
 
 rm -rf \
   msys64/mingw64/share/doc/ \

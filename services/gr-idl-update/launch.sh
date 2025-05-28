@@ -17,8 +17,8 @@ set -x
 chmod 0400 .ssh/*_deploy
 
 export CI=1
-export EMAIL=nobody@community-tc.services.mozilla.com
-export {GIT_AUTHOR_NAME,GIT_COMMITTER_NAME}="Taskcluster Automation"
+export GIT_AUTHOR_NAME="Taskcluster Automation"
+export GIT_COMMITTER_NAME="Taskcluster Automation"
 
 git init gridl
 (
@@ -28,10 +28,10 @@ git init gridl
   git -c advice.detachedHead=false checkout origin/main
   retry npm i --no-progress
   npm run update-idls &&
-  npm test &&
-  if git status -s; then
-    git add data/idls
-    git commit -m "feat(grammar): update webidls"
-    retry git push origin HEAD:main
-  fi
-)> /live.log 2>&1
+    npm test &&
+    if git status -s; then
+      git add data/idls
+      git commit -m "feat(grammar): update webidls"
+      retry git push origin HEAD:main
+    fi
+) >/live.log 2>&1

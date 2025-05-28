@@ -15,7 +15,7 @@ source "${0%/*}/common.sh"
 sys-update
 
 apt-install-auto libeatmydata1
-echo /usr/lib/x86_64-linux-gnu/libeatmydata.so > /etc/ld.so.preload
+echo /usr/lib/x86_64-linux-gnu/libeatmydata.so >/etc/ld.so.preload
 
 #### Install recipes
 
@@ -114,7 +114,7 @@ dbgsym_packages=(
 
 sys-embed "${packages_with_recommends[@]}"
 retry apt-get install -y -qq "${packages[@]}"
-apt-get remove -y gvfs  # see https://bugzilla.mozilla.org/show_bug.cgi?id=1682934
+apt-get remove -y gvfs # see https://bugzilla.mozilla.org/show_bug.cgi?id=1682934
 
 # We want full symbols for things GTK/Mesa related where we find crashes.
 sys-embed-dbgsym "${dbgsym_packages[@]}"
@@ -132,14 +132,14 @@ locale-gen en_US.utf8
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
-cat << EOF > /etc/boto.cfg
+cat <<EOF >/etc/boto.cfg
 [Boto]
 metadata_service_num_attempts = 10
 EOF
 
 #### Base Environment Configuration
 
-cat << 'EOF' >> /home/worker/.bashrc
+cat <<'EOF' >>/home/worker/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
@@ -152,18 +152,18 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
 
 rm /etc/ld.so.preload
 /home/worker/.local/bin/cleanup.sh
 
 mkdir -p /home/worker/.ssh /root/.ssh
 chmod 0700 /home/worker/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config /home/worker/.ssh/config > /dev/null
+cat <<EOF | tee -a /root/.ssh/config /home/worker/.ssh/config >/dev/null
 Host *
 UseRoaming no
 EOF
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts >/dev/null
 
 # get new minidump-stackwalk
 retry-curl "$(resolve-tc minidump-stackwalk)" | zstdcat | tar -x -v --strip-components=1 -C /usr/local/bin

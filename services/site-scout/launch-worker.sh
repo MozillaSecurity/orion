@@ -13,16 +13,16 @@ PATH=~/.local/bin:$PATH
 # shellcheck source=recipes/linux/common.sh
 source common.sh
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
   # check if there is enough time to run
-  if [[ "$TARGET_DURATION" -le 600 ]]; then
+  if [[ $TARGET_DURATION -le 600 ]]; then
     # create required artifact directory to avoid task failure
     mkdir -p /tmp/site-scout
     update-status "Not enough time remaining before deadline!"
     exit 0
   fi
-  if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
+  if [[ -n $RUNTIME_LIMIT ]] && [[ $RUNTIME_LIMIT -lt $TARGET_DURATION ]]; then
     TARGET_DURATION="$RUNTIME_LIMIT"
   fi
 else
@@ -34,8 +34,8 @@ eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
 pushd /src/fuzzmanager >/dev/null
-  retry git fetch -q --depth 1 --no-tags origin master
-  git reset --hard origin/master
+retry git fetch -q --depth 1 --no-tags origin master
+git reset --hard origin/master
 popd >/dev/null
 
 # Get fuzzmanager configuration from TC
@@ -43,7 +43,7 @@ get-tc-secret fuzzmanagerconf-site-scout .fuzzmanagerconf
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
-cat >> .fuzzmanagerconf << EOF
+cat >>.fuzzmanagerconf <<EOF
 sigdir = $HOME/signatures
 EOF
 setup-fuzzmanager-hostname
@@ -61,7 +61,7 @@ if [[ ! -d /src/site-scout-private ]]; then
   # Get deployment key from TC
   get-tc-secret deploy-site-scout-private .ssh/id_ecdsa.site-scout-private
 
-  cat <<- EOF >> .ssh/config
+  cat <<-EOF >>.ssh/config
 
 	Host site-scout-private
 	HostName github.com
@@ -77,7 +77,7 @@ update-status "Setup: fetching build"
 
 # select build
 TARGET_BIN="./build/firefox"
-if [[ -n "$COVERAGE" ]]; then
+if [[ -n $COVERAGE ]]; then
   export COVERAGE_FLAG="--coverage"
   retry fuzzfetch -n build --coverage
   export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
@@ -119,13 +119,13 @@ else
 fi
 
 # setup reporter
-echo "No report yet" > status.txt
+echo "No report yet" >status.txt
 task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # enable page interactions
-if [[ -n "$EXPLORE" ]]; then
+if [[ -n $EXPLORE ]]; then
   export EXPLORE_FLAG="--explore"
 else
   export EXPLORE_FLAG=""
@@ -133,9 +133,8 @@ fi
 
 # select URL collections
 mkdir active_lists
-for LIST in $URL_LISTS
-do
-    cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
+for LIST in $URL_LISTS; do
+  cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
 # create directory for launch failure results
@@ -154,7 +153,7 @@ site-scout "$TARGET_BIN" \
   --url-limit "${URL_LIMIT-0}" \
   -o /tmp/site-scout/local-results $COVERAGE_FLAG
 
-if [[ -n "$COVERAGE" ]]; then
+if [[ -n $COVERAGE ]]; then
   retry-curl --compressed -O "$SOURCE_URL"
   unzip source.zip
 
@@ -167,7 +166,7 @@ if [[ -n "$COVERAGE" ]]; then
     --ignore-not-existing \
     -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
     -s "./mozilla-central-${REVISION}" \
-    > "./coverage.json"
+    >"./coverage.json"
 
   # Submit coverage data.
   cov-reporter \

@@ -37,12 +37,11 @@ sys-embed "${pkgs[@]}"
 source "${0%/*}/clang.sh"
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
-function git-clone-rev () {
+function git-clone-rev() {
   local dest rev url
   url="$1"
   rev="$2"
-  if [[ $# -eq 3 ]]
-  then
+  if [[ $# -eq 3 ]]; then
     dest="$3"
   else
     dest="$(basename "$1" .git)"
@@ -71,8 +70,7 @@ popd >/dev/null
 
 # web services custom mutator
 pushd custom_mutators >/dev/null
-for mutator in /srv/repos/setup/custom_mutators/*
-do
+for mutator in /srv/repos/setup/custom_mutators/*; do
   dir_name=$(basename "$mutator")
   cp -r "$mutator" ./
   pushd "$dir_name" >/dev/null

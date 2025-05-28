@@ -13,7 +13,7 @@ mkdir -p /home/worker/.local/bin
 source "${0%/*}/common.sh"
 
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
 
 #### Bootstrap Packages
 

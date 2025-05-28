@@ -13,7 +13,7 @@ TASKCLUSTER_ROOT_URL="https://community-tc.services.mozilla.com"
 TASKCLUSTER_CLIENT_ID="project/$TC_PROJECT/worker-$TC_WORKER_TYPE-gh"
 
 set +x
-cat > worker.config <<EOF
+cat >worker.config <<EOF
 {
   "accessToken": "$TASKCLUSTER_ACCESS_TOKEN",
   "clientId": "$TASKCLUSTER_CLIENT_ID",
@@ -39,7 +39,7 @@ EOF
 set -x
 unset TASKCLUSTER_ACCESS_TOKEN
 
-retry_curl () {
+retry_curl() {
   curl --connect-timeout 25 --fail --retry 5 --show-error --silent "$@"
 }
 
@@ -55,9 +55,8 @@ mkdir tasks
 set +e
 ./generic-worker run --config worker.config
 case $? in
-0|68)
-  ;;
-*)
-  exit $?
-  ;;
+  0 | 68) ;;
+  *)
+    exit $?
+    ;;
 esac

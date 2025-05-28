@@ -21,26 +21,26 @@ cd "${0%/*}"
 ./gsutil.sh
 
 packages=(
-    binutils
-    clang
-    curl
-    git
-    golang
-    gyp
-    jshon
-    libclang-rt-dev
-    libssl-dev
-    locales
-    make
-    mercurial
-    ninja-build
-    openssh-client
-    pipx
-    python-is-python3
-    python3
-    strace
-    unzip
-    zlib1g-dev
+  binutils
+  clang
+  curl
+  git
+  golang
+  gyp
+  jshon
+  libclang-rt-dev
+  libssl-dev
+  locales
+  make
+  mercurial
+  ninja-build
+  openssh-client
+  pipx
+  python-is-python3
+  python3
+  strace
+  unzip
+  zlib1g-dev
 )
 
 sys-embed "${packages[@]}"
@@ -59,12 +59,12 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
 
 /home/worker/.local/bin/cleanup.sh
 
 mkdir -p /home/worker/.ssh
-retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
+retry ssh-keyscan github.com >/home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker
 chmod 0777 /src

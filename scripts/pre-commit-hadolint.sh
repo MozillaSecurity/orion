@@ -10,26 +10,24 @@ declare -A CHECKSUMS=(
 CHECKSUM=${CHECKSUMS[$ARCH]}
 HADOLINT=~/.cache/orion/hadolint
 
-function checksum () {
+function checksum() {
   python3 -c "import hashlib;print(hashlib.sha256(open('$HADOLINT','rb').read()).hexdigest())"
 }
 
-function retry-curl () {
+function retry-curl() {
   curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
 mkdir -p "$(dirname "$HADOLINT")"
-if [[ -e "$HADOLINT" ]]
-then
-  if [[ "$(checksum)" != "$CHECKSUM" ]]
-  then
+if [[ -e $HADOLINT ]]; then
+  if [[ "$(checksum)" != "$CHECKSUM" ]]; then
     retry-curl -o "$HADOLINT" "$URL"
-    [[ "$(checksum)" == "$CHECKSUM" ]]  # assert that checksum matches
+    [[ "$(checksum)" == "$CHECKSUM" ]] # assert that checksum matches
     chmod +x "$HADOLINT"
   fi
 else
   retry-curl -o "$HADOLINT" "$URL"
-  [[ "$(checksum)" == "$CHECKSUM" ]]  # assert that checksum matches
+  [[ "$(checksum)" == "$CHECKSUM" ]] # assert that checksum matches
   chmod +x "$HADOLINT"
 fi
 

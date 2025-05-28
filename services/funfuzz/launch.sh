@@ -10,13 +10,11 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
-if [[ "$(id -u)" = "0" ]]
-then
-  if [[ -z "$NO_SECRETS" ]]
-  then
+if [[ "$(id -u)" == "0" ]]; then
+  if [[ -z $NO_SECRETS ]]; then
     get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
     mkdir -p /etc/td-agent-bit
-    cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+    cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
@@ -65,7 +63,7 @@ EOF
     mkdir -p /var/lib/td-agent-bit/pos
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
-    function onexit () {
+    function onexit() {
       echo "Waiting for logs to flush..." >&2
       sleep 15
       killall -INT td-agent-bit || true

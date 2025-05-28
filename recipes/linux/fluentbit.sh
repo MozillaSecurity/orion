@@ -24,7 +24,7 @@ case "${1-install}" in
 
     if [[ ! -f /etc/apt/sources.list.d/fluentbit.list ]]; then
       keypath="$(install-apt-key https://packages.fluentbit.io/fluentbit.key)"
-      cat > /etc/apt/sources.list.d/fluentbit.list <<- EOF
+      cat >/etc/apt/sources.list.d/fluentbit.list <<-EOF
 	deb [signed-by=${keypath}] https://packages.fluentbit.io/ubuntu/$(lsb_release -sc) $(lsb_release -sc) main
 	EOF
 

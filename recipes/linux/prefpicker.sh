@@ -21,8 +21,7 @@ case "${1-install}" in
       git \
       pipx
 
-    if [[ "$EDIT" = "1" ]]
-    then
+    if [[ $EDIT == "1" ]]; then
       cd "${DESTDIR-/home/worker}"
       git-clone https://github.com/MozillaSecurity/prefpicker prefpicker
       PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./prefpicker

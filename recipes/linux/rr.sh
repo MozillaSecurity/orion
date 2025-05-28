@@ -43,14 +43,14 @@ case "${1-install}" in
 
     TMPD="$(mktemp -d -p. rr.build.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      git init rr
-      pushd rr >/dev/null
-        git remote add -t master origin https://github.com/rr-debugger/rr.git
-        retry git fetch --no-tags origin "$REVISION"
-        git reset --hard "$REVISION"
-        PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
-        sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt
-        git apply <<- "EOF"
+    git init rr
+    pushd rr >/dev/null
+    git remote add -t master origin https://github.com/rr-debugger/rr.git
+    retry git fetch --no-tags origin "$REVISION"
+    git reset --hard "$REVISION"
+    PATCH="git.$(git log -1 --date=iso | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | tr -d '-').$(git rev-parse --short HEAD)"
+    sed -i "s/set(rr_VERSION_PATCH [0-9]\\+)/set(rr_VERSION_PATCH $PATCH)/" CMakeLists.txt
+    git apply <<-"EOF"
 	diff --git a/CMakeLists.txt b/CMakeLists.txt
 	index d0d02346..29ac3b57 100644
 	--- a/CMakeLists.txt
@@ -64,14 +64,14 @@ case "${1-install}" in
 	 if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
 	   set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
 	EOF
-      popd >/dev/null
-      mkdir obj
-      pushd obj >/dev/null
-        CC=clang CXX=clang++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -Dstrip=TRUE -DBUILD_TESTS=False ../rr
-        cmake --build .
-        cpack -G DEB
-        dpkg -i dist/rr-*.deb
-      popd >/dev/null
+    popd >/dev/null
+    mkdir obj
+    pushd obj >/dev/null
+    CC=clang CXX=clang++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -Dstrip=TRUE -DBUILD_TESTS=False ../rr
+    cmake --build .
+    cpack -G DEB
+    dpkg -i dist/rr-*.deb
+    popd >/dev/null
     popd >/dev/null
     rm -rf "$TMPD"
     ;;

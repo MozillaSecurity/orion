@@ -13,12 +13,12 @@ if ! grep -q '127\.0\.0\.1:55555' qemu_tool.sh; then
   sed -i 's/-vnc/-monitor tcp:127.0.0.1:55555,server,nowait -vnc/' qemu_tool.sh
 fi
 touch config.sh
-qemu-cmd () {
+qemu-cmd() {
   set +x
   echo "$@" | nc -N 127.0.0.1 55555 >/dev/null
   set -x
 }
-gen-qemu-sendkeys () {
+gen-qemu-sendkeys() {
   set +x
   echo -n "$@" | while read -r -n1 letter; do
     case "$letter" in
@@ -55,7 +55,7 @@ qemu-cmd "sendkey alt-f2"
 sleep 30
 qemu-cmd "$(gen-qemu-sendkeys gnome-terminal)"
 sleep 60
-qemu-cmd "$(gen-qemu-sendkeys "sudo screen -d -m bash -c \"sleep 5; /home/user/loader\"; exit")"
+qemu-cmd "$(gen-qemu-sendkeys 'sudo screen -d -m bash -c "sleep 5; /home/user/loader"; exit')"
 sleep 90
 qemu-cmd "$(gen-qemu-sendkeys user)"
 wait

@@ -58,7 +58,7 @@ sys-embed "${pkgs[@]}"
 apt-install-auto pipx
 
 mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin /srv/repos
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts >/dev/null
 
 "${0%/*}/nodejs.sh"
 DESTDIR=/srv/repos EDIT=1 "${0%/*}/fuzzfetch.sh"

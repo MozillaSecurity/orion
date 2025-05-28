@@ -16,8 +16,8 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     apt-install-auto \
-        ca-certificates \
-        curl
+      ca-certificates \
+      curl
 
     if is-arm64; then
       PLATFORM="linux-arm64"
@@ -30,10 +30,10 @@ case "${1-install}" in
 
     TMPD="$(mktemp -d -p. tc.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      LATEST_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
-      retry-curl -O "https://github.com/taskcluster/taskcluster/releases/download/$LATEST_VERSION/taskcluster-$PLATFORM.tar.gz"
-      tar -xzf taskcluster-$PLATFORM.tar.gz
-      install taskcluster /usr/local/bin/taskcluster
+    LATEST_VERSION=$(get-latest-github-release "taskcluster/taskcluster")
+    retry-curl -O "https://github.com/taskcluster/taskcluster/releases/download/$LATEST_VERSION/taskcluster-$PLATFORM.tar.gz"
+    tar -xzf taskcluster-$PLATFORM.tar.gz
+    install taskcluster /usr/local/bin/taskcluster
     popd >/dev/null
     rm -rf "$TMPD"
     ;;

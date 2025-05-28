@@ -17,8 +17,7 @@ mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 
 #guided-fuzzing-daemon
-for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon
-do
+for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon; do
   pushd "/srv/repos/$r" >/dev/null
   retry git fetch origin HEAD
   git reset --hard FETCH_HEAD
@@ -30,12 +29,11 @@ setup-aws-credentials
 
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
-if [[ ! -e ~/.fuzzmanagerconf ]]
-then
+if [[ ! -e ~/.fuzzmanagerconf ]]; then
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
   # Update FuzzManager config for this instance.
   mkdir -p signatures
-  cat >> .fuzzmanagerconf << EOF
+  cat >>.fuzzmanagerconf <<EOF
 sigdir = $HOME/signatures
 EOF
   # Update Fuzzmanager config with suitable hostname based on the execution environment.
@@ -44,10 +42,9 @@ EOF
 fi
 
 mkdir -p ~/.ssh
-if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]]
-then
+if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]]; then
   get-tc-secret deploy-fuzzing-shells-private ~/.ssh/id_rsa.fuzzing-shells-private
-  cat >> ~/.ssh/config << EOF
+  cat >>~/.ssh/config <<EOF
 Host fuzzing-shells-private github.com
 Hostname github.com
 IdentityFile ~/.ssh/id_rsa.fuzzing-shells-private
@@ -55,39 +52,27 @@ EOF
 fi
 
 TOOLNAME="${TOOLNAME:-AFL++-$FUZZER}"
-if [[ -n "$JSRT" ]]
-then
-  if [[ ! -e fuzzing-shells-private ]]
-  then
+if [[ -n $JSRT ]]; then
+  if [[ ! -e fuzzing-shells-private ]]; then
     git-clone git@fuzzing-shells-private:MozillaSecurity/fuzzing-shells-private.git
   fi
   FUZZER="$HOME/fuzzing-shells-private/$JSRT/$FUZZER"
 fi
 
-if [[ -n "$TOKENS" ]]
-then
-  gcs-cat guided-fuzzing-data "$TOKENS" > ./tokens.dict
+if [[ -n $TOKENS ]]; then
+  gcs-cat guided-fuzzing-data "$TOKENS" >./tokens.dict
   TOKENS="./tokens.dict"
 fi
 
 # setup target
 
-ASAN_OPTIONS=\
-abort_on_error=1:\
-hard_rss_limit_mb=4096:\
-max_allocation_size_mb=3073:\
-strip_path_prefix=/builds/worker/workspace/build/src/:\
-symbolize=0:\
-$ASAN_OPTIONS
+ASAN_OPTIONS=abort_on_error=1:hard_rss_limit_mb=4096:max_allocation_size_mb=3073:strip_path_prefix=/builds/worker/workspace/build/src/:symbolize=0:$ASAN_OPTIONS
 ASAN_OPTIONS=${ASAN_OPTIONS//:/ }
 
-UBSAN_OPTIONS=\
-strip_path_prefix=/builds/worker/workspace/build/src/:\
-symbolize=0:\
-$UBSAN_OPTIONS
+UBSAN_OPTIONS=strip_path_prefix=/builds/worker/workspace/build/src/:symbolize=0:$UBSAN_OPTIONS
 UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
-if [[ "$COVERAGE" = 1 ]]; then
+if [[ $COVERAGE == 1 ]]; then
   export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
   SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
   export SOURCE_URL
@@ -99,8 +84,7 @@ fi
 
 TARGET_BIN="$(./setup-target.sh)"
 JS="${JS:-0}"
-if [[ "$JS" = 1 ]] || [[ -n "$JSRT" ]]
-then
+if [[ $JS == 1 ]] || [[ -n $JSRT ]]; then
   export GCOV_PREFIX="$HOME/js"
 else
   export GCOV_PREFIX="$HOME/firefox"
@@ -112,14 +96,12 @@ mkdir -p corpus.out
 
 update-status "preparing to launch guided-fuzzing-daemon"
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-then
+if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   task-status-reporter --report-from-file ./stats --keep-reporting 60 --random-offset 30 &
 
-  onexit () {
+  onexit() {
     # ensure final stats are complete
-    if [[ -e ./stats ]]
-    then
+    if [[ -e ./stats ]]; then
       task-status-reporter --report-from-file ./stats
     fi
   }
@@ -143,23 +125,20 @@ S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJ
 
 export AFL_MAP_SIZE=8388608
 
-if [[ -n "$S3_CORPUS_REFRESH" ]]
-then
+if [[ -n $S3_CORPUS_REFRESH ]]; then
   update-status "starting corpus refresh"
   time xvfb-run guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
     --corpus-refresh ./corpus \
     "${DAEMON_ARGS[@]}"
 else
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-  then
+  if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
 
   # Sometimes, don't download the existing corpus.
   # This can increase coverage in large targets and prevents bad corpora.
   # Results will be merged with the existing corpus on next refresh.
-  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]
-  then
+  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
     # Download the corpus from S3
     update-status "downloading corpus"
     time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
@@ -167,9 +146,8 @@ else
     mkdir -p corpus
   fi
   # Ensure corpus is not empty
-  if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]
-  then
-    echo "Hello world" > ./corpus/input0
+  if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
+    echo "Hello world" >./corpus/input0
   fi
 
   # run and watch for results
@@ -184,15 +162,13 @@ else
     --corpus-in ./corpus \
     --corpus-out ./corpus.out \
     "${DAEMON_ARGS[@]}"
-  for st in ./corpus.out/*/fuzzer_stats
-  do
+  for st in ./corpus.out/*/fuzzer_stats; do
     idx="$(basename "$(dirname "$st")")"
     cp "$st" "/logs/fuzzer_stats$idx.txt"
   done
 fi
 
-if [[ $COVERAGE -eq 1 ]]
-then
+if [[ $COVERAGE -eq 1 ]]; then
   retry-curl --compressed -O "$SOURCE_URL"
   unzip source.zip
 
@@ -205,7 +181,7 @@ then
     --ignore-not-existing \
     -p "$(rg -Nor '$1' "pathprefix = (.*)" "$HOME/${TARGET_BIN}.fuzzmanagerconf")" \
     -s "./${REPO-mozilla-central}-$REVISION" \
-    > ./coverage.json
+    >./coverage.json
 
   # Submit coverage data.
   cov-reporter \

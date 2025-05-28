@@ -2,21 +2,23 @@
 set -e -x -o pipefail
 PATH="$PWD/msys64/opt/node:$PATH"
 
-retry () {
+retry() {
   i=0
-  while [[ "$i" -lt 9 ]]; do
+  while [[ $i -lt 9 ]]; do
     "$@" && return
     sleep 30
-    i="$((i+1))"
+    i="$((i + 1))"
   done
   "$@"
 }
 
-powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableScriptScanning \$true" || true
-powershell -ExecutionPolicy Bypass -NoProfile -Command "Set-MpPreference -DisableRealtimeMonitoring \$true" || true
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || true
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || true
 
 mkdir -p "$LOCALAPPDATA/autobisect/autobisect/"
-cat << EOF > "$LOCALAPPDATA/autobisect/autobisect/autobisect.ini"
+cat <<EOF >"$LOCALAPPDATA/autobisect/autobisect/autobisect.ini"
 [autobisect]
 storage-path: $(cd "$USERPROFILE" && pwd -W)/builds/
 persist: true
@@ -30,7 +32,7 @@ ARTIFACT_DEST="$PWD/bugmon-artifacts"
 TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 CONFIRM_ARGS=""
-if [[ -n "$FORCE_CONFIRM" ]]; then
+if [[ -n $FORCE_CONFIRM ]]; then
   CONFIRM_ARGS="--force-confirm"
 fi
 
