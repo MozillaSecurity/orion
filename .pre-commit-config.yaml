@@ -20,6 +20,7 @@ repos:
       - id: check-symlinks
       - id: debug-statements
       - id: trailing-whitespace
+        exclude_types: [diff]
       - id: mixed-line-ending
       - id: name-tests-test
         args: ['--django']
