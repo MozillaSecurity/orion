@@ -12,13 +12,13 @@ source .local/bin/common.sh
 # shellcheck source=recipes/linux/taskgraph-m-c-latest.sh
 source /src/recipes/taskgraph-m-c-latest.sh
 
-if [[ ! -e .fuzzmanagerconf ]] && [[ "$NO_REPORT" != "1" ]]; then
+if [[ ! -e .fuzzmanagerconf ]] && [[ $NO_REPORT != "1" ]]; then
   # Get fuzzmanager configuration from TC
   get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 
   # Update fuzzmanager config for this instance
   mkdir -p signatures
-  cat >> .fuzzmanagerconf <<- EOF
+  cat >>.fuzzmanagerconf <<-EOF
 	sigdir = $HOME/signatures
 	tool = nss-coverage
 	EOF
@@ -65,7 +65,7 @@ fi
 # Setup gcloud
 mkdir -p ~/.config/gcloud
 get-tc-secret ossfuzz-gutils ~/.config/gcloud/application_default_credentials.json raw
-echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" > .boto
+echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" >.boto
 
 COVRUNTIME=${COVRUNTIME-3600}
 
@@ -76,7 +76,7 @@ function run-target {
 
   find . -name "*.gcda" -delete
   timeout -s 2 -k $((COVRUNTIME + 60)) $((COVRUNTIME + 30)) \
-          "$target" "corpus/$name" -max_total_time="$COVRUNTIME" "$@" || :
+    "$target" "corpus/$name" -max_total_time="$COVRUNTIME" "$@" || :
 
   # Collect coverage count data
   RUST_BACKTRACE=1 grcov nss \
@@ -86,7 +86,7 @@ function run-target {
     --guess-directory-when-missing \
     -s nss/out/Debug/ \
     -p "$PWD" \
-    > coverage-nss.json
+    >coverage-nss.json
   RUST_BACKTRACE=1 grcov nspr \
     -t coveralls+ \
     --token NONE \
@@ -95,11 +95,11 @@ function run-target {
     -s nspr/Debug/dist/include/nspr/ \
     -p "$PWD" \
     --path-mapping nspr_map.json \
-    > coverage-nspr.json
-  python merge-coverage.py coverage-nss.json coverage-nspr.json > "coverage-$name.json"
+    >coverage-nspr.json
+  python merge-coverage.py coverage-nss.json coverage-nspr.json >"coverage-$name.json"
   rm coverage-nss.json coverage-nspr.json
 
-  if [[ "$NO_REPORT" != "1" ]]; then
+  if [[ $NO_REPORT != "1" ]]; then
     # Submit coverage data
     cov-reporter \
       --repository mozilla-central \

@@ -17,8 +17,8 @@ eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
 pushd /src/fuzzmanager >/dev/null
-  retry git fetch -q --depth 1 --no-tags origin master
-  git reset --hard origin/master
+retry git fetch -q --depth 1 --no-tags origin master
+git reset --hard origin/master
 popd >/dev/null
 
 # Get fuzzmanager configuration from TC
@@ -26,7 +26,7 @@ get-tc-secret fuzzmanagerconf .fuzzmanagerconf
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
-cat >> .fuzzmanagerconf << EOF
+cat >>.fuzzmanagerconf <<EOF
 sigdir = $HOME/signatures
 tool = bearspray
 EOF
@@ -39,9 +39,9 @@ if [[ -e ~/Android/Sdk ]]; then
 fi
 
 # Get Cloud Storage credentials
-if [[ "$ADAPTER" != "reducer" ]]; then
+if [[ $ADAPTER != "reducer" ]]; then
   mkdir -p ~/.config/gcloud
-  if [[ "$ADAPTER" = "crashxp" ]]; then
+  if [[ $ADAPTER == "crashxp" ]]; then
     get-tc-secret ci-gcs-crashxp-data ~/.config/gcloud/application_default_credentials.json raw
   else
     get-tc-secret google-cloud-storage-creds ~/.config/gcloud/application_default_credentials.json raw
@@ -55,7 +55,7 @@ if [ ! -d /src/bearspray ]; then
   # Get deployment key from TC
   get-tc-secret deploy-bearspray .ssh/id_ecdsa.bearspray
 
-  cat <<- EOF >> .ssh/config
+  cat <<-EOF >>.ssh/config
 
 	Host bearspray
 	HostName github.com

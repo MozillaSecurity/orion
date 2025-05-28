@@ -21,7 +21,7 @@ poetry install
 
 mkdir -p /home/worker/.cache/autobisect
 mkdir -p /home/worker/.config/autobisect
-cat << EOF >  /home/worker/.config/autobisect/autobisect.ini
+cat <<EOF >/home/worker/.config/autobisect/autobisect.ini
 [autobisect]
 storage-path: /home/worker/.cache/autobisect
 persist: false

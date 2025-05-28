@@ -14,7 +14,7 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     # assert that SRCDIR is set
-    [[ -n "$SRCDIR" ]]
+    [[ -n $SRCDIR ]]
 
     sys-embed \
       ca-certificates \
@@ -24,8 +24,7 @@ case "${1-install}" in
     apt-install-auto \
       pipx
 
-    if [[ "$EDIT" = "1" ]]
-    then
+    if [[ $EDIT == "1" ]]; then
       PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e "$SRCDIR"
     else
       PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "$SRCDIR"

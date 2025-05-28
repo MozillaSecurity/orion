@@ -4,8 +4,8 @@
 
 echo "[!] executing fuzz.sh" | ./hcat
 chmod +x hget
-echo 0 > /proc/sys/kernel/randomize_va_space
-echo 0 > /proc/sys/kernel/printk
+echo 0 >/proc/sys/kernel/randomize_va_space
+echo 0 >/proc/sys/kernel/printk
 
 #echo 2 > /proc/sys/vm/overcommit_memory
 #echo 1 > /proc/sys/vm/panic_on_oom

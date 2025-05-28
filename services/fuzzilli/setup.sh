@@ -85,7 +85,7 @@ retry-curl "https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz"
 mv swiftly /home/ubuntu/
 chmod 755 /home/ubuntu/swiftly
 su - ubuntu -c "/home/ubuntu/swiftly init --quiet-shell-followup -y"
-echo ". /home/ubuntu/.local/share/swiftly/env.sh" >> /home/ubuntu/.bashrc
+echo ". /home/ubuntu/.local/share/swiftly/env.sh" >>/home/ubuntu/.bashrc
 
 #### Base System Configuration
 
@@ -94,14 +94,14 @@ locale-gen en_US.utf8
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
-cat << EOF | tee /etc/boto.cfg > /dev/null
+cat <<EOF | tee /etc/boto.cfg >/dev/null
 [Boto]
 metadata_service_num_attempts = 10
 EOF
 
 #### Base Environment Configuration
 
-cat << 'EOF' >> /home/ubuntu/.bashrc
+cat <<'EOF' >>/home/ubuntu/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
@@ -111,14 +111,14 @@ mkdir -p /home/ubuntu/.local/bin
 
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/ubuntu/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/ubuntu/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/ubuntu/.bashrc
 
 # Cleanup
 "${0%/*}/cleanup.sh"
 
 mkdir -p /home/ubuntu/.ssh /root/.ssh
 chmod 0700 /home/ubuntu/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
+cat <<EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
 Host *
 UseRoaming no
 IdentitiesOnly yes

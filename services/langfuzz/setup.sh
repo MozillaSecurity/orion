@@ -28,19 +28,20 @@ EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./fuzzfetch.sh
 ./grcov.sh
 if ! is-arm64; then
-./llvm-symbolizer.sh
+  ./llvm-symbolizer.sh
 fi
 ./taskcluster.sh
 
 # use Amazon Corretto OpenJDK
 retry-curl https://apt.corretto.aws/corretto.key | gpg --dearmor -o /etc/apt/keyrings/corretto.gpg
-echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list
+echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" >/etc/apt/sources.list.d/corretto.list
 sys-update
 
 # setup maven
 mkdir /opt/maven
 retry-curl https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar -C /opt/maven --strip-components=1 -xz
-echo "PATH=\$PATH:/opt/maven/bin" >> /etc/bash.bashrc
+# shellcheck disable=SC2016
+echo 'PATH=$PATH:/opt/maven/bin' >>/etc/bash.bashrc
 
 #### Bootstrap Packages
 
@@ -102,8 +103,8 @@ retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
 
 if is-arm64; then
   update-alternatives --install \
-    /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-15     100 \
-    --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-15
+    /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-15 100 \
+    --slave /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-15
 fi
 
 python_packages=(
@@ -125,14 +126,14 @@ locale-gen en_US.utf8
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
-cat << EOF | tee /etc/boto.cfg > /dev/null
+cat <<EOF | tee /etc/boto.cfg >/dev/null
 [Boto]
 metadata_service_num_attempts = 10
 EOF
 
 #### Base Environment Configuration
 
-cat << 'EOF' >> /home/ubuntu/.bashrc
+cat <<'EOF' >>/home/ubuntu/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
@@ -143,7 +144,7 @@ EOF
 
 mkdir -p /home/ubuntu/.ssh /root/.ssh
 chmod 0700 /home/ubuntu/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
+cat <<EOF | tee -a /root/.ssh/config /home/ubuntu/.ssh/config
 Host *
 UseRoaming no
 IdentitiesOnly yes

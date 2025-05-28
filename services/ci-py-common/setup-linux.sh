@@ -60,7 +60,7 @@ SRCDIR=/src/orion-decision EDIT=1 "${0%/*}/orion_decision.sh"
 "${0%/*}/cleanup.sh"
 
 mkdir /home/worker/.ssh
-retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
+retry ssh-keyscan github.com >/home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker
 chmod 0777 /src

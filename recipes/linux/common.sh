@@ -13,13 +13,11 @@ EC2_METADATA_URL="http://169.254.169.254/latest/meta-data"
 GCE_METADATA_URL="http://169.254.169.254/computeMetadata/v1"
 
 # Re-tries a certain command 9 times with a 30 seconds pause between each try.
-function retry () {
+function retry() {
   local op
   op="$(mktemp)"
-  for _ in {1..9}
-  do
-    if "$@" >"$op"
-    then
+  for _ in {1..9}; do
+    if "$@" >"$op"; then
       cat "$op"
       rm "$op"
       return
@@ -32,9 +30,8 @@ function retry () {
 
 # `apt-get update` command with retry functionality.
 # shellcheck disable=SC2120
-function sys-update () {
-  if [[ $# -gt 0 ]]
-  then
+function sys-update() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
@@ -42,12 +39,12 @@ function sys-update () {
 }
 
 # `apt-get install` command with retry functionality.
-function sys-embed () {
+function sys-embed() {
   retry apt-get install -y -qq --no-install-recommends --no-install-suggests "$@" >&2
 }
 
 # `apt-get install` dependencies without installing the package itself
-function apt-install-depends () {
+function apt-install-depends() {
   local dep new pkg
   new=()
   for pkg in "$@"; do
@@ -60,7 +57,7 @@ function apt-install-depends () {
 
 # Calls `apt-get install` on it's arguments but marks them as automatically installed.
 # Previously installed packages are not affected.
-function apt-install-auto () {
+function apt-install-auto() {
   local new pkg
   new=()
   for pkg in "$@"; do
@@ -75,17 +72,17 @@ function apt-install-auto () {
 }
 
 # Follow redirects and resolve a url
-function resolve-url () {
+function resolve-url() {
   curl --connect-timeout 25 --fail --location --retry 5 --show-error --silent --head --write-out "%{url_effective}" "$@" -o /dev/null
 }
 
 # wrap curl with sane defaults
-function retry-curl () {
+function retry-curl() {
   curl --connect-timeout 25 --fail --location --retry 5 --retry-all-errors --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
-function get-deadline () {
-  if [[ -z "$TASK_ID" ]] || [[ -z "$RUN_ID" ]]; then
+function get-deadline() {
+  if [[ -z $TASK_ID ]] || [[ -z $RUN_ID ]]; then
     echo "error: get-deadline() is only supported on Taskcluster" >&2
     exit 1
   fi
@@ -97,8 +94,7 @@ function get-deadline () {
   max_run_time="$(jshon -e payload -e maxRunTime -u <"$tmp/task.json")"
   rm -rf "$tmp"
   run_end="$((started + max_run_time))"
-  if [[ $run_end -lt $deadline ]]
-  then
+  if [[ $run_end -lt $deadline ]]; then
     echo "$run_end"
   else
     echo "$deadline"
@@ -107,21 +103,18 @@ function get-deadline () {
 
 # Get the task deadline.
 # If running locally, return a date far in the future to prevent expiration.
-function get-target-time () {
-  if [[ "$TARGET_TIME" =~ ^-?[0-9]+$ ]]
-  then
+function get-target-time() {
+  if [[ $TARGET_TIME =~ ^-?[0-9]+$ ]]; then
     echo "$TARGET_TIME"
-  elif [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
-  then
+  elif [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
     echo $(($(get-deadline) - $(date +%s) - 5 * 60))
   else
     echo $((10 * 365 * 24 * 3600))
   fi
 }
 
-function get-latest-github-release () {
-  if [[ $# -ne 1 ]]
-  then
+function get-latest-github-release() {
+  if [[ $# -ne 1 ]]; then
     echo "usage: $0 repo" >&2
     return 1
   fi
@@ -130,16 +123,14 @@ function get-latest-github-release () {
 }
 
 # Shallow git-clone of the default branch only
-function git-clone () {
+function git-clone() {
   local dest url
-  if [[ $# -lt 1 ]] || [[ $# -gt 2 ]]
-  then
+  if [[ $# -lt 1 ]] || [[ $# -gt 2 ]]; then
     echo "usage: $0 url [name]" >&2
     return 1
   fi
   url="$1"
-  if [[ $# -eq 2 ]]
-  then
+  if [[ $# -eq 2 ]]; then
     dest="$2"
   else
     dest="$(basename "$1" .git)"
@@ -154,14 +145,12 @@ function git-clone () {
 
 # In a chrooted 32-bit environment "uname -m" would still return 64-bit.
 # shellcheck disable=SC2120
-function is-64-bit () {
-  if [[ $# -gt 0 ]]
-  then
+function is-64-bit() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ "$(getconf LONG_BIT)" = "64" ]]
-  then
+  if [[ "$(getconf LONG_BIT)" == "64" ]]; then
     true
   else
     false
@@ -169,14 +158,12 @@ function is-64-bit () {
 }
 
 # shellcheck disable=SC2120
-function is-arm64 () {
-  if [[ $# -gt 0 ]]
-  then
+function is-arm64() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ "$(uname -m)" = "aarch64" ]]
-  then
+  if [[ "$(uname -m)" == "aarch64" ]]; then
     true
   else
     false
@@ -184,14 +171,12 @@ function is-arm64 () {
 }
 
 # shellcheck disable=SC2120
-function is-amd64 () {
-  if [[ $# -gt 0 ]]
-  then
+function is-amd64() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ "$(uname -m)" = "x86_64" ]]
-  then
+  if [[ "$(uname -m)" == "x86_64" ]]; then
     true
   else
     false
@@ -199,15 +184,14 @@ function is-amd64 () {
 }
 
 # Curl with headers set for accessing GCE metadata service
-function curl-gce () {
+function curl-gce() {
   retry-curl -H "Metadata-Flavor: Google" "$@"
 }
 
 # Determine the relative hostname based on the outside environment.
 # shellcheck disable=SC2120
-function relative-hostname () {
-  if [[ $# -gt 0 ]]
-  then
+function relative-hostname() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
@@ -218,7 +202,7 @@ function relative-hostname () {
     gce)
       local IFS='.'
       # read external IP as an array of octets
-      read -ra octets <<< "$(curl-gce "$GCE_METADATA_URL/instance/network-interfaces/0/access-configs/0/external-ip")"
+      read -ra octets <<<"$(curl-gce "$GCE_METADATA_URL/instance/network-interfaces/0/access-configs/0/external-ip")"
       # reverse the array into "stetco"
       local stetco=()
       for i in "${octets[@]}"; do
@@ -237,16 +221,14 @@ function relative-hostname () {
 }
 
 # Get a secret from Taskcluster 'secret' service
-function get-tc-secret () {
+function get-tc-secret() {
   local nofile output raw secret
-  if [[ $# -lt 1 ]] || [[ $# -gt 3 ]]
-  then
+  if [[ $# -lt 1 ]] || [[ $# -gt 3 ]]; then
     echo "usage: get-tc-secret name [output] [raw]" >&2
     return 1
   fi
   secret="$1"
-  if [[ $# -eq 1 ]] || [[ "$2" = "-" ]]
-  then
+  if [[ $# -eq 1 ]] || [[ $2 == "-" ]]; then
     output=/dev/stdout
     nofile=1
   else
@@ -254,51 +236,42 @@ function get-tc-secret () {
     nofile=0
   fi
   raw=0
-  if [[ $# -eq 3 ]]
-  then
-    if [[ "$3" = "raw" ]]
-    then
+  if [[ $# -eq 3 ]]; then
+    if [[ $3 == "raw" ]]; then
       raw=1
     else
       echo "unknown arg: $3" >&2
       return 1
     fi
   fi
-  if [[ $nofile -eq 0 ]]
-  then
+  if [[ $nofile -eq 0 ]]; then
     mkdir -p "$(dirname "$output")"
   fi
-  if [[ -x "/usr/local/bin/taskcluster" ]]
-  then
+  if [[ -x "/usr/local/bin/taskcluster" ]]; then
     TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/$secret"
-  elif [[ -n "$TASKCLUSTER_PROXY_URL" ]]
-  then
+  elif [[ -n $TASKCLUSTER_PROXY_URL ]]; then
     retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/$secret"
   else
     echo "error: either taskcluster client binary must be installed or TASKCLUSTER_PROXY_URL must be set" >&2
     return 1
-  fi | if [[ $raw -eq 1 ]]
-  then
+  fi | if [[ $raw -eq 1 ]]; then
     jshon -e secret -e key
   else
     jshon -e secret -e key -u
   fi >"$output"
-  if [[ $nofile -eq 0 ]]
-  then
+  if [[ $nofile -eq 0 ]]; then
     chmod 0600 "$output"
   fi
 }
 
 # Add AWS credentials based on the given provider
 # shellcheck disable=SC2120
-function setup-aws-credentials () {
-  if [[ $# -gt 0 ]]
-  then
+function setup-aws-credentials() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ ! -f "$HOME/.aws/credentials" ]]
-  then
+  if [[ ! -f "$HOME/.aws/credentials" ]]; then
     case "$(echo "${SHIP-$(get-provider)}" | tr "[:upper:]" "[:lower:]")" in
       gce)
         # Get AWS credentials for GCE to be able to read from Credstash
@@ -309,8 +282,7 @@ function setup-aws-credentials () {
       taskcluster)
         # Get AWS credentials for TC to be able to read from Credstash
         mkdir -p "$HOME/.aws"
-        if [[ -x "/usr/local/bin/taskcluster" ]]
-        then
+        if [[ -x "/usr/local/bin/taskcluster" ]]; then
           TASKCLUSTER_ROOT_URL="${TASKCLUSTER_PROXY_URL-$TASKCLUSTER_ROOT_URL}" retry taskcluster api secrets get "project/fuzzing/${CREDSTASH_SECRET}"
         else
           retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/${CREDSTASH_SECRET}"
@@ -323,9 +295,8 @@ function setup-aws-credentials () {
 
 # Determine the provider environment we're running in
 # shellcheck disable=SC2120
-function get-provider () {
-  if [[ $# -gt 0 ]]
-  then
+function get-provider() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
@@ -339,8 +310,7 @@ function get-provider () {
       return 0
       ;;
     *)
-      if [[ -n "$TASKCLUSTER_ROOT_URL" ]]
-      then
+      if [[ -n $TASKCLUSTER_ROOT_URL ]]; then
         echo "Taskcluster"
         return 0
       fi
@@ -352,16 +322,14 @@ function get-provider () {
 
 # Add relative hostname to the FuzzManager configuration.
 # shellcheck disable=SC2120
-function setup-fuzzmanager-hostname () {
-  if [[ $# -gt 0 ]]
-  then
+function setup-fuzzmanager-hostname() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
   local name
   name="$(relative-hostname)"
-  if [[ -z "$name" ]]
-  then
+  if [[ -z $name ]]; then
     echo "WARNING: hostname was not determined correctly." >&2
     name="$(hostname -f)"
   fi
@@ -371,43 +339,38 @@ function setup-fuzzmanager-hostname () {
 
 # Disable AWS EC2 pool; suitable as trap function.
 # shellcheck disable=SC2120
-function disable-ec2-pool () {
-  if [[ $# -gt 0 ]]
-  then
+function disable-ec2-pool() {
+  if [[ $# -gt 0 ]]; then
     echo "usage: $0" >&2
     return 1
   fi
-  if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
-  then
+  if [[ -n $EC2SPOTMANAGER_POOLID ]]; then
     echo "Disabling EC2 pool $EC2SPOTMANAGER_POOLID" >&2
     ec2-reporter --disable "$EC2SPOTMANAGER_POOLID"
   fi
 }
 
 # Include timestamp in status message.
-function update-status () {
+function update-status() {
   update-ec2-status "[$(date -Is)] $*"
 }
 
-function update-ec2-status () {
-  if [[ -n "$EC2SPOTMANAGER_POOLID" ]]
-  then
+function update-ec2-status() {
+  if [[ -n $EC2SPOTMANAGER_POOLID ]]; then
     ec2-reporter --report "$@" || true
-  elif [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]
-  then
+  elif [[ -n $TASKCLUSTER_FUZZING_POOL ]]; then
     task-status-reporter --report "$@" || true
   fi
 }
 
 # Show sorted list of largest files and folders.
-function size () {
+function size() {
   du -cha "$@" 2>/dev/null | sort -rh | head -n 100
 }
 
-function install-apt-key () {
+function install-apt-key() {
   local keyurl
-  if [[ $# -ne 1 ]]
-  then
+  if [[ $# -ne 1 ]]; then
     echo "usage: $0 keyurl" >&2
     return 1
   fi

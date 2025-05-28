@@ -14,7 +14,7 @@ set -o pipefail
 get-tc-secret deploy-langfuzz .ssh/id_rsa.langfuzz
 
 # Setup Key Identities
-cat << EOF >> .ssh/config
+cat <<EOF >>.ssh/config
 Host langfuzz
 Hostname github.com
 IdentityFile ~/.ssh/id_rsa.langfuzz
@@ -65,7 +65,7 @@ rm -Rf tests
 TEST262_LIST=/home/ubuntu/LangFuzz/tools/tests/test262.list
 
 # This is a hack to extract include directives for jit-tests and convert them to jstests shell.js style
-(cd $JITTESTS && grep -rnl " include:" . | grep directives | while read -r f; do cp "lib/$(grep -E -m1 -o 'include:[a-zA-Z0-9\.\-]+' "$f" | sed -e 's/include://')" "${f/directives.txt}shell.js" ; done)
+(cd $JITTESTS && grep -rnl " include:" . | grep directives | while read -r f; do cp "lib/$(grep -E -m1 -o 'include:[a-zA-Z0-9\.\-]+' "$f" | sed -e 's/include://')" "${f/directives.txt/}shell.js"; done)
 
 cp -R $JITTESTS $JSTESTS .
 

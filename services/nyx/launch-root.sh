@@ -13,7 +13,7 @@ source "/srv/repos/setup/common.sh"
 # start logging
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
 mkdir -p /etc/td-agent-bit /logs
-cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
@@ -59,8 +59,7 @@ export SKIP_RUST=1
 source "/srv/repos/setup/clang.sh"
 retry-curl "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.cache.level-3.toolchains.v3.sysroot-x86_64-linux-gnu.latest/artifacts/public/build/sysroot-x86_64-linux-gnu.tar.zst" | zstdcat | tar -x -C /opt
 
-for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon
-do
+for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon; do
   pushd "/srv/repos/$r" >/dev/null
   retry git fetch --depth=1 --no-tags origin HEAD
   git reset --hard FETCH_HEAD
@@ -70,7 +69,7 @@ done
 # setup kvm device
 kvm_gid="$(stat -c%g /dev/kvm)"
 kvm_grp="$({ grep ":$kvm_gid:" /etc/group || true; } | cut -d: -f1)"
-if [[ -z "$kvm_grp" ]]; then
+if [[ -z $kvm_grp ]]; then
   groupadd -g "$kvm_gid" --system kvm
   kvm_grp=kvm
 fi
@@ -79,7 +78,7 @@ if [[ ! -e /dev/kvm ]]; then
 fi
 usermod -a -G "$kvm_grp" worker
 
-onexit () {
+onexit() {
   echo "Waiting for logs to flush..." >&2
   sleep 15
   killall -INT td-agent-bit || true

@@ -21,7 +21,7 @@ ln -sf /bin/true /sbin/initctl
 
 export DEBIAN_FRONTEND=noninteractive
 
-./js32_deps.sh  # does the initial sys-update
+./js32_deps.sh # does the initial sys-update
 ./grcov.sh
 ./gsutil.sh
 ./fluentbit.sh
@@ -58,7 +58,7 @@ pkgs=(
   software-properties-common
   ubuntu-restricted-addons
   unzip
-  wget  # used by oss-fuzz/infra/helper.py
+  wget # used by oss-fuzz/infra/helper.py
   xvfb
   zip
   zstd
@@ -70,7 +70,7 @@ apt-install-depends firefox
 apt-mark auto xul-ext-ubufox
 
 mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts > /dev/null
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts >/dev/null
 
 DESTDIR=/srv/repos EDIT=1 ./fuzzmanager.sh
 DESTDIR=/srv/repos EDIT=1 ./fuzzfetch.sh
@@ -81,13 +81,13 @@ chown -R worker:worker /home/worker /srv/repos
 afl_ver="$(resolve-tc-alias afl-instrumentation)"
 retry-curl "$(resolve-tc "$afl_ver")" | zstdcat | tar -x -C /opt
 # shellcheck disable=SC2016
-echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >> /etc/bash.bashrc
+echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >>/etc/bash.bashrc
 pushd /opt/afl-instrumentation/bin
-patch -p1 < /home/worker/patches/afl-cmin.patch
+patch -p1 </home/worker/patches/afl-cmin.patch
 popd >/dev/null
 
 cd ..
-su worker << EOF
+su worker <<EOF
 source ./setup/common.sh
 git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 EOF

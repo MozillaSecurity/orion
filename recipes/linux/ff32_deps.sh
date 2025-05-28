@@ -14,7 +14,7 @@ source "${0%/*}/common.sh"
 packages=(
   libasound2:i386
   libatk1.0-0:i386
-  libatomic1:i386  # needed only on 22.04
+  libatomic1:i386 # needed only on 22.04
   libc6:i386
   libcairo-gobject2:i386
   libcairo2:i386
@@ -61,8 +61,8 @@ case "${1-install}" in
     "${0%/*}/fuzzfetch.sh"
     TMPD="$(mktemp -d -p. ff32.test.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      fuzzfetch --name obj --target firefox --cpu x86
-      ./obj/firefox --help
+    fuzzfetch --name obj --target firefox --cpu x86
+    ./obj/firefox --help
     popd >/dev/null
     rm -rf "$TMPD"
     "${0%/*}/fuzzfetch.sh" uninstall

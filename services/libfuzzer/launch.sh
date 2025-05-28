@@ -8,13 +8,11 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source ~worker/.local/bin/common.sh
 
-if [[ "$(id -u)" = "0" ]]
-then
-  if [[ -z "$NO_SECRETS" ]]
-  then
+if [[ "$(id -u)" == "0" ]]; then
+  if [[ -z $NO_SECRETS ]]; then
     get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
     mkdir -p /etc/td-agent-bit
-    cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+    cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
@@ -67,7 +65,7 @@ EOF
 
     # See https://github.com/koalaman/shellcheck/issues/2660
     # shellcheck disable=SC2317
-    function onexit () {
+    function onexit() {
       echo "Waiting for logs to flush..." >&2
       sleep 15
       killall -INT td-agent-bit || true
@@ -83,26 +81,22 @@ EOF
     retry git fetch origin main
     git reset --hard origin/main
     PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx upgrade guided-fuzzing-daemon
-  )
-    then
+  ); then
     echo "Failed to install guided fuzzing daemon!"
     exit 1
   fi
 
   su worker -s "$0"
 else
-  if [[ -z "$NO_SECRETS" ]]
-  then
+  if [[ -z $NO_SECRETS ]]; then
     # get gcp fuzzdata credentials
     mkdir -p ~/.config/gcloud
     get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
   fi
 
-  if [[ $COVERAGE ]]
-  then
+  if [[ $COVERAGE ]]; then
 
-    if [[ -z "$TASK_ID" ]]
-    then
+    if [[ -z $TASK_ID ]]; then
       # See https://github.com/koalaman/shellcheck/issues/2660
       # shellcheck disable=SC2317
       function onexit {
@@ -122,8 +116,7 @@ fi
 
 exit_code=$?
 echo "returned $exit_code" >&2
-if [[ "$exit_code" -eq 124 ]]
-then
+if [[ $exit_code -eq 124 ]]; then
   # timeout coreutil exit code.
   exit 0
 else

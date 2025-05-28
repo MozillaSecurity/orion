@@ -20,6 +20,7 @@ repos:
       - id: check-symlinks
       - id: debug-statements
       - id: trailing-whitespace
+        exclude_types: [diff]
       - id: mixed-line-ending
       - id: name-tests-test
         args: ['--django']
@@ -40,6 +41,11 @@ repos:
     hooks:
       - id: shellcheck
         args: ['--exclude=SC1091,SC2148']
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.11.0-1
+    hooks:
+      - id: shfmt
+        args: ['-i', '2', '-ci', '-s', '-w']
   - repo: meta
     hooks:
       - id: check-useless-excludes

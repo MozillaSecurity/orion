@@ -2,8 +2,15 @@
 set -e -x -o pipefail
 shopt -s extglob
 
-retry () { i=0; while [[ "$i" -lt 9 ]]; do if "$@"; then return; else sleep 30; fi; i="$((i+1))"; done; "$@"; }
-retry-curl () { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry() {
+  i=0
+  while [[ $i -lt 9 ]]; do
+    if "$@"; then return; else sleep 30; fi
+    i="$((i + 1))"
+  done
+  "$@"
+}
+retry-curl() { curl -sSL --compressed --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
 # base msys packages
 retry pacman --noconfirm -S \
@@ -38,7 +45,7 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
 
 # configure pip
 mkdir -p pip
-cat << EOF > pip/pip.ini
+cat <<EOF >pip/pip.ini
 [global]
 disable-pip-version-check = true
 no-cache-dir = false
@@ -61,8 +68,8 @@ sed -i "s/^\\(    \\)maker = PipScriptMaker(.*/&\r\n\\1maker.executable = '\\/us
   msys64/opt/python/Lib/site-packages/pip/_internal/operations/install/wheel.py
 
 retry-curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json
-resolve_tc () {
-python - "$1" << EOF
+resolve_tc() {
+  python - "$1" <<EOF
 import json
 import sys
 with open("label-to-taskid.json") as fd:
@@ -90,7 +97,7 @@ retry python -m pip install \
 mkdir bugmon-artifacts
 
 mkdir -p .ssh
-retry ssh-keyscan github.com > .ssh/known_hosts
+retry ssh-keyscan github.com >.ssh/known_hosts
 
 rm -rf \
   msys64/mingw64/share/doc/ \

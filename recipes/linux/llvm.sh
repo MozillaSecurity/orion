@@ -15,13 +15,13 @@ source "${0%/*}/common.sh"
 
 VERSION=16
 
-if [[ "$1" = "auto" ]]; then
-  function install-auto-arg () {
+if [[ $1 == "auto" ]]; then
+  function install-auto-arg() {
     apt-install-auto "$@"
   }
   shift
 else
-  function install-auto-arg () {
+  function install-auto-arg() {
     sys-embed "$@"
   }
 fi
@@ -37,7 +37,7 @@ case "${1-install}" in
 
     if [[ ! -f /etc/apt/sources.list.d/llvm.list ]]; then
       keypath="$(install-apt-key https://apt.llvm.org/llvm-snapshot.gpg.key)"
-      cat > /etc/apt/sources.list.d/llvm.list <<- EOF
+      cat >/etc/apt/sources.list.d/llvm.list <<-EOF
 	deb [signed-by=${keypath}] https://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-$VERSION main
 	EOF
 
@@ -53,11 +53,11 @@ case "${1-install}" in
       "libc++-$VERSION-dev" "libc++abi-$VERSION-dev"
 
     update-alternatives --install \
-      /usr/bin/llvm-config              llvm-config      /usr/bin/llvm-config-$VERSION     100 \
-      --slave /usr/bin/clang            clang            /usr/bin/clang-$VERSION               \
-      --slave /usr/bin/clang++          clang++          /usr/bin/clang++-$VERSION             \
-      --slave /usr/bin/llvm-symbolizer  llvm-symbolizer  /usr/bin/llvm-symbolizer-$VERSION     \
-      --slave /usr/bin/lldb             lldb             /usr/bin/lldb-$VERSION
+      /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-$VERSION 100 \
+      --slave /usr/bin/clang clang /usr/bin/clang-$VERSION \
+      --slave /usr/bin/clang++ clang++ /usr/bin/clang++-$VERSION \
+      --slave /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-$VERSION \
+      --slave /usr/bin/lldb lldb /usr/bin/lldb-$VERSION
     ;;
   test)
     clang --version

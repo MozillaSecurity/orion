@@ -12,7 +12,7 @@ source /home/worker/.local/bin/common.sh
 
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
 mkdir -p /etc/td-agent-bit
-cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
@@ -62,7 +62,7 @@ mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
 # shellcheck disable=SC2317
-function onexit () {
+function onexit() {
   echo "Waiting for logs to flush..." >&2
   sleep 15
   killall -INT td-agent-bit || true
@@ -77,7 +77,7 @@ fi
 if [[ -e /dev/kvm ]]; then
   kvm_gid="$(stat -c%g /dev/kvm)"
   kvm_grp="$({ grep ":$kvm_gid:" /etc/group || true; } | cut -d: -f1)"
-  if [[ -z "$kvm_grp" ]]; then
+  if [[ -z $kvm_grp ]]; then
     # if group kvm already exists, delete it
     if grep -q kvm /etc/group; then
       groupdel kvm
@@ -100,12 +100,12 @@ rwait wait "$wait_token"
 exit_code=$?
 echo "returned $exit_code" >&2
 case $exit_code in
-  5)  # grizzly.common.utils.Exit
-      # expected results not reproduced (opposite of SUCCESS)
+  5) # grizzly.common.utils.Exit
+    # expected results not reproduced (opposite of SUCCESS)
     exit 0
     ;;
-  4)  # grizzly.common.utils.LAUNCH_FAILURE
-      # unrelated target failure (browser startup crash, etc)
+  4) # grizzly.common.utils.LAUNCH_FAILURE
+    # unrelated target failure (browser startup crash, etc)
     exit 0
     ;;
   *)

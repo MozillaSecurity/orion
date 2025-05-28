@@ -34,10 +34,10 @@ case "${1-install}" in
     if is-arm64; then
       TMPD="$(mktemp -d -p. grcov.XXXXXXXXXX)"
       pushd "$TMPD" >/dev/null
-        LATEST_VERSION=$(get-latest-github-release "mozilla/grcov")
-        retry-curl -O "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-aarch64-unknown-linux-gnu.tar.bz2"
-        tar -I lbzip2 -xf grcov-aarch64-unknown-linux-gnu.tar.bz2
-        install grcov /usr/local/bin/grcov
+      LATEST_VERSION=$(get-latest-github-release "mozilla/grcov")
+      retry-curl -O "https://github.com/mozilla/grcov/releases/download/$LATEST_VERSION/grcov-aarch64-unknown-linux-gnu.tar.bz2"
+      tar -I lbzip2 -xf grcov-aarch64-unknown-linux-gnu.tar.bz2
+      install grcov /usr/local/bin/grcov
       popd >/dev/null
       rm -rf "$TMPD"
     else

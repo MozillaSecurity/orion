@@ -23,23 +23,20 @@ echo "[!] requesting session.sh" | ./hcat
 source ./session.sh
 
 echo "[!] NYX_FUZZER: $NYX_FUZZER" | ./hcat
-if [[ $NYX_FUZZER == Domino* ]]
-then
+if [[ $NYX_FUZZER == Domino* ]]; then
   echo "[!] requesting extra files from hypervisor" | ./hcat
   ./hget nyx-server.py nyx-server.py
   echo "[!] starting domino replay server" | ./hcat
   python3 nyx-server.py &
 fi
 
-if [[ -n ${__AFL_PC_FILTER:-} ]]
-then
+if [[ -n ${__AFL_PC_FILTER:-} ]]; then
   echo "[!] enabling afl symbol filtering" | ./hcat
   ./hget target.symbols.txt target.symbols.txt
   export AFL_PC_FILTER_FILE=/home/user/target.symbols.txt
 fi
 
-if [[ -n ${MOCHITEST_ARGS:-} ]]
-then
+if [[ -n ${MOCHITEST_ARGS:-} ]]; then
   echo "[!] requesting testenv.txz from hypervisor" | ./hcat
   ./hget_bulk testenv.txz testenv.txz
   echo "[!] requesting tools.txz from hypervisor" | ./hcat
@@ -48,9 +45,8 @@ then
   tar xf testenv.txz
   echo "[!] unpacking tools.txz" | ./hcat
   tar xf tools.txz -C tests/bin/
-elif [[ $NYX_FUZZER == Domino* ]]
-then
-  cat > fuzz.html <<EOF
+elif [[ $NYX_FUZZER == Domino* ]]; then
+  cat >fuzz.html <<EOF
 <!DOCTYPE html>
 <meta http-equiv="refresh" content="0; url=http://localhost:8080/nyx_landing.html">
 EOF
@@ -81,7 +77,7 @@ export AFL_DEBUG=1
 echo "[!] creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
 LD_LIBRARY_PATH="/home/user/firefox" \
-xvfb-run /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
+  xvfb-run /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
 
 echo "[!] starting firefox" | ./hcat

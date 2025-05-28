@@ -26,7 +26,6 @@ TEST_SUITE=(
   web-platform-tests
 )
 
-
 git config --global init.defaultBranch main
 git init covdiff
 (
@@ -56,4 +55,4 @@ git init covdiff
     )
     cov-reporter "${COV_ARGS[@]}"
   fi
-)> /live.log 2>&1
+) >/live.log 2>&1

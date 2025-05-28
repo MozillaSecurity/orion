@@ -26,13 +26,14 @@ sys-embed \
   openssh-client
 
 retry-curl https://apt.corretto.aws/corretto.key | gpg --dearmor -o /etc/apt/keyrings/corretto.gpg
-echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" > /etc/apt/sources.list.d/corretto.list
+echo "deb [signed-by=/etc/apt/keyrings/corretto.gpg] https://apt.corretto.aws stable main" >/etc/apt/sources.list.d/corretto.list
 sys-update
 
 mkdir /opt/maven
 retry-curl https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar -C /opt/maven --strip-components=1 -xz
-echo "PATH=\$PATH:/opt/maven/bin" >> /etc/bash.bashrc
-echo ". /etc/environment" >> /etc/bash.bashrc
+#shellcheck disable=SC2016
+echo 'PATH=$PATH:/opt/maven/bin' >>/etc/bash.bashrc
+echo ". /etc/environment" >>/etc/bash.bashrc
 
 #### Install recipes
 
@@ -41,7 +42,7 @@ sys-embed java-11-amazon-corretto-jdk
 SRCDIR=/src/orion-decision "${0%/*}/orion_decision.sh"
 "${0%/*}/worker.sh"
 mkdir /home/worker/.ssh
-retry ssh-keyscan github.com > /home/worker/.ssh/known_hosts
+retry ssh-keyscan github.com >/home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker
 chmod 0777 /src

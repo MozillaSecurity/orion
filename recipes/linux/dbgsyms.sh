@@ -21,7 +21,7 @@ apt-install-auto \
 
 if [[ ! -f /etc/apt/sources.list.d/ddebs.list ]]; then
   keypath="$(install-apt-key http://ddebs.ubuntu.com/dbgsym-release-key.asc)"
-  cat <<- EOF > /etc/apt/sources.list.d/ddebs.list
+  cat <<-EOF >/etc/apt/sources.list.d/ddebs.list
 	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs) main restricted universe multiverse
 	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs)-updates main restricted universe multiverse
 	deb [signed-by=${keypath}] http://ddebs.ubuntu.com/ $(lsb_release -cs)-proposed main restricted universe multiverse
@@ -31,7 +31,7 @@ if [[ ! -f /etc/apt/sources.list.d/ddebs.list ]]; then
 fi
 
 # For each package, install the corresponding dbgsym package (same version).
-function sys-embed-dbgsym () {
+function sys-embed-dbgsym() {
   dbgsym_installs=()
   for pkg in "$@"; do
     if ver="$(dpkg-query -W "$pkg" 2>/dev/null | head -n1 | cut -f2)"; then

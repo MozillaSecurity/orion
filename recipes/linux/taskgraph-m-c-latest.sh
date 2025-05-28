@@ -10,7 +10,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 _TC_CACHE="/tmp/resolve-tc-cache"
 
-_ensure-tc-taskgraph-data () {
+_ensure-tc-taskgraph-data() {
   mkdir -p "$_TC_CACHE"
   if [[ ! -e "$_TC_CACHE/full-task-graph.json" ]]; then
     apt-install-auto \
@@ -21,10 +21,10 @@ _ensure-tc-taskgraph-data () {
 }
 
 # resolve toolchain alias (eg. clang -> clang-16)
-resolve-tc-alias () {
+resolve-tc-alias() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<- "EOF"
+  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -46,10 +46,10 @@ resolve-tc-alias () {
 }
 
 # resolve toolchain artifact (eg. clang-17 -> public/build/clang.tar.zst)
-resolve-tc-artifact () {
+resolve-tc-artifact() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<- "EOF"
+  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -60,10 +60,10 @@ resolve-tc-artifact () {
 }
 
 # resolve toolchain source artifact (eg. clang-17 -> public/build/llvm-project.tar.zst)
-resolve-tc-src-artifact () {
+resolve-tc-src-artifact() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<- "EOF"
+  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -74,10 +74,10 @@ resolve-tc-src-artifact () {
 }
 
 # return the artifact url for a given toolchain alias (eg. grcov or clang)
-resolve-tc () {
+resolve-tc() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<- "EOF"
+  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
 	import json
 	import sys
 	with open(sys.argv[1]) as fd:
@@ -105,10 +105,10 @@ resolve-tc () {
 }
 
 # return the source artifact url for a given toolchain alias (eg. grcov or clang)
-resolve-tc-src () {
+resolve-tc-src() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<- "EOF"
+  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
 	import json
 	import sys
 	with open(sys.argv[1]) as fd:

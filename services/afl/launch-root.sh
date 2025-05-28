@@ -13,7 +13,7 @@ source "/srv/repos/setup/common.sh"
 # start logging
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
 mkdir -p /etc/td-agent-bit /logs
-cat > /etc/td-agent-bit/td-agent-bit.conf << EOF
+cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
     Log_File     /var/log/td-agent-bit.log
@@ -54,7 +54,7 @@ EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
-onexit () {
+onexit() {
   echo "Waiting for logs to flush..." >&2
   sleep 15
   killall -INT td-agent-bit || true

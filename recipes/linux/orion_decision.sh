@@ -14,7 +14,7 @@ source "${0%/*}/common.sh"
 case "${1-install}" in
   install)
     # assert that SRCDIR is set
-    [[ -n "$SRCDIR" ]]
+    [[ -n $SRCDIR ]]
 
     sys-embed \
       ca-certificates \
@@ -34,8 +34,7 @@ case "${1-install}" in
     PIPX_DEFAULT_PYTHON="$(which python3)"
     export PIPX_DEFAULT_PYTHON
 
-    if [[ "$EDIT" = "1" ]]
-    then
+    if [[ $EDIT == "1" ]]; then
       retry "$tmp/bin/pipx" install --global -e "$SRCDIR"
     else
       retry "$tmp/bin/pipx" install --global "$SRCDIR"

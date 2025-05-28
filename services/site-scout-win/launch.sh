@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -e -x -o pipefail
 
-retry () {
+retry() {
   i=0
-  while [[ "$i" -lt 9 ]]; do
+  while [[ $i -lt 9 ]]; do
     "$@" && return
     sleep 30
-    i="$((i+1))"
+    i="$((i + 1))"
   done
   "$@"
 }
-retry-curl () { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
+retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
-function get-deadline () {
-  if [[ -z "$TASK_ID" ]] || [[ -z "$RUN_ID" ]]; then
+function get-deadline() {
+  if [[ -z $TASK_ID ]] || [[ -z $RUN_ID ]]; then
     echo "error: get-deadline() is only supported on Taskcluster" >&2
     exit 1
   fi
@@ -25,30 +25,29 @@ function get-deadline () {
   max_run_time="$(python -c "import json,sys;print(json.load(sys.stdin)['payload']['maxRunTime'])" <"$tmp/task.json")"
   rm -rf "$tmp"
   run_end="$((started + max_run_time))"
-  if [[ $run_end -lt $deadline ]]
-  then
+  if [[ $run_end -lt $deadline ]]; then
     echo "$run_end"
   else
     echo "$deadline"
   fi
 }
 
-status () {
-  if [[ -n "$TASKCLUSTER_FUZZING_POOL" ]]; then
+status() {
+  if [[ -n $TASKCLUSTER_FUZZING_POOL ]]; then
     task-status-reporter --report "$@" || true
   fi
 }
 
-if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
   # check if there is enough time to run
-  if [[ "$TARGET_DURATION" -le 600 ]]; then
+  if [[ $TARGET_DURATION -le 600 ]]; then
     # create required artifact directory to avoid task failure
     mkdir -p "${TMP}/site-scout"
     status "Not enough time remaining before deadline!"
     exit 0
   fi
-  if [[ -n "$RUNTIME_LIMIT" ]] && [[ "$RUNTIME_LIMIT" -lt "$TARGET_DURATION" ]]; then
+  if [[ -n $RUNTIME_LIMIT ]] && [[ $RUNTIME_LIMIT -lt $TARGET_DURATION ]]; then
     TARGET_DURATION="$RUNTIME_LIMIT"
   fi
 else
@@ -59,7 +58,7 @@ fi
 set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"
 set -x
-cat > td-agent-bit.conf << EOF
+cat >td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       Off
     Log_File     $USERPROFILE\\td-agent-bit.log
@@ -114,7 +113,7 @@ set -x
 
 # Update fuzzmanager config for this instance
 mkdir -p signatures
-cat >> .fuzzmanagerconf << EOF
+cat >>.fuzzmanagerconf <<EOF
 sigdir = $USERPROFILE\\signatures
 EOF
 
@@ -136,7 +135,7 @@ status "Setup: cloning site-scout-private"
 set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/deploy-site-scout-private" | python -c "import json,sys;open('.ssh/id_ecdsa.site-scout-private','w',newline='\\n').write(json.load(sys.stdin)['secret']['key'])"
 set -x
-cat << EOF >> .ssh/config
+cat <<EOF >>.ssh/config
 
 Host site-scout-private
 HostName github.com
@@ -176,13 +175,13 @@ case $build in
 esac
 
 # setup reporter
-echo "No report yet" > status.txt
+echo "No report yet" >status.txt
 task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # enable page interactions
-if [[ -n "$EXPLORE" ]]; then
+if [[ -n $EXPLORE ]]; then
   export EXPLORE_FLAG="--explore"
 else
   export EXPLORE_FLAG=""
@@ -190,9 +189,8 @@ fi
 
 # select URL collections
 mkdir active_lists
-for LIST in ${URL_LISTS}
-do
-    cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
+for LIST in ${URL_LISTS}; do
+  cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
 done
 
 # create directory for launch failure results

@@ -25,8 +25,8 @@ if ! is-arm64; then
       "${0%/*}/fuzzfetch.sh"
       TMPD="$(mktemp -d -p. js32.test.XXXXXXXXXX)"
       pushd "$TMPD" >/dev/null
-        fuzzfetch --name jsshell --target js --cpu x86
-        ./jsshell/dist/bin/js --help
+      fuzzfetch --name jsshell --target js --cpu x86
+      ./jsshell/dist/bin/js --help
       popd >/dev/null
       rm -rf "$TMPD"
       "${0%/*}/fuzzfetch.sh" uninstall

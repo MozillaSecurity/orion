@@ -15,35 +15,29 @@ source "/srv/repos/setup/common.sh"
 
 FETCH_ARGS=(-o "$HOME" --afl --fuzzing)
 
-if [[ -n "$JSRT" ]] && [[ -z "$COVERAGE" ]]
-then
+if [[ -n $JSRT ]] && [[ -z $COVERAGE ]]; then
   FETCH_ARGS+=(--debug)
-elif [[ -z "$COVERAGE" ]]
-then
+elif [[ -z $COVERAGE ]]; then
   FETCH_ARGS+=(--asan)
 fi
 
-if [[ "$COVERAGE" = 1 ]]
-then
+if [[ $COVERAGE == 1 ]]; then
   FETCH_ARGS+=(--coverage --build "$REVISION")
 fi
 
-if [[ "$REPO" = "try" ]]; then
+if [[ $REPO == "try" ]]; then
   FETCH_ARGS+=(--try)
 fi
 
 # Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
 JS="${JS:-0}"
-if [[ "$JS" = 1 ]] || [[ -n "$JSRT" ]]
-then
-  if [[ ! -d "$HOME/js" ]]
-  then
+if [[ $JS == 1 ]] || [[ -n $JSRT ]]; then
+  if [[ ! -d "$HOME/js" ]]; then
     update-status "downloading js shell"
     retry fuzzfetch -n js --target js "${FETCH_ARGS[@]}"
   fi
-  if [[ -n "$JSRT" ]]
-  then
+  if [[ -n $JSRT ]]; then
     TARGET_BIN="js/dist/bin/js"
   else
     # if we are using the fuzz-tests target, copy fuzzmanagerconf from the js binary
@@ -52,8 +46,7 @@ then
   fi
 else
   TARGET_BIN="firefox/firefox"
-  if [[ ! -d "$HOME/firefox" ]]
-  then
+  if [[ ! -d "$HOME/firefox" ]]; then
     FETCH_ARGS+=(--target firefox common gtest xpcshell)
     update-status "downloading firefox"
     retry fuzzfetch -n firefox "${FETCH_ARGS[@]}"

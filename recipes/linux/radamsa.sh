@@ -24,10 +24,10 @@ case "${1-install}" in
     # Build radamsa
     TMPD="$(mktemp -d -p. radamsa.build.XXXXXXXXXX)"
     pushd "$TMPD" >/dev/null
-      git-clone https://gitlab.com/akihe/radamsa.git
-      cd radamsa
-      make
-      make install
+    git-clone https://gitlab.com/akihe/radamsa.git
+    cd radamsa
+    make
+    make install
     popd >/dev/null
     rm -rf "$TMPD"
     ;;

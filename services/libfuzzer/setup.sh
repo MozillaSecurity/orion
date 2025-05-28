@@ -16,7 +16,7 @@ source "${0%/*}/common.sh"
 #### Install recipes
 
 cd "${0%/*}"
-./js32_deps.sh  # does the initial sys-update
+./js32_deps.sh # does the initial sys-update
 ./htop.sh
 ./fuzzfetch.sh
 ./fuzzmanager.sh
@@ -61,7 +61,7 @@ packages=(
   subversion
   ubuntu-restricted-addons
   unzip
-  wget  # used by oss-fuzz/infra/helper.py
+  wget # used by oss-fuzz/infra/helper.py
   xvfb
   zip
 )
@@ -74,7 +74,7 @@ apt-get remove --purge -qq xul-ext-ubufox
 
 # Ensure the machine uses core dumps with PID in the filename
 # https://github.com/moby/moby/issues/11740
-cat << EOF | tee /etc/sysctl.d/60-fuzzos.conf > /dev/null
+cat <<EOF | tee /etc/sysctl.d/60-fuzzos.conf >/dev/null
 # Ensure that we use PIDs with core dumps
 kernel.core_uses_pid = 1
 # Allow ptrace of any process
@@ -83,14 +83,14 @@ EOF
 
 # Ensure we retry metadata requests in case of glitches
 # https://github.com/boto/boto/issues/1868
-cat << EOF | tee /etc/boto.cfg > /dev/null
+cat <<EOF | tee /etc/boto.cfg >/dev/null
 [Boto]
 metadata_service_num_attempts = 10
 EOF
 
 #### Base Environment Configuration
 
-cat << 'EOF' >> /home/worker/.bashrc
+cat <<'EOF' >>/home/worker/.bashrc
 
 # FuzzOS
 export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]λ\[\033[0m\] '
@@ -103,7 +103,7 @@ cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
 
 # Add shared `common.sh` to Bash
 cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >> /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
 
 mkdir -p /src
 git init /src/guided-fuzzing-daemon
@@ -118,10 +118,10 @@ PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install /src/guided-f
 
 mkdir -p /home/worker/.ssh /root/.ssh
 chmod 0700 /home/worker/.ssh /root/.ssh
-cat << EOF | tee -a /root/.ssh/config >> /home/worker/.ssh/config
+cat <<EOF | tee -a /root/.ssh/config >>/home/worker/.ssh/config
 Host *
 UseRoaming no
 EOF
-retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >> /home/worker/.ssh/known_hosts
+retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts >>/home/worker/.ssh/known_hosts
 
 chown -R worker:worker /home/worker
