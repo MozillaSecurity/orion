@@ -108,7 +108,11 @@ function get-deadline () {
 # Get the task deadline.
 # If running locally, return a date far in the future to prevent expiration.
 function get-target-time () {
-  if [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]; then
+  if [[ "$TARGET_TIME" =~ ^-?[0-9]+$ ]]
+  then
+    echo "$TARGET_TIME"
+  elif [[ -n "$TASK_ID" ]] || [[ -n "$RUN_ID" ]]
+  then
     echo $(($(get-deadline) - $(date +%s) - 5 * 60))
   else
     echo $((10 * 365 * 24 * 3600))
