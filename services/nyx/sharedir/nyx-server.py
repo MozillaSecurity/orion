@@ -36,7 +36,8 @@ NYX_HTML = b"""<html>
           }
 
           const { fuzzer, objects, timeout } = entryPoints
-          for (url of [fuzzer, objects, timeout]) {
+          // The load order is required
+          for (url of [timeout, objects, fuzzer]) {
             const script = document.createElement("script")
             script.src = `/${url}`
             script.defer = true
