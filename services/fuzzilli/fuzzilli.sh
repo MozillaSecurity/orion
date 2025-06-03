@@ -158,6 +158,6 @@ else
   if [[ $COVERAGE ]]; then
     timeout -s 2 "$(fuzzilli-deadline)" "$HOME/coverage.sh" "$HOME/build/dist/bin/js" "$HOME/build/"
   else
-    guided-fuzzing-daemon "${args[@]}" --fuzzilli --fuzzmanager --max-runtime "$(fuzzilli-deadline)" --build-dir ~/fuzzilli --corpus-out "$HOME/results" "$HOME/build/dist/bin/js"
+    guided-fuzzing-daemon "${args[@]}" --debug --fuzzilli --fuzzmanager --max-runtime "$(fuzzilli-deadline)" --build-dir ~/fuzzilli --corpus-out "$HOME/results" "$HOME/build/dist/bin/js"
   fi
 fi
