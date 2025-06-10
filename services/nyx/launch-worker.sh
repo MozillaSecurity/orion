@@ -83,6 +83,14 @@ if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]; then
 fi
 pushd ipc-fuzzing/userspace-tools
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"
+
+# Record crashes for non-default handlers
+for var in CATCH_MOZ_CRASH CATCH_MOZ_ASSERT CATCH_MOZ_RELEASE_ASSERT; do
+  if [[ ${!var} -eq 1 ]]; then
+    export CPPFLAGS="$CPPFLAGS -D$var"
+  fi
+done
+
 make clean htools_no_pt
 cd ../preload/harness
 make clean bin64/ld_preload_fuzz_no_pt.so
