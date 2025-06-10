@@ -158,6 +158,10 @@ UBSAN_OPTIONS=strip_path_prefix=/builds/worker/workspace/build/src/:symbolize=0:
 if [[ $COVERAGE -eq 1 ]]; then
   echo "export MOZ_FUZZ_COVERAGE=1" >>session.sh
 fi
+# Env variable required to log crashes in content processes
+if [[ $MOZ_LOG_CHILD_CRASHES -eq 1 ]]; then
+  echo "export MOZ_LOG_CHILD_CRASHES=1" >>session.sh
+fi
 
 # Generate dynamic instrumentation map
 if [[ -n $AFL_PC_FILTER_FILE_REGEX && $COVERAGE -ne 1 ]]; then
