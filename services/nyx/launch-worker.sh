@@ -155,6 +155,7 @@ UBSAN_OPTIONS=strip_path_prefix=/builds/worker/workspace/build/src/:symbolize=0:
   echo "export UBSAN_OPTIONS=\"${UBSAN_OPTIONS}\""
 } >>session.sh
 
+# Enable coverage settings
 if [[ $COVERAGE -eq 1 ]]; then
   echo "export MOZ_FUZZ_COVERAGE=1" >>session.sh
 fi
