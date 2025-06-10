@@ -8,7 +8,7 @@ source /home/worker/.local/bin/common.sh
 
 get-tc-secret deploy-gridl .ssh/gridl_deploy
 
-GIT_TOKEN=$(get-tc-secret ci-git-token)
+GIT_TOKEN=$(get-tc-secret gridl-git-token)
 export GIT_TOKEN
 
 npm set //registry.npmjs.org/:_authToken="$(get-tc-secret deploy-npm)"
