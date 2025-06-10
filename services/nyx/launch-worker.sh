@@ -159,9 +159,12 @@ if [[ $COVERAGE -eq 1 ]]; then
   echo "export MOZ_FUZZ_COVERAGE=1" >>session.sh
 fi
 
-if [[ -n $AFL_PC_FILTER_FILE_REGEX ]] && [[ $COVERAGE -ne 1 ]]; then
-  python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so >libxul.symbols.txt
-  grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt >target.symbols.txt
+# Generate dynamic instrumentation map
+if [[ -n $AFL_PC_FILTER_FILE_REGEX && $COVERAGE -ne 1 ]]; then
+  if [[ ! -f target.symbols.txt ]]; then
+    python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so >libxul.symbols.txt
+    grep -P "$AFL_PC_FILTER_FILE_REGEX" libxul.symbols.txt >target.symbols.txt
+  fi
   echo "export __AFL_PC_FILTER=1" >>session.sh
 fi
 
