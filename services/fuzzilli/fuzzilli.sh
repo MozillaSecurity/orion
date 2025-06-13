@@ -119,9 +119,19 @@ if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
 fi
 
 args=(
-  --bucket mozilla-aflfuzz
   --project "$S3_PROJECT"
 )
+
+if [[ -n $USE_GCS ]]; then
+  args+=(
+    --bucket guided-fuzzing-data
+    --provider GCS
+  )
+else
+  args+=(
+    --bucket mozilla-aflfuzz
+  )
+fi
 
 if [[ -n $DIFFERENTIAL ]]; then
   args+=(--differential)
