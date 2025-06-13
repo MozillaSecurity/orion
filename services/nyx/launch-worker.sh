@@ -238,22 +238,29 @@ DAEMON_ARGS=(
   --timeout "${AFL_TIMEOUT-30000}"
 )
 
+if [[ -n $USE_GCS ]]; then
+  S3_BUCKET_ARGS=(--bucket guided-fuzzing-data --provider GCS)
+else
+  S3_BUCKET_ARGS=(--bucket mozilla-aflfuzz)
+fi
 S3_PROJECT="${S3_PROJECT-Nyx-$NYX_FUZZER}"
-S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
+S3_PROJECT_ARGS=(--project "$S3_PROJECT")
 
 if [[ -n $S3_CORPUS_REFRESH ]]; then
   update-status "starting corpus refresh"
   export AFL_PRINT_FILENAMES=1
   if [[ $NYX_FUZZER == "IPC_SingleMessage" ]]; then
-    guided-fuzzing-daemon --list-projects "${S3_PROJECT_ARGS[@]}" | while read -r project; do
+    guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" | while read -r project; do
       time guided-fuzzing-daemon \
-        --bucket mozilla-aflfuzz \
+        "${S3_BUCKET_ARGS[@]}" \
         --project "$project" \
         --corpus-refresh ./corpus \
         "${DAEMON_ARGS[@]}"
     done
   else
-    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
+    time guided-fuzzing-daemon \
+      "${S3_BUCKET_ARGS[@]}" \
+      "${S3_PROJECT_ARGS[@]}" \
       --corpus-refresh ./corpus \
       "${DAEMON_ARGS[@]}"
   fi
@@ -266,7 +273,7 @@ else
       --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so
     )
     source ./sharedir/config.sh
-    S3_PROJECT_ARGS=(--bucket mozilla-aflfuzz --project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
+    S3_PROJECT_ARGS=(--project "$S3_PROJECT-${MOZ_FUZZ_IPC_TRIGGER//:/_}")
   elif [[ $NYX_FUZZER == "IPC_Generic" ]]; then
     DAEMON_ARGS+=(
       --env-percent 75 AFL_CUSTOM_MUTATOR_LIBRARY=/srv/repos/AFLplusplus/custom_mutators/honggfuzz/honggfuzz-2b-chunked-mutator.so
@@ -292,7 +299,7 @@ else
   if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
     # Download the corpus from S3
     update-status "downloading corpus"
-    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
+    time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
   else
     mkdir -p corpus
   fi
@@ -307,7 +314,7 @@ else
 
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
-  time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
+  time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" \
     --fuzzmanager \
     --max-runtime "$(get-target-time)" \
     --afl-async-corpus \
