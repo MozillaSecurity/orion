@@ -28,6 +28,10 @@ COPY \
     services/fuzzilli/setup.sh \
     /srv/repos/setup/
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
+COPY \
+    services/afl/pyproject.toml \
+    services/nyx/nyx_utils.py \
+    /srv/repos/nyx_utils/
 
 RUN /srv/repos/setup/setup.sh
 COPY services/fuzzilli/coverage.sh \
