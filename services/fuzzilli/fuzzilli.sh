@@ -119,6 +119,7 @@ if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
 fi
 
 args=(
+  --instances "${INSTANCES:-$(($(ncpu) / 2))}"
   --project "$S3_PROJECT"
   --stats ./stats
 )
