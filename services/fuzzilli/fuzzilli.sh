@@ -120,6 +120,7 @@ fi
 
 args=(
   --project "$S3_PROJECT"
+  --stats ./stats
 )
 
 if [[ -n $USE_GCS ]]; then
