@@ -16,6 +16,10 @@ source "$HOME/.local/bin/common.sh"
 if [[ -z $NO_SECRETS ]]; then
   # setup AWS credentials to use S3
   setup-aws-credentials
+
+  # get gcp fuzzdata credentials
+  mkdir -p ~/.config/gcloud
+  get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 fi
 
 fuzzilli-deadline() {
