@@ -110,9 +110,9 @@ class AWS(Provider):
         aws = yaml.safe_load(path.read_text())
         assert "subnets" in aws, "Missing subnets in AWS config"
         assert "security_groups" in aws, "Missing security_groups in AWS config"
-        assert (
-            aws["subnets"].keys() == aws["security_groups"].keys()
-        ), "Keys mismatch in AWS config"
+        assert aws["subnets"].keys() == aws["security_groups"].keys(), (
+            "Keys mismatch in AWS config"
+        )
         return {
             region: {
                 "subnets": subnets,
@@ -281,9 +281,9 @@ class GCP(Provider):
     ) -> list[dict[str, Any]]:
         # Load source image
         assert imageset in self.imagesets, f"Missing imageset {imageset}"
-        assert (
-            "gcp" in self.imagesets[imageset]
-        ), f"No GCP implementation for imageset {imageset}"
+        assert "gcp" in self.imagesets[imageset], (
+            f"No GCP implementation for imageset {imageset}"
+        )
         source_image = self.imagesets[imageset]["gcp"]["image"]
         worker_config = self.get_worker_config(imageset, platform, worker_type)
 

@@ -286,10 +286,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                         "generic-worker:"
                         f"os-group:{PROVISIONER_ID}/{task_id}/Administrators"
                     ),
-                    (
-                        "generic-worker:"
-                        f"run-as-administrator:{PROVISIONER_ID}/{task_id}"
-                    ),
+                    (f"generic-worker:run-as-administrator:{PROVISIONER_ID}/{task_id}"),
                 )
             )
 
@@ -334,9 +331,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "maxCapacity": (
                 # * 2 since Taskcluster seems to not reuse workers very quickly in some
                 # cases, so we end up with a lot of pending tasks.
-                max(1, math.ceil(self.max_run_time / self.cycle_time))
-                * self.tasks
-                * 2
+                max(1, math.ceil(self.max_run_time / self.cycle_time)) * self.tasks * 2
             ),
             "minCapacity": 0,
         }
