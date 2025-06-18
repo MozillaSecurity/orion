@@ -296,9 +296,9 @@ class CommonPoolConfiguration(abc.ABC):
                 f"{', '.join(extra_keys)}"
             )
             for k, v in value.items():
-                assert isinstance(
-                    v, str
-                ), f"unexpected type for 'container.{k}': {type(v).__name__}"
+                assert isinstance(v, str), (
+                    f"unexpected type for 'container.{k}': {type(v).__name__}"
+                )
         for key, value in data.get("artifacts", {}).items():
             assert isinstance(key, str), (
                 f"expected artifact '{key!r}' name to be 'str', "
@@ -321,9 +321,9 @@ class CommonPoolConfiguration(abc.ABC):
                 "directory",
             }, f"expected artifact '{key}' .type to be one of: file, directory"
         for key, value in data.get("macros", {}).items():
-            assert isinstance(
-                key, str
-            ), f"expected macro '{key!r}' name to be 'str', got '{type(key).__name__}'"
+            assert isinstance(key, str), (
+                f"expected macro '{key!r}' name to be 'str', got '{type(key).__name__}'"
+            )
             assert isinstance(value, (int, str)), (
                 f"expected macro '{key}' value to be 'int' or 'str', got "
                 f"'{type(value).__name__}'"
@@ -565,9 +565,9 @@ class PoolConfiguration(CommonPoolConfiguration):
             return None
         data = yaml.safe_load((self.base_dir / f"{self.preprocess}.yml").read_text())
         pool_id = self.pool_id + "/preprocess"
-        assert data["tasks"] == 1 or (
-            self.tasks == 1 and data["tasks"] is None
-        ), f"{self.preprocess} must set tasks = 1"
+        assert data["tasks"] == 1 or (self.tasks == 1 and data["tasks"] is None), (
+            f"{self.preprocess} must set tasks = 1"
+        )
         cannot_set = [
             "disk_size",
             "cores_per_task",
@@ -720,15 +720,15 @@ class PoolConfigMap(CommonPoolConfiguration):
         if not pools:
             return
         for field in same_fields:
-            assert (
-                len({getattr(pool, field) for pool in pools}) == 1
-            ), f"{field} has multiple values"
+            assert len({getattr(pool, field) for pool in pools}) == 1, (
+                f"{field} has multiple values"
+            )
             # set the field on self, so it can easily be used by decision
             setattr(self, field, getattr(pools[0], field))
         for field in not_allowed:
-            assert not any(
-                getattr(pool, field) for pool in pools
-            ), f"{field} cannot be defined"
+            assert not any(getattr(pool, field) for pool in pools), (
+                f"{field} cannot be defined"
+            )
 
     def apply(self, parent: str) -> CommonPoolConfiguration:
         pool_id = f"{parent}/{self.pool_id}"
