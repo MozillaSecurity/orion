@@ -419,7 +419,7 @@ class CommonPoolConfiguration(abc.ABC):
 
     def get_machine_list(
         self, machine_types: MachineTypes
-    ) -> Iterable[tuple[str, int, frozenset[str]]]:
+    ) -> Iterable[tuple[str, frozenset[str]]]:
         """
         Args:
             machine_types: database of all machine types
@@ -442,9 +442,8 @@ class CommonPoolConfiguration(abc.ABC):
             self.metal,
             self.gpu,
         ):
-            cpus = machine_types.cpus(self.cloud, self.cpu, machine)
             zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
-            yield (machine, cpus // self.cores_per_task, zone_blacklist)
+            yield (machine, zone_blacklist)
             yielded = True
         assert yielded, "No available machines match specified configuration"
 
