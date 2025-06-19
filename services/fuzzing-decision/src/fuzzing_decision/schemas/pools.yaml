@@ -93,6 +93,15 @@ properties:
     description: "Disk size"
     type: string
     pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
+  env:
+    description: "Environment variables to be set in the task"
+    type: object
+    additionalProperties: false
+    patternProperties:
+      ^.*$:
+        type:
+          - string
+          - integer
   gpu:
     description: "Boolean indicating if task requires a GPU instance type"
     type: boolean
@@ -100,7 +109,7 @@ properties:
     description: "The name of the taskcluster imageset"
     type: string
   macros:
-    description: "Arbitrary dictionary of macros to set"
+    description: "Alias for env (deprecated)"
     type: object
     additionalProperties: false
     patternProperties:

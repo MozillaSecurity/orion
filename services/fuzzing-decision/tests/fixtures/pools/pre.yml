@@ -17,7 +17,7 @@ parents: []
 cpu: null
 platform: null
 preprocess: null
-macros:
+env:
   PREPROCESS: "1"
 run_as_admin: false
 nested_virtualization: null

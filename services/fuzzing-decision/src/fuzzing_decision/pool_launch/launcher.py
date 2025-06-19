@@ -63,10 +63,10 @@ class PoolLauncher(Workflow):
         if pool_config.command:
             assert not self.command, "Specify command-line args XOR pool.command"
             self.command = pool_config.command.copy()
-        for key, value in pool_config.macros.items():
-            # don't override existing macros
+        for key, value in pool_config.env.items():
+            # don't override existing env vars
             if key in self.environment:
-                LOG.info("Skip setting existing macro %r", key)
+                LOG.info("Skip setting existing environment variable '%s'", key)
                 continue
             self.environment[key] = value
         self.environment["FUZZING_POOL_NAME"] = pool_config.name

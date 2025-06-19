@@ -21,7 +21,7 @@ parents: []
 cpu: x64
 platform: windows
 preprocess: ""
-macros:
+env:
   ENVVAR1: "abc"
   ENVVAR5: "xyz"
 run_as_admin: false

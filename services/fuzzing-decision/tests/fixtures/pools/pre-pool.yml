@@ -18,7 +18,7 @@ parents: []
 cpu: x64
 platform: linux
 preprocess: pre
-macros: {}
+env: {}
 run_as_admin: false
 gpu: false
 nested_virtualization: false

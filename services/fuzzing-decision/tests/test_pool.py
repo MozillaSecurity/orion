@@ -187,9 +187,9 @@ def test_aws_resources(
             "cycle_time": "12h",
             "demand": demand,
             "disk_size": "120g",
+            "env": {},
             "gpu": False,
             "imageset": "docker-worker" if worker == "docker" else "generic-worker-A",
-            "macros": {},
             "max_run_time": "12h",
             "metal": False,
             "minimum_memory_per_core": "1g",
@@ -327,9 +327,9 @@ def test_azure_resources(
             "cycle_time": "12h",
             "demand": demand,
             "disk_size": "120g",
+            "env": {},
             "gpu": False,
             "imageset": "generic-worker-A",
-            "macros": {},
             "max_run_time": "12h",
             "metal": False,
             "minimum_memory_per_core": "1g",
@@ -449,9 +449,9 @@ def test_gcp_resources(
             "cycle_time": "12h",
             "demand": demand,
             "disk_size": "120g",
+            "env": {},
             "gpu": False,
             "imageset": "docker-worker",
-            "macros": {},
             "max_run_time": "12h",
             "metal": False,
             "minimum_memory_per_core": "1g",
@@ -671,9 +671,9 @@ def test_tasks(
             "cycle_time": "1h",
             "demand": False,
             "disk_size": "10g",
+            "env": {},
             "gpu": False,
             "imageset": "anything",
-            "macros": {},
             "max_run_time": "30s",
             "metal": False,
             "minimum_memory_per_core": "1g",
@@ -911,9 +911,9 @@ def test_flatten(pool_path):
     assert pool.cycle_time == expect.cycle_time
     assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
+    assert pool.env == expect.env
     assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
-    assert pool.macros == expect.macros
     assert pool.max_run_time == expect.max_run_time
     assert pool.metal == expect.metal
     assert pool.minimum_memory_per_core == expect.minimum_memory_per_core
@@ -944,9 +944,9 @@ def test_pool_map():
     assert cfg_map.cycle_time == expect.cycle_time
     assert cfg_map.demand == expect.demand
     assert cfg_map.disk_size == expect.disk_size
+    assert cfg_map.env == {}
     assert cfg_map.gpu == expect.gpu
     assert cfg_map.imageset == expect.imageset
-    assert cfg_map.macros == {}
     assert cfg_map.max_run_time is None
     assert cfg_map.metal == expect.metal
     assert cfg_map.minimum_memory_per_core == expect.minimum_memory_per_core
@@ -971,9 +971,9 @@ def test_pool_map():
     assert pool.cycle_time == expect.cycle_time
     assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
+    assert pool.env == expect.env
     assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
-    assert pool.macros == expect.macros
     assert pool.max_run_time == expect.max_run_time
     assert pool.metal == expect.metal
     assert pool.minimum_memory_per_core == expect.minimum_memory_per_core
@@ -1060,7 +1060,7 @@ def test_cycle_crons():
             "disk_size": "10g",
             "gpu": False,
             "imageset": "anything",
-            "macros": {},
+            "env": {},
             "max_run_time": "6h",
             "metal": False,
             "minimum_memory_per_core": "1g",
@@ -1195,7 +1195,7 @@ def test_task_image(mocker):
             "disk_size": "10g",
             "gpu": False,
             "imageset": "anything",
-            "macros": {},
+            "env": {},
             "max_run_time": "30s",
             "metal": False,
             "minimum_memory_per_core": "1g",
