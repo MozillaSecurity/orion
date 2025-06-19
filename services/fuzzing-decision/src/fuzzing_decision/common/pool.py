@@ -369,7 +369,9 @@ class CommonPoolConfiguration(abc.ABC):
             self.command = data["command"].copy()
         else:
             self.command = None
-        self.machine_types: list[str] = data.get("machine_types", []).copy()
+        self.machine_types: list[str] | None = None
+        if data.get("machine_types") is not None:
+            self.machine_types = data["machine_types"].copy()
         self.routes = data.get("routes", []).copy()
         self.scopes = data.get("scopes", []).copy()
 
@@ -568,6 +570,8 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.command = []
             if self.env is None:
                 self.env = {}
+            if self.machine_types is None:
+                self.machine_types = []
             if self.max_run_time is None:
                 self.max_run_time = self.cycle_time
             if self.parents is None:
@@ -634,6 +638,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "disk_size",
             "gpu",
             "imageset",
+            "machine_types",
             "max_run_time",
             "metal",
             "minimum_memory_per_core",
@@ -647,7 +652,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "worker",
         )
         merge_dict_fields = ("artifacts", "env")
-        merge_list_fields = ("machine_types", "routes", "scopes")
+        merge_list_fields = ("routes", "scopes")
         null_fields = {
             field for field in overwriting_fields if getattr(self, field) is None
         }
@@ -756,9 +761,17 @@ class PoolConfigMap(CommonPoolConfiguration):
             # set the field on self, so it can easily be used by decision
             setattr(self, field, getattr(pools[0], field))
         # handle machine_types separately because it is unhashable
-        assert len({frozenset(pool.machine_types) for pool in pools}) == 1, (
-            "machine_types has multiple values"
-        )
+        assert (
+            len(
+                {
+                    frozenset(pool.machine_types)
+                    if pool.machine_types is not None
+                    else None
+                    for pool in pools
+                }
+            )
+            == 1
+        ), "machine_types has multiple values"
         self.machine_types = pools[0].machine_types
         for field in not_allowed:
             assert not any(getattr(pool, field) for pool in pools), (
