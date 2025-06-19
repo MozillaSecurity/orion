@@ -1,0 +1,5 @@
+name: pool15
+parents:
+  - pool14
+machine_types:
+  - less-ram
