@@ -39,7 +39,7 @@ sys-update
 
 # setup maven
 mkdir /opt/maven
-retry-curl https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar -C /opt/maven --strip-components=1 -xz
+retry-curl https://archive.apache.org/dist/maven/maven-3/3.9.10/binaries/apache-maven-3.9.10-bin.tar.gz | tar -C /opt/maven --strip-components=1 -xz
 # shellcheck disable=SC2016
 echo 'PATH=$PATH:/opt/maven/bin' >>/etc/bash.bashrc
 
