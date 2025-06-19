@@ -24,7 +24,7 @@ class Provider(ABC):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
+        machines: Iterable[tuple[str, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
@@ -128,7 +128,7 @@ class AWS(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
+        machines: Iterable[tuple[str, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
@@ -142,7 +142,7 @@ class AWS(Provider):
 
         result: list[dict[str, Any]] = [
             {
-                "capacityPerInstance": capacity,
+                "capacityPerInstance": 1,
                 "region": region_name,
                 "launchConfig": {
                     "ImageId": amis[region_name],
@@ -166,7 +166,7 @@ class AWS(Provider):
                 },
                 "workerConfig": worker_config,
             }
-            for instance, capacity, az_blacklist in machines
+            for instance, az_blacklist in machines
             for region_name, region in self.regions.items()
             for az, subnet in region["subnets"].items()
             if region_name in amis and az not in az_blacklist
@@ -199,7 +199,7 @@ class Azure(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
+        machines: Iterable[tuple[str, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
@@ -213,7 +213,7 @@ class Azure(Provider):
 
         result: list[dict[str, Any]] = [
             {
-                "capacityPerInstance": capacity,
+                "capacityPerInstance": 1,
                 "location": location,
                 "storageProfile": {
                     "osDisk": {
@@ -240,7 +240,7 @@ class Azure(Provider):
                 },
                 "workerConfig": worker_config,
             }
-            for instance, capacity, az_blacklist in machines
+            for instance, az_blacklist in machines
             for location, subnet in self.locations.items()
             if location in images and location not in az_blacklist
         ]
@@ -272,7 +272,7 @@ class GCP(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
+        machines: Iterable[tuple[str, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
@@ -289,7 +289,7 @@ class GCP(Provider):
 
         result = [
             {
-                "capacityPerInstance": capacity,
+                "capacityPerInstance": 1,
                 "machineType": f"zones/{zone}/machineTypes/{instance}",
                 "region": region,
                 "zone": zone,
@@ -308,7 +308,7 @@ class GCP(Provider):
                 "networkInterfaces": [{"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}],
                 "workerConfig": worker_config,
             }
-            for instance, capacity, zone_blacklist in machines
+            for instance, zone_blacklist in machines
             for region, zones in self.regions.items()
             for zone in zones
             if zone not in zone_blacklist
@@ -342,7 +342,7 @@ class Static(Provider):
     def build_launch_configs(
         self,
         imageset: str,
-        machines: Iterable[tuple[str, int, frozenset[str]]],
+        machines: Iterable[tuple[str, frozenset[str]]],
         disk_size: int,
         platform: str,
         demand: bool,
