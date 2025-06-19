@@ -22,5 +22,5 @@ parents:
 cpu: null
 platform: null
 preprocess: null
-macros:
+env:
   ENVVAR3: defghi

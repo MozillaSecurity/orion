@@ -26,7 +26,7 @@ parents:
 cpu: arm64
 platform: linux
 preprocess: ""
-macros:
+env:
   ENVVAR1: "123"
   ENVVAR2: 789abc
   ENVVAR3: defghi

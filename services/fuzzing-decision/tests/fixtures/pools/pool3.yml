@@ -18,6 +18,6 @@ parents:
 cpu: null
 platform: null
 preprocess: null
-macros:
+env:
   ENVVAR1: "123"
   ENVVAR4: "456"

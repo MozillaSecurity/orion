@@ -19,4 +19,4 @@ parents:
 cpu: null
 platform: null
 preprocess: null
-macros: {}
+env: {}

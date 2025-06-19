@@ -21,7 +21,7 @@ parents: []
 cpu: arm64
 platform: linux
 preprocess: null
-macros:
+env:
   ENVVAR1: 123456
   ENVVAR2: 789abc
 run_as_admin: false

@@ -34,9 +34,9 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "cycle_time": (int, str),
         "demand": bool,
         "disk_size": (int, str),
+        "env": dict,
         "gpu": bool,
         "imageset": str,
-        "macros": dict,
         "max_run_time": (int, str),
         "metal": bool,
         "minimum_memory_per_core": (float, str),
@@ -220,9 +220,9 @@ class CommonPoolConfiguration(abc.ABC):
         cycle_time: schedule for running this pool in seconds
         demand: whether an on-demand instance is required (vs. spot/preemptible)
         disk_size: disk size in GB
+        env: dictionary of environment variables passed to the target
         gpu: whether or not the target requires to be run with a GPU
         imageset: imageset name in community-tc-config/config/imagesets.yml
-        macros: dictionary of environment variables passed to the target
         max_run_time: maximum run time of this pool in seconds
         metal: whether or not the target requires to be run on bare metal
         minimum_memory_per_core: minimum RAM to be made available per core in GB
@@ -320,12 +320,12 @@ class CommonPoolConfiguration(abc.ABC):
                 "file",
                 "directory",
             }, f"expected artifact '{key}' .type to be one of: file, directory"
-        for key, value in data.get("macros", {}).items():
+        for key, value in data.get("env", {}).items():
             assert isinstance(key, str), (
-                f"expected macro '{key!r}' name to be 'str', got '{type(key).__name__}'"
+                f"expected env '{key!r}' name to be 'str', got '{type(key).__name__}'"
             )
             assert isinstance(value, (int, str)), (
-                f"expected macro '{key}' value to be 'int' or 'str', got "
+                f"expected env '{key}' value to be 'int' or 'str', got "
                 f"'{type(value).__name__}'"
             )
 
@@ -345,7 +345,7 @@ class CommonPoolConfiguration(abc.ABC):
 
         # dict fields
         self.artifacts = data.get("artifacts", {})
-        self.macros = {k: str(v) for k, v in data.get("macros", {}).items()}
+        self.env = {k: str(v) for k, v in data.get("env", {}).items()}
 
         # list fields
         # command is an overwriting field, null is allowed
@@ -406,9 +406,13 @@ class CommonPoolConfiguration(abc.ABC):
     @classmethod
     def from_file(cls, pool_yml: Path, **kwds: Any) -> CommonPoolConfiguration:
         assert pool_yml.is_file()
+        data = yaml.safe_load(pool_yml.read_text())
+        # temporarily support macros as alias for env
+        if "env" not in data and "macros" in data:
+            data["env"] = data.pop("macros")
         return cls(
             pool_yml.stem,
-            yaml.safe_load(pool_yml.read_text()),
+            data,
             base_dir=pool_yml.parent,
             **kwds,
         )
@@ -538,8 +542,8 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.artifacts = {}
             if self.command is None:
                 self.command = []
-            if self.macros is None:
-                self.macros = {}
+            if self.env is None:
+                self.env = {}
             if self.max_run_time is None:
                 self.max_run_time = self.cycle_time
             if self.parents is None:
@@ -616,7 +620,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "run_as_admin",
             "worker",
         )
-        merge_dict_fields = ("artifacts", "macros")
+        merge_dict_fields = ("artifacts", "env")
         merge_list_fields = ("routes", "scopes")
         null_fields = {
             field for field in overwriting_fields if getattr(self, field) is None
@@ -757,6 +761,9 @@ class PoolConfigLoader:
     def from_file(pool_yml: Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
+        # temporarily support macros as alias for env
+        if "env" not in data and "macros" in data:
+            data["env"] = data.pop("macros")
         for cls in (PoolConfiguration, PoolConfigMap):
             if (
                 set(cls.FIELD_TYPES)  # type: ignore

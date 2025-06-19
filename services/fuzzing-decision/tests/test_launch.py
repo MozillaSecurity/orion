@@ -50,6 +50,7 @@ def pool_data():
         "schedule_start": None,
         "cores_per_task": 10,
         "demand": False,
+        "env": {},
         "gpu": False,
         "metal": False,
         "name": "Amazing fuzzing pool",
@@ -62,7 +63,6 @@ def pool_data():
         "cpu": "arm64",
         "platform": "linux",
         "preprocess": "",
-        "macros": {},
         "run_as_admin": False,
         "nested_virtualization": False,
         "worker": "generic",
@@ -72,9 +72,9 @@ def pool_data():
 @patch("os.environ", {})
 def test_load_params_1(tmp_path, pool_data):
     os.environ["STATIC"] = "value"
-    pool_data["macros"]["ENVVAR1"] = "123456"
-    pool_data["macros"]["ENVVAR2"] = "789abc"
-    pool_data["macros"]["ENVVAR3"] = "failed!"
+    pool_data["env"]["ENVVAR1"] = "123456"
+    pool_data["env"]["ENVVAR2"] = "789abc"
+    pool_data["env"]["ENVVAR3"] = "failed!"
 
     # test 1: environment from pool is merged
     launcher = PoolLauncher(["command", "arg"], "test-pool")
@@ -143,6 +143,7 @@ def test_load_params_4(tmp_path, pool_data):
         "schedule_start": None,
         "cores_per_task": None,
         "demand": None,
+        "env": {"PREPROC": "1"},
         "gpu": None,
         "metal": None,
         "name": "preproc",
@@ -155,7 +156,6 @@ def test_load_params_4(tmp_path, pool_data):
         "cpu": None,
         "platform": None,
         "preprocess": None,
-        "macros": {"PREPROC": "1"},
         "run_as_admin": False,
         "worker": "generic",
     }

@@ -648,6 +648,9 @@ class PoolConfigLoader:
     def from_file(pool_yml: Path) -> PoolConfiguration | PoolConfigMap:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
+        # temporarily support macros as alias for env
+        if "env" not in data and "macros" in data:
+            data["env"] = data.pop("macros")
         for cls in (PoolConfiguration, PoolConfigMap):
             if (
                 set(cls.FIELD_TYPES)  # type: ignore
