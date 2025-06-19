@@ -108,6 +108,11 @@ properties:
   imageset:
     description: "The name of the taskcluster imageset"
     type: string
+  machine_types:
+    description: "An array of machine types to use for a given task"
+    type: array
+    items:
+      type: string
   macros:
     description: "Alias for env (deprecated)"
     type: object

@@ -37,6 +37,7 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "env": dict,
         "gpu": bool,
         "imageset": str,
+        "machine_types": list,
         "max_run_time": (int, str),
         "metal": bool,
         "minimum_memory_per_core": (float, str),
@@ -51,6 +52,10 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "tasks": int,
         "worker": str,
     }
+)
+# fields that are now optional
+OPTIONAL_FIELDS = frozenset(
+    ("cores_per_task", "gpu", "metal", "minimum_memory_per_core")
 )
 # fields that must exist in every pool.yml
 COMMON_REQUIRED_FIELDS = frozenset(("name",))
@@ -163,11 +168,19 @@ class MachineTypes:
         return self._data[provider][architecture][machine]["cpu"]
 
     def zone_blacklist(
-        self, provider: str, architecture: str, machine: str
+        self,
+        provider: str,
+        architecture: str,
+        machine: str,
+        allow_missing: bool = False,
     ) -> frozenset[str]:
-        return frozenset(
-            self._data[provider][architecture][machine].get("zone_blacklist", [])
-        )
+        if allow_missing:
+            machine_data = (
+                self._data.get(provider, {}).get(architecture, {}).get(machine, [])
+            )
+        else:
+            machine_data = self._data[provider][architecture][machine]
+        return frozenset(machine_data.get("zone_blacklist", []))
 
     def filter(
         self,
@@ -223,6 +236,7 @@ class CommonPoolConfiguration(abc.ABC):
         env: dictionary of environment variables passed to the target
         gpu: whether or not the target requires to be run with a GPU
         imageset: imageset name in community-tc-config/config/imagesets.yml
+        machine_types: machine types to use for this pool
         max_run_time: maximum run time of this pool in seconds
         metal: whether or not the target requires to be run on bare metal
         minimum_memory_per_core: minimum RAM to be made available per core in GB
@@ -355,6 +369,7 @@ class CommonPoolConfiguration(abc.ABC):
             self.command = data["command"].copy()
         else:
             self.command = None
+        self.machine_types: list[str] = data.get("machine_types", []).copy()
         self.routes = data.get("routes", []).copy()
         self.scopes = data.get("scopes", []).copy()
 
@@ -430,21 +445,31 @@ class CommonPoolConfiguration(abc.ABC):
         yielded = False
         assert self.cloud is not None
         assert self.cpu is not None
-        assert self.cores_per_task is not None
-        assert self.gpu is not None
-        assert self.minimum_memory_per_core is not None
-        assert self.metal is not None
-        for machine in machine_types.filter(
-            self.cloud,
-            self.cpu,
-            self.cores_per_task,
-            self.minimum_memory_per_core,
-            self.metal,
-            self.gpu,
-        ):
-            zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
-            yield (machine, zone_blacklist)
-            yielded = True
+        if not self.machine_types:
+            assert self.cores_per_task is not None
+            assert self.gpu is not None
+            assert self.minimum_memory_per_core is not None
+            assert self.metal is not None
+            for machine in machine_types.filter(
+                self.cloud,
+                self.cpu,
+                self.cores_per_task,
+                self.minimum_memory_per_core,
+                self.metal,
+                self.gpu,
+            ):
+                zone_blacklist = machine_types.zone_blacklist(
+                    self.cloud, self.cpu, machine
+                )
+                yield (machine, zone_blacklist)
+                yielded = True
+        else:
+            for machine in self.machine_types:
+                zone_blacklist = machine_types.zone_blacklist(
+                    self.cloud, self.cpu, machine, allow_missing=True
+                )
+                yield (machine, zone_blacklist)
+                yielded = True
         assert yielded, "No available machines match specified configuration"
 
     def cycle_crons(self) -> Iterable[str]:
@@ -555,7 +580,9 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.scopes = []
             # assert complete
             missing = {
-                field for field in self.FIELD_TYPES if getattr(self, field) is None
+                field
+                for field in self.FIELD_TYPES
+                if field not in OPTIONAL_FIELDS and getattr(self, field) is None
             }
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
@@ -620,7 +647,7 @@ class PoolConfiguration(CommonPoolConfiguration):
             "worker",
         )
         merge_dict_fields = ("artifacts", "env")
-        merge_list_fields = ("routes", "scopes")
+        merge_list_fields = ("machine_types", "routes", "scopes")
         null_fields = {
             field for field in overwriting_fields if getattr(self, field) is None
         }
@@ -728,6 +755,11 @@ class PoolConfigMap(CommonPoolConfiguration):
             )
             # set the field on self, so it can easily be used by decision
             setattr(self, field, getattr(pools[0], field))
+        # handle machine_types separately because it is unhashable
+        assert len({frozenset(pool.machine_types) for pool in pools}) == 1, (
+            "machine_types has multiple values"
+        )
+        self.machine_types = pools[0].machine_types
         for field in not_allowed:
             assert not any(getattr(pool, field) for pool in pools), (
                 f"{field} cannot be defined"
