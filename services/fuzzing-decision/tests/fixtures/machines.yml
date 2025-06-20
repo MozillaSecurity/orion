@@ -1,41 +1,16 @@
 ---
 gcp:
   x64:
-    base:
-      cpu: 1
-      ram: 1
-    2-cpus:
-      cpu: 2
-      ram: 4
-    more-ram:
-      cpu: 2
-      ram: 16
+    gcp1:
       zone_blacklist:
         - us-west1-b
-    metal:
-      cpu: 1
-      ram: 1
-      metal: true
-azure:
-  x64:
-    standard:
-      cpu: 2
-      ram: 2
 aws:
   arm64:
-    a1:
-      cpu: 1
-      ram: 2
-    a2:
-      cpu: 2
-      ram: 4
-
-    # Of course we can comment on how insane this machine is
-    a3:
-      cpu: 25
-      ram: 1000
-
-    a4:
-      cpu: 1
-      ram: 2
-      gpu: true
+    aws1:
+      zone_blacklist:
+        - ca-central1
+azure:
+  x64:
+    azure1:
+      zone_blacklist:
+        - ru-serious8
