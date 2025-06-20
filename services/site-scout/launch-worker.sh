@@ -79,6 +79,7 @@ if [[ -n $CRASH_STATS ]]; then
   # prepare to run URLs from Crash Stats
   python3 -m venv /tmp/crashstats-tools-venv
   retry /tmp/crashstats-tools-venv/bin/pip install crashstats-tools
+  retry /tmp/crashstats-tools-venv/bin/pip install site-scout
   export OMIT_URLS_FLAG="--omit-urls"
   set +x
   CRASHSTATS_API_TOKEN="$(get-tc-secret crash-stats-api-token)"
