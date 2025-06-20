@@ -77,7 +77,8 @@ update-status "Setup: collecting URLs"
 
 if [[ -n $CRASH_STATS ]]; then
   # prepare to run URLs from Crash Stats
-  retry pipx install crashstats-tools
+  python3 -m venv /tmp/crashstats-tools-venv
+  retry /tmp/crashstats-tools-venv/bin/pip install crashstats-tools
   export OMIT_URLS_FLAG="--omit-urls"
   set +x
   CRASHSTATS_API_TOKEN="$(get-tc-secret crash-stats-api-token)"
@@ -88,8 +89,9 @@ if [[ -n $CRASH_STATS ]]; then
   retry /tmp/tranco-venv/bin/pip install tranco
   /tmp/tranco-venv/bin/python /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
   # download crash-urls.jsonl from crash-stats.mozilla.org
+
   # NOTE: currently filtering by top 1M and not setting --include-path
-  python3 /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --scan-hours "$SCAN_HOURS"
+  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --scan-hours "$SCAN_HOURS"
   cp crash-urls.jsonl ./active_lists/
 else
   # prepare to run URL list
