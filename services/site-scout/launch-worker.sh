@@ -84,8 +84,9 @@ if [[ -n $CRASH_STATS ]]; then
   set -x
   export CRASHSTATS_API_TOKEN
   # download allow list (top-1M.txt), this is temporary for initial test run
-  retry pipx install tranco
-  python3 /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
+  python3 -m venv /tmp/tranco-venv
+  retry /tmp/tranco-venv/bin/pip install tranco
+  /tmp/tranco-venv/bin/python /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
   # download crash-urls.jsonl from crash-stats.mozilla.org
   # NOTE: currently filtering by top 1M and not setting --include-path
   python3 /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --scan-hours "$SCAN_HOURS"
