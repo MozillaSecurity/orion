@@ -176,7 +176,7 @@ class MachineTypes:
     ) -> frozenset[str]:
         if allow_missing:
             machine_data = (
-                self._data.get(provider, {}).get(architecture, {}).get(machine, [])
+                self._data.get(provider, {}).get(architecture, {}).get(machine, {})
             )
         else:
             machine_data = self._data[provider][architecture][machine]
