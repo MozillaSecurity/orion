@@ -35,6 +35,3 @@ patternProperties:
                 type: array
                 items:
                   type: string
-            required:
-              - cpu
-              - ram
