@@ -29,18 +29,14 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "cloud": str,
         "command": list,
         "container": (str, dict),
-        "cores_per_task": int,
         "cpu": str,
         "cycle_time": (int, str),
         "demand": bool,
         "disk_size": (int, str),
         "env": dict,
-        "gpu": bool,
         "imageset": str,
         "machine_types": list,
         "max_run_time": (int, str),
-        "metal": bool,
-        "minimum_memory_per_core": (float, str),
         "name": str,
         "nested_virtualization": bool,
         "platform": str,
@@ -52,10 +48,6 @@ COMMON_FIELD_TYPES = types.MappingProxyType(
         "tasks": int,
         "worker": str,
     }
-)
-# fields that are now optional
-OPTIONAL_FIELDS = frozenset(
-    ("cores_per_task", "gpu", "metal", "minimum_memory_per_core")
 )
 # fields that must exist in every pool.yml
 COMMON_REQUIRED_FIELDS = frozenset(("name",))
@@ -145,14 +137,7 @@ class MachineTypes:
             for arch, machines in provider_archs.items():
                 assert arch in ARCHITECTURES, f"unknown architecture: {provider}.{arch}"
                 for machine, spec in machines.items():
-                    missing = list({"cpu", "ram"} - set(spec))
-                    extra = list(
-                        set(spec) - {"cpu", "gpu", "metal", "ram", "zone_blacklist"}
-                    )
-                    assert not missing, (
-                        f"machine {provider}.{arch}.{machine} missing required keys: "
-                        f"{missing!r}"
-                    )
+                    extra = list(set(spec) - {"zone_blacklist"})
                     assert not extra, (
                         f"machine {provider}.{arch}.{machine} has unknown keys: "
                         f"{extra!r}"
@@ -172,50 +157,11 @@ class MachineTypes:
         provider: str,
         architecture: str,
         machine: str,
-        allow_missing: bool = False,
     ) -> frozenset[str]:
-        if allow_missing:
-            machine_data = (
-                self._data.get(provider, {}).get(architecture, {}).get(machine, {})
-            )
-        else:
-            machine_data = self._data[provider][architecture][machine]
+        machine_data = (
+            self._data.get(provider, {}).get(architecture, {}).get(machine, {})
+        )
         return frozenset(machine_data.get("zone_blacklist", []))
-
-    def filter(
-        self,
-        provider: str,
-        architecture: str,
-        min_cpu: int,
-        min_ram_per_cpu: float,
-        metal: bool = False,
-        gpu: bool = False,
-    ) -> Iterable[str]:
-        """Generate machine types which fit the given requirements.
-
-        Args:
-            provider: the cloud provider (aws or google)
-            architecture: the cpu architecture (x64 or arm64)
-            min_cpu: the least number of acceptable cpu cores
-            min_ram_per_cpu: the least amount of memory acceptable per cpu core
-            metal: whether a bare-metal instance is required
-                   (metal instances may be selected even if false)
-            gpu: whether a GPU instance is required
-
-        Returns:
-            machine type names for the given provider/architecture
-        """
-        for name, spec in self._data[provider][architecture].items():
-            if (
-                spec["cpu"] == min_cpu
-                and (spec["ram"] / spec["cpu"]) >= min_ram_per_cpu
-                # metal: false only means metal is not *required*
-                #   but it will still be allowed in results
-                and (not metal or (metal and spec.get("metal", False)))
-                # gpu: must be an exact match
-                and gpu == spec.get("gpu", False)
-            ):
-                yield name
 
 
 class CommonPoolConfiguration(abc.ABC):
@@ -228,18 +174,14 @@ class CommonPoolConfiguration(abc.ABC):
         command: list of strings, command to execute in the image/container
         container: image to run. takes the same options as
             https://docs.taskcluster.net/docs/reference/workers/docker-worker/payload
-        cores_per_task: number of cores to be allocated per task
         cpu: cpu architecture (eg. x64/arm64)
         cycle_time: schedule for running this pool in seconds
         demand: whether an on-demand instance is required (vs. spot/preemptible)
         disk_size: disk size in GB
         env: dictionary of environment variables passed to the target
-        gpu: whether or not the target requires to be run with a GPU
         imageset: imageset name in community-tc-config/config/imagesets.yml
         machine_types: machine types to use for this pool
         max_run_time: maximum run time of this pool in seconds
-        metal: whether or not the target requires to be run on bare metal
-        minimum_memory_per_core: minimum RAM to be made available per core in GB
         name: descriptive name of the configuration
         platform: operating system of the target (linux, macos, windows)
         pool_id: basename of the pool on disk (eg. "pool1" for pool1.yml)
@@ -249,7 +191,7 @@ class CommonPoolConfiguration(abc.ABC):
         schedule_start: reference date for `cycle_time` scheduling
         routes: list of taskcluster notification routes to enable on the target
         scopes: list of taskcluster scopes required by the target
-        tasks: number of tasks to run (each with `cores_per_task`)
+        tasks: number of tasks to run
         worker: TC worker type
     """
 
@@ -344,11 +286,8 @@ class CommonPoolConfiguration(abc.ABC):
             )
 
         self.container = data.get("container")
-        self.cores_per_task = data.get("cores_per_task")
         self.demand = data.get("demand")
         self.imageset = data.get("imageset")
-        self.gpu = data.get("gpu")
-        self.metal = data.get("metal")
         self.name = data["name"]
         assert self.name is not None, "name is required for every configuration"
         self.nested_virtualization = data.get("nested_virtualization")
@@ -376,11 +315,7 @@ class CommonPoolConfiguration(abc.ABC):
         self.scopes = data.get("scopes", []).copy()
 
         # size fields
-        self.minimum_memory_per_core = self.disk_size = None
-        if data.get("minimum_memory_per_core") is not None:
-            self.minimum_memory_per_core = parse_size(
-                str(data["minimum_memory_per_core"])
-            ) / parse_size("1g")
+        self.disk_size = None
         if data.get("disk_size") is not None:
             self.disk_size = int(parse_size(str(data["disk_size"])) / parse_size("1g"))
 
@@ -424,9 +359,6 @@ class CommonPoolConfiguration(abc.ABC):
     def from_file(cls, pool_yml: Path, **kwds: Any) -> CommonPoolConfiguration:
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
-        # temporarily support macros as alias for env
-        if "env" not in data and "macros" in data:
-            data["env"] = data.pop("macros")
         return cls(
             pool_yml.stem,
             data,
@@ -447,31 +379,11 @@ class CommonPoolConfiguration(abc.ABC):
         yielded = False
         assert self.cloud is not None
         assert self.cpu is not None
-        if not self.machine_types:
-            assert self.cores_per_task is not None
-            assert self.gpu is not None
-            assert self.minimum_memory_per_core is not None
-            assert self.metal is not None
-            for machine in machine_types.filter(
-                self.cloud,
-                self.cpu,
-                self.cores_per_task,
-                self.minimum_memory_per_core,
-                self.metal,
-                self.gpu,
-            ):
-                zone_blacklist = machine_types.zone_blacklist(
-                    self.cloud, self.cpu, machine
-                )
-                yield (machine, zone_blacklist)
-                yielded = True
-        else:
-            for machine in self.machine_types:
-                zone_blacklist = machine_types.zone_blacklist(
-                    self.cloud, self.cpu, machine, allow_missing=True
-                )
-                yield (machine, zone_blacklist)
-                yielded = True
+        assert self.machine_types
+        for machine in self.machine_types:
+            zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
+            yield (machine, zone_blacklist)
+            yielded = True
         assert yielded, "No available machines match specified configuration"
 
     def cycle_crons(self) -> Iterable[str]:
@@ -584,9 +496,7 @@ class PoolConfiguration(CommonPoolConfiguration):
                 self.scopes = []
             # assert complete
             missing = {
-                field
-                for field in self.FIELD_TYPES
-                if field not in OPTIONAL_FIELDS and getattr(self, field) is None
+                field for field in self.FIELD_TYPES if getattr(self, field) is None
             }
             missing.discard("schedule_start")  # this field can be null
             assert not missing, f"Pool is missing fields: {list(missing)!r}"
@@ -604,15 +514,12 @@ class PoolConfiguration(CommonPoolConfiguration):
         )
         cannot_set = [
             "disk_size",
-            "cores_per_task",
             "cpu",
             "cloud",
             "cycle_time",
             "demand",
-            "gpu",
             "imageset",
-            "metal",
-            "minimum_memory_per_core",
+            "machine_types",
             "nested_virtualization",
             "platform",
             "preprocess",
@@ -631,17 +538,13 @@ class PoolConfiguration(CommonPoolConfiguration):
             "cloud",
             "command",
             "container",
-            "cores_per_task",
             "cpu",
             "cycle_time",
             "demand",
             "disk_size",
-            "gpu",
             "imageset",
             "machine_types",
             "max_run_time",
-            "metal",
-            "minimum_memory_per_core",
             "name",
             "nested_virtualization",
             "platform",
@@ -736,15 +639,11 @@ class PoolConfigMap(CommonPoolConfiguration):
         # for the entire set .. at least for now
         same_fields = (
             "cloud",
-            "cores_per_task",
             "cpu",
             "cycle_time",
             "demand",
             "disk_size",
-            "gpu",
             "imageset",
-            "metal",
-            "minimum_memory_per_core",
             "nested_virtualization",
             "platform",
             "schedule_start",
@@ -782,7 +681,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         pool_id = f"{parent}/{self.pool_id}"
         data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
         # convert special fields
-        for gig_field in ("disk_size", "minimum_memory_per_core"):
+        for gig_field in ("disk_size",):
             if data[gig_field] is not None:
                 value = data[gig_field]
                 assert value is not None
@@ -805,9 +704,6 @@ class PoolConfigLoader:
     def from_file(pool_yml: Path):
         assert pool_yml.is_file()
         data = yaml.safe_load(pool_yml.read_text())
-        # temporarily support macros as alias for env
-        if "env" not in data and "macros" in data:
-            data["env"] = data.pop("macros")
         for cls in (PoolConfiguration, PoolConfigMap):
             if (
                 set(cls.FIELD_TYPES)  # type: ignore
@@ -821,36 +717,3 @@ class PoolConfigLoader:
             f"to exist."
         )
         raise RuntimeError(f"{pool_yml} type could not be identified!")
-
-
-def test_main() -> None:
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", type=Path, help="machines.yml")
-    parser.add_argument(
-        "--cpu", help="cpu architecture", choices=ARCHITECTURES, default="x64"
-    )
-    parser.add_argument(
-        "--provider", help="cloud provider", choices=PROVIDERS, default="aws"
-    )
-    parser.add_argument(
-        "--cores", help="minimum number of cpu cores", type=int, required=True
-    )
-    parser.add_argument(
-        "--ram", help="minimum amount of ram per core, eg. 4gb", required=True
-    )
-    parser.add_argument("--metal", help="bare metal machines", action="store_true")
-    parser.add_argument("--gpu", help="GPU machines", action="store_true")
-    args = parser.parse_args()
-
-    ram = parse_size(args.ram) / parse_size("1g")
-    type_list = MachineTypes.from_file(args.input)
-    for machine in type_list.filter(
-        args.provider, args.cpu, args.cores, ram, args.metal, args.gpu
-    ):
-        print(machine)
-
-
-if __name__ == "__main__":
-    test_main()

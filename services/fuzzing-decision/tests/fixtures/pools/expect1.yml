@@ -1,31 +1,29 @@
 cloud: aws
-routes:
-  - notify.email.user1@mozilla.com.on-failed
-scopes:
-  - scope1
-disk_size: 120g
-cycle_time: 1h
-max_run_time: 1h
-schedule_start: null
-cores_per_task: 10
-metal: false
-name: parent
-tasks: 3
 command:
   - cmd1
   - arg1
 container: MozillaSecurity/fuzzer:latest
-minimum_memory_per_core: 1g
-imageset: generic-worker-A
-parents: []
 cpu: arm64
-platform: linux
-preprocess: ""
+cycle_time: 1h
+demand: false
+disk_size: 120g
 env:
   ENVVAR1: "123456"
   ENVVAR2: 789abc
-run_as_admin: false
-gpu: false
-demand: false
+imageset: generic-worker-A
+machine_types:
+  - aws1
+max_run_time: 1h
+name: parent
 nested_virtualization: false
+parents: []
+platform: linux
+preprocess: ""
+routes:
+  - notify.email.user1@mozilla.com.on-failed
+run_as_admin: false
+schedule_start: null
+scopes:
+  - scope1
+tasks: 3
 worker: docker

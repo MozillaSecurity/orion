@@ -7,8 +7,6 @@ disk_size: 120g
 cycle_time: 1h
 max_run_time: 1h
 schedule_start: null
-cores_per_task: 10
-metal: false
 name: pool9
 tasks: 3
 command:
@@ -17,7 +15,6 @@ command:
 container:
   name: MozillaSecurity/fuzzer:latest
   type: docker-image
-minimum_memory_per_core: 1g
 imageset: generic-worker-A
 parents: []
 cpu: arm64
@@ -27,7 +24,6 @@ env:
   ENVVAR1: 123456
   ENVVAR2: 789abc
 run_as_admin: false
-gpu: false
 demand: false
 nested_virtualization: false
 worker: d2g

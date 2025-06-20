@@ -1,35 +1,33 @@
 cloud: aws
-routes:
-  - notify.email.user1@mozilla.com.on-failed
-  - notify.email.user2@mozilla.com.on-failed
-scopes:
-  - scope1
-  - scope2
-disk_size: 120g
-cycle_time: 2h
-max_run_time: 2h
-schedule_start: null
-cores_per_task: 10
-metal: false
-name: child
-tasks: 3
 command:
   - cmd2
   - arg2
 container: "MozillaSecurity/fuzzer:latest"
-minimum_memory_per_core: 1g
-imageset: generic-worker-A
-parents:
-  - pool1
 cpu: arm64
-platform: linux
-preprocess: ""
+cycle_time: 2h
+demand: false
+disk_size: 120g
 env:
   ENVVAR1: "123456"
   ENVVAR2: 789abc
   ENVVAR3: defghi
-run_as_admin: false
-gpu: false
-demand: false
+imageset: generic-worker-A
+machine_types:
+  - aws1
+max_run_time: 2h
+name: child
 nested_virtualization: false
+parents:
+  - pool1
+platform: linux
+preprocess: ""
+routes:
+  - notify.email.user1@mozilla.com.on-failed
+  - notify.email.user2@mozilla.com.on-failed
+run_as_admin: false
+schedule_start: null
+scopes:
+  - scope1
+  - scope2
+tasks: 3
 worker: docker

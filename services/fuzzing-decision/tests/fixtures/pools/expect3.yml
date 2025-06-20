@@ -1,36 +1,34 @@
 cloud: aws
-routes:
-  - notify.email.user1@mozilla.com.on-failed
-  - notify.email.user2@mozilla.com.on-failed
-scopes:
-  - scope1
-  - scope2
-disk_size: 120g
-cycle_time: 2h
-max_run_time: 2h
-schedule_start: null
-cores_per_task: 10
-metal: false
-name: grandchild
-tasks: 3
 command:
   - cmd2
   - arg2
 container: MozillaSecurity/fuzzer:latest
-minimum_memory_per_core: 1g
-imageset: generic-worker-A
-parents:
-  - pool2
 cpu: arm64
-platform: linux
-preprocess: ""
+cycle_time: 2h
+demand: false
+disk_size: 120g
 env:
   ENVVAR1: "123"
   ENVVAR2: 789abc
   ENVVAR3: defghi
   ENVVAR4: "456"
-run_as_admin: false
-gpu: false
-demand: false
+imageset: generic-worker-A
+machine_types:
+  - aws1
+max_run_time: 2h
+name: grandchild
 nested_virtualization: false
+parents:
+  - pool2
+platform: linux
+preprocess: ""
+routes:
+  - notify.email.user1@mozilla.com.on-failed
+  - notify.email.user2@mozilla.com.on-failed
+run_as_admin: false
+schedule_start: null
+scopes:
+  - scope1
+  - scope2
+tasks: 3
 worker: generic

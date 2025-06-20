@@ -18,18 +18,6 @@ patternProperties:
             type: object
             additionalProperties: false
             properties:
-              cpu:
-                description: "Number of CPUs"
-                type: integer
-              ram:
-                description: "RAM in gigabytes"
-                type: integer
-              gpu:
-                description: "Boolean indicating if a GPU instance should be used"
-                type: boolean
-              metal:
-                description: "Boolean indicating if a bare metal instance should be used"
-                type: boolean
               zone_blacklist:
                 description: "Zones to avoid"
                 type: array

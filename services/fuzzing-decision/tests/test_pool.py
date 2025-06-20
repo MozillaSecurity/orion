@@ -42,44 +42,6 @@ def test_parse_size(size, divisor, result):
     assert parse_size(size) / divisor == result
 
 
-@pytest.mark.parametrize(
-    "provider, cpu, cores, ram, metal, gpu, result",
-    [
-        ("gcp", "x64", 1, 1, False, False, ["base", "metal"]),
-        ("gcp", "x64", 2, 1, False, False, ["2-cpus", "more-ram"]),
-        ("gcp", "x64", 2, 5, False, False, ["more-ram"]),
-        ("gcp", "x64", 1, 1, True, False, ["metal"]),
-        ("gcp", "x64", 1, 1, False, True, []),
-        ("aws", "arm64", 1, 1, False, False, ["a1"]),
-        ("aws", "arm64", 2, 1, False, False, ["a2"]),
-        ("aws", "arm64", 12, 32, False, False, []),
-        ("aws", "arm64", 1, 1, True, False, []),
-        ("aws", "arm64", 1, 1, False, True, ["a4"]),
-        # x64 is not present in aws
-        ("aws", "x64", 1, 1, False, False, KeyError),
-        # invalid provider raises too
-        ("dummy", "x64", 1, 1, False, False, KeyError),
-    ],
-)
-def test_machine_filters(
-    mock_machines,
-    provider,
-    cpu,
-    ram,
-    cores,
-    metal,
-    gpu,
-    result,
-):
-    if isinstance(result, list):
-        assert (
-            list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu)) == result
-        )
-    else:
-        with pytest.raises(result):
-            list(mock_machines.filter(provider, cpu, cores, ram, metal, gpu))
-
-
 # Hook & role should be the same across cloud providers
 def _get_expected_hook(platform="linux"):
     return {
@@ -182,17 +144,14 @@ def test_aws_resources(
             "cloud": "aws",
             "command": ["run-fuzzing.sh"],
             "container": "MozillaSecurity/fuzzer:latest",
-            "cores_per_task": 2,
             "cpu": "arm64",
             "cycle_time": "12h",
             "demand": demand,
             "disk_size": "120g",
             "env": {},
-            "gpu": False,
             "imageset": "docker-worker" if worker == "docker" else "generic-worker-A",
+            "machine_types": ["a2"],
             "max_run_time": "12h",
-            "metal": False,
-            "minimum_memory_per_core": "1g",
             "name": "Amazing fuzzing pool",
             "parents": [],
             "platform": platform,
@@ -322,17 +281,14 @@ def test_azure_resources(
             "cloud": "azure",
             "command": ["run-fuzzing.sh"],
             "container": "MozillaSecurity/fuzzer:latest",
-            "cores_per_task": 2,
             "cpu": "x64",
             "cycle_time": "12h",
             "demand": demand,
             "disk_size": "120g",
             "env": {},
-            "gpu": False,
             "imageset": "generic-worker-A",
+            "machine_types": ["standard"],
             "max_run_time": "12h",
-            "metal": False,
-            "minimum_memory_per_core": "1g",
             "name": "Amazing fuzzing pool",
             "parents": [],
             "platform": "windows",
@@ -450,7 +406,7 @@ def test_gcp_resources(
             "disk_size": "120g",
             "env": {},
             "imageset": "docker-worker",
-            "machine_types": ["2-cpus", "more-ram"],
+            "machine_types": ["2-cpus", "gcp1"],
             "max_run_time": "12h",
             "name": "Amazing fuzzing pool",
             "parents": [],
@@ -540,7 +496,7 @@ def test_gcp_resources(
                             "type": "PERSISTENT",
                         }
                     ],
-                    "machineType": "zones/us-west1-a/machineTypes/more-ram",
+                    "machineType": "zones/us-west1-a/machineTypes/gcp1",
                     "networkInterfaces": [
                         {"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}
                     ],
@@ -663,17 +619,14 @@ def test_tasks(
                     "path": "public/msys2.tar.bz2",
                 }
             ),
-            "cores_per_task": 1,
             "cpu": "x64",
             "cycle_time": "1h",
             "demand": False,
             "disk_size": "10g",
             "env": {},
-            "gpu": False,
             "imageset": "anything",
+            "machine_types": ["a2"],
             "max_run_time": "30s",
-            "metal": False,
-            "minimum_memory_per_core": "1g",
             "name": "Amazing fuzzing pool",
             "parents": [],
             "platform": platform,
@@ -903,17 +856,14 @@ def test_flatten(pool_path):
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
-    assert pool.cores_per_task == expect.cores_per_task
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
     assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
     assert pool.env == expect.env
-    assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
+    assert set(pool.machine_types) == set(expect.machine_types)
     assert pool.max_run_time == expect.max_run_time
-    assert pool.metal == expect.metal
-    assert pool.minimum_memory_per_core == expect.minimum_memory_per_core
     assert pool.name == expect.name
     assert pool.parents == expect.parents
     assert pool.platform == expect.platform
@@ -936,17 +886,14 @@ def test_pool_map():
     assert cfg_map.cloud == expect.cloud
     assert cfg_map.command is None
     assert cfg_map.container is None
-    assert cfg_map.cores_per_task == expect.cores_per_task
     assert cfg_map.cpu == expect.cpu
     assert cfg_map.cycle_time == expect.cycle_time
     assert cfg_map.demand == expect.demand
     assert cfg_map.disk_size == expect.disk_size
     assert cfg_map.env == {}
-    assert cfg_map.gpu == expect.gpu
     assert cfg_map.imageset == expect.imageset
+    assert set(cfg_map.machine_types) == set(expect.machine_types)
     assert cfg_map.max_run_time is None
-    assert cfg_map.metal == expect.metal
-    assert cfg_map.minimum_memory_per_core == expect.minimum_memory_per_core
     assert cfg_map.name == "mixed"
     assert cfg_map.platform == expect.platform
     assert cfg_map.preprocess is None
@@ -963,17 +910,14 @@ def test_pool_map():
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
-    assert pool.cores_per_task == expect.cores_per_task
     assert pool.cpu == expect.cpu
     assert pool.cycle_time == expect.cycle_time
     assert pool.demand == expect.demand
     assert pool.disk_size == expect.disk_size
     assert pool.env == expect.env
-    assert pool.gpu == expect.gpu
     assert pool.imageset == expect.imageset
+    assert set(pool.machine_types) == set(expect.machine_types)
     assert pool.max_run_time == expect.max_run_time
-    assert pool.metal == expect.metal
-    assert pool.minimum_memory_per_core == expect.minimum_memory_per_core
     assert pool.name == f"{expect.name}"
     assert pool.parents == ["pool1"]
     assert pool.platform == expect.platform
@@ -1050,17 +994,14 @@ def test_cycle_crons():
             "cloud": "gcp",
             "command": ["run-fuzzing.sh"],
             "container": "MozillaSecurity/fuzzer:latest",
-            "cores_per_task": 1,
             "cpu": "x64",
             "cycle_time": "6h",
             "demand": False,
             "disk_size": "10g",
-            "gpu": False,
             "imageset": "anything",
             "env": {},
+            "machine_types": ["a2"],
             "max_run_time": "6h",
-            "metal": False,
-            "minimum_memory_per_core": "1g",
             "name": "Amazing fuzzing pool",
             "parents": [],
             "platform": "linux",
@@ -1152,9 +1093,6 @@ def test_gcp_nested_virt(
     cfg.cloud = "gcp"
     cfg.nested_virtualization = True
     cfg.imageset = "generic-worker-A"
-    cfg.cores_per_task = 1
-    cfg.metal = False
-    cfg.minimum_memory_per_core = 1
     pool_obj, _hook, _role = cfg.build_resources(mock_clouds, mock_machines)
     configs = pool_obj.to_json()["config"]["launchConfigs"]
     assert configs
@@ -1185,17 +1123,14 @@ def test_task_image(mocker):
                 "type": "task-image",
                 "path": "public/msys2.tar.bz2",
             },
-            "cores_per_task": 1,
             "cpu": "x64",
             "cycle_time": "1h",
             "demand": False,
             "disk_size": "10g",
-            "gpu": False,
             "imageset": "anything",
             "env": {},
+            "machine_types": ["a2"],
             "max_run_time": "30s",
-            "metal": False,
-            "minimum_memory_per_core": "1g",
             "name": "Amazing fuzzing pool",
             "parents": [],
             "platform": "linux",

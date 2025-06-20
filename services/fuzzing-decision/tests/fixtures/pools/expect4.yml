@@ -1,31 +1,29 @@
 cloud: gcp
-routes:
-  - notify.email.user4@mozilla.com.on-failed
-scopes:
-  - scope4
-disk_size: 140g
-cycle_time: 4h
-max_run_time: 4h
-schedule_start: null
-cores_per_task: 40
-metal: true
-name: pool4
-tasks: 4
 command:
   - cmd4
   - arg4
 container: MozillaSecurity/fuzzer:default
-minimum_memory_per_core: 4g
-imageset: generic-worker-4
-parents: []
 cpu: x64
-platform: windows
-preprocess: ""
+cycle_time: 4h
+demand: false
+disk_size: 140g
 env:
   ENVVAR1: "abc"
   ENVVAR5: "xyz"
-run_as_admin: false
-gpu: false
-demand: false
+imageset: generic-worker-4
+machine_types:
+  - gcp1
+max_run_time: 4h
+name: pool4
 nested_virtualization: false
+parents: []
+platform: windows
+preprocess: ""
+routes:
+  - notify.email.user4@mozilla.com.on-failed
+run_as_admin: false
+schedule_start: null
+scopes:
+  - scope4
+tasks: 4
 worker: generic

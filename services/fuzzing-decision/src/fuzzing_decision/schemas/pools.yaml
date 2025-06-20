@@ -75,9 +75,6 @@ properties:
           - type
           - taskId
           - path
-  cores_per_task:
-    description: "Number of cores per task"
-    type: integer
   cpu:
     description: "CPU architecture type"
     type: string
@@ -102,9 +99,6 @@ properties:
         type:
           - string
           - integer
-  gpu:
-    description: "Boolean indicating if task requires a GPU instance type"
-    type: boolean
   imageset:
     description: "The name of the taskcluster imageset"
     type: string
@@ -113,25 +107,9 @@ properties:
     type: array
     items:
       type: string
-  macros:
-    description: "Alias for env (deprecated)"
-    type: object
-    additionalProperties: false
-    patternProperties:
-      ^.*$:
-        type:
-          - string
-          - integer
   max_run_time:
     description: "Maximum time to run each instance"
     pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
-  metal:
-    description: "Boolean indicating if task requires a bare metal instance type"
-    type: boolean
-  minimum_memory_per_core:
-    description: "Minimum amount of memory per core"
-    type: string
-    pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
   name:
     description: "Human description"
     type: string

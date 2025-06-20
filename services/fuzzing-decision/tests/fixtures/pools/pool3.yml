@@ -1,23 +1,20 @@
 cloud: null
-routes: []
-scopes: []
-disk_size: null
-cycle_time: null
-max_run_time: null
-schedule_start: null
-cores_per_task: null
-metal: null
-name: grandchild
-tasks: null
 command: null
 container: null
-minimum_memory_per_core: null
-imageset: null
-parents:
-  - pool2
 cpu: null
-platform: null
-preprocess: null
+cycle_time: null
+disk_size: null
 env:
   ENVVAR1: "123"
   ENVVAR4: "456"
+imageset: null
+max_run_time: null
+name: grandchild
+parents:
+  - pool2
+platform: null
+preprocess: null
+routes: []
+schedule_start: null
+scopes: []
+tasks: null
