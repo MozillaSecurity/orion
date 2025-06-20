@@ -90,9 +90,8 @@ if [[ -n $CRASH_STATS ]]; then
   retry /tmp/tranco-venv/bin/pip install tranco
   /tmp/tranco-venv/bin/python /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
   # download crash-urls.jsonl from crash-stats.mozilla.org
-
-  # NOTE: currently filtering by top 1M and not setting --include-path
-  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --scan-hours "$SCAN_HOURS"
+  # NOTE: currently filtering by top 1M
+  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS"
   mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
 else
