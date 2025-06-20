@@ -376,15 +376,12 @@ class CommonPoolConfiguration(abc.ABC):
         Returns:
             instance type name and task capacity
         """
-        yielded = False
         assert self.cloud is not None
         assert self.cpu is not None
         assert self.machine_types
         for machine in self.machine_types:
             zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
             yield (machine, zone_blacklist)
-            yielded = True
-        assert yielded, "No available machines match specified configuration"
 
     def cycle_crons(self) -> Iterable[str]:
         """Generate cron patterns that correspond to cycle_time (starting from now)
