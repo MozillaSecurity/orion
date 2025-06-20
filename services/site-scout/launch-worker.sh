@@ -73,6 +73,33 @@ if [[ ! -d /src/site-scout-private ]]; then
   git-clone git@site-scout-private:MozillaSecurity/site-scout-private.git /src/site-scout-private
 fi
 
+update-status "Setup: collecting URLs"
+
+if [[ -n $CRASH_STATS ]]; then
+  # prepare to run URLs from Crash Stats
+  retry pipx install crashstats-tools
+  export OMIT_URLS_FLAG="--omit-urls"
+  set +x
+  CRASHSTATS_API_TOKEN="$(get-tc-secret crash-stats-api-token)"
+  set -x
+  export CRASHSTATS_API_TOKEN
+  # download allow list (top-1M.txt), this is temporary for initial test run
+  retry pipx install tranco
+  python3 /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
+  # download crash-urls.jsonl from crash-stats.mozilla.org
+  # NOTE: currently filtering by top 1M and not setting --include-path
+  python3 /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --scan-hours "$SCAN_HOURS"
+  cp crash-urls.jsonl ./active_lists/
+else
+  # prepare to run URL list
+  export OMIT_URLS_FLAG=""
+  # select URL collections
+  mkdir active_lists
+  for LIST in $URL_LISTS; do
+    cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
+  done
+fi
+
 update-status "Setup: fetching build"
 
 # select build
@@ -131,12 +158,6 @@ else
   export EXPLORE_FLAG=""
 fi
 
-# select URL collections
-mkdir active_lists
-for LIST in $URL_LISTS; do
-  cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
-done
-
 # create directory for launch failure results
 mkdir -p /tmp/site-scout/local-results
 
@@ -144,6 +165,7 @@ update-status "Setup: launching site-scout"
 site-scout "$TARGET_BIN" \
   -i ./active_lists/ \
   $EXPLORE_FLAG \
+  $OMIT_URLS_FLAG \
   --fuzzmanager \
   --memory-limit "$MEM_LIMIT" \
   --jobs "$JOBS" \
