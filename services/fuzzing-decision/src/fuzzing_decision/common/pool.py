@@ -678,11 +678,10 @@ class PoolConfigMap(CommonPoolConfiguration):
         pool_id = f"{parent}/{self.pool_id}"
         data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
         # convert special fields
-        for gig_field in ("disk_size",):
-            if data[gig_field] is not None:
-                value = data[gig_field]
-                assert value is not None
-                data[gig_field] = value * 1024 * 1024 * 1024
+        if data["disk_size"] is not None:
+            value = data["disk_size"]
+            assert value is not None
+            data["disk_size"] = value * 1024 * 1024 * 1024
         if data["schedule_start"] is not None:
             assert isinstance(data["schedule_start"], datetime)
             data["schedule_start"] = data["schedule_start"].isoformat()
