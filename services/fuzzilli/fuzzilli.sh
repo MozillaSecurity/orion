@@ -123,7 +123,7 @@ if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
 fi
 
 args=(
-  --instances "${INSTANCES:-$(python3 -c 'import os;print(len(os.sched_getaffinity(0))/2)')}"
+  --instances "${INSTANCES:-$(python3 -c 'import os;print(len(os.sched_getaffinity(0))//2)')}"
   --project "$S3_PROJECT"
   --stats ./stats
 )
