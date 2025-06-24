@@ -26,11 +26,6 @@ if [[ ! -e .fuzzmanagerconf ]] && [[ $NO_REPORT != "1" ]]; then
   chmod 0600 .fuzzmanagerconf
 fi
 
-update-status "setup: getting revisions"
-REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
-NSS_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/security/nss/TAG-INFO")"
-NSPR_TAG="$(retry-curl "https://hg.mozilla.org/mozilla-central/raw-file/$REVISION/nsprpub/TAG-INFO")"
-
 if [[ ! -d clang ]]; then
   update-status "setup: installing clang"
   clang_ver="$(resolve-tc-alias clang)"
@@ -49,11 +44,21 @@ export LDFLAGS="$CFLAGS"
 
 # Clone nss/nspr
 update-status "setup: cloning nss"
-if [[ ! -d nspr ]]; then
-  retry hg clone -r "$NSPR_TAG" https://hg.mozilla.org/projects/nspr
-fi
-if [[ ! -d nss ]]; then
-  retry hg clone -r "$NSS_TAG" https://hg.mozilla.org/projects/nss
+
+HG_REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+GIT_REVISION="$(retry-curl --compressed https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION | jshon -e "git_hash" -u)"
+
+if [[ ! -d firefox ]]; then
+  retry git clone --no-checkout --depth 1 --filter=tree:0 https://github.com/mozilla-firefox/firefox.git
+
+  pushd firefox
+  git fetch --depth 1 origin $GIT_REVISION
+  git sparse-checkout set --no-cone /security/nss /nsprpub
+  git checkout $GIT_REVISION
+  popd
+
+  mv firefox/security/nss nss
+  mv firefox/nsprpub nspr
 fi
 
 # Clone cryptofuzz
