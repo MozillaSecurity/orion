@@ -24,7 +24,7 @@ git init gridl
 (
   cd gridl
   git remote add origin "${GIT_REPO-git@gridl:MozillaSecurity/gridl}"
-  retry git fetch -q --depth=10 origin main
+  retry git fetch -q --depth=1 origin main
   git -c advice.detachedHead=false checkout origin/main
   retry npm i --no-progress
   npm run update-idls &&
