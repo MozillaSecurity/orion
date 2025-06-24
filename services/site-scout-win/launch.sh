@@ -152,7 +152,7 @@ git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
 # Collect URLs
-update-status "Setup: collecting URLs"
+status "Setup: collecting URLs"
 
 if [[ -n $CRASH_STATS ]]; then
   # prepare to run URLs from Crash Stats
