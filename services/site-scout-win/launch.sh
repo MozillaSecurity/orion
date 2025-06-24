@@ -151,6 +151,35 @@ retry git fetch -q --depth 1 --no-tags origin HEAD
 git -c advice.detachedHead=false checkout FETCH_HEAD
 cd ..
 
+# Collect URLs
+update-status "Setup: collecting URLs"
+
+if [[ -n $CRASH_STATS ]]; then
+  # prepare to run URLs from Crash Stats
+  retry python -m pip install crashstats-tools
+  export OMIT_URLS_FLAG="--omit-urls"
+  set +x
+  retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/crash-stats-api-token" | python -c "import json,sys;open('crash_stats_token','w').write(json.load(sys.stdin)['secret']['key'])"
+  set -x
+  # download allow list (top-1M.txt), this is temporary for initial test run
+  retry python -m pip install tranco
+  python /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
+  # download crash-urls.jsonl from crash-stats.mozilla.org
+  # NOTE: currently filtering by top 1M
+  python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS" --api-token crash_stats_token
+  rm crash-stats-api-token
+  mkdir active_lists
+  cp crash-urls.jsonl ./active_lists/
+else
+  # prepare to run URL list
+  export OMIT_URLS_FLAG=""
+  # select URL collections
+  mkdir active_lists
+  for LIST in $URL_LISTS; do
+    cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
+  done
+fi
+
 status "Setup: fetching build"
 
 # select build
@@ -187,12 +216,6 @@ else
   export EXPLORE_FLAG=""
 fi
 
-# select URL collections
-mkdir active_lists
-for LIST in ${URL_LISTS}; do
-  cp "./site-scout-private/visit-yml/${LIST}" ./active_lists/
-done
-
 # create directory for launch failure results
 mkdir -p "${TMP}/site-scout/local-results"
 
@@ -200,6 +223,7 @@ status "Setup: launching site-scout"
 site-scout ./build/firefox.exe \
   -i ./active_lists/ \
   $EXPLORE_FLAG \
+  $OMIT_URLS_FLAG \
   --fuzzmanager \
   --jobs "$JOBS" \
   --memory-limit "$MEM_LIMIT" \
