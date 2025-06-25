@@ -167,7 +167,7 @@ if [[ -n $CRASH_STATS ]]; then
   # download crash-urls.jsonl from crash-stats.mozilla.org
   # NOTE: currently filtering by top 1M
   python ./site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS" --api-token crash_stats_token
-  rm crash-stats-api-token
+  rm crash_stats_token
   mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
 else
