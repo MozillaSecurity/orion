@@ -54,6 +54,7 @@ pkgs=(
   patch
   pipx
   psmisc
+  ripgrep
   screen
   software-properties-common
   ubuntu-restricted-addons
