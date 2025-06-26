@@ -129,25 +129,25 @@ else
   # download build
   case $build in
     asan32)
-      # TEMPORARY workaround for frequent OOMs
-      export ASAN_OPTIONS="malloc_context_size=20:rss_limit_heap_profile=false:max_malloc_fill_size=4096:quarantine_size_mb=64"
       retry fuzzfetch -n build --asan --cpu x86
       ;;
     beta-asan)
-      # try to minimize OOMs
-      export ASAN_OPTIONS="malloc_context_size=20:rss_limit_heap_profile=false"
       retry fuzzfetch -n build --asan --branch beta
       ;;
     debug32)
       retry fuzzfetch -n build --debug --cpu x86
       ;;
     *)
-      # try to minimize OOMs
-      export ASAN_OPTIONS="malloc_context_size=20:rss_limit_heap_profile=false"
       retry fuzzfetch -n build "--$build"
       ;;
   esac
 fi
+
+# try to workaround frequent OOMs
+export ASAN_OPTIONS="detect_stack_use_after_return=0 \
+:hard_rss_limit_mb=${MEM_LIMIT} \
+:malloc_context_size=20 \
+:rss_limit_heap_profile=false"
 
 # setup reporter
 echo "No report yet" >status.txt
