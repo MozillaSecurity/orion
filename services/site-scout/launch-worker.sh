@@ -144,9 +144,9 @@ else
 fi
 
 # try to workaround frequent OOMs
-export ASAN_OPTIONS="detect_stack_use_after_return=0 \
-:hard_rss_limit_mb=${MEM_LIMIT} \
-:malloc_context_size=20 \
+export ASAN_OPTIONS="detect_stack_use_after_return=0\
+:hard_rss_limit_mb=${MEM_LIMIT}\
+:malloc_context_size=20\
 :rss_limit_heap_profile=false"
 
 # setup reporter
