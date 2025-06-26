@@ -12,6 +12,13 @@ retry() {
 }
 retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[downloaded %{url_effective}]\n" "$@"; }
 
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || echo "failed to disable script scanning"
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || echo "failed to disable RT monitoring"
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Disable-WindowsErrorReporting' || echo "failed to disable WER"
+
 function get-deadline() {
   if [[ -z $TASK_ID ]] || [[ -z $RUN_ID ]]; then
     echo "error: get-deadline() is only supported on Taskcluster" >&2
