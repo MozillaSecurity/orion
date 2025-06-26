@@ -20,9 +20,11 @@ status() {
 }
 
 #shellcheck disable=SC2016
-powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || true
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || echo "failed to disable script scanning"
 #shellcheck disable=SC2016
-powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || true
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || echo "failed to disable RT monitoring"
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Disable-WindowsErrorReporting' || echo "failed to disable WER"
 
 set +x
 retry-curl "$TASKCLUSTER_PROXY_URL/secrets/v1/secret/project/fuzzing/google-logging-creds" | python -c "import json,sys;json.dump(json.load(sys.stdin)['secret']['key'],open('google_logging_creds.json','w'))"

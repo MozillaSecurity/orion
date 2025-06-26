@@ -13,9 +13,11 @@ retry() {
 }
 
 #shellcheck disable=SC2016
-powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || true
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableScriptScanning $true' || echo "failed to disable script scanning"
 #shellcheck disable=SC2016
-powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || true
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Set-MpPreference -DisableRealtimeMonitoring $true' || echo "failed to disable RT monitoring"
+#shellcheck disable=SC2016
+powershell -ExecutionPolicy Bypass -NoProfile -Command 'Disable-WindowsErrorReporting' || echo "failed to disable WER"
 
 mkdir -p "$LOCALAPPDATA/autobisect/autobisect/"
 cat <<EOF >"$LOCALAPPDATA/autobisect/autobisect/autobisect.ini"
