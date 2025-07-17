@@ -104,13 +104,30 @@ function get-deadline() {
 # Get the task deadline.
 # If running locally, return a date far in the future to prevent expiration.
 function get-target-time() {
-  if [[ $TARGET_TIME =~ ^-?[0-9]+$ ]]; then
-    echo "$TARGET_TIME"
-  elif [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
-    echo $(($(get-deadline) - $(date +%s) - 5 * 60))
+  local remaining_time, result
+  if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
+    remaining_time=$(($(get-deadline) - $(date +%s)))
   else
-    echo $((10 * 365 * 24 * 3600))
+    remaining_time=$((10 * 365 * 24 * 3600))
   fi
+  if [[ ${COVERAGE-0} == 1 ]] && [[ ${COVRUNTIME-0} -gt 0 ]]; then
+    result=$COVRUNTIME
+    if [[ $result -lt $remaining_time ]]; then
+      echo "error: not enough time to respect COVRUNTIME, failing..." >&2
+      exit 1
+    fi
+  elif [[ $TARGET_TIME =~ ^-?[0-9]+$ ]]; then
+    result=$TARGET_TIME
+    if [[ $result -lt $remaining_time ]]; then
+      echo "warning: TARGET_TIME given, but exceeds task deadline!" >&2
+    fi
+  else
+    if [[ $remaining_time -lt $((5 * 60)) ]]; then
+      echo "warning: less than 5 minutes remains before task deadline!" >&2
+    fi
+    result=$((remaining_time - 5 * 60))
+  fi
+  echo "$result"
 }
 
 function get-latest-github-release() {
