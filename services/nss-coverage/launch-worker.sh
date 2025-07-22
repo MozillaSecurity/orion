@@ -87,7 +87,7 @@ function run-target {
   RUST_BACKTRACE=1 grcov nss \
     -t coveralls+ \
     --token NONE \
-    --commit-sha "$REVISION" \
+    --commit-sha "$HG_REVISION" \
     --guess-directory-when-missing \
     -s nss/out/Debug/ \
     -p "$PWD" \
@@ -95,7 +95,7 @@ function run-target {
   RUST_BACKTRACE=1 grcov nspr \
     -t coveralls+ \
     --token NONE \
-    --commit-sha "$REVISION" \
+    --commit-sha "$HG_REVISION" \
     --guess-directory-when-missing \
     -s nspr/Debug/dist/include/nspr/ \
     -p "$PWD" \
