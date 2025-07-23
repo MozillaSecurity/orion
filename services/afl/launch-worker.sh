@@ -108,6 +108,9 @@ if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   trap onexit EXIT
 fi
 
+# split AFL_TARGET_ARGS to a bash array (see SC2206)
+IFS=" " read -r -a AFL_TARGET_ARGS <<<"$AFL_TARGET_ARGS"
+
 DAEMON_ARGS=(
   --afl-binary-dir /opt/afl-instrumentation/bin
   --afl-timeout "${AFL_TIMEOUT-30000}"
@@ -116,6 +119,8 @@ DAEMON_ARGS=(
   --stats ./stats
   --memory-limit "${MEMORY_LIMIT:-0}"
   "$TARGET_BIN"
+  --
+  "${AFL_TARGET_ARGS[@]}"
 )
 
 unset AFL_INSTANCES
@@ -132,7 +137,7 @@ if [[ -n $S3_CORPUS_REFRESH ]]; then
     "${DAEMON_ARGS[@]}"
 else
   if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
-    DAEMON_ARGS+=(--afl-hide-logs)
+    DAEMON_ARGS=(--afl-hide-logs "${DAEMON_ARGS[@]}")
   fi
 
   # Sometimes, don't download the existing corpus.
