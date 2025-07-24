@@ -136,6 +136,7 @@ DAEMON_ARGS=(
 )
 
 unset AFL_INSTANCES
+unset AFL_TARGET_ARGS
 
 S3_PROJECT="${S3_PROJECT:-afl-$FUZZER}"
 S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJECT")
