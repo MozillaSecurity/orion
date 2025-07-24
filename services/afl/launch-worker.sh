@@ -51,6 +51,18 @@ IdentityFile ~/.ssh/id_rsa.fuzzing-shells-private
 EOF
 fi
 
+if [[ $COVERAGE -eq 1 ]]; then
+  # get all env variables prefixed with COV_
+  for var in "${!COV_@}"; do
+    # get the value of $var
+    declare -n value="$var"
+    # drop the COV_ prefix
+    orig="$(echo "$var" | cut -d_ -f2-)"
+    # set/overwrite the variable
+    declare "$orig=$value"
+  done
+fi
+
 TOOLNAME="${TOOLNAME:-AFL++-$FUZZER}"
 if [[ -n $JSRT ]]; then
   if [[ ! -e fuzzing-shells-private ]]; then
