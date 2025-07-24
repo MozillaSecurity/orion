@@ -140,6 +140,16 @@ else
     DAEMON_ARGS=(--afl-hide-logs "${DAEMON_ARGS[@]}")
   fi
 
+  if [[ -n $AFL_MAX_FUZZ_TIME ]]; then
+    DAEMON_ARGS=(--max-fuzz-time "$AFL_MAX_FUZZ_TIME" "${DAEMON_ARGS[@]}")
+    unset AFL_MAX_FUZZ_TIME
+  fi
+
+  if [[ -n $AFL_MAX_FUZZ_RUNS ]]; then
+    DAEMON_ARGS=(--max-fuzz-runs "$AFL_MAX_FUZZ_RUNS" "${DAEMON_ARGS[@]}")
+    unset AFL_MAX_FUZZ_RUNS
+  fi
+
   # Sometimes, don't download the existing corpus.
   # This can increase coverage in large targets and prevents bad corpora.
   # Results will be merged with the existing corpus on next refresh.
