@@ -46,12 +46,14 @@ IdentityFile $key_path
 EOF
 }
 
-# get Cloud Storage credentials
-mkdir -p ~/.config/gcloud
-get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
+if [[ -z $NO_SECRETS ]]; then
+  # get Cloud Storage credentials
+  mkdir -p ~/.config/gcloud
+  get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 
-# get AWS S3 credentials
-setup-aws-credentials
+  # get AWS S3 credentials
+  setup-aws-credentials
+fi
 
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
@@ -76,10 +78,12 @@ fi
 pushd /srv/repos/ipc-research
 # clone ipc-fuzzing & build harness/tools
 if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]; then
-  update-status "installing ipc-fuzzing repo"
-  get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
-  setup-ssh-key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
-  git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
+  if [[ -z $NO_SECRETS ]]; then
+    update-status "installing ipc-fuzzing repo"
+    get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
+    setup-ssh-key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
+    git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
+  fi
 fi
 pushd ipc-fuzzing/userspace-tools
 export CPPFLAGS="--sysroot /opt/sysroot-x86_64-linux-gnu -I/srv/repos/AFLplusplus/nyx_mode/QEMU-Nyx/libxdc"

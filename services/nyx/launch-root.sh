@@ -11,7 +11,9 @@ set -o pipefail
 source "/srv/repos/setup/common.sh"
 
 # start logging
-get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
+if [[ -z $NO_SECRETS ]]; then
+  get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
+fi
 mkdir -p /etc/td-agent-bit /logs
 cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
@@ -51,8 +53,10 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
     google_service_credentials /etc/google/auth/application_default_credentials.json
     resource global
 EOF
-mkdir -p /var/lib/td-agent-bit/pos
-/opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
+if [[ -z $NO_SECRETS ]]; then
+  mkdir -p /var/lib/td-agent-bit/pos
+  /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
+fi
 
 # install clang
 export SKIP_RUST=1
