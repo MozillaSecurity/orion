@@ -146,6 +146,10 @@ echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/applic
 for directory in nss-fuzzing-corpus-new-and-minimized/*; do
   name="$(basename "$directory")"
 
+  if [[  ! "$(ls "$directory")" ]]; then
+    continue
+  fi
+
   gsutil -m cp "$directory/*" \
     "gs://nss-corpus.clusterfuzz-external.appspot.com/libFuzzer/nss_$name"
 done
