@@ -297,15 +297,17 @@ else
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
 
-  # Sometimes, don't download the existing corpus.
-  # This can increase coverage in large targets and prevents bad corpora.
-  # Results will be merged with the existing corpus on next refresh.
-  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
-    # Download the corpus from S3
-    update-status "downloading corpus"
-    time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
-  else
-    mkdir -p corpus
+  if [[ -e corpus ]]; then
+    # Sometimes, don't download the existing corpus.
+    # This can increase coverage in large targets and prevents bad corpora.
+    # Results will be merged with the existing corpus on next refresh.
+    if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+      # Download the corpus from S3
+      update-status "downloading corpus"
+      time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
+    else
+      mkdir -p corpus
+    fi
   fi
   # Ensure corpus is not empty
   if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
