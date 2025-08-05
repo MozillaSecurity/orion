@@ -83,6 +83,8 @@ if [[ ! -e /srv/repos/ipc-research/ipc-fuzzing ]]; then
     get-tc-secret deploy-ipc-fuzzing ~/.ssh/id_ecdsa.ipc_fuzzing
     setup-ssh-key "ipc-fuzzing" "$HOME/.ssh/id_ecdsa.ipc_fuzzing"
     git-clone git@ipc-fuzzing:MozillaSecurity/ipc-fuzzing.git
+  else
+    git-clone https://github.com/MozillaSecurity/snapshot-fuzzing ipc-fuzzing
   fi
 fi
 pushd ipc-fuzzing/userspace-tools
