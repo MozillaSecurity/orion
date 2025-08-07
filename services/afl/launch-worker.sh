@@ -194,6 +194,13 @@ else
     idx="$(basename "$(dirname "$st")")"
     cp "$st" "/logs/fuzzer_stats$idx.txt"
   done
+  for cr in ./corpus.out/*/crashes; do
+    idx="$(basename "$(dirname "$cr")")"
+    find "$cr" -type f -name "*.norepro" | while read -r fn; do
+      mkdir -p "/corpus/$idx/crashes"
+      cp "$fn" "/corpus/$idx/crashes"
+    done
+  done
 fi
 
 if [[ $COVERAGE -eq 1 ]]; then
