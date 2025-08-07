@@ -12,7 +12,7 @@ source "/srv/repos/setup/common.sh"
 
 # start logging
 get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
-mkdir -p /etc/td-agent-bit /logs
+mkdir -p /corpus /etc/td-agent-bit /logs
 cat >/etc/td-agent-bit/td-agent-bit.conf <<EOF
 [SERVICE]
     Daemon       On
@@ -64,6 +64,6 @@ trap onexit EXIT
 
 /opt/afl-instrumentation/bin/afl-system-config || true
 
-chown root:worker /logs
-chmod 0775 /logs
+chown root:worker /corpus /logs
+chmod 0775 /corpus /logs
 su worker -c "/home/worker/launch-worker.sh"
