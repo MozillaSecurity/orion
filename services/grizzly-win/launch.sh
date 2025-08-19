@@ -39,7 +39,7 @@ cat >td-agent-bit.conf <<EOF
 
 [INPUT]
     Name tail
-    Path $USERPROFILE\\logs\\live.log,$USERPROFILE\\grizzly-auto-run\\screenlog.*
+    Path $USERPROFILE\\logs\\live.log,$USERPROFILE\\grizzly-auto-run\\screenlog.*,$SYSTEMDRIVE\\generic-worker\\generic-worker-service.log,$SYSTEMDRIVE\\worker-runner\\worker-runner-service.log
     Path_Key file
     Key message
     Refresh_Interval 5

@@ -75,7 +75,7 @@ cat >td-agent-bit.conf <<EOF
 
 [INPUT]
     Name tail
-    Path $USERPROFILE\\logs\\live.log
+    Path $USERPROFILE\\logs\\live.log,$SYSTEMDRIVE\\generic-worker\\generic-worker-service.log,$SYSTEMDRIVE\\worker-runner\\worker-runner-service.log
     Path_Key file
     Key message
     Refresh_Interval 5
