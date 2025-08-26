@@ -103,7 +103,6 @@ echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/applic
 # Pull corpus & run fuzzer
 BINARY_PATH="$HOME/neqo/target/x86_64-unknown-linux-gnu/release"
 COVRUNTIME=${COVRUNTIME-3600}
-NEQO_REVISION="$(git -C neqo rev-parse "v$NEQO_VERSION" | tr -d "\n")"
 
 function clone-corpus {
   mkdir -p "$HOME/corpus/$1"
@@ -123,7 +122,7 @@ function run-target {
   RUST_BACKTRACE=1 grcov . \
     -t coveralls+ \
     --token NONE \
-    --commit-sha "$NEQO_REVISION" \
+    --commit-sha "$HG_REVISION" \
     --guess-directory-when-missing \
     --binary-path "$BINARY_PATH" \
     --source-dir "$HOME/neqo" \
