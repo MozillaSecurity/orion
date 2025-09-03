@@ -104,7 +104,7 @@ function get-deadline() {
 # Get the task deadline.
 # If running locally, return a date far in the future to prevent expiration.
 function get-target-time() {
-  local remaining_time, result
+  local remaining_time result
   if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
     remaining_time=$(($(get-deadline) - $(date +%s)))
   else
