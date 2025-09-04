@@ -1,0 +1,346 @@
+diff --git a/afl-cmin b/afl-cmin
+index a88460a8..9509562a 100755
+--- a/afl-cmin
++++ b/afl-cmin
+@@ -103,7 +103,7 @@ function usage() {
+ "afl-cmin [ options ] -- /path/to/target_app [ ... ]\n" \
+ "\n" \
+ "Required parameters:\n" \
+-"  -i dir        - input directory with starting corpus\n" \
++"  -i dir        - input directory with starting corpus (can be specified multiple times)\n" \
+ "  -o dir        - output directory for minimized files\n" \
+ "\n" \
+ "Execution control settings:\n" \
+@@ -115,6 +115,8 @@ function usage() {
+ "  -Q            - use binary-only instrumentation (QEMU mode)\n" \
+ "  -U            - use unicorn-based instrumentation (unicorn mode)\n" \
+ "  -X            - use Nyx mode\n" \
++"  -c            - collect traces only (no processing)\n" \
++"  -p            - process saved trace files only (no collection)\n" \
+ "\n" \
+ "Minimization settings:\n" \
+ "  -A            - allow crashes and timeouts (not recommended)\n" \
+@@ -163,11 +165,10 @@ BEGIN {
+   # process options
+   Opterr = 1    # default is to diagnose
+   Optind = 1    # skip ARGV[0]
+-  while ((_go_c = getopt(ARGC, ARGV, "hi:o:f:m:t:eACOQUXYT:?")) != -1) {
++  while ((_go_c = getopt(ARGC, ARGV, "hi:o:f:m:t:cpeACOQUXYT:?")) != -1) {
+     if (_go_c == "i") {
+       if (!Optarg) usage()
+-      if (in_dir) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+-      in_dir = Optarg
++      in_dirs[++in_dir_count] = Optarg
+       continue
+     } else 
+     if (_go_c == "T") {
+@@ -237,6 +238,15 @@ BEGIN {
+       nyx_mode = 1
+       continue
+     } else 
++    if (_go_c == "c") {
++      collect_traces_only = 1
++      ENVIRON["AFL_KEEP_TRACES"] = 1
++      continue
++    } else
++    if (_go_c == "p") {
++      process_traces_only = 1
++      continue
++    } else
+     if (_go_c == "?") {
+       exit 1
+     } else 
+@@ -256,7 +266,7 @@ BEGIN {
+   }
+ 
+   # sanity checks
+-  if (!prog_args[0] || !in_dir || !out_dir) usage()
++  if (!prog_args[0] || !in_dir_count || !out_dir) usage()
+ 
+   target_bin = prog_args[0] 
+ 
+@@ -264,11 +274,14 @@ BEGIN {
+   # handle this safely from an awk script.
+ 
+   if (!ENVIRON["AFL_ALLOW_TMP"]) {
+-    dirlist[0] = in_dir
+-    dirlist[1] = target_bin
+-    dirlist[2] = out_dir
+-    dirlist[3] = stdin_file
+-    "pwd" | getline dirlist[4] # current directory
++    dirlist_idx = 0
++    for (i = 1; i <= in_dir_count; i++) {
++      dirlist[dirlist_idx++] = in_dirs[i]
++    }
++    dirlist[dirlist_idx++] = target_bin
++    dirlist[dirlist_idx++] = out_dir
++    dirlist[dirlist_idx++] = stdin_file
++    "pwd" | getline dirlist[dirlist_idx++] # current directory
+     for (dirind in dirlist) {
+       dir = dirlist[dirind]
+       if (dir ~ /^(\/var)?\/tmp/) {
+@@ -330,14 +343,18 @@ BEGIN {
+     target_bin = tnew
+   }
+ 
+-  if (0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
+-    echo "[!] Trying to obtain the map size of the target ..."
+-    get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
+-    get_map_size | getline mapsize
+-    close(get_map_size)
+-    if (mapsize && mapsize > 65535 && mapsize < 100000000) {
+-      AFL_MAP_SIZE = "AFL_MAP_SIZE="mapsize" "
+-      print "[+] Setting "AFL_MAP_SIZE
++  if (!nyx_mode) {
++    if (!ENVIRON["AFL_MAP_SIZE"] && 0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
++      echo "[!] Trying to obtain the map size of the target ..."
++      get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
++      get_map_size | getline mapsize
++      close(get_map_size)
++      if (mapsize && mapsize > 65535 && mapsize < 100000000) {
++        AFL_MAP_SIZE = "AFL_MAP_SIZE="mapsize" "
++        print "[+] Setting "AFL_MAP_SIZE
++      }
++    } else {
++      AFL_MAP_SIZE = "AFL_MAP_SIZE=" ENVIRON["AFL_MAP_SIZE"] " "
+     }
+   }
+ 
+@@ -348,9 +365,13 @@ BEGIN {
+     }
+   }
+ 
+-  if (0 != system( "test -d "in_dir )) {
+-    print "[-] Error: directory '"in_dir"' not found." > "/dev/stderr"
+-    exit 1
++  AFL_PRELOAD = ("AFL_PRELOAD" in ENVIRON) ? "AFL_PRELOAD=" ENVIRON["AFL_PRELOAD"] " " : ""
++
++  for (i = 1; i <= in_dir_count; i++) {
++    if (0 != system( "test -d "in_dirs[i] )) {
++      print "[-] Error: directory '"in_dirs[i]"' not found." > "/dev/stderr"
++      exit 1
++    }
+   }
+ 
+   #if (0 == system( "test -d "in_dir"/default" )) {
+@@ -361,8 +382,21 @@ BEGIN {
+   #  in_dir = in_dir "/queue"
+   #}
+ 
+-  system("rm -rf "trace_dir" 2>/dev/null");
+-  system("rm "out_dir"/id[:_]* 2>/dev/null")
++  if (process_traces_only || collect_traces_only) {
++    if (collect_traces_only) {
++      # Check if trace directory has files and warn if so
++      cmd = "find "trace_dir" -type f 2>/dev/null | wc -l"
++      cmd | getline trace_file_count
++      close(cmd)
++
++      if (trace_file_count > 0) {
++        print "[!] Warning: trace directory '"trace_dir"' contains "trace_file_count" files, preserving existing traces" > "/dev/stderr"
++      }
++    }
++  } else {
++    system("rm -rf "trace_dir" 2>/dev/null");
++    system("rm "out_dir"/id[:_]* 2>/dev/null")
++  }
+ 
+   cmd = "ls "out_dir"/* 2>/dev/null | wc -l"
+   cmd | getline noofentries
+@@ -419,7 +453,7 @@ BEGIN {
+     exit 1
+   }
+ 
+-  # get list of input filenames sorted by size
++  # get list of input filenames sorted by size from all input directories
+   i = 0
+   # yuck, gnu stat is option incompatible to bsd stat
+   # we use a heuristic to differentiate between
+@@ -432,22 +466,32 @@ BEGIN {
+   } else {
+     stat_format = "-f '%z %N'" # *BSD, MacOS
+   }
+-  cmdline = "(cd "in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o -type f -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
+-  #cmdline = "ls "in_dir" | (cd "in_dir" && xargs stat "stat_format" 2>/dev/null) | sort -k1n -k2r"
+-  #cmdline = "(cd "in_dir" && stat "stat_format" *) | sort -k1n -k2r"
+-  #cmdline = "(cd "in_dir" && ls | xargs stat "stat_format" ) | sort -k1n -k2r"
+-  while (cmdline | getline) {
+-    sub(/^[0-9]+ (\.\/)?/,"",$0)
+-    infilesSmallToBigFull[i] = $0
+-    sub(/.*\//, "", $0)
+-    infilesSmallToBig[i] = $0
+-    infilesSmallToBigMap[infilesSmallToBig[i]] = infilesSmallToBigFull[i]
+-    infilesSmallToBigFullMap[infilesSmallToBigFull[i]] = infilesSmallToBig[i]
+-    i++
+-  }
+-  close(cmdline)
++
++  # Process each input directory
++  for (dir_idx = 1; dir_idx <= in_dir_count; dir_idx++) {
++    current_in_dir = in_dirs[dir_idx]
++    cmdline = "(cd "current_in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o -type f -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
++    while (cmdline | getline) {
++      sub(/^[0-9]+ (\.\/)?/,"",$0)
++      # Store the full path including the source directory
++      full_path_with_dir = current_in_dir "/" $0
++      infilesSmallToBigFull[i] = full_path_with_dir
++      sub(/.*\//, "", $0)
++      # Use basename as filename, duplicates will overwrite
++      infilesSmallToBig[i] = $0
++      infilesSmallToBigMap[infilesSmallToBig[i]] = infilesSmallToBigFull[i]
++      infilesSmallToBigFullMap[infilesSmallToBigFull[i]] = infilesSmallToBig[i]
++      i++
++    }
++    close(cmdline)
++  }
+   in_count = i
+ 
++  if (in_count == 0) {
++    print "[-] Error: No files found in any of the specified input directories." > "/dev/stderr"
++    exit 1
++  }
++
+   first_file = infilesSmallToBigFull[0]
+   
+   #if (0 == system("test -d ""\""in_dir"/"first_file"\"")) {
+@@ -455,13 +499,13 @@ BEGIN {
+   #  exit 1
+   #}
+ 
+-  system(">\""in_dir"/.afl-cmin.test\"")
+-  if (0 == system("ln \""in_dir"/.afl-cmin.test\" "trace_dir"/.link_test")) {
++  system(">\""in_dirs[1]"/.afl-cmin.test\"")
++  if (0 == system("ln \""in_dirs[1]"/.afl-cmin.test\" "trace_dir"/.link_test")) {
+     cp_tool = "ln"
+   } else {
+     cp_tool = "cp"
+   }
+-  system("rm -f \""in_dir"/.afl-cmin.test\"")
++  system("rm -f \""in_dirs[1]"/.afl-cmin.test\" "trace_dir"/.link_test")
+ 
+   if (!ENVIRON["AFL_SKIP_BIN_CHECK"]) {
+     # Make sure that we can actually get anything out of afl-showmap before we
+@@ -470,10 +514,10 @@ BEGIN {
+     print "[*] Testing the target binary..."
+ 
+     if (!stdin_file) {
+-      system(AFL_MAP_SIZE "AFL_CMIN_ALLOW_ANY=1 "AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"/.run_test\" -Z "extra_par" -- \""target_bin"\" "prog_args_string" <\""in_dir"/"first_file"\"")
++      system(AFL_MAP_SIZE AFL_PRELOAD "AFL_CMIN_ALLOW_ANY=1 "AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"/.run_test\" -Z "extra_par" -- \""target_bin"\" "prog_args_string" <\""first_file"\"")
+     } else {
+-      system("cp \""in_dir"/"first_file"\" "stdin_file)
+-      system(AFL_MAP_SIZE "AFL_CMIN_ALLOW_ANY=1 "AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"/.run_test\" -Z "extra_par" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null")
++      system("cp \""first_file"\" "stdin_file)
++      system(AFL_MAP_SIZE AFL_PRELOAD "AFL_CMIN_ALLOW_ANY=1 "AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"/.run_test\" -Z "extra_par" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null")
+     }
+ 
+     first_count = 0
+@@ -505,6 +549,7 @@ BEGIN {
+   #############################
+   # STEP 1: Collecting traces #
+   #############################
++  if (!process_traces_only) {
+ 
+   if (threads) {
+ 
+@@ -517,17 +562,23 @@ BEGIN {
+     tmpfile=out_dir "/.filelist"
+     for (instance = 1; instance < threads; instance++) {
+       for (i = 0; i < inputsperfile; i++) {
+-        print in_dir"/"infilesSmallToBigFull[cnt] >> tmpfile"."instance
++        print infilesSmallToBigFull[cnt] >> tmpfile"."instance
+         cnt++
+       }
+     }
+     for (; cnt < in_count; cnt++) {
+-      print in_dir"/"infilesSmallToBigFull[cnt] >> tmpfile"."threads
++      print infilesSmallToBigFull[cnt] >> tmpfile"."threads
+     }
+ 
+   }
+ 
+-  print "[*] Obtaining traces for "in_count" input files in '"in_dir"'."
++  # Create directory list for display
++  dir_list = ""
++  for (i = 1; i <= in_dir_count; i++) {
++    if (i > 1) dir_list = dir_list", "
++    dir_list = dir_list "'" in_dirs[i] "'"
++  }
++  print "[*] Obtaining traces for "in_count" input files from " dir_list "."
+ 
+   cur = 0;
+ 
+@@ -537,12 +588,12 @@ BEGIN {
+     for (i = 1; i <= threads; i++) {
+ 
+       if (!stdin_file) {
+-#        print " { "AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -- \""target_bin"\" "prog_args_string"; > "tmpfile"."i".done ; } &"
+-        retval = system(" { "AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -- \""target_bin"\" "prog_args_string"; > "tmpfile"."i".done ; } &")
++#        print " { "AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -- \""target_bin"\" "prog_args_string"; > "tmpfile"."i".done ; } &"
++        retval = system(" { "AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -- \""target_bin"\" "prog_args_string"; > "tmpfile"."i".done ; } &")
+       } else {
+         stdin_file=tmpfile"."i".stdin"
+-#        print " { "AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null; > "tmpfile"."i".done ; } &"
+-        retval = system(" { "AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null; > "tmpfile"."i".done ; } &")
++#        print " { "AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null; > "tmpfile"."i".done ; } &"
++        retval = system(" { "AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"."i"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null; > "tmpfile"."i".done ; } &")
+       }
+     }
+     print "[*] Waiting for parallel tasks to complete ..."
+@@ -559,16 +610,23 @@ BEGIN {
+     print "[*] Done!"
+     system("rm -f "tmpfile"*")
+   } else {
++    # Create a single file list for all input files
++    tmpfile = out_dir "/.all_files"
++    for (i = 0; i < in_count; i++) {
++      print infilesSmallToBigFull[i] >> tmpfile
++    }
++    close(tmpfile)
++
+     if (!stdin_file) {
+       print "    Processing "in_count" files (forkserver mode)..."
+-#      print AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -i \""in_dir"\" -- \""target_bin"\" "prog_args_string
+-      retval = system(AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -i \""in_dir"\" -- \""target_bin"\" "prog_args_string)
++      retval = system(AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"\" -- \""target_bin"\" "prog_args_string)
+     } else {
+       print "    Processing "in_count" files (forkserver mode)..."
+-#    print AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -i \""in_dir"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null"
+-      retval = system(AFL_MAP_SIZE AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -i \""in_dir"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null")
++      retval = system(AFL_MAP_SIZE AFL_PRELOAD AFL_CMIN_ALLOW_ANY AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -I \""tmpfile"\" -H \""stdin_file"\" -- \""target_bin"\" "prog_args_string" </dev/null")
+     }
+ 
++    system("rm -f "tmpfile)
++
+     if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
+       print "[!] Exit code "retval" != 0 received from afl-showmap (this means a crashing or timeout input is likely present), terminating..."
+ 
+@@ -581,12 +639,19 @@ BEGIN {
+ 
+   }
+ 
++  }
++
++  if (collect_traces_only) {
++    print "[*] Collected traces for "in_count" input files in '"trace_dir"'."
++    exit 0
++  }
++
+   #######################################################
+   # STEP 2: register smallest input file for each tuple #
+   # STEP 3: copy that file (at most once)               #
+   #######################################################
+ 
+-  print "[*] Processing traces for input files in '"in_dir"'."
++  print "[*] Processing traces for input files from " dir_list "."
+ 
+   cur = 0
+   out_count = 0
+@@ -665,7 +730,7 @@ BEGIN {
+     # copy file unless already done
+     if (! (fn in file_already_copied)) {
+       realfile = infilesSmallToBigMap[fn]
+-      system(cp_tool" \""in_dir"/"realfile"\" \""out_dir"/"fn"\"")
++      system(cp_tool" \""realfile"\" \""out_dir"/"fn"\"")
+       file_already_copied[fn] = ""
+       ++out_count
+       #printf "tuple nr %d (%d cnt=%d) -> %s\n",tcnt,key,key_count[key],fn > trace_dir"/.log"

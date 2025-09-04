@@ -255,16 +255,25 @@ S3_PROJECT_ARGS=(--project "$S3_PROJECT")
 if [[ -n $S3_CORPUS_REFRESH ]]; then
   update-status "starting corpus refresh"
   export AFL_PRINT_FILENAMES=1
+
+  MAX_RUN_TIME="$(($(get-target-time) - 1800))"
+  if [[ $MAX_RUN_TIME -lt 0 ]]; then
+    echo "error: not enough time to perform corpus refresh" >&2
+    exit 2
+  fi
   if [[ $NYX_FUZZER == "IPC_SingleMessage" ]]; then
-    guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" | while read -r project; do
-      time guided-fuzzing-daemon \
-        "${S3_BUCKET_ARGS[@]}" \
-        --project "$project" \
-        --corpus-refresh ./corpus \
-        "${DAEMON_ARGS[@]}"
-    done
+    refresh_ipc_projects() {
+      guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" | while read -r project; do
+        time guided-fuzzing-daemon \
+          "${S3_BUCKET_ARGS[@]}" \
+          --project "$project" \
+          --corpus-refresh ./corpus \
+          "${DAEMON_ARGS[@]}"
+      done
+    }
+    timeout -s 2 "$MAX_RUN_TIME" refresh_ipc_projects
   else
-    time guided-fuzzing-daemon \
+    time timeout -s 2 "$MAX_RUN_TIME" guided-fuzzing-daemon \
       "${S3_BUCKET_ARGS[@]}" \
       "${S3_PROJECT_ARGS[@]}" \
       --corpus-refresh ./corpus \
