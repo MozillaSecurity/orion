@@ -1,17 +1,85 @@
 diff --git a/afl-cmin b/afl-cmin
-index a88460a8..e43877ac 100755
+index a88460a8..b54a1b3f 100755
 --- a/afl-cmin
 +++ b/afl-cmin
-@@ -258,7 +258,7 @@ BEGIN {
-   # sanity checks
-   if (!prog_args[0] || !in_dir || !out_dir) usage()
- 
--  target_bin = prog_args[0] 
-+  target_bin = prog_args[0]
- 
-   # Do a sanity check to discourage the use of /tmp, since we can't really
-   # handle this safely from an awk script.
-@@ -330,14 +330,18 @@ BEGIN {
+@@ -115,6 +115,8 @@ function usage() {
+ "  -Q            - use binary-only instrumentation (QEMU mode)\n" \
+ "  -U            - use unicorn-based instrumentation (unicorn mode)\n" \
+ "  -X            - use Nyx mode\n" \
++"  -c            - collect traces only (no processing)\n" \
++"  -p            - process saved trace files only (no collection)\n" \
+ "\n" \
+ "Minimization settings:\n" \
+ "  -A            - allow crashes and timeouts (not recommended)\n" \
+@@ -163,44 +165,44 @@ BEGIN {
+   # process options
+   Opterr = 1    # default is to diagnose
+   Optind = 1    # skip ARGV[0]
+-  while ((_go_c = getopt(ARGC, ARGV, "hi:o:f:m:t:eACOQUXYT:?")) != -1) {
++  while ((_go_c = getopt(ARGC, ARGV, "hi:o:f:m:t:cpeACOQUXYT:?")) != -1) {
+     if (_go_c == "i") {
+       if (!Optarg) usage()
+       if (in_dir) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       in_dir = Optarg
+       continue
+-    } else 
++    } else
+     if (_go_c == "T") {
+       if (!Optarg) usage()
+       if (threads) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       threads = Optarg
+       continue
+-    } else 
++    } else
+     if (_go_c == "o") {
+       if (!Optarg) usage()
+       if (out_dir) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       out_dir = Optarg
+       continue
+-    } else 
++    } else
+     if (_go_c == "f") {
+       if (!Optarg) usage()
+       if (stdin_file) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       stdin_file = Optarg
+       continue
+-    } else 
++    } else
+     if (_go_c == "m") {
+       if (!Optarg) usage()
+       if (mem_limit) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       mem_limit = Optarg
+       mem_limit_given = 1
+       continue
+-    } else 
++    } else
+     if (_go_c == "t") {
+       if (!Optarg) usage()
+       if (timeout) { print "Option "_go_c" is only allowed once" > "/dev/stderr"}
+       timeout = Optarg
+       continue
+-    } else 
++    } else
+     if (_go_c == "C") {
+       AFL_CMIN_CRASHES_ONLY = "AFL_CMIN_CRASHES_ONLY=1 "
+       continue
+@@ -236,6 +238,15 @@ BEGIN {
+       extra_par = extra_par " -X"
+       nyx_mode = 1
+       continue
++    } else
++    if (_go_c == "c") {
++      collect_traces_only = 1
++      ENVIRON["AFL_KEEP_TRACES"] = 1
++      continue
++    } else
++    if (_go_c == "p") {
++      process_traces_only = 1
++      continue
+     } else 
+     if (_go_c == "?") {
+       exit 1
+@@ -330,14 +341,18 @@ BEGIN {
      target_bin = tnew
    }
  
@@ -38,7 +106,7 @@ index a88460a8..e43877ac 100755
      }
    }
  
-@@ -348,6 +352,8 @@ BEGIN {
+@@ -348,6 +363,8 @@ BEGIN {
      }
    }
  
@@ -47,7 +115,20 @@ index a88460a8..e43877ac 100755
    if (0 != system( "test -d "in_dir )) {
      print "[-] Error: directory '"in_dir"' not found." > "/dev/stderr"
      exit 1
-@@ -470,10 +476,10 @@ BEGIN {
+@@ -361,8 +378,10 @@ BEGIN {
+   #  in_dir = in_dir "/queue"
+   #}
+ 
+-  system("rm -rf "trace_dir" 2>/dev/null");
+-  system("rm "out_dir"/id[:_]* 2>/dev/null")
++  if (!process_traces_only) {
++    system("rm -rf "trace_dir" 2>/dev/null");
++    system("rm "out_dir"/id[:_]* 2>/dev/null")
++  }
+ 
+   cmd = "ls "out_dir"/* 2>/dev/null | wc -l"
+   cmd | getline noofentries
+@@ -470,10 +489,10 @@ BEGIN {
      print "[*] Testing the target binary..."
  
      if (!stdin_file) {
@@ -60,7 +141,18 @@ index a88460a8..e43877ac 100755
      }
  
      first_count = 0
-@@ -537,12 +543,12 @@ BEGIN {
+@@ -505,8 +524,9 @@ BEGIN {
+   #############################
+   # STEP 1: Collecting traces #
+   #############################
++  if (!process_traces_only) {
+ 
+-  if (threads) {
++    if (threads) {
+ 
+     inputsperfile = int(in_count / threads)
+     if (in_count % threads) {
+@@ -537,12 +557,12 @@ BEGIN {
      for (i = 1; i <= threads; i++) {
  
        if (!stdin_file) {
@@ -77,7 +169,7 @@ index a88460a8..e43877ac 100755
        }
      }
      print "[*] Waiting for parallel tasks to complete ..."
-@@ -562,11 +568,11 @@ BEGIN {
+@@ -562,11 +582,11 @@ BEGIN {
      if (!stdin_file) {
        print "    Processing "in_count" files (forkserver mode)..."
  #      print AFL_CMIN_CRASHES_ONLY"\""showmap"\" -m "mem_limit" -t "timeout" -o \""trace_dir"\" -Z "extra_par" -i \""in_dir"\" -- \""target_bin"\" "prog_args_string
@@ -91,32 +183,17 @@ index a88460a8..e43877ac 100755
      }
  
      if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
-diff --git a/afl-cmin.bash b/afl-cmin.bash
-index 99ae80d9..2909ebfa 100755
---- a/afl-cmin.bash
-+++ b/afl-cmin.bash
-@@ -245,14 +245,16 @@ if [ "$NYX_MODE" = "" ]; then
+@@ -581,6 +601,13 @@ BEGIN {
  
- fi
+   }
  
--grep -aq AFL_DUMP_MAP_SIZE "$TARGET_BIN" && {
--  echo "[!] Trying to obtain the map size of the target ..."
--  MAPSIZE=`AFL_DUMP_MAP_SIZE=1 "./$TARGET_BIN" 2>/dev/null`
--  test -n "$MAPSIZE" && {
--    export AFL_MAP_SIZE=$MAPSIZE
--    echo "[+] Setting AFL_MAP_SIZE=$MAPSIZE"
--  }
--}
-+if [ -z "$NYX_MODE" ]; then
-+  if [ -z "$AFL_MAP_SIZE" ] && grep -aq AFL_DUMP_MAP_SIZE "$TARGET_BIN"; then
-+    echo "[!] Trying to obtain the map size of the target ..."
-+    MAPSIZE=`AFL_DUMP_MAP_SIZE=1 "./$TARGET_BIN" 2>/dev/null`
-+    test -n "$MAPSIZE" && {
-+      export AFL_MAP_SIZE=$MAPSIZE
-+      echo "[+] Setting AFL_MAP_SIZE=$MAPSIZE"
-+    }
-+  fi
-+fi
- 
- if [ "$AFL_SKIP_BIN_CHECK" = "" -a "$QEMU_MODE" = "" -a "$FRIDA_MODE" = "" -a "$UNICORN_MODE" = "" -a "$NYX_MODE" = "" ]; then
- 
++  }
++
++  if (collect_traces_only) {
++    print "[*] Collected traces for "in_count" input files in '"trace_dir"'."
++    exit 0
++  }
++
+   #######################################################
+   # STEP 2: register smallest input file for each tuple #
+   # STEP 3: copy that file (at most once)               #
