@@ -255,6 +255,7 @@ S3_PROJECT_ARGS=(--project "$S3_PROJECT")
 if [[ -n $S3_CORPUS_REFRESH ]]; then
   update-status "starting corpus refresh"
   export AFL_PRINT_FILENAMES=1
+
   if [[ $NYX_FUZZER == "IPC_SingleMessage" ]]; then
     guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" | while read -r project; do
       time guided-fuzzing-daemon \

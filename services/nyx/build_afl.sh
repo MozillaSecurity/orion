@@ -60,6 +60,9 @@ pushd /srv/repos >/dev/null
 git-clone-rev https://github.com/AFLplusplus/AFLplusplus 78b7e14c73baacf1d88b3c03955e78f5080d17ba
 pushd AFLplusplus >/dev/null
 
+# Enable passing AFL_MAP_SIZE and add resume mode to afl-cmin
+git apply /srv/repos/setup/patches/afl-cmin.diff
+
 # WIP 2-byte chunked variant of honggfuzz custom mutator
 git apply /srv/repos/setup/patches/hongfuzz-2b-chunked.diff
 git apply /srv/repos/setup/patches/increase-map-size.diff
