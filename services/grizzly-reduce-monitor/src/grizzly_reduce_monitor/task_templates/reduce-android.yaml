@@ -23,14 +23,16 @@ payload:
     path: public/grizzly-android.tar.zst
     type: indexed-image
   env:
-    ANDROID_EMULATOR: "1"
     ADAPTER: reducer
+    ANDROID_EMULATOR: "1"
+    DEBUG: "1"
+    DISPLAY_MODE: xvfb
     FUZZING_CPU_COUNT: "0"  # force single instance/task
-    GRIZZLY_BRANCH: android-rebase
     IGNORE: "log-limit memory timeout"
-    MEM_LIMIT: "7000"
     INPUT: "${crash_id}"
-    TIMEOUT: "60"
+    NO_HARNESS: "1"
+    TIMEOUT: "10"
+    USE_HTTP: "1"
   features:
     taskclusterProxy: true
   maxRunTime: !!int "${max_run_time}"
