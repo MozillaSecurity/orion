@@ -163,15 +163,18 @@ else
     unset AFL_MAX_FUZZ_RUNS
   fi
 
-  # Sometimes, don't download the existing corpus.
-  # This can increase coverage in large targets and prevents bad corpora.
-  # Results will be merged with the existing corpus on next refresh.
-  if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
-    # Download the corpus from S3
-    update-status "downloading corpus"
-    time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
-  else
-    mkdir -p corpus
+  # it may already exist if it was mounted
+  if [[ ! -e corpus ]]; then
+    # Sometimes, don't download the existing corpus.
+    # This can increase coverage in large targets and prevents bad corpora.
+    # Results will be merged with the existing corpus on next refresh.
+    if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+      # Download the corpus from S3
+      update-status "downloading corpus"
+      time guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus
+    else
+      mkdir -p corpus
+    fi
   fi
   # Ensure corpus is not empty
   if [[ $(find ./corpus -type f | wc -l) -eq 0 ]]; then
