@@ -308,7 +308,8 @@ else
     DAEMON_ARGS+=(--afl-hide-logs)
   fi
 
-  if [[ -e corpus ]]; then
+  # it may already exist if it was mounted
+  if [[ ! -e corpus ]]; then
     # Sometimes, don't download the existing corpus.
     # This can increase coverage in large targets and prevents bad corpora.
     # Results will be merged with the existing corpus on next refresh.
