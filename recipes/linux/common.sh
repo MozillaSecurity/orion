@@ -112,13 +112,13 @@ function get-target-time() {
   fi
   if [[ ${COVERAGE-0} == 1 ]] && [[ ${COVRUNTIME-0} -gt 0 ]]; then
     result=$COVRUNTIME
-    if [[ $result -lt $remaining_time ]]; then
+    if [[ $result -gt $remaining_time ]]; then
       echo "error: not enough time to respect COVRUNTIME, failing..." >&2
       exit 1
     fi
   elif [[ $TARGET_TIME =~ ^-?[0-9]+$ ]]; then
     result=$TARGET_TIME
-    if [[ $result -lt $remaining_time ]]; then
+    if [[ $result -gt $remaining_time ]]; then
       echo "warning: TARGET_TIME given, but exceeds task deadline!" >&2
     fi
   else
