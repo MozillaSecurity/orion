@@ -256,7 +256,8 @@ if [[ -n $S3_CORPUS_REFRESH ]]; then
   update-status "starting corpus refresh"
   export AFL_PRINT_FILENAMES=1
 
-  MAX_RUN_TIME="$(($(get-target-time) - 1800))"
+  # Leave up to 2 hours for post-processing
+  MAX_RUN_TIME="$(($(get-target-time) - 7200))"
   if [[ $MAX_RUN_TIME -lt 0 ]]; then
     echo "error: not enough time to perform corpus refresh" >&2
     exit 2
