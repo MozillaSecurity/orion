@@ -13,21 +13,37 @@ PATH=~/.local/bin:$PATH
 # shellcheck source=recipes/linux/common.sh
 source common.sh
 
-if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
-  TARGET_DURATION="$(($(get-deadline) - $(date +%s) - 600))"
-  # check if there is enough time to run
-  if [[ $TARGET_DURATION -le 600 ]]; then
-    # create required artifact directory to avoid task failure
-    mkdir -p /tmp/site-scout
-    update-status "Not enough time remaining before deadline!"
-    exit 0
+if [[ -n $QUEUE_LIST ]]; then
+  # get gcp pubsub credentials
+  mkdir -p ~/.config/gcloud
+  get-tc-secret google-cloud-pubsub-site-scout-urls ~/.config/gcloud/application_default_credentials.json raw
+fi
+
+# create required artifact directory to avoid task failure
+mkdir -p /tmp/site-scout
+
+function calc-duration() {
+  local duration
+  if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
+    duration="$(($(get-deadline) - $(date +%s) - 600))"
+    # check if there is enough time to run
+    if [[ $duration -le 600 ]]; then
+      duration=-1
+      update-status "Not enough time remaining before deadline!"
+    fi
+    if [[ -n $RUNTIME_LIMIT ]] && [[ $RUNTIME_LIMIT -lt $duration ]]; then
+      duration="$RUNTIME_LIMIT"
+    fi
+  else
+    # RUNTIME_LIMIT or no-limit
+    duration="${RUNTIME_LIMIT-0}"
   fi
-  if [[ -n $RUNTIME_LIMIT ]] && [[ $RUNTIME_LIMIT -lt $TARGET_DURATION ]]; then
-    TARGET_DURATION="$RUNTIME_LIMIT"
-  fi
-else
-  # RUNTIME_LIMIT or no-limit
-  TARGET_DURATION="${RUNTIME_LIMIT-0}"
+  echo "$duration"
+}
+
+TARGET_DURATION="$(calc-duration)"
+if [[ $TARGET_DURATION -eq -1 ]]; then
+  exit 0
 fi
 
 eval "$(ssh-agent -s)"
@@ -75,12 +91,14 @@ fi
 
 update-status "Setup: collecting URLs"
 
+extra_flags=()
+
 if [[ -n $CRASH_STATS ]]; then
   # prepare to run URLs from Crash Stats
   python3 -m venv /tmp/crashstats-tools-venv
   retry /tmp/crashstats-tools-venv/bin/pip install crashstats-tools
   retry /tmp/crashstats-tools-venv/bin/pip install site-scout
-  export OMIT_URLS_FLAG="--omit-urls"
+  extra_flags+=("--omit-urls")
   set +x
   CRASHSTATS_API_TOKEN="$(get-tc-secret crash-stats-api-token)"
   set -x
@@ -94,9 +112,12 @@ if [[ -n $CRASH_STATS ]]; then
   /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS"
   mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
+elif [[ -n $QUEUE_LIST ]]; then
+  python3 -m venv /tmp/queue-list-venv
+  retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
+  mkdir active_lists
 else
   # prepare to run URL list
-  export OMIT_URLS_FLAG=""
   # select URL collections
   mkdir active_lists
   for LIST in $URL_LISTS; do
@@ -157,27 +178,46 @@ trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # enable page interactions
 if [[ -n $EXPLORE ]]; then
-  export EXPLORE_FLAG="--explore"
-else
-  export EXPLORE_FLAG=""
+  extra_flags+=("--explore")
 fi
 
 # create directory for launch failure results
 mkdir -p /tmp/site-scout/local-results
 
-update-status "Setup: launching site-scout"
-site-scout "$TARGET_BIN" \
-  -i ./active_lists/ \
-  $EXPLORE_FLAG \
-  $OMIT_URLS_FLAG \
-  --fuzzmanager \
-  --memory-limit "$MEM_LIMIT" \
-  --jobs "$JOBS" \
-  --runtime-limit "$TARGET_DURATION" \
-  --status-report status.txt \
-  --time-limit "$TIME_LIMIT" \
-  --url-limit "${URL_LIMIT-0}" \
-  -o /tmp/site-scout/local-results $COVERAGE_FLAG
+while true; do
+  if [[ -n $QUEUE_LIST ]]; then
+    python3 -m venv /tmp/queue-list-venv
+    retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
+    urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py pull "$QUEUE_LIST" --limit 10)"
+    acks="$(basename "$urls" .txt).ack.txt"
+    mv "$urls" active_lists/
+  fi
+
+  TARGET_DURATION="$(calc-duration)"
+  if [[ $TARGET_DURATION -eq -1 ]]; then
+    exit 0
+  fi
+
+  update-status "Setup: launching site-scout"
+  site-scout "$TARGET_BIN" \
+    -i ./active_lists/ \
+    "${extra_flags[@]}" \
+    --fuzzmanager \
+    --memory-limit "$MEM_LIMIT" \
+    --jobs "$JOBS" \
+    --runtime-limit "$TARGET_DURATION" \
+    --status-report status.txt \
+    --time-limit "$TIME_LIMIT" \
+    --url-limit "${URL_LIMIT-0}" \
+    -o /tmp/site-scout/local-results $COVERAGE_FLAG
+
+  if [[ -n $QUEUE_LIST ]]; then
+    /tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py ack "$QUEUE_LIST" "$acks"
+    rm active_lists/* "$acks"
+  else
+    break
+  fi
+done
 
 if [[ -n $COVERAGE ]]; then
   retry-curl --compressed -O "$SOURCE_URL"
