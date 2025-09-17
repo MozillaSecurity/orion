@@ -13,7 +13,7 @@ PATH=~/.local/bin:$PATH
 # shellcheck source=recipes/linux/common.sh
 source common.sh
 
-if [[ -n $QUEUE_LIST ]]; then
+if [[ -n $QUEUE_NAME ]]; then
   # get gcp pubsub credentials
   mkdir -p ~/.config/gcloud
   get-tc-secret google-cloud-pubsub-site-scout-urls ~/.config/gcloud/application_default_credentials.json raw
@@ -112,7 +112,7 @@ if [[ -n $CRASH_STATS ]]; then
   /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS"
   mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
-elif [[ -n $QUEUE_LIST ]]; then
+elif [[ -n $QUEUE_NAME ]]; then
   python3 -m venv /tmp/queue-list-venv
   retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
   mkdir active_lists
@@ -188,13 +188,13 @@ fi
 mkdir -p /tmp/site-scout/local-results
 
 while true; do
-  if [[ -n $QUEUE_LIST ]]; then
+  if [[ -n $QUEUE_NAME ]]; then
     python3 -m venv /tmp/queue-list-venv
     retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
     # maximum ack time is 10 minutes or else queue entries will be retried,
     # so QUEUE_CHUNK_SIZE and JOBS should be set such that work can be
     # completed within 10 minutes
-    urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py pull "$QUEUE_LIST" --limit "$QUEUE_CHUNK_SIZE")"
+    urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_util.py pull "$QUEUE_NAME" --limit "$QUEUE_CHUNK_SIZE")"
     acks="$(basename "$urls" .txt).ack.txt"
     url-collection -l "$urls" active_lists/work.yml
     rm "$urls"
@@ -218,8 +218,8 @@ while true; do
     --url-limit "${URL_LIMIT-0}" \
     -o /tmp/site-scout/local-results
 
-  if [[ -n $QUEUE_LIST ]]; then
-    /tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py ack "$QUEUE_LIST" "$acks"
+  if [[ -n $QUEUE_NAME ]]; then
+    /tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_util.py ack "$QUEUE_NAME" "$acks"
     rm active_lists/* "$acks"
   else
     break
