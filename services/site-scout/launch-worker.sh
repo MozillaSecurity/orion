@@ -181,7 +181,7 @@ trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
 # enable page interactions
 if [[ -n $EXPLORE ]]; then
-  extra_flags+=("--explore")
+  extra_flags+=("--explore" "$EXPLORE")
 fi
 
 # create directory for launch failure results
