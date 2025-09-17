@@ -130,7 +130,7 @@ update-status "Setup: fetching build"
 # select build
 TARGET_BIN="./build/firefox"
 if [[ -n $COVERAGE ]]; then
-  export COVERAGE_FLAG="--coverage"
+  extra_flags+=("--coverage")
   retry fuzzfetch -n build --coverage
   export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
   SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
@@ -147,7 +147,6 @@ elif [[ -n $CUSTOM_BUILD ]]; then
   # shellcheck disable=SC2086
   retry fuzzfetch -n build $CUSTOM_BUILD
 else
-  export COVERAGE_FLAG=""
   echo "Build types: ${BUILD_TYPES}"
   BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
   build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
@@ -213,7 +212,7 @@ while true; do
     --status-report status.txt \
     --time-limit "$TIME_LIMIT" \
     --url-limit "${URL_LIMIT-0}" \
-    -o /tmp/site-scout/local-results "$COVERAGE_FLAG"
+    -o /tmp/site-scout/local-results
 
   if [[ -n $QUEUE_LIST ]]; then
     /tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py ack "$QUEUE_LIST" "$acks"
