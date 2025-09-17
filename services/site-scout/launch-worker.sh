@@ -191,9 +191,13 @@ while true; do
   if [[ -n $QUEUE_LIST ]]; then
     python3 -m venv /tmp/queue-list-venv
     retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
-    urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py pull "$QUEUE_LIST" --limit 10)"
+    # maximum ack time is 10 minutes or else queue entries will be retried,
+    # so QUEUE_CHUNK_SIZE and JOBS should be set such that work can be
+    # completed within 10 minutes
+    urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py pull "$QUEUE_LIST" --limit "$QUEUE_CHUNK_SIZE")"
     acks="$(basename "$urls" .txt).ack.txt"
-    mv "$urls" active_lists/
+    url-collection -l "$urls" active_lists/work.yml
+    rm "$urls"
   fi
 
   TARGET_DURATION="$(calc-duration)"
