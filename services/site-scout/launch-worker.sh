@@ -142,6 +142,10 @@ if [[ -n $COVERAGE ]]; then
   export GCOV_PREFIX="$HOME/build"
   GCOV_PREFIX_STRIP="$(grep pathprefix "${TARGET_BIN}.fuzzmanagerconf" | grep -E -o "/.+$" | tr -cd '/' | wc -c)"
   export GCOV_PREFIX_STRIP
+elif [[ -n $CUSTOM_BUILD ]]; then
+  echo "Using requested custom build"
+  # shellcheck disable=SC2086
+  retry fuzzfetch -n build $CUSTOM_BUILD
 else
   export COVERAGE_FLAG=""
   echo "Build types: ${BUILD_TYPES}"
@@ -209,7 +213,7 @@ while true; do
     --status-report status.txt \
     --time-limit "$TIME_LIMIT" \
     --url-limit "${URL_LIMIT-0}" \
-    -o /tmp/site-scout/local-results $COVERAGE_FLAG
+    -o /tmp/site-scout/local-results "$COVERAGE_FLAG"
 
   if [[ -n $QUEUE_LIST ]]; then
     /tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_list.py ack "$QUEUE_LIST" "$acks"
