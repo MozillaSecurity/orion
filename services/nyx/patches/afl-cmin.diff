@@ -1,5 +1,5 @@
 diff --git a/afl-cmin b/afl-cmin
-index a88460a8..9509562a 100755
+index a88460a8..4de07878 100755
 --- a/afl-cmin
 +++ b/afl-cmin
 @@ -103,7 +103,7 @@ function usage() {
@@ -314,7 +314,7 @@ index a88460a8..9509562a 100755
      if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
        print "[!] Exit code "retval" != 0 received from afl-showmap (this means a crashing or timeout input is likely present), terminating..."
  
-@@ -581,12 +639,19 @@ BEGIN {
+@@ -581,16 +639,24 @@ BEGIN {
  
    }
  
@@ -335,7 +335,40 @@ index a88460a8..9509562a 100755
  
    cur = 0
    out_count = 0
-@@ -665,7 +730,7 @@ BEGIN {
+   tuple_count = 0
++  missing_count = 0
+ 
+   # from rare to frequent new tuples
+   # get the best (smallest) file for it
+@@ -602,14 +668,20 @@ BEGIN {
+     else { print "    Processing file "cur"/"in_count }
+     # create path for the trace file from afl-showmap
+     tracefile_path = trace_dir"/"fn
+-    # ensure the file size is not zero
+-    cmd = "du -b \""tracefile_path"\""
+-    # "ls -l \""tracefile_path"\""
+-    cmd | getline output
++    # check if file exists and size is not zero
++    cmd = "test -e \""tracefile_path"\" && echo 1 || echo 0"
++    cmd | getline file_exists
+     close(cmd)
+-    split(output, result, "\t")
+-    if (result[1] == 0) {
+-      print "[!] WARNING: file "fn" is crashing the target, ignoring..."
++    if (file_exists == 1) {
++      cmd = "test -s \""tracefile_path"\" && echo 1 || echo 0"
++      cmd | getline file_nonzero
++      close(cmd)
++      if (file_nonzero == 0) {
++        print "[!] WARNING: file "fn" is crashing the target, ignoring..."
++      }
++    } else {
++      missing_count++
++      print "[!] WARNING: file "fn" is missing, ignoring..."
+     }
+     # gather all keys, and count them
+     while ((getline line < tracefile_path) > 0) {
+@@ -665,7 +737,7 @@ BEGIN {
      # copy file unless already done
      if (! (fn in file_already_copied)) {
        realfile = infilesSmallToBigMap[fn]
@@ -344,3 +377,11 @@ index a88460a8..9509562a 100755
        file_already_copied[fn] = ""
        ++out_count
        #printf "tuple nr %d (%d cnt=%d) -> %s\n",tcnt,key,key_count[key],fn > trace_dir"/.log"
+@@ -674,6 +746,7 @@ BEGIN {
+   close(sortedKeys)
+   print ""
+   print "[+] Found "tuple_count" unique tuples across "in_count" files."
++  print "[+] Missing files: "missing_count
+ 
+   if (out_count == 1) {
+     print "[!] WARNING: All test cases had the same traces, check syntax!"
