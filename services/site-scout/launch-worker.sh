@@ -93,6 +93,9 @@ update-status "Setup: collecting URLs"
 
 extra_flags=()
 
+# create directory to scan for URL lists
+mkdir active_lists
+
 if [[ -n $CRASH_STATS ]]; then
   # prepare to run URLs from Crash Stats
   python3 -m venv /tmp/crashstats-tools-venv
@@ -110,16 +113,13 @@ if [[ -n $CRASH_STATS ]]; then
   # download crash-urls.jsonl from crash-stats.mozilla.org
   # NOTE: currently filtering by top 1M
   /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS"
-  mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
 elif [[ -n $QUEUE_NAME ]]; then
   python3 -m venv /tmp/queue-list-venv
   retry /tmp/queue-list-venv/bin/pip install google-cloud-pubsub
-  mkdir active_lists
 else
   # prepare to run URL list
   # select URL collections
-  mkdir active_lists
   for LIST in $URL_LISTS; do
     cp "/src/site-scout-private/visit-yml/${LIST}" ./active_lists/
   done
@@ -198,6 +198,11 @@ while true; do
     acks="$(basename "$urls" .txt).ack.txt"
     url-collection -l "$urls" active_lists/work.yml
     rm "$urls"
+  fi
+  if [[ ! -s $urls ]]; then
+    echo "Queue empty" | tee status.txt
+    # no work available, this pool should be disabled.
+    exit 1
   fi
 
   TARGET_DURATION="$(calc-duration)"
