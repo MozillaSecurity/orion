@@ -141,31 +141,6 @@ for fuzzer in dist/Debug/bin/nssfuzz-*; do
   run-target "$fuzzer" "$name" "${options[@]}"
 done
 
-# Build nss with tls fuzzing mode
-update-status "building nss with tls fuzzing mode"
-pushd nss
-time ./build.sh -c -v --fuzz=tls --disable-tests
-popd
-
-for fuzzer in dist/Debug/bin/nssfuzz-*; do
-  file="$(basename "$fuzzer")"
-  name="${file#nssfuzz-}"
-
-  if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
-    update-status "cloning corpus for target $name"
-    mkdir -p "./corpus/$name"
-    pushd "./corpus/$name"
-    gsutil -m cp "gs://nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/latest.zip" .
-    unzip latest.zip
-    rm latest.zip
-    popd
-
-    update-status "running target $name"
-    readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
-    run-target "$fuzzer" "$name" "${options[@]}"
-  fi
-done
-
 # Generate cryptofuzz headers
 pushd cryptofuzz
 ./gen_repository.py
@@ -194,13 +169,38 @@ update-status "cloning cryptofuzz nss corpus"
 mkdir -p ./corpus/cryptofuzz
 
 pushd ./corpus/cryptofuzz
-retry-curl -O "https://storage.googleapis.com/cryptofuzz-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/cryptofuzz_cryptofuzz-nss/public.zip"
-unzip public.zip
-rm -f public.zip
+gsutil cp "gs://nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_cryptofuzz/latest.zip" .
+unzip latest.zip
+rm latest.zip
 popd
 
 # Run cryptofuzz
 update-status "running cryptofuzz"
 run-target "cryptofuzz/cryptofuzz" "cryptofuzz" --force-module=nss
+
+# Build nss with tls fuzzing mode
+update-status "building nss with tls fuzzing mode"
+pushd nss
+time ./build.sh -c -v --fuzz=tls --disable-tests
+popd
+
+for fuzzer in dist/Debug/bin/nssfuzz-*; do
+  file="$(basename "$fuzzer")"
+  name="${file#nssfuzz-}"
+
+  if [[ -f "nss/fuzz/options/$name-no_fuzzer_mode.options" ]]; then
+    update-status "cloning corpus for target $name"
+    mkdir -p "./corpus/$name"
+    pushd "./corpus/$name"
+    gsutil -m cp "gs://nss-backup.clusterfuzz-external.appspot.com/corpus/libFuzzer/nss_$name/latest.zip" .
+    unzip latest.zip
+    rm latest.zip
+    popd
+
+    update-status "running target $name"
+    readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
+    run-target "$fuzzer" "$name" "${options[@]}"
+  fi
+done
 
 update-status "done"
