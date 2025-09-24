@@ -197,12 +197,12 @@ while true; do
     urls="$(/tmp/queue-list-venv/bin/python /src/site-scout-private/src/queue_util.py pull "$QUEUE_NAME" --limit "$QUEUE_CHUNK_SIZE")"
     acks="$(basename "$urls" .txt).ack.txt"
     url-collection -l "$urls" active_lists/work.yml
+    if [[ ! -s $urls ]]; then
+      echo "Queue empty" | tee status.txt
+      # no work available, this pool should be disabled.
+      exit 1
+    fi
     rm "$urls"
-  fi
-  if [[ ! -s $urls ]]; then
-    echo "Queue empty" | tee status.txt
-    # no work available, this pool should be disabled.
-    exit 1
   fi
 
   TARGET_DURATION="$(calc-duration)"
