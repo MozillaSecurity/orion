@@ -27,9 +27,9 @@ case "${1-install}" in
     if [[ $EDIT == "1" ]]; then
       cd "${DESTDIR-/home/worker}"
       git-clone https://github.com/MozillaSecurity/fuzzfetch fuzzfetch
-      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./fuzzfetch
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e "./fuzzfetch[sentry]"
     else
-      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/fuzzfetch"
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/fuzzfetch.git#egg=fuzzfetch[sentry]"
     fi
     ;;
   test)
