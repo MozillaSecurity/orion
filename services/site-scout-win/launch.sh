@@ -132,7 +132,7 @@ chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
 status "Setup: installing site-scout"
-retry python -m pip install fuzzfetch site-scout
+retry python -m pip install "fuzzfetch[sentry]" site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v
