@@ -27,7 +27,6 @@ EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 ./nodejs.sh
 ./radamsa.sh
-./redis.sh
 ./rr.sh
 ./gcov-9.sh
 ./taskcluster.sh
