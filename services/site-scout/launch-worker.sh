@@ -128,7 +128,14 @@ fi
 update-status "Setup: fetching build"
 
 # select build
-TARGET_BIN="./build/firefox"
+fuzzfetch_flags=(-n build)
+if [[ -n $ANDROID_EMULATOR ]]; then
+  TARGET_BIN="./build/target.apk"
+  fuzzfetch_flags+=(--os Android)
+else
+  TARGET_BIN="./build/firefox"
+fi
+
 if [[ -n $COVERAGE ]]; then
   extra_flags+=("--coverage")
   retry fuzzfetch -n build --coverage
@@ -145,26 +152,27 @@ if [[ -n $COVERAGE ]]; then
 elif [[ -n $CUSTOM_BUILD ]]; then
   echo "Using requested custom build"
   # shellcheck disable=SC2086
-  retry fuzzfetch -n build $CUSTOM_BUILD
+  retry fuzzfetch "${fuzzfetch_flags[@]}" $CUSTOM_BUILD
 else
   echo "Build types: ${BUILD_TYPES}"
   BUILD_SELECT_SCRIPT="import random;print(random.choice(str.split('${BUILD_TYPES}')))"
   build="$(python3 -c "$BUILD_SELECT_SCRIPT")"
-  # download build
   case $build in
     asan32)
-      retry fuzzfetch -n build --asan --cpu x86
+      fuzzfetch_flags+=(--asan --cpu x86)
       ;;
     beta-asan)
-      retry fuzzfetch -n build --asan --branch beta
+      fuzzfetch_flags+=(--asan --branch beta)
       ;;
     debug32)
-      retry fuzzfetch -n build --debug --cpu x86
+      fuzzfetch_flags+=(--debug --cpu x86)
       ;;
     *)
-      retry fuzzfetch -n build "--$build"
+      fuzzfetch_flags+=("--$build")
       ;;
   esac
+  # download build
+  retry fuzzfetch "${fuzzfetch_flags[@]}"
 fi
 
 # try to workaround frequent OOMs
