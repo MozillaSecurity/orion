@@ -187,9 +187,17 @@ task-status-reporter --report-from-file status.txt --keep-reporting 60 &
 # shellcheck disable=SC2064
 trap "kill $!; task-status-reporter --report-from-file status.txt" EXIT
 
+if [[ -n $DEBUG ]]; then
+  extra_flags+=(--log-level DEBUG)
+fi
+
+if [[ -n $DISPLAY_MODE ]]; then
+  extra_flags+=(--display "$DISPLAY_MODE")
+fi
+
 # enable page interactions
 if [[ -n $EXPLORE ]]; then
-  extra_flags+=("--explore" "$EXPLORE")
+  extra_flags+=(--explore "$EXPLORE")
 fi
 
 # create directory for launch failure results
