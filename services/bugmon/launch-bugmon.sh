@@ -40,7 +40,7 @@ case "$BUG_ACTION" in
     export BZ_API_KEY
     export BZ_API_ROOT="https://bugzilla.mozilla.org/rest"
     if [ "$BUG_ACTION" == "monitor" ]; then
-      poetry run bugmon-monitor -d "$ARTIFACT_DEST" "${CONFIRM_ARGS[@]}"
+      poetry run bugmon-monitor "$ARTIFACT_DEST" "${CONFIRM_ARGS[@]}"
     else
       PERNOSCO_USER="$(get-tc-secret pernosco-user)"
       PERNOSCO_GROUP="$(get-tc-secret pernosco-group)"
