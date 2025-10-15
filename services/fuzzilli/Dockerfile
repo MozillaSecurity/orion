@@ -17,12 +17,13 @@ COPY \
     recipes/linux/cleanup.sh \
     recipes/linux/common.sh \
     recipes/linux/fluentbit.sh \
-    recipes/linux/js32_deps.sh \
-    recipes/linux/grcov.sh \
-    recipes/linux/llvm-symbolizer.sh \
     recipes/linux/fuzzfetch.sh \
     recipes/linux/fuzzing_tc.sh \
     recipes/linux/fuzzmanager.sh \
+    recipes/linux/grcov.sh \
+    recipes/linux/js32_deps.sh \
+    recipes/linux/llvm-symbolizer.sh \
+    recipes/linux/sentry.sh \
     recipes/linux/taskcluster.sh \
     recipes/linux/taskgraph-m-c-latest.sh \
     services/fuzzilli/setup.sh \

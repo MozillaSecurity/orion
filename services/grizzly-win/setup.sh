@@ -52,6 +52,12 @@ retry-curl -O "https://fluentbit.io/releases/${VER/%.+([0-9])/}/fluent-bit-${VER
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
 
+# get sentry
+VER=2.56.1
+retry-curl \
+  -o ./msys64/usr/bin/sentry-cli.exe \
+  "https://github.com/getsentry/sentry-cli/releases/download/$VER/sentry-cli-Windows-x86_64.exe"
+
 # get python
 VER=3.10.8
 retry nuget install python -ExcludeVersion -OutputDirectory . -Version "$VER"

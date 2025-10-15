@@ -60,12 +60,13 @@ apt-install-auto pipx
 mkdir -p /root/.ssh /home/worker/.ssh /home/worker/.local/bin /srv/repos
 retry ssh-keyscan github.com | tee -a /root/.ssh/known_hosts /home/worker/.ssh/known_hosts >/dev/null
 
-"${0%/*}/nodejs.sh"
-DESTDIR=/srv/repos EDIT=1 "${0%/*}/fuzzfetch.sh"
-DESTDIR=/srv/repos EDIT=1 "${0%/*}/prefpicker.sh"
-DESTDIR=/srv/repos EDIT=1 "${0%/*}/fuzzmanager.sh"
-SRCDIR=/srv/repos/fuzzing-decision "${0%/*}/fuzzing_tc.sh"
 "${0%/*}/fluentbit.sh"
+DESTDIR=/srv/repos EDIT=1 "${0%/*}/fuzzfetch.sh"
+SRCDIR=/srv/repos/fuzzing-decision "${0%/*}/fuzzing_tc.sh"
+DESTDIR=/srv/repos EDIT=1 "${0%/*}/fuzzmanager.sh"
+"${0%/*}/nodejs.sh"
+DESTDIR=/srv/repos EDIT=1 "${0%/*}/prefpicker.sh"
+"${0%/*}/sentry.sh"
 "${0%/*}/taskcluster.sh"
 export SKIP_PROFILE=1
 source "${0%/*}/clang.sh"

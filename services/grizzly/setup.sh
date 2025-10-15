@@ -24,11 +24,12 @@ cd "${0%/*}"
 ./fluentbit.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 EDIT=1 DESTDIR=/src ./fuzzmanager.sh
+./gcov-9.sh
 ./grcov.sh
 ./nodejs.sh
 ./radamsa.sh
 ./rr.sh
-./gcov-9.sh
+./sentry.sh
 ./taskcluster.sh
 
 # shellcheck source=recipes/linux/taskgraph-m-c-latest.sh

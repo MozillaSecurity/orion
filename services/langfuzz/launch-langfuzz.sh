@@ -10,6 +10,11 @@ set -o pipefail
 # shellcheck source=recipes/linux/common.sh
 source /src/recipes/common.sh
 
+if [[ -n $SENTRY_DSN ]]; then
+  export SENTRY_CLI_NO_EXIT_TRAP=1
+  eval "$(sentry-cli bash-hook)"
+fi
+
 if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
   TARGET_TIME="$(($(get-deadline) - $(date +%s) - 5 * 60))"
 else

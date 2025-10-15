@@ -28,6 +28,7 @@ export DEBIAN_FRONTEND=noninteractive
 SRCDIR=/srv/repos/fuzzing-decision ./fuzzing_tc.sh
 ./llvm-symbolizer.sh
 ./nodejs.sh
+./sentry.sh
 ./taskcluster.sh
 ./worker.sh
 
