@@ -62,6 +62,24 @@ function onexit() {
 }
 trap onexit EXIT
 
+# setup kvm device
+if [[ ! -e /dev/kvm ]] && grep -q '\<kvm\>' /proc/misc; then
+  mknod /dev/kvm c 10 "$(grep '\<kvm\>' /proc/misc | cut -f 1 -d' ')"
+fi
+if [[ -e /dev/kvm ]]; then
+  kvm_gid="$(stat -c%g /dev/kvm)"
+  kvm_grp="$({ grep ":$kvm_gid:" /etc/group || true; } | cut -d: -f1)"
+  if [[ -z $kvm_grp ]]; then
+    # if group kvm already exists, delete it
+    if grep -q kvm /etc/group; then
+      groupdel kvm
+    fi
+    groupadd -g "$kvm_gid" --system kvm
+    kvm_grp=kvm
+  fi
+  usermod -a -G "$kvm_grp" worker
+fi
+
 # disable ASLR for TSan
 sysctl -w kernel.randomize_va_space=0
 
