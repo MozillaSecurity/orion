@@ -24,12 +24,13 @@ cd "${0%/*}"
 # when run under Taskcluster
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 
-EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./fuzzfetch.sh
+EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 if ! is-arm64; then
   ./llvm-symbolizer.sh
 fi
+./sentry.sh
 ./taskcluster.sh
 
 # use Amazon Corretto OpenJDK

@@ -11,6 +11,11 @@ set -o pipefail
 source ~worker/.local/bin/common.sh
 
 if [[ "$(id -u)" == "0" ]]; then
+  if [[ -n $SENTRY_DSN ]]; then
+    export SENTRY_CLI_NO_EXIT_TRAP=1
+    eval "$(sentry-cli bash-hook)"
+  fi
+
   if [[ -z $NO_SECRETS ]]; then
     get-tc-secret google-logging-creds /etc/google/auth/application_default_credentials.json raw
     mkdir -p /etc/td-agent-bit

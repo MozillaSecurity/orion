@@ -21,8 +21,9 @@ cd "${0%/*}"
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
-./taskcluster.sh
 ./gsutil.sh
+./sentry.sh
+./taskcluster.sh
 
 packages=(
   binutils

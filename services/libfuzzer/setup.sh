@@ -27,6 +27,7 @@ cd "${0%/*}"
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh
 ./llvm-symbolizer.sh
 ./nodejs.sh
+./sentry.sh
 ./taskcluster.sh
 ./worker.sh
 

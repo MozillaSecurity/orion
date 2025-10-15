@@ -24,9 +24,10 @@ cd "${0%/*}"
 # when run under Taskcluster
 SRCDIR=/srv/repos/fuzzing-decision ./fuzzing_tc.sh
 
-./taskcluster.sh
 ./grcov.sh
 ./llvm-symbolizer.sh
+./sentry.sh
+./taskcluster.sh
 
 #### Bootstrap Packages
 

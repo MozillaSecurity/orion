@@ -19,6 +19,7 @@ COPY \
     recipes/linux/llvm-symbolizer.sh \
     recipes/linux/nodejs.sh \
     recipes/linux/prefpicker.sh \
+    recipes/linux/sentry.sh \
     recipes/linux/taskcluster.sh \
     recipes/linux/taskgraph-m-c-latest.sh \
     recipes/linux/worker.sh \
