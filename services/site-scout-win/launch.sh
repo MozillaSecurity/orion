@@ -14,7 +14,7 @@ retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[dow
 
 if [[ -n $SENTRY_DSN ]]; then
   export SENTRY_CLI_NO_EXIT_TRAP=1
-  eval "$(sentry-cli bash-hook)"
+  # eval "$(sentry-cli bash-hook)"
 fi
 
 #shellcheck disable=SC2016

@@ -11,7 +11,7 @@ source ~worker/.local/bin/common.sh
 if [[ "$(id -u)" == "0" ]]; then
   if [[ -n $SENTRY_DSN ]]; then
     export SENTRY_CLI_NO_EXIT_TRAP=1
-    eval "$(sentry-cli bash-hook)"
+    # eval "$(sentry-cli bash-hook)"
   fi
 
   if [[ -z $NO_SECRETS ]]; then
