@@ -12,7 +12,7 @@ source /src/recipes/common.sh
 
 if [[ -n $SENTRY_DSN ]]; then
   export SENTRY_CLI_NO_EXIT_TRAP=1
-  eval "$(sentry-cli bash-hook)"
+  # eval "$(sentry-cli bash-hook)"
 fi
 
 if [[ -n $TASK_ID ]] || [[ -n $RUN_ID ]]; then
