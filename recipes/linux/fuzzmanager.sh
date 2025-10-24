@@ -27,7 +27,7 @@ case "${1-install}" in
       git-clone https://github.com/MozillaSecurity/FuzzManager fuzzmanager
       PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./fuzzmanager[sentry]
     else
-      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/FuzzManager[sentry]"
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/FuzzManager#egg=FuzzManager[sentry]"
     fi
     ;;
   test)
