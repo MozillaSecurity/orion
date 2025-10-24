@@ -113,7 +113,7 @@ git remote add origin "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 retry git fetch origin main
 git checkout main
 cd -
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install /src/guided-fuzzing-daemon
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install /src/guided-fuzzing-daemon[sentry]
 
 /home/worker/.local/bin/cleanup.sh
 

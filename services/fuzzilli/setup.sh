@@ -116,7 +116,7 @@ source ./setup/common.sh
 git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
 EOF
 
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./guided-fuzzing-daemon
+PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./guided-fuzzing-daemon[sentry]
 
 # Cleanup
 "${0%/*}/cleanup.sh"
