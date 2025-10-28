@@ -369,14 +369,20 @@ function disable-ec2-pool() {
 
 # Include timestamp in status message.
 function update-status() {
-  update-ec2-status "[$(date -Is)] $*"
+  if [[ -n $TASKCLUSTER_FUZZING_POOL ]] || [[ -n $EC2SPOTMANAGER_POOLID ]]; then
+    if [[ ! -e "$HOME/.fuzzmanagerconf" ]]; then
+      echo "WARNING: fuzzmanagerconf not present, can't report task status" >&2
+      return 0
+    fi
+  fi
+  update-ec2-status "[$(date -Is)] $*" || true
 }
 
 function update-ec2-status() {
   if [[ -n $EC2SPOTMANAGER_POOLID ]]; then
-    ec2-reporter --report "$@" || true
+    ec2-reporter --report "$@"
   elif [[ -n $TASKCLUSTER_FUZZING_POOL ]]; then
-    task-status-reporter --report "$@" || true
+    task-status-reporter --report "$@"
   fi
 }
 
