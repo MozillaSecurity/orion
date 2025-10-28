@@ -124,6 +124,7 @@ function get-target-time() {
   else
     if [[ $remaining_time -lt $((5 * 60)) ]]; then
       echo "warning: less than 5 minutes remains before task deadline!" >&2
+      exit 0
     fi
     result=$((remaining_time - 5 * 60))
   fi
