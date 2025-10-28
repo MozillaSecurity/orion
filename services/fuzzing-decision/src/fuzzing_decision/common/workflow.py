@@ -24,6 +24,7 @@ RETRY_SLEEP = 30
 class Workflow:
     def __init__(self) -> None:
         taskcluster.auth()
+        self.ssh_private_key: Path | None = None
 
     @property
     def in_taskcluster(self) -> bool:
@@ -80,7 +81,7 @@ class Workflow:
         # Setup ssh private key if any
         private_key = config.get("private_key")
         if private_key is not None:
-            path = ssh_path / "id_rsa"
+            path = ssh_path / "id_rsa.decision"
             if path.exists():
                 LOG.warning(f"Not overwriting pre-existing ssh key at {path}")
             else:
@@ -88,6 +89,7 @@ class Workflow:
                     key_fp.write(private_key)
                 path.chmod(0o400)
                 LOG.info("Installed ssh private key")
+                self.ssh_private_key = path
 
     def git_clone(
         self,
@@ -115,9 +117,16 @@ class Workflow:
             subprocess.check_output(cmd)
             cmd = ["git", "remote", "add", "origin", url]
             subprocess.check_output(cmd, cwd=str(path))
+            env = {}
+            if self.ssh_private_key is not None:
+                env["GIT_SSH_COMMAND"] = (
+                    f"ssh -i '{self.ssh_private_key}'_file -o IdentitiesOnly=yes"
+                )
             cmd = ["git", "fetch", "-q", "origin", revision]
             for _ in range(RETRIES - 1):
-                result = subprocess.run(cmd, cwd=str(path), stdout=subprocess.PIPE)
+                result = subprocess.run(
+                    cmd, cwd=str(path), env=env, stdout=subprocess.PIPE
+                )
                 if result.returncode == 0:
                     break
                 LOG.warning(
