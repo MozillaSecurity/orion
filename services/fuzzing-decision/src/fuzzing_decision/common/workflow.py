@@ -120,7 +120,7 @@ class Workflow:
             env = {}
             if self.ssh_private_key is not None:
                 env["GIT_SSH_COMMAND"] = (
-                    f"ssh -i '{self.ssh_private_key}'_file -o IdentitiesOnly=yes"
+                    f"ssh -i '{self.ssh_private_key}' -o IdentitiesOnly=yes"
                 )
             cmd = ["git", "fetch", "-q", "origin", revision]
             for _ in range(RETRIES - 1):
