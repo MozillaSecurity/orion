@@ -77,6 +77,10 @@ class Workflow:
 
         ssh_path = Path("~/.ssh").expanduser()
         ssh_path.mkdir(mode=0o700, exist_ok=True)
+        ssh_path.chmod(0o700)
+        hosts = ssh_path / "known_hosts"
+        if hosts.is_file():
+            hosts.chmod(0o600)
 
         # Setup ssh private key if any
         private_key = config.get("private_key")
