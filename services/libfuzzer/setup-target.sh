@@ -31,9 +31,10 @@ if [[ $REPO == "try" ]]; then
   FETCH_ARGS+=(--try)
 fi
 
-# Our default target is Firefox, but we support targeting the JS engine instead.
+# Our default target is Firefox, the JS engine and Thunderbird are also supported.
 # In either case, we check if the target is already mounted into the container.
 JS="${JS:-0}"
+THUNDERBIRD="${THUNDERBIRD:-0}"
 if [[ $JS == 1 ]] || [[ -n $JSRT ]]; then
   if [[ ! -d "$HOME/js" ]]; then
     retry fuzzfetch -n js --target js "${FETCH_ARGS[@]}"
@@ -44,6 +45,12 @@ if [[ $JS == 1 ]] || [[ -n $JSRT ]]; then
     # if we are using the fuzz-tests target, copy fuzzmanagerconf from the js binary
     cp "$HOME/js/dist/bin/js.fuzzmanagerconf" "$HOME/js/dist/bin/fuzz-tests.fuzzmanagerconf"
     TARGET_BIN="js/dist/bin/fuzz-tests"
+  fi
+elif [[ $THUNDERBIRD == 1 ]]; then
+  TARGET_BIN="thunderbird/thunderbird"
+  if [[ ! -d "$HOME/thunderbird" ]]; then
+    FETCH_ARGS+=(--target thunderbird gtest)
+    retry fuzzfetch -n thunderbird "${FETCH_ARGS[@]}"
   fi
 else
   TARGET_BIN="firefox/firefox"
