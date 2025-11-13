@@ -30,7 +30,7 @@ retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
 VER=2.1.10
-retry-curl -O "https://fluentbit.io/releases/${VER/%.+([0-9])/}/fluent-bit-${VER}-win64.zip"
+retry-curl -O "https://packages.fluentbit.io/windows/fluent-bit-${VER}-win64.zip"
 7z x "fluent-bit-${VER}-win64.zip"
 mv "fluent-bit-${VER}-win64" td-agent-bit
 rm -rf td-agent-bit/include td-agent-bit/bin/fluent-bit.pdb
