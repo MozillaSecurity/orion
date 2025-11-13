@@ -93,7 +93,7 @@ class Workflow:
                     key_fp.write(private_key)
                 path.chmod(0o400)
                 LOG.info("Installed ssh private key")
-                self.ssh_private_key = path
+            self.ssh_private_key = path
 
     def git_clone(
         self,
