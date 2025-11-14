@@ -390,6 +390,10 @@ class CommonPoolConfiguration(abc.ABC):
             One or more strings in simple cron format. If all patterns
             are installed, the result should correspond to cycle_time.
         """
+        # if pool is disabled, this hook should never fire
+        if not self.tasks:
+            return
+
         if self.schedule_start is not None:
             now = self.schedule_start
             assert isinstance(now, datetime)
