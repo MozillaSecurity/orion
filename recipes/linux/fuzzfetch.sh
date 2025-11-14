@@ -19,7 +19,8 @@ case "${1-install}" in
       ca-certificates \
       lbzip2 \
       python3 \
-      xz-utils
+      xz-utils \
+      zstd
     apt-install-auto \
       git \
       pipx
