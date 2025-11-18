@@ -27,6 +27,7 @@ payload:
     DISPLAY_MODE: "xvfb"
     IGNORE: "log-limit memory timeout"
     INPUT: "${crash_id}"
+    MEM_LIMIT: "12288"
     PERIODIC_REPORT: "1800"
     TIMEOUT: "60"
   features:
