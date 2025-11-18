@@ -27,6 +27,7 @@ payload:
     DISPLAY_MODE: "xvfb"
     IGNORE: "log-limit memory timeout"
     INPUT: "${crash_id}"
+    PERIODIC_REPORT: "1800"
     TIMEOUT: "60"
   features:
     taskclusterProxy: true
