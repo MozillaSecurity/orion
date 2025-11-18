@@ -33,6 +33,7 @@ payload:
     GRZ_TMP: grizzly-tmp
     IGNORE: "log-limit memory timeout"
     INPUT: "${crash_id}"
+    PERIODIC_REPORT: "1800"
     TIMEOUT: "60"
   features:
     taskclusterProxy: true
