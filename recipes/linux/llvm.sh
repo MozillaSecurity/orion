@@ -13,7 +13,7 @@ source "${0%/*}/common.sh"
 
 #### Install LLVM
 
-VERSION=16
+VERSION=${VERSION-20}
 
 if [[ $1 == "auto" ]]; then
   function install-auto-arg() {
