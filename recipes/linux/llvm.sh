@@ -27,7 +27,7 @@ else
 fi
 
 case "${1-install}" in
-  install)
+  install | setup)
     apt-install-auto \
       ca-certificates \
       curl \
@@ -44,6 +44,10 @@ case "${1-install}" in
       sys-update
     fi
 
+    if [[ $1 == "setup" ]]; then
+      exit
+    fi
+
     install-auto-arg \
       "clang-$VERSION" \
       "llvm-$VERSION" \
@@ -53,11 +57,11 @@ case "${1-install}" in
       "libc++-$VERSION-dev" "libc++abi-$VERSION-dev"
 
     update-alternatives --install \
-      /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-$VERSION 100 \
-      --slave /usr/bin/clang clang /usr/bin/clang-$VERSION \
-      --slave /usr/bin/clang++ clang++ /usr/bin/clang++-$VERSION \
-      --slave /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-$VERSION \
-      --slave /usr/bin/lldb lldb /usr/bin/lldb-$VERSION
+      /usr/bin/llvm-config llvm-config "/usr/bin/llvm-config-$VERSION" 100 \
+      --slave /usr/bin/clang clang "/usr/bin/clang-$VERSION" \
+      --slave /usr/bin/clang++ clang++ "/usr/bin/clang++-$VERSION" \
+      --slave /usr/bin/llvm-symbolizer llvm-symbolizer "/usr/bin/llvm-symbolizer-$VERSION" \
+      --slave /usr/bin/lldb lldb "/usr/bin/lldb-$VERSION"
     ;;
   test)
     clang --version
