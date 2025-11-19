@@ -72,8 +72,6 @@ retry python3 -m pip install --user --no-build-isolation -e /src/bearspray
 
 update-status "Setup: launching bearspray"
 
-export GCOV=/usr/local/bin/gcov-9
-
 screen -dmLS grizzly /bin/bash
 sleep 5
 # shellcheck disable=SC2086
