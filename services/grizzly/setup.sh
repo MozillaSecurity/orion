@@ -151,7 +151,6 @@ mkdir -p /home/worker/.local/bin
 
 # Symlink llvm-cov to gcov to ensure it's used by grcov
 ln -s "$(which llvm-cov)" /usr/local/bin/gcov
-strip --strip-unneeded /usr/local/bin/llvm-cov
 
 # Add `cleanup.sh` to let images perform standard cleanup operations.
 cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh
