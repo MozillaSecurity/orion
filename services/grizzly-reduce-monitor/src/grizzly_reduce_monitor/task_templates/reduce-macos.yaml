@@ -46,9 +46,11 @@ payload:
 priority: high
 provisionerId: "${provisioner}"
 retries: 5
-routes: []
+routes:
+  - notify.email.twsmith@mozilla.com.on-failed
 schedulerId: "${scheduler}"
 scopes:
+  - "queue:route:notify.email.twsmith@mozilla.com.on-failed"
   - "secrets:get:project/fuzzing/deploy-bearspray"
   - "secrets:get:project/fuzzing/deploy-grizzly-private"
   - "secrets:get:project/fuzzing/fuzzmanagerconf"
