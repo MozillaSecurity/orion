@@ -9,7 +9,7 @@ from typing import Any, Iterable
 
 import yaml
 
-from ..common.pool import parse_time
+from ..common.util import parse_time
 
 LOG = logging.getLogger(__name__)
 

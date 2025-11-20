@@ -21,9 +21,10 @@ from tcadmin.resources import Hook, Role, WorkerPool
 
 from ..common import taskcluster
 from ..common.pool import CommonPoolConfiguration as BasePoolConfiguration
-from ..common.pool import MachineTypes, parse_time
+from ..common.pool import MachineTypes
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
+from ..common.util import parse_time
 from . import (
     CANCEL_TASK_DAYS,
     DECISION_TASK_SECRET,
