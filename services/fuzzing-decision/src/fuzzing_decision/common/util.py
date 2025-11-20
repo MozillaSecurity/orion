@@ -8,7 +8,37 @@ import stat
 from pathlib import Path
 from typing import Any, Callable, Union
 
+import yaml
+from jsonschema import validate
+from referencing import Registry, Resource
+
 PathArg = Union[str, Path]
+
+
+def _load_schema_cache() -> Registry:
+    resources = []
+    for path in (Path(__file__).parent.parent / "schemas").glob("*.yaml"):
+        schema = Resource.from_contents(yaml.safe_load(path.read_text()))
+        uri = schema.id()
+        assert uri is not None
+        resources.append((uri, schema))
+    return Registry().with_resources(resources)
+
+
+SCHEMA_CACHE = _load_schema_cache()
+
+
+def _schema_by_name(name: str):
+    for uri in SCHEMA_CACHE:
+        schema = SCHEMA_CACHE[uri]
+        if schema.contents["title"] == name:
+            return schema.contents
+    raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
+
+
+def validate_schema_by_name(instance: dict[str, str] | str, name: str):
+    schema = _schema_by_name(name)
+    return validate(instance=instance, schema=schema, registry=SCHEMA_CACHE)
 
 
 def onerror(func: Callable[[PathArg], None], path: PathArg, _exc_info: Any) -> None:

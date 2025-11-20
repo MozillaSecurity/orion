@@ -16,8 +16,6 @@ from typing import Any, Iterator, cast
 
 import dateutil.parser
 import yaml
-from jsonschema import validate
-from referencing import Registry, Resource
 from taskcluster.exceptions import TaskclusterFailure, TaskclusterRestFailure
 from taskcluster.utils import fromNow, slugId, stringDate
 from tcadmin.resources import Hook, Role
@@ -28,7 +26,7 @@ from ..common.pool import CPU_ALIASES, MachineTypes
 from ..common.pool import CommonPoolConfiguration as BasePoolConfiguration
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
-from ..common.util import parse_size, parse_time
+from ..common.util import parse_size, parse_time, validate_schema_by_name
 from . import (
     CANCEL_TASK_DAYS,
     DECISION_TASK_SECRET,
@@ -58,32 +56,6 @@ DOCKER_WORKER_DEVICES = (
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 DECISION_TASK = Template((TEMPLATES / "decision.yaml").read_text())
 FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
-
-
-def _load_schema_cache() -> Registry:
-    resources = []
-    for path in (Path(__file__).parent.parent / "schemas").glob("*.yaml"):
-        schema = Resource.from_contents(yaml.safe_load(path.read_text()))
-        uri = schema.id()
-        assert uri is not None
-        resources.append((uri, schema))
-    return Registry().with_resources(resources)
-
-
-SCHEMA_CACHE = _load_schema_cache()
-
-
-def _schema_by_name(name: str):
-    for uri in SCHEMA_CACHE:
-        schema = SCHEMA_CACHE[uri]
-        if schema.contents["title"] == name:
-            return schema.contents
-    raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
-
-
-def _validate_schema_by_name(instance: dict[str, str] | str, name: str):
-    schema = _schema_by_name(name)
-    return validate(instance=instance, schema=schema, registry=SCHEMA_CACHE)
 
 
 class MountArtifactResolver:
@@ -684,7 +656,7 @@ class WorkerPool:
             this_config = defaults.copy()
             this_config.update(config)
             data[idx] = this_config
-        _validate_schema_by_name(instance=data, name="WorkerPools")
+        validate_schema_by_name(instance=data, name="WorkerPools")
         for pool_config in data:
             pool_config["disk_size"] = int(
                 parse_size(pool_config["disk_size"]) / parse_size("1g")
