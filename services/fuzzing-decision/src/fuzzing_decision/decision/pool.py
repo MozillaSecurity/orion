@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Generator, cast
+from typing import Any, Iterator, cast
 
 import dateutil.parser
 import yaml
@@ -300,7 +300,7 @@ class PoolConfiguration(CommonPoolConfiguration):
         providers: dict[str, Provider],
         machine_types: MachineTypes,
         env: dict[str, str] | None = None,
-    ) -> Generator[WorkerPool | Hook | Role, None, None]:
+    ) -> Iterator[WorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -421,7 +421,7 @@ class PoolConfiguration(CommonPoolConfiguration):
 
     def build_tasks(
         self, parent_task_id: str, env: dict[str, str] | None = None
-    ) -> Generator[tuple[str, dict], None, None]:
+    ) -> Iterator[tuple[str, dict]]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.now(timezone.utc)
         preprocess_task_id = None
@@ -498,7 +498,7 @@ class PoolConfigMap(CommonPoolConfigMap):
         providers: dict[str, Provider],
         machine_types: MachineTypes,
         env=None,
-    ) -> Generator[WorkerPool | Hook | Role, None, None]:
+    ) -> Iterator[WorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
@@ -599,7 +599,7 @@ class PoolConfigMap(CommonPoolConfigMap):
             scopes=scopes,
         )
 
-    def iterpools(self) -> Generator[BasePoolConfiguration, None, None]:
+    def iterpools(self) -> Iterator[BasePoolConfiguration]:
         for parent in self.apply_to:
             # skip if base pool is disabled (.tasks == 0)
             tasks = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").tasks
@@ -608,7 +608,7 @@ class PoolConfigMap(CommonPoolConfigMap):
 
     def build_tasks(
         self, parent_task_id: str, env: dict[str, str] | None = None
-    ) -> Generator[tuple[str, dict], None, None]:
+    ) -> Iterator[tuple[str, dict]]:
         """Create fuzzing tasks and attach them to a decision task"""
         now = datetime.now(timezone.utc)
 
