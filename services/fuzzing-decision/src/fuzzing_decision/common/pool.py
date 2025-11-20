@@ -7,7 +7,6 @@ from __future__ import annotations
 import abc
 import itertools
 import logging
-import re
 import types
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -19,6 +18,8 @@ from typing import (
 
 import dateutil.parser
 import yaml
+
+from .util import parse_size, parse_time
 
 LOG = logging.getLogger(__name__)
 
@@ -71,61 +72,6 @@ CPU_ALIASES = types.MappingProxyType(
 PROVIDERS = frozenset(("aws", "azure", "gcp", "static"))
 ARCHITECTURES = frozenset(("x64", "arm64"))
 WORKERS = frozenset(("generic", "docker", "d2g"))
-
-
-def parse_size(size: str) -> float:
-    """Parse a human readable size like "4g" into (4 * 1024 * 1024 * 1024)
-
-    Args:
-        size: size as a string, with si prefixes allowed
-
-    Returns:
-        size with si prefix expanded
-    """
-    match = re.match(r"(\d+\.\d+|\d+)([kmgt]?)b?", size, re.IGNORECASE)
-    assert match is not None, "size should be a number followed by optional si prefix"
-    result = float(match.group(1))
-    multiplier = {
-        "": 1,
-        "k": 1024,
-        "m": 1024 * 1024,
-        "g": 1024 * 1024 * 1024,
-        "t": 1024 * 1024 * 1024 * 1024,
-    }[match.group(2).lower()]
-    return result * multiplier
-
-
-def parse_time(time: str) -> int:
-    """Parse a human readable time like 1h30m or 30m10s
-
-    Args:
-        time: time as a string
-
-    Returns:
-        time in seconds
-    """
-    result = 0
-    got_anything = False
-    while time:
-        match = re.match(r"(\d+)([wdhms]?)(.*)", time, re.IGNORECASE)
-        assert match is not None, "time should be a number followed by optional unit"
-        if match.group(2):
-            multiplier = {
-                "w": 7 * 24 * 60 * 60,
-                "d": 24 * 60 * 60,
-                "h": 60 * 60,
-                "m": 60,
-                "s": 1,
-            }[match.group(2).lower()]
-        else:
-            assert not match.group(3), "trailing data"
-            assert not got_anything, "multipart time must specify all units"
-            multiplier = 1
-        got_anything = True
-        result += int(match.group(1)) * multiplier
-        time = match.group(3)
-    assert got_anything, "no time could be parsed"
-    return result
 
 
 class MachineTypes:
