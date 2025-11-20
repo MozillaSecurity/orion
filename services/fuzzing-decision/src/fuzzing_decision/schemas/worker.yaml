@@ -1,0 +1,74 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/worker.yaml"
+title: WorkerPool
+description: Worker Pool definition
+type: object
+required:
+  - imageset
+  - machine_types
+  - max_capacity
+  - name
+  - owner
+additionalProperties: false
+properties:
+  cloud:
+    description: The cloud service where the task should run
+    type: string
+    pattern: "^aws|azure|gcp|static$"
+    default: gcp
+  cpu:
+    description: CPU architecture type
+    type: string
+    pattern: "^(x64|x86[_-]64|amd64|aarch64|arm64)$"
+    default: x86_64
+  demand:
+    description: Boolean indicating if task requires an on-demand instance
+    type: boolean
+    default: false
+  disk_size:
+    description: Disk size
+    type: string
+    pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
+    default: 60g
+  imageset:
+    description: The name of the taskcluster imageset
+    type: string
+  include_tasks_in_taskmanager:
+    description: Include tasks from this pool in Taskmanager
+    type: boolean
+    default: false
+  machine_types:
+    description: An array of machine types to use for a given task
+    type: array
+    minItems: 1
+    items:
+      type: string
+  max_capacity:
+    description: Maximum number of workers to launch
+    type: integer
+  min_capacity:
+    description: Minimum number of workers to keep available
+    type: integer
+    default: 0
+  name:
+    description: Queue identifier for workers
+    type: string
+    pattern: "^[a-z]([-a-z0-9]{0,36}[a-z0-9])?$"
+  nested_virtualization:
+    description: Boolean indicating if task requires an instance type that supported nested virtualization
+    type: boolean
+    default: false
+  owner:
+    description: Owner email address
+    format: email
+    type: string
+  platform:
+    description: Platform type
+    type: string
+    pattern: "^(linux|windows|macos)$"
+    default: linux
+  worker:
+    description: Taskcluster worker type
+    type: string
+    pattern: "^(d2g|docker|generic)$"
+    default: d2g

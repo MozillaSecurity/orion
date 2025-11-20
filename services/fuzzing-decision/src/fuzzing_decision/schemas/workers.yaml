@@ -1,0 +1,7 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/workers.yaml"
+title: WorkerPools
+description: An array of worker pool definitions
+type: array
+items:
+  $ref: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/worker.yaml"

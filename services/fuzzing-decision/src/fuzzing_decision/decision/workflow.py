@@ -20,7 +20,7 @@ from ..common.pool import MachineTypes
 from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
-from .pool import PoolConfigLoader, cancel_tasks
+from .pool import PoolConfigLoader, WorkerPool, cancel_tasks
 from .providers import AWS, GCP, Azure, Static
 
 LOG = logging.getLogger(__name__)
@@ -105,6 +105,11 @@ class Workflow(CommonWorkflow):
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_config = PoolConfigLoader.from_file(config_file)
             resources.update(pool_config.build_resources(clouds, machines, env))
+
+        extra_pools_path = self.fuzzing_config_dir / "workers.yml"
+        if extra_pools_path.is_file():
+            for pool in WorkerPool.from_file_iter(extra_pools_path):
+                resources.update(pool.build_resources(clouds, machines))
 
     def build_resources_patterns(self) -> list[str] | str:
         """Build regex patterns to manage our resources"""

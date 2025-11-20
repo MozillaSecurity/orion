@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import math
 import os
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
@@ -15,16 +16,19 @@ from typing import Any, Iterator, cast
 
 import dateutil.parser
 import yaml
+from jsonschema import validate
+from referencing import Registry, Resource
 from taskcluster.exceptions import TaskclusterFailure, TaskclusterRestFailure
 from taskcluster.utils import fromNow, slugId, stringDate
-from tcadmin.resources import Hook, Role, WorkerPool
+from tcadmin.resources import Hook, Role
+from tcadmin.resources import WorkerPool as TCWorkerPool
 
 from ..common import taskcluster
+from ..common.pool import CPU_ALIASES, MachineTypes
 from ..common.pool import CommonPoolConfiguration as BasePoolConfiguration
-from ..common.pool import MachineTypes
 from ..common.pool import PoolConfigMap as CommonPoolConfigMap
 from ..common.pool import PoolConfiguration as CommonPoolConfiguration
-from ..common.util import parse_time
+from ..common.util import parse_size, parse_time
 from . import (
     CANCEL_TASK_DAYS,
     DECISION_TASK_SECRET,
@@ -54,6 +58,32 @@ DOCKER_WORKER_DEVICES = (
 TEMPLATES = (Path(__file__).parent / "task_templates").resolve()
 DECISION_TASK = Template((TEMPLATES / "decision.yaml").read_text())
 FUZZING_TASK = Template((TEMPLATES / "fuzzing.yaml").read_text())
+
+
+def _load_schema_cache() -> Registry:
+    resources = []
+    for path in (Path(__file__).parent.parent / "schemas").glob("*.yaml"):
+        schema = Resource.from_contents(yaml.safe_load(path.read_text()))
+        uri = schema.id()
+        assert uri is not None
+        resources.append((uri, schema))
+    return Registry().with_resources(resources)
+
+
+SCHEMA_CACHE = _load_schema_cache()
+
+
+def _schema_by_name(name: str):
+    for uri in SCHEMA_CACHE:
+        schema = SCHEMA_CACHE[uri]
+        if schema.contents["title"] == name:
+            return schema.contents
+    raise RuntimeError(f"Unknown schema name: {name}")  # pragma: no cover
+
+
+def _validate_schema_by_name(instance: dict[str, str] | str, name: str):
+    schema = _schema_by_name(name)
+    return validate(instance=instance, schema=schema, registry=SCHEMA_CACHE)
 
 
 class MountArtifactResolver:
@@ -298,50 +328,47 @@ class PoolConfiguration(CommonPoolConfiguration):
     def build_resources(
         self,
         providers: dict[str, Provider],
-        machine_types: MachineTypes,
+        machine_type_db: MachineTypes,
         env: dict[str, str] | None = None,
-    ) -> Iterator[WorkerPool | Hook | Role]:
+    ) -> Iterator[TCWorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
 
         # Select a cloud provider according to configuration
         assert self.cloud in providers, f"Cloud Provider {self.cloud} not available"
-        provider = providers[self.cloud]
+        assert self.cpu is not None
+        assert self.cycle_time is not None
+        assert self.demand is not None
+        assert self.disk_size is not None
+        assert self.imageset is not None
+        assert self.machine_types is not None
+        assert self.max_run_time is not None
+        assert self.nested_virtualization is not None
+        assert self.platform is not None
+        assert self.tasks is not None
+        assert self.worker is not None
 
         # Build the pool configuration for selected machines
-        machines = self.get_machine_list(machine_types)
-        assert self.imageset is not None
-        assert machines is not None
-        assert self.disk_size is not None
-        assert self.platform is not None
-        assert self.max_run_time is not None
-        assert self.cycle_time is not None
-        assert self.tasks is not None
-        assert self.demand is not None
-        assert self.nested_virtualization is not None
-        assert self.worker is not None
-        config: dict[str, object] = {
-            "launchConfigs": provider.build_launch_configs(
-                self.imageset,
-                machines,
-                self.disk_size,
-                self.platform,
-                self.demand,
-                self.nested_virtualization,
-                self.worker,
-            ),
-            "maxCapacity": (
-                # * 2 since Taskcluster seems to not reuse workers very quickly in some
-                # cases, so we end up with a lot of pending tasks.
-                max(1, math.ceil(self.max_run_time / self.cycle_time)) * self.tasks * 2
-            ),
-            "minCapacity": 0,
-        }
-        config["lifecycle"] = {
-            # give workers 15 minutes to register before assuming they're broken
-            "registrationTimeout": parse_time("15m"),
-            "reregistrationTimeout": parse_time("4d"),
-            "queueInactivityTimeout": parse_time("2h"),
-        }
+        worker = WorkerPool(
+            cloud=self.cloud,
+            cpu=self.cpu,
+            demand=self.demand,
+            disk_size=self.disk_size,
+            imageset=self.imageset,
+            include_tasks_in_taskmanager=True,
+            machine_types=self.machine_types,
+            # * 2 since Taskcluster seems to not reuse workers very quickly in some
+            # cases, so we end up with a lot of pending tasks.
+            max_capacity=max(1, math.ceil(self.max_run_time / self.cycle_time))
+            * self.tasks
+            * 2,
+            min_capacity=0,
+            name=self.task_id,
+            nested_virtualization=self.nested_virtualization,
+            owner=OWNER_EMAIL,
+            platform=self.platform,
+            worker=self.worker,
+        )
+        yield from worker.build_resources(providers, machine_type_db)
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
@@ -362,17 +389,6 @@ class PoolConfiguration(CommonPoolConfiguration):
         if env is not None:
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
-
-        assert self.cloud is not None
-        if self.cloud != "static":
-            yield WorkerPool(
-                config=config,
-                description=DESCRIPTION,
-                emailOnError=True,
-                owner=OWNER_EMAIL,
-                providerId=PROVIDER_IDS[self.cloud],
-                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-            )
 
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
@@ -496,16 +512,41 @@ class PoolConfigMap(CommonPoolConfigMap):
     def build_resources(
         self,
         providers: dict[str, Provider],
-        machine_types: MachineTypes,
+        machine_type_db: MachineTypes,
         env=None,
-    ) -> Iterator[WorkerPool | Hook | Role]:
+    ) -> Iterator[TCWorkerPool | Hook | Role]:
         """Build the full tc-admin resources to compare and build the pool"""
-
         # Select a cloud provider according to configuration
         assert self.cloud in providers, f"Cloud Provider {self.cloud} not available"
-        provider = providers[self.cloud]
-
+        assert self.cpu is not None
+        assert self.demand is not None
+        assert self.disk_size is not None
+        assert self.imageset is not None
+        assert self.machine_types is not None
+        assert self.nested_virtualization is not None
+        assert self.platform is not None
+        assert self.worker is not None
         pools = list(self.iterpools())
+
+        # Build the pool configuration for selected machines
+        worker = WorkerPool(
+            cloud=self.cloud,
+            cpu=self.cpu,
+            demand=self.demand,
+            disk_size=self.disk_size,
+            imageset=self.imageset,
+            include_tasks_in_taskmanager=True,
+            machine_types=self.machine_types,
+            max_capacity=max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
+            min_capacity=0,
+            name=self.task_id,
+            nested_virtualization=self.nested_virtualization,
+            owner=OWNER_EMAIL,
+            platform=self.platform,
+            worker=self.worker,
+        )
+        yield from worker.build_resources(providers, machine_type_db)
+
         all_scopes = tuple(
             set(
                 chain.from_iterable(
@@ -513,35 +554,6 @@ class PoolConfigMap(CommonPoolConfigMap):
                 )
             )
         )
-
-        # Build the pool configuration for selected machines
-        machines = self.get_machine_list(machine_types)
-        assert self.imageset is not None
-        assert machines is not None
-        assert self.disk_size is not None
-        assert self.platform is not None
-        assert self.demand is not None
-        assert self.nested_virtualization is not None
-        assert self.worker is not None
-        config: dict[str, object] = {
-            "launchConfigs": provider.build_launch_configs(
-                self.imageset,
-                machines,
-                self.disk_size,
-                self.platform,
-                self.demand,
-                self.nested_virtualization,
-                self.worker,
-            ),
-            "maxCapacity": max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
-            "minCapacity": 0,
-        }
-        config["lifecycle"] = {
-            # give workers 15 minutes to register before assuming they're broken
-            "registrationTimeout": parse_time("15m"),
-            "reregistrationTimeout": parse_time("4d"),
-            "queueInactivityTimeout": parse_time("2h"),
-        }
 
         # Build the decision task payload that will trigger the new fuzzing tasks
         decision_task = yaml.safe_load(
@@ -560,17 +572,6 @@ class PoolConfigMap(CommonPoolConfigMap):
         if env is not None:
             assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
             decision_task["payload"]["env"].update(env)
-
-        assert self.cloud is not None
-        if self.cloud != "static":
-            yield WorkerPool(
-                config=config,
-                description=DESCRIPTION.replace("\n", "\\n"),
-                emailOnError=True,
-                owner=OWNER_EMAIL,
-                providerId=PROVIDER_IDS[self.cloud],
-                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.task_id}",
-            )
 
         self_cycle_crons = self.cycle_crons()
         assert self_cycle_crons is not None
@@ -642,6 +643,101 @@ class PoolConfigMap(CommonPoolConfigMap):
                 )
                 configure_task(task, cast(PoolConfiguration, pool), now, env)
                 yield slugId(), task
+
+
+@dataclass
+class WorkerPool:
+    cloud: str
+    cpu: str
+    demand: bool
+    disk_size: int
+    imageset: str
+    include_tasks_in_taskmanager: bool
+    machine_types: list[str]
+    max_capacity: int
+    min_capacity: int
+    name: str
+    nested_virtualization: bool
+    owner: str
+    platform: str
+    worker: str
+
+    @classmethod
+    def from_file_iter(cls, pools_yml: Path) -> Iterator[WorkerPool]:
+        assert pools_yml.is_file()
+        # these should match what's in workers.yaml!
+        defaults = {
+            "cloud": "gcp",
+            "cpu": "x86_64",
+            "demand": False,
+            "disk_size": "60g",
+            "include_tasks_in_taskmanager": False,
+            "min_capacity": 0,
+            "nested_virtualization": False,
+            "platform": "linux",
+            "worker": "d2g",
+        }
+        with pools_yml.open() as pools_fd:
+            data = yaml.safe_load(pools_fd)
+        # apply defaults
+        for idx, config in enumerate(data):
+            this_config = defaults.copy()
+            this_config.update(config)
+            data[idx] = this_config
+        _validate_schema_by_name(instance=data, name="WorkerPools")
+        for pool_config in data:
+            pool_config["disk_size"] = int(
+                parse_size(pool_config["disk_size"]) / parse_size("1g")
+            )
+            pool_config["cpu"] = CPU_ALIASES.get(pool_config["cpu"], pool_config["cpu"])
+            yield cls(**pool_config)
+
+    def build_resources(
+        self,
+        providers: dict[str, Provider],
+        machine_type_db: MachineTypes,
+    ) -> Iterator[TCWorkerPool]:
+        """Build the full tc-admin resources to compare and build the pool"""
+        # Select a cloud provider according to configuration
+        provider = providers[self.cloud]
+
+        # Build the pool configuration for selected machines
+        def _get_machine_list():
+            for machine in self.machine_types:
+                zone_blacklist = machine_type_db.zone_blacklist(
+                    self.cloud, self.cpu, machine
+                )
+                yield (machine, zone_blacklist)
+
+        config: dict[str, object] = {
+            "launchConfigs": provider.build_launch_configs(
+                self.imageset,
+                _get_machine_list(),
+                self.disk_size,
+                self.platform,
+                self.demand,
+                self.nested_virtualization,
+                self.worker,
+            ),
+            "maxCapacity": self.max_capacity,
+            "minCapacity": self.min_capacity,
+        }
+        config["lifecycle"] = {
+            # give workers 15 minutes to register before assuming they're broken
+            "registrationTimeout": parse_time("15m"),
+            "reregistrationTimeout": parse_time("4d"),
+            "queueInactivityTimeout": parse_time("2h"),
+        }
+
+        if self.cloud != "static":
+            yield TCWorkerPool(
+                config=config,
+                description=DESCRIPTION,
+                emailOnError=True,
+                owner=self.owner,
+                providerId=PROVIDER_IDS[self.cloud],
+                workerPoolId=f"{WORKER_POOL_PREFIX}/{self.name}",
+            )
 
 
 class PoolConfigLoader:
