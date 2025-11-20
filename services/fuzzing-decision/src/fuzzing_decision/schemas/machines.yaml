@@ -1,4 +1,5 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/machines.yaml"
 title: "Machines"
 description: "Cloud service machine mappings"
 type: object
