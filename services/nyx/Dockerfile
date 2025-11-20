@@ -41,6 +41,8 @@ COPY \
     services/nyx/setup.cfg \
     services/nyx/setup.py \
     /srv/repos/nyx_ipc_manager/
+
+COPY services/nyx/symbol-filter/ /srv/repos/symbol-filter/
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/nyx/launch-root.sh \

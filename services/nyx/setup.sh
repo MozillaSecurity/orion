@@ -74,10 +74,17 @@ source "${0%/*}/clang.sh"
 mkdir -p /srv/repos/ipc-research
 chown -R worker:worker /home/worker /srv/repos/ipc-research
 
+export PIPX_HOME=/opt/pipx
+export PIPX_BIN_DIR=/usr/local/bin
+
 pushd /srv/repos >/dev/null
+# Install guided-fuzzing-daemon
 git-clone https://github.com/MozillaSecurity/guided-fuzzing-daemon
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./guided-fuzzing-daemon[sentry]
-PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx inject --include-apps -e guided-fuzzing-daemon ./nyx_ipc_manager
+retry pipx install -e ./guided-fuzzing-daemon[sentry]
+retry pipx inject --include-apps -e guided-fuzzing-daemon ./nyx_ipc_manager
+
+# Install symbol-filter
+retry pipx install -e ./symbol-filter
 popd >/dev/null
 
 rm -rf /opt/clang /opt/rustc

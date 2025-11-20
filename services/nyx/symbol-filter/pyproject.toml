@@ -1,0 +1,73 @@
+[project]
+name = "symbol-filter"
+version = "0.1.0"
+description = "Path based symbol filter"
+readme = "README.md"
+authors = [
+    { name = "pyoor", email = "pyoor@users.noreply.github.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fuzzfetch>=16.0.0",
+    "fuzzmanager>=0.9.0",
+]
+
+[project.scripts]
+symbol-filter = "symbol_filter:main"
+
+[build-system]
+requires = ["uv_build>=0.8.21,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=25.11.0",
+    "pytest>=9.0.1",
+    "pytest-mock>=3.15.1",
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+strict = true
+show_error_codes = true
+warn_unused_ignores = false
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = "Reporter.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "fuzzfetch"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "symbol_filter.filter"
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+check_untyped_defs = false
+disallow_untyped_defs = false
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+ignore = []
+select = [
+    # flake8
+    "E",
+    "F",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # includes yesqa
+    "RUF",
+]

@@ -24,6 +24,7 @@ COPY \
     recipes/linux/taskgraph-m-c-latest.sh \
     recipes/linux/worker.sh \
     services/afl/setup.sh \
+    services/nyx/clang.sh \
     /srv/repos/setup/
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
 COPY \
@@ -31,6 +32,7 @@ COPY \
     services/nyx/nyx_utils.py \
     /srv/repos/nyx_utils/
 COPY services/nyx/patches/afl-cmin.diff /home/worker/patches/
+COPY services/nyx/symbol-filter/ /srv/repos/symbol-filter/
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/afl/launch-root.sh \
