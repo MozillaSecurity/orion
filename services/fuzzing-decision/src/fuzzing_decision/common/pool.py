@@ -12,8 +12,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import (
     Any,
-    Generator,
     Iterable,
+    Iterator,
 )
 
 import dateutil.parser
@@ -640,7 +640,7 @@ class PoolConfigMap(CommonPoolConfiguration):
         data["name"] = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").name
         return self.RESULT_TYPE(pool_id, data, self.base_dir)
 
-    def iterpools(self) -> Generator[CommonPoolConfiguration, None, None]:
+    def iterpools(self) -> Iterator[CommonPoolConfiguration]:
         for parent in self.apply_to:
             yield self.apply(parent)
 
