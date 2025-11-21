@@ -1,10 +1,6 @@
 name: symbol-filter
 type: test
 tests:
-  - name: python 3.9 unittests
-    type: tox
-    image: ci-py-39
-    toxenv: py39
   - name: python 3.10 unittests
     type: tox
     image: ci-py-310
@@ -23,5 +19,5 @@ tests:
     toxenv: py313
   - name: lint
     type: tox
-    image: ci-py-39
+    image: ci-py-310
     toxenv: lint
