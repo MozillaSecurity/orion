@@ -3,6 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """Tests for symbol_filter.filter module."""
 
+from unittest.mock import patch
+
+# Suppress decorator before loading Reporter
+patch("Reporter.Reporter.remote_checks", lambda f: f).start()
+
 import pytest
 
 from symbol_filter.filter import (
