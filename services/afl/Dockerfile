@@ -31,7 +31,7 @@ COPY \
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
 COPY \
     services/afl/pyproject.toml \
-    services/nyx/nyx_utils.py \
+    services/nyx/nyx_ipc_manager/nyx_utils.py \
     /srv/repos/nyx_utils/
 COPY services/nyx/patches/afl-cmin.diff /home/worker/patches/
 COPY services/nyx/symbol-filter/ /srv/repos/symbol-filter/
