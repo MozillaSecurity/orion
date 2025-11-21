@@ -59,6 +59,10 @@ EOF
 mkdir -p /var/lib/td-agent-bit/pos
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf
 
+# install clang
+export SKIP_RUST=1
+source "/srv/repos/setup/clang.sh"
+
 onexit() {
   echo "Waiting for logs to flush..." >&2
   sleep 15
