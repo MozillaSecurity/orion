@@ -1,0 +1,8 @@
+name: nyx_ipc_manager
+type: test
+tests:
+  - name: lint
+    type: tox
+    image: ci-py-10
+    toxenv: lint
+
