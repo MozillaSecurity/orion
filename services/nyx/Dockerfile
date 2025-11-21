@@ -34,15 +34,9 @@ COPY \
     services/nyx/setup.sh \
     /srv/repos/setup/
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
-COPY \
-    services/nyx/pyproject.toml \
-    services/nyx/nyx_ipc_manager.py \
-    services/nyx/nyx_utils.py \
-    services/nyx/setup.cfg \
-    services/nyx/setup.py \
-    /srv/repos/nyx_ipc_manager/
+COPY services/nyx/nyx_ipc_manager /srv/repos/nyx_ipc_manager
 
-COPY services/nyx/symbol-filter/ /srv/repos/symbol-filter/
+COPY services/nyx/symbol-filter /srv/repos/symbol-filter
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/nyx/launch-root.sh \
