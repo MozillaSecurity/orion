@@ -3,6 +3,6 @@ type: test
 tests:
   - name: lint
     type: tox
-    image: ci-py-10
+    image: ci-py-310
     toxenv: lint
 
