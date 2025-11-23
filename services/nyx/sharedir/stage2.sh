@@ -76,6 +76,7 @@ export AFL_DEBUG=1
 
 echo "[!] creating firefox profile" | ./hcat
 ./hget prefs.js prefs.js
+mkdir -p /home/user/.mozilla/firefox
 LD_LIBRARY_PATH="/home/user/firefox" \
   xvfb-run /home/user/firefox/firefox-bin -CreateProfile test 2>&1 | ./hcat
 mv prefs.js /home/user/.mozilla/firefox/*test/
