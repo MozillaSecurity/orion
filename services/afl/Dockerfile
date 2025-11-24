@@ -16,6 +16,8 @@ COPY \
     recipes/linux/grcov.sh \
     recipes/linux/gsutil.sh \
     recipes/linux/js32_deps.sh \
+    recipes/linux/llvm.sh \
+    recipes/linux/llvm-cov.sh \
     recipes/linux/llvm-symbolizer.sh \
     recipes/linux/nodejs.sh \
     recipes/linux/prefpicker.sh \

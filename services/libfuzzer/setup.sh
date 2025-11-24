@@ -22,6 +22,7 @@ cd "${0%/*}"
 ./fuzzmanager.sh
 ./prefpicker.sh
 ./grcov.sh
+./llvm-cov.sh
 ./gsutil.sh
 ./fluentbit.sh
 SRCDIR=/tmp/fuzzing-tc ./fuzzing_tc.sh

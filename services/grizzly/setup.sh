@@ -24,6 +24,8 @@ cd "${0%/*}"
 ./fluentbit.sh
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 EDIT=1 DESTDIR=/src ./fuzzmanager.sh
+./grcov.sh
+./llvm-cov.sh
 ./nodejs.sh
 ./radamsa.sh
 ./rr.sh
@@ -144,13 +146,6 @@ export PS1='🐳  \[\033[1;36m\]\h \[\033[1;34m\]\W\[\033[0;35m\] \[\033[1;36m\]
 EOF
 
 mkdir -p /home/worker/.local/bin
-
-# Install grcov
-./grcov.sh
-./llvm-cov.sh
-
-# Symlink llvm-cov to gcov to ensure it's used by grcov
-ln -s "$(which llvm-cov)" /usr/local/bin/gcov
 
 # Add `cleanup.sh` to let images perform standard cleanup operations.
 cp "${0%/*}/cleanup.sh" /home/worker/.local/bin/cleanup.sh

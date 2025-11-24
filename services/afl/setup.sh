@@ -26,6 +26,7 @@ export DEBIAN_FRONTEND=noninteractive
 ./gsutil.sh
 ./fluentbit.sh
 SRCDIR=/srv/repos/fuzzing-decision ./fuzzing_tc.sh
+./llvm-cov.sh
 ./llvm-symbolizer.sh
 ./nodejs.sh
 ./sentry.sh

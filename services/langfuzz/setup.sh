@@ -27,6 +27,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzfetch.sh
 EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
+./llvm-cov.sh
 if ! is-arm64; then
   ./llvm-symbolizer.sh
 fi
