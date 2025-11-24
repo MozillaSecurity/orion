@@ -25,6 +25,7 @@ cd "${0%/*}"
 SRCDIR=/srv/repos/fuzzing-decision ./fuzzing_tc.sh
 
 ./grcov.sh
+./llvm-cov.sh
 ./llvm-symbolizer.sh
 ./sentry.sh
 ./taskcluster.sh

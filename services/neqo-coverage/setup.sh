@@ -19,6 +19,7 @@ cd "${0%/*}"
 EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 ./fuzzmanager.sh
 ./grcov.sh
+./llvm-cov.sh
 ./gsutil.sh
 ./sentry.sh
 ./taskcluster.sh
