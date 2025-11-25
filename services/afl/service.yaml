@@ -1,1 +1,4 @@
 name: afl
+force_deps:
+  - nyx_ipc_manager
+  - symbol-filter
