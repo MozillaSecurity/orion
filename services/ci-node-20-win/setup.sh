@@ -14,6 +14,7 @@ retry-curl() { curl -sSL --connect-timeout 25 --fail --retry 5 -w "%{stderr}[dow
 # base msys packages
 retry pacman --noconfirm -Sy \
   mingw-w64-x86_64-curl \
+  openssh \
   patch \
   psmisc \
   tar \
