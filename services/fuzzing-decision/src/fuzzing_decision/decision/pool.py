@@ -284,7 +284,8 @@ def get_scopes(pool: FuzzingPoolConfig) -> list[str]:
                     f"os-group:{PROVISIONER_ID}/{pool.hook_id}/Administrators"
                 ),
                 (
-                    f"generic-worker:run-as-administrator:{PROVISIONER_ID}/{pool.hook_id}"
+                    "generic-worker:"
+                    f"run-as-administrator:{PROVISIONER_ID}/{pool.hook_id}"
                 ),
             )
         )
