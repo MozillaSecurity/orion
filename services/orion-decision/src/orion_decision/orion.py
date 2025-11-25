@@ -526,10 +526,8 @@ class Services(dict):
                     "Service %s is dirty with service %s (forced)", service.name, dep
                 )
 
-            if isinstance(service, (ServiceMsys, ServiceHomebrew)):
+            if isinstance(service, (ServiceTestOnly, ServiceMsys, ServiceHomebrew)):
                 search_root = service.root
-            elif isinstance(service, ServiceTestOnly):
-                continue
             else:
                 # calculate image dependencies
                 parser = DockerfileParser(path=str(service.dockerfile))
