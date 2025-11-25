@@ -65,7 +65,6 @@ class MountArtifactResolver:
 
     @classmethod
     def lookup_taskid(cls, namespace: str) -> int:
-        assert isinstance(namespace, str)
         if namespace not in cls.CACHE:
             # need to resolve "image" to a task ID where the mount
             # artifact is
@@ -352,8 +351,8 @@ def build_resources(
         assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
         decision_task["payload"]["env"].update(env)
 
-    self_cycle_crons = pool.cycle_crons()
-    assert self_cycle_crons is not None
+    cycle_crons = list(pool.cycle_crons())
+    assert cycle_crons
 
     scopes = [
         *sorted(
@@ -376,7 +375,7 @@ def build_resources(
         hookId=pool.hook_id,
         name=pool.hook_id,
         owner=OWNER_EMAIL,
-        schedule=list(pool.cycle_crons()),
+        schedule=cycle_crons,
         task=decision_task,
         triggerSchema={},
     )
@@ -485,7 +484,6 @@ class WorkerPool:
 
     @classmethod
     def from_file_iter(cls, pools_yml: Path) -> Iterator[WorkerPool]:
-        assert pools_yml.is_file()
         # these should match what's in workers.yaml!
         defaults = {
             "cloud": "gcp",
