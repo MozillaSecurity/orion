@@ -113,6 +113,7 @@ class FuzzingPoolConfig:
     parents: list[str]
     # Platform (OS)
     platform: str
+    # Pool ID (eg. pool100)
     pool_id: str
     # A configuration item to run as part of the preprocess stage
     preprocess: str
