@@ -692,7 +692,7 @@ def test_create_homebrew(mocker: MockerFixture) -> None:
 
 @freeze_time()
 def test_create_test_only(mocker: MockerFixture) -> None:
-    """test test task non-creation"""
+    """test of test task non-creation (test only "service")"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
     now = datetime.now(timezone.utc)
@@ -709,9 +709,10 @@ def test_create_test_only(mocker: MockerFixture) -> None:
     evt.pull_request = None
     sched = Scheduler(evt, "group", "scheduler", "secret", "push")
     sched.services["test-svc"].dirty = True
+    sched.services.propagate_dirty([sched.services["test-svc"]])
     sched.create_tasks()
-    assert queue.createTask.call_count == 1
-    _, task = queue.createTask.call_args[0]
+    assert queue.createTask.call_count == 2
+    test_task_id, task = queue.createTask.call_args_list[0][0]
     expected = yaml_load(
         TEST_TASK.substitute(
             commit="commit",
@@ -735,6 +736,29 @@ def test_create_test_only(mocker: MockerFixture) -> None:
     sched.services["test-svc"].tests[0].update_task(
         expected, "https://example.com", "fetch", "commit", "test-only"
     )
+    assert task == expected
+    _, task = queue.createTask.call_args_list[1][0]
+    expected = yaml_load(
+        BUILD_TASK.substitute(
+            arch="amd64",
+            clone_url="https://example.com",
+            commit="commit",
+            deadline=stringDate(now + DEADLINE),
+            dockerfile="test-force-dep-on-test/Dockerfile",
+            expires=stringDate(now + ARTIFACTS_EXPIRE),
+            load_deps="1",
+            max_run_time=int(MAX_RUN_TIME.total_seconds()),
+            now=stringDate(now),
+            owner_email=OWNER_EMAIL,
+            provisioner=PROVISIONER_ID,
+            scheduler="scheduler",
+            service_name="dep-svc",
+            source_url=SOURCE_URL,
+            task_group="group",
+            worker=WORKER_TYPE,
+        )
+    )
+    expected["dependencies"].append(test_task_id)
     assert task == expected
 
 

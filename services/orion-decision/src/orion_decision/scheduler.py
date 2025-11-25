@@ -468,6 +468,7 @@ class Scheduler:
         build_tasks_created: set[str] = set()
         combine_tasks_created: dict[str, str] = {}
         push_tasks_created: set[str] = set()
+        test_only_tasks_created: dict[str, tuple[str]] = {}
         to_create = [
             (recipe, "amd64")
             for recipe in sorted(self.services.recipes.values(), key=lambda x: x.name)
@@ -492,6 +493,20 @@ class Scheduler:
             # TODO: implement tests for all archs in the future
             if is_svc:
                 assert isinstance(obj, Service)
+
+                # Check if any deps are service-test "tasks".
+                # These are virtual tasks which should pass through their
+                # dependencies.
+                test_only_deps = set(dirty_dep_tasks) & set(test_only_tasks_created)
+                dirty_dep_tasks = list(set(dirty_dep_tasks) - test_only_deps)
+                for d in test_only_deps:
+                    dirty_dep_tasks.extend(test_only_tasks_created[d])
+                    LOG.debug(
+                        "Expanded dependency on %s to: %s",
+                        d,
+                        ",".join(test_only_tasks_created[d]),
+                    )
+
                 dirty_test_dep_tasks = []
                 for test in obj.tests:
                     assert isinstance(test, ToxServiceTest)
@@ -510,11 +525,15 @@ class Scheduler:
             ]
 
             pending_deps = (
-                set(dirty_dep_tasks) | set(dirty_test_dep_tasks)
-            ) - build_tasks_created
-            pending_deps |= (
-                set(dirty_recipe_test_tasks) - set(test_tasks_created.values())
-            ) - recipe_tasks_created
+                (
+                    set(dirty_dep_tasks)
+                    | set(dirty_test_dep_tasks)
+                    | set(dirty_recipe_test_tasks)
+                )
+                - build_tasks_created
+                - set(test_tasks_created.values())
+                - recipe_tasks_created
+            )
             if pending_deps:
                 if is_svc:
                     task_id = service_build_tasks[(obj.name, arch)]
@@ -549,6 +568,8 @@ class Scheduler:
 
                 if isinstance(obj, ServiceTestOnly):
                     assert obj.tests
+                    task_id = service_build_tasks[(obj.name, arch)]
+                    test_only_tasks_created[task_id] = tuple(test_tasks)
                     continue
 
                 build_tasks_created.add(
