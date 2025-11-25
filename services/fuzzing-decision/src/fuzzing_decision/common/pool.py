@@ -75,31 +75,55 @@ class MachineTypes:
 
 @dataclass
 class FuzzingPoolConfig:
+    # An array of configurations to apply this configuration to
     apply_to: list[str]
+    # Object containing artifact mappings for the task instance
+    # { container_path: { type: (file|directory), url: where to map artifact in TC } }
     artifacts: dict[str, dict[str, str]]
     base_dir: Path
+    # The cloud service where the task should run
     cloud: str
+    # List of commands to run
     command: list[str]
+    # Docker image (might be tag or taskcluster specification object)
     container: str | dict[str, str]
+    # CPU architecture type
     cpu: str
+    # Maximum time before completely refreshing this pool
     cycle_time: int
+    # Boolean indicating if task requires an on-demand instance
     demand: bool
     disk_size: int
+    # Environment variables to be set in the task
     env: dict
+    # The name of the taskcluster imageset
     imageset: str
+    # An array of machine types to use for a given task
     machine_types: list
+    # Maximum time to run each instance
     max_run_time: int
+    # Human description
     name: str
+    # Task requires an instance type that supported nested virtualization
     nested_virtualization: bool
+    # An array of configurations to inherit from
     parents: list[str]
+    # Platform (OS)
     platform: str
     pool_id: str
+    # A configuration item to run as part of the preprocess stage
     preprocess: str
+    # Boolean indicating if the image should be run with administrator privileges
     run_as_admin: bool
+    # Date and time to start applying this configuration
     schedule_start: datetime | None
+    # An array of routes to apply to the task
     routes: list
+    # An array of taskcluster scopes to apply to the task
     scopes: list
+    # Number of tasks to run
     tasks: int
+    # Taskcluster worker type
     worker: str
 
     @classmethod

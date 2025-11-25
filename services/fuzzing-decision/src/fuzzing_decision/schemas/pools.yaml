@@ -1,36 +1,32 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/pools.yaml"
 title: "Pool"
-description: "Pool definition"
 type: object
 required:
   - name
 additionalProperties: false
 properties:
   apply_to:
-    description: "An array of configurations to apply this configuration to."
     type: array
     items:
       type: string
   artifacts:
-    description: "Object containing artifact mappings for the task instance"
     type: object
     patternProperties:
       ^.*$:
+        type: object
+        additionalProperties: false
         properties:
           type:
             type: string
             pattern: "^file|directory$"
           url:
-            description: "Taskcluster URL part of the artifact"
             type: string
             pattern: "^[A-Za-z0-9_-]+(/[A-Za-z0-9_.-]+)+$"
   cloud:
-    description: "The cloud service where the task should run"
     type: string
     pattern: "^aws|azure|gcp|static$"
   command:
-    description: "List of commands to run"
     type: array
     items:
       type: string
@@ -77,22 +73,17 @@ properties:
           - taskId
           - path
   cpu:
-    description: "CPU architecture type"
     type: string
     pattern: "^(x64|x86[_-]64|amd64|aarch64|arm64)$"
   cycle_time:
-    description: "Maximum time before completely refreshing this pool"
     type: string
     pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
   demand:
-    description: "Boolean indicating if task requires an on-demand instance"
     type: boolean
   disk_size:
-    description: "Disk size"
     type: string
     pattern: "^(\\d+\\.\\d+|\\d+)[kKmMgGtT]?[bB]?$"
   env:
-    description: "Environment variables to be set in the task"
     type: object
     additionalProperties: false
     patternProperties:
@@ -101,57 +92,43 @@ properties:
           - string
           - integer
   imageset:
-    description: "The name of the taskcluster imageset"
     type: string
   machine_types:
-    description: "An array of machine types to use for a given task"
     type: array
     items:
       type: string
   max_run_time:
-    description: "Maximum time to run each instance"
     pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
   name:
-    description: "Human description"
     type: string
   nested_virtualization:
-    description: "Boolean indicating if task requires an instance type that supported nested virtualization"
     type: boolean
   routes:
-    description: "An array of routes to apply to the task"
     type: array
     items:
       type: string
       pattern: "^notify\\.(email|pulse|matrix-room|slack-channel)\\..+?on-(exception|failed)$"
   parents:
-    description: "An array of configurations to inherit from."
     type: array
     items:
       type: string
   platform:
-    description: "Platform type"
     type: string
     pattern: "^(linux|windows|macos)$"
   preprocess:
-    description: "A configuration item to run as part of the preprocess stage"
     type: string
   run_as_admin:
-    description: "Boolean indicating if the image should be run with administrator privileges"
     type: boolean
   schedule_start:
-    description: "Date and time to start applying this configuration"
     type: string
     format: "date-time"
   scopes:
-    description: "An array of taskcluster scopes to apply to the task"
     type: array
     items:
       type: string
       pattern: "^[A-Za-z0-9:_/-]+$"
   tasks:
-    description: "Number of tasks to run"
     type: integer
   worker:
-    description: "Taskcluster worker type"
     type: string
     pattern: "^(d2g|docker|generic)$"
