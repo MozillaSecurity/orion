@@ -37,6 +37,10 @@ ARCHITECTURES = frozenset(("x64", "arm64"))
 WORKERS = frozenset(("generic", "docker", "d2g"))
 
 
+class ConfigurationError(Exception):
+    """Error in pool configuration"""
+
+
 class MachineTypes:
     """Database of all machine types available, by provider and architecture."""
 
@@ -129,9 +133,10 @@ class FuzzingPoolConfig:
     @classmethod
     def _load_partial(cls, path: Path, loaded: set[str]) -> dict[str, Any]:
         name = path.stem
-        assert name not in loaded, (
-            f"attempt to resolve cyclic configuration, {name} already encountered"
-        )
+        if name in loaded:
+            raise ConfigurationError(
+                f"attempt to resolve cyclic configuration, {name} already encountered"
+            )
         raw = yaml.safe_load(path.read_text())
         result: dict[str, Any] = {}
 
@@ -189,6 +194,7 @@ class FuzzingPoolConfig:
 
     @classmethod
     def from_file(cls, path: Path) -> Iterator[FuzzingPoolConfig]:
+        apply_pool = path.stem
         raw = cls._load_partial(path, set())
 
         if not raw.get("apply_to"):
@@ -227,10 +233,23 @@ class FuzzingPoolConfig:
             if same_values is None:
                 same_values = my_same_values
             else:
-                assert (
-                    same_values == my_same_values
-                )  # , f"{same_values} != {my_same_values}"
-            assert not new["preprocess"]
+                # Pools with "apply_to" set require certain values to be the same
+                # across all tasks in the group.
+                if same_values != my_same_values:
+                    diffs = {
+                        field
+                        for field in same_fields
+                        if my_same_values[field] != same_values[field]
+                    }
+                    raise ConfigurationError(
+                        f"Pool {pool}/{apply_pool} has different values than others in "
+                        f"{apply_pool} for fields: {','.join(diffs)}"
+                    )
+            if new["preprocess"]:
+                raise ConfigurationError(
+                    f"Pool {pool}/{apply_pool} sets preprocess, "
+                    "not allowed with apply_to"
+                )
 
             yield cls(**new)
 
@@ -262,7 +281,8 @@ class FuzzingPoolConfig:
             this["name"] = name
             self._fixup_fields(this, this_path)
             this["pool_id"] = pool_id
-            assert this["tasks"] == 1, f"{self.preprocess} must set tasks = 1"
+            if this["tasks"] != 1:
+                raise ConfigurationError(f"Pool {pool_id} must set tasks = 1")
             cannot_set = (
                 "disk_size",
                 "cpu",
@@ -277,9 +297,10 @@ class FuzzingPoolConfig:
                 "schedule_start",
             )
             for field in cannot_set:
-                assert this[field] == getattr(self, field), (
-                    f"{self.preprocess} cannot set {field}"
-                )
+                if this[field] != getattr(self, field):
+                    raise ConfigurationError(
+                        f"Pool {pool_id} cannot change field {field}"
+                    )
             yield type(self)(**this)
 
     def get_machine_list(
