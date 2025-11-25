@@ -45,16 +45,7 @@ class MachineTypes:
     """Database of all machine types available, by provider and architecture."""
 
     def __init__(self, machines_data: dict[str, Any]) -> None:
-        for provider, provider_archs in machines_data.items():
-            assert provider in PROVIDERS, f"unknown provider: {provider}"
-            for arch, machines in provider_archs.items():
-                assert arch in ARCHITECTURES, f"unknown architecture: {provider}.{arch}"
-                for machine, spec in machines.items():
-                    extra = list(set(spec) - {"zone_blacklist"})
-                    assert not extra, (
-                        f"machine {provider}.{arch}.{machine} has unknown keys: "
-                        f"{extra!r}"
-                    )
+        validate_schema_by_name(instance=machines_data, name="Machines")
         self._data = machines_data
 
     @classmethod
