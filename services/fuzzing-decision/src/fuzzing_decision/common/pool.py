@@ -59,7 +59,6 @@ class MachineTypes:
 
     @classmethod
     def from_file(cls, machines_yml: Path) -> MachineTypes:
-        assert machines_yml.is_file()
         return cls(yaml.safe_load(machines_yml.read_text()))
 
     def cpus(self, provider: str, architecture: str, machine: str):
@@ -330,7 +329,6 @@ class FuzzingPoolConfig:
 
         if self.schedule_start is not None:
             now = self.schedule_start
-            assert isinstance(now, datetime)
             if now.utcoffset() is None:
                 # no timezone was specified. treat it as UTC
                 now = now.replace(tzinfo=timezone.utc)
