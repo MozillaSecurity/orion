@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import abc
-import itertools
 import logging
 import types
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import (
@@ -19,46 +18,10 @@ from typing import (
 import dateutil.parser
 import yaml
 
-from .util import parse_size, parse_time
+from .util import parse_size, parse_time, validate_schema_by_name
 
 LOG = logging.getLogger(__name__)
 
-# fields that must exist in pool.yml (once flattened), and their types
-COMMON_FIELD_TYPES = types.MappingProxyType(
-    {
-        "artifacts": dict,
-        "cloud": str,
-        "command": list,
-        "container": (str, dict),
-        "cpu": str,
-        "cycle_time": (int, str),
-        "demand": bool,
-        "disk_size": (int, str),
-        "env": dict,
-        "imageset": str,
-        "machine_types": list,
-        "max_run_time": (int, str),
-        "name": str,
-        "nested_virtualization": bool,
-        "platform": str,
-        "preprocess": str,
-        "run_as_admin": bool,
-        "schedule_start": (datetime, str),
-        "routes": list,
-        "scopes": list,
-        "tasks": int,
-        "worker": str,
-    }
-)
-# fields that must exist in every pool.yml
-COMMON_REQUIRED_FIELDS = frozenset(("name",))
-POOL_CONFIG_FIELD_TYPES = types.MappingProxyType(
-    {k: v for k, v in itertools.chain(COMMON_FIELD_TYPES.items(), [("parents", list)])}
-)
-POOL_MAP_FIELD_TYPES = types.MappingProxyType(
-    {k: v for k, v in itertools.chain(COMMON_FIELD_TYPES.items(), [("apply_to", list)])}
-)
-POOL_MAP_REQUIRED_FIELDS = frozenset(COMMON_REQUIRED_FIELDS | {"apply_to"})
 CPU_ALIASES = types.MappingProxyType(
     {
         "x86_64": "x64",
@@ -110,207 +73,190 @@ class MachineTypes:
         return frozenset(machine_data.get("zone_blacklist", []))
 
 
-class CommonPoolConfiguration(abc.ABC):
-    """Fuzzing Pool Configuration
-
-    Attributes:
-        artifacts: dictionary of local path ->
-                   {url: taskcluster path, type: file/directory}
-        cloud: cloud provider, like aws or gcp
-        command: list of strings, command to execute in the image/container
-        container: image to run. takes the same options as
-            https://docs.taskcluster.net/docs/reference/workers/docker-worker/payload
-        cpu: cpu architecture (eg. x64/arm64)
-        cycle_time: schedule for running this pool in seconds
-        demand: whether an on-demand instance is required (vs. spot/preemptible)
-        disk_size: disk size in GB
-        env: dictionary of environment variables passed to the target
-        imageset: imageset name in community-tc-config/config/imagesets.yml
-        machine_types: machine types to use for this pool
-        max_run_time: maximum run time of this pool in seconds
-        name: descriptive name of the configuration
-        platform: operating system of the target (linux, macos, windows)
-        pool_id: basename of the pool on disk (eg. "pool1" for pool1.yml)
-        preprocess: name of pool configuration to apply and run before fuzzing tasks
-        run_as_admin: whether to run as Administrator or unprivileged user
-                      (only valid when platform is windows)
-        schedule_start: reference date for `cycle_time` scheduling
-        routes: list of taskcluster notification routes to enable on the target
-        scopes: list of taskcluster scopes required by the target
-        tasks: number of tasks to run
-        worker: TC worker type
-    """
-
-    FIELD_TYPES: types.MappingProxyType
-    REQUIRED_FIELDS: frozenset
-
-    def __init__(
-        self,
-        pool_id: str,
-        data: dict[str, Any],
-        base_dir: Path | None = None,
-    ) -> None:
-        LOG.debug(f"creating pool {pool_id}")
-        extra = list(set(data) - set(self.FIELD_TYPES))
-        missing = list(set(self.REQUIRED_FIELDS) - set(data))
-        assert not missing, f"configuration is missing fields: {missing!r}"
-        assert not extra, f"configuration has extra fields: {extra!r}"
-
-        # "normal" fields
-        self.pool_id = pool_id
-        self.base_dir = base_dir or Path.cwd()
-
-        # check that all fields are of the right type (or None)
-        for field, cls in self.FIELD_TYPES.items():
-            if data.get(field) is not None:
-                if isinstance(cls, tuple):
-                    expected = f"'{cls[0].__name__}' or '{cls[1].__name__}'"
-                else:
-                    expected = f"'{cls.__name__}'"
-                assert isinstance(data[field], cls), (
-                    f"expected '{field}' to be {expected}, got "
-                    f"'{type(data[field]).__name__}'"
-                )
-        if isinstance(data.get("container"), dict):
-            value = data["container"]
-            assert value is not None
-            assert isinstance(value, dict)
-            assert "type" in value, "'container' missing required key: 'type'"
-            assert value["type"] in {
-                "docker-image",
-                "indexed-image",
-                "task-image",
-            }, f"unknown 'container.type': {value['type']}"
-            required_keys = {
-                "docker-image": {"type", "name"},
-                "indexed-image": {"type", "path", "namespace"},
-                "task-image": {"type", "path", "taskId"},
-            }[value["type"]]
-            have_keys = set(value.keys())
-            missing_keys = required_keys - have_keys
-            extra_keys = have_keys - required_keys
-            assert not missing_keys, (
-                f"missing required keys for 'container' with type '{value['type']}': "
-                f"{', '.join(missing_keys)}"
-            )
-            assert not extra_keys, (
-                f"unknown keys for 'container' with type '{value['type']}': "
-                f"{', '.join(extra_keys)}"
-            )
-            for k, v in value.items():
-                assert isinstance(v, str), (
-                    f"unexpected type for 'container.{k}': {type(v).__name__}"
-                )
-        for key, value in data.get("artifacts", {}).items():
-            assert isinstance(key, str), (
-                f"expected artifact '{key!r}' name to be 'str', "
-                f"got '{type(key).__name__}'"
-            )
-            assert isinstance(value, dict), (
-                f"expected artifact '{key}' value to be 'dict', "
-                f"got '{type(value).__name__}'"
-            )
-            assert set(value.keys()) == {
-                "url",
-                "type",
-            }, f"expected artifact '{key}' object to contain only keys: url, type"
-            assert isinstance(value["url"], str), (
-                f"expected artifact '{key}' .url to be 'str', "
-                f"got '{type(value['url']).__name__}'"
-            )
-            assert value["type"] in {
-                "file",
-                "directory",
-            }, f"expected artifact '{key}' .type to be one of: file, directory"
-        for key, value in data.get("env", {}).items():
-            assert isinstance(key, str), (
-                f"expected env '{key!r}' name to be 'str', got '{type(key).__name__}'"
-            )
-            assert isinstance(value, (int, str)), (
-                f"expected env '{key}' value to be 'int' or 'str', got "
-                f"'{type(value).__name__}'"
-            )
-
-        self.container = data.get("container")
-        self.demand = data.get("demand")
-        self.imageset = data.get("imageset")
-        self.name = data["name"]
-        assert self.name is not None, "name is required for every configuration"
-        self.nested_virtualization = data.get("nested_virtualization")
-        self.platform = data.get("platform")
-        self.tasks = data.get("tasks")
-        self.preprocess = data.get("preprocess")
-        self.run_as_admin = data.get("run_as_admin")
-
-        # dict fields
-        self.artifacts = data.get("artifacts", {})
-        self.env = {k: str(v) for k, v in data.get("env", {}).items()}
-
-        # list fields
-        # command is an overwriting field, null is allowed
-        self.command: list[str] | None
-        if data.get("command") is not None:
-            assert data["command"] is not None
-            self.command = data["command"].copy()
-        else:
-            self.command = None
-        self.machine_types: list[str] | None = None
-        if data.get("machine_types") is not None:
-            self.machine_types = data["machine_types"].copy()
-        self.routes = data.get("routes", []).copy()
-        self.scopes = data.get("scopes", []).copy()
-
-        # size fields
-        self.disk_size = None
-        if data.get("disk_size") is not None:
-            self.disk_size = int(parse_size(str(data["disk_size"])) / parse_size("1g"))
-
-        # time fields
-        self.cycle_time = None
-        if data.get("cycle_time") is not None:
-            self.cycle_time = parse_time(str(data["cycle_time"]))
-        self.max_run_time = None
-        if data.get("max_run_time") is not None:
-            self.max_run_time = parse_time(str(data["max_run_time"]))
-        self.schedule_start: datetime | str | None = None
-        if data.get("schedule_start") is not None:
-            if isinstance(data["schedule_start"], datetime):
-                assert data["schedule_start"] is not None
-                self.schedule_start = data["schedule_start"]
-            else:
-                assert data["schedule_start"] is not None
-                self.schedule_start = dateutil.parser.isoparse(data["schedule_start"])
-
-        # other special fields
-        self.cpu = None
-        if data.get("cpu") is not None:
-            assert data["cpu"] is not None
-            cpu = self.alias_cpu(data["cpu"])
-            assert cpu in ARCHITECTURES
-            self.cpu = cpu
-        self.cloud = None
-        if data.get("cloud") is not None:
-            assert data["cloud"] in PROVIDERS, "Invalid cloud - use {}".format(
-                ",".join(PROVIDERS)
-            )
-            self.cloud = data["cloud"]
-        self.worker = None
-        if data.get("worker") is not None:
-            assert data["worker"] in WORKERS, "Invalid worker - use {}".format(
-                ",".join(WORKERS)
-            )
-            self.worker = data["worker"]
+@dataclass
+class FuzzingPoolConfig:
+    apply_to: list[str]
+    artifacts: dict[str, dict[str, str]]
+    base_dir: Path
+    cloud: str
+    command: list[str]
+    container: str | dict[str, str]
+    cpu: str
+    cycle_time: int
+    demand: bool
+    disk_size: int
+    env: dict
+    imageset: str
+    machine_types: list
+    max_run_time: int
+    name: str
+    nested_virtualization: bool
+    parents: list[str]
+    platform: str
+    pool_id: str
+    preprocess: str
+    run_as_admin: bool
+    schedule_start: datetime | None
+    routes: list
+    scopes: list
+    tasks: int
+    worker: str
 
     @classmethod
-    def from_file(cls, pool_yml: Path, **kwds: Any) -> CommonPoolConfiguration:
-        assert pool_yml.is_file()
-        data = yaml.safe_load(pool_yml.read_text())
-        return cls(
-            pool_yml.stem,
-            data,
-            base_dir=pool_yml.parent,
-            **kwds,
+    def _load_partial(cls, path: Path, loaded: set[str]) -> dict[str, Any]:
+        name = path.stem
+        assert name not in loaded, (
+            f"attempt to resolve cyclic configuration, {name} already encountered"
         )
+        raw = yaml.safe_load(path.read_text())
+        result: dict[str, Any] = {}
+
+        for parent in raw.get("parents", []):
+            par = cls._load_partial(path.parent / f"{parent}.yml", loaded)
+            cls._overwrite(result, par)
+        cls._overwrite(result, raw)
+        return result
+
+    @classmethod
+    def _fixup_fields(cls, raw: dict[str, Any], path: Path) -> None:
+        if isinstance(raw.get("schedule_start"), datetime):
+            raw["schedule_start"] = raw["schedule_start"].isoformat()
+
+        validate_schema_by_name(instance=raw, name="Pool")
+
+        # size fields
+        raw["disk_size"] = int(parse_size(str(raw["disk_size"])) / parse_size("1g"))
+
+        # time fields
+        raw["cycle_time"] = parse_time(str(raw["cycle_time"]))
+        raw["max_run_time"] = parse_time(str(raw["max_run_time"]))
+        if raw.get("schedule_start"):
+            raw["schedule_start"] = dateutil.parser.isoparse(raw["schedule_start"])
+        else:
+            raw["schedule_start"] = None
+
+        # other special fields
+        raw["cpu"] = cls.alias_cpu(raw["cpu"])
+        raw.setdefault("apply_to", [])
+        raw.setdefault("artifacts", {})
+        raw.setdefault("command", [])
+        raw.setdefault("preprocess", "")
+        raw.setdefault("routes", [])
+        raw["env"] = {k: str(v) for k, v in raw["env"].items()}
+        raw["base_dir"] = path.parent
+        raw["pool_id"] = path.stem
+
+    @staticmethod
+    def _overwrite(result: dict[str, Any], overlay: dict[str, Any]):
+        # null -> no-op
+        overlay = {k: v for k, v in overlay.items() if v is not None}
+        # some dicts should be merged
+        for k in ("artifacts", "env"):
+            if k in overlay:
+                result.setdefault(k, {})
+                result[k].update(overlay.pop(k))
+        # some lists should be merged
+        for k in ("routes", "scopes"):
+            if k in overlay:
+                result.setdefault(k, [])
+                result[k].extend(overlay.pop(k))
+        # merge the rest
+        result.update(overlay)
+
+    @classmethod
+    def from_file(cls, path: Path) -> Iterator[FuzzingPoolConfig]:
+        raw = cls._load_partial(path, set())
+
+        if not raw.get("apply_to"):
+            cls._fixup_fields(raw, path)
+            yield cls(**raw)
+            return
+
+        # must be the same for the entire set .. at least for now
+        same_fields = (
+            "cloud",
+            "cpu",
+            "cycle_time",
+            "demand",
+            "disk_size",
+            "imageset",
+            "nested_virtualization",
+            "platform",
+            "schedule_start",
+            "worker",
+        )
+        same_values = None
+
+        for pool in raw["apply_to"]:
+            new = cls._load_partial(path.parent / f"{pool}.yml", set())
+
+            # skip disabled pools
+            if not new["tasks"]:
+                continue
+
+            cls._overwrite(new, raw)
+            cls._fixup_fields(new, path)
+            new["pool_id"] = f"{pool}/{path.stem}"
+
+            # check for field violations
+            my_same_values = {field: new[field] for field in same_fields}
+            if same_values is None:
+                same_values = my_same_values
+            else:
+                assert (
+                    same_values == my_same_values
+                )  # , f"{same_values} != {my_same_values}"
+            assert not new["preprocess"]
+
+            yield cls(**new)
+
+    @property
+    def task_id(self) -> str:
+        return f"{self.platform}-{self.pool_id}"
+
+    # for scope calculations, the real worker pool name must be used
+    @property
+    def config_pool_id(self) -> str:
+        if "/" in self.pool_id:
+            _apply, pool_id = self.pool_id.split("/", 1)
+            return pool_id
+        return self.pool_id
+
+    @property
+    def hook_id(self) -> str:
+        return f"{self.platform}-{self.config_pool_id}"
+
+    def get_preprocess(self) -> Iterator[FuzzingPoolConfig]:
+        if self.preprocess:
+            pool_id = f"{self.pool_id}/preprocess"
+            this_path = self.base_dir / f"{self.pool_id}.yml"
+            preproc_path = self.base_dir / f"{self.preprocess}.yml"
+            this = self._load_partial(this_path, set())
+            preproc = self._load_partial(preproc_path, set())
+            name = f"{self.name} ({preproc['name']})"
+            self._overwrite(this, preproc)
+            this["name"] = name
+            self._fixup_fields(this, this_path)
+            this["pool_id"] = pool_id
+            assert this["tasks"] == 1, f"{self.preprocess} must set tasks = 1"
+            cannot_set = (
+                "disk_size",
+                "cpu",
+                "cloud",
+                "cycle_time",
+                "demand",
+                "imageset",
+                "machine_types",
+                "nested_virtualization",
+                "platform",
+                "preprocess",
+                "schedule_start",
+            )
+            for field in cannot_set:
+                assert this[field] == getattr(self, field), (
+                    f"{self.preprocess} cannot set {field}"
+                )
+            yield type(self)(**this)
 
     def get_machine_list(
         self, machine_types: MachineTypes
@@ -322,9 +268,6 @@ class CommonPoolConfiguration(abc.ABC):
         Returns:
             instance type name and task capacity
         """
-        assert self.cloud is not None
-        assert self.cpu is not None
-        assert self.machine_types
         for machine in self.machine_types:
             zone_blacklist = machine_types.zone_blacklist(self.cloud, self.cpu, machine)
             yield (machine, zone_blacklist)
@@ -390,276 +333,3 @@ class CommonPoolConfiguration(abc.ABC):
             x64 or arm64
         """
         return CPU_ALIASES[cpu_name.lower()]
-
-
-class PoolConfiguration(CommonPoolConfiguration):
-    """Fuzzing Pool Configuration
-
-    Attributes:
-        parents (list): list of parents to inherit from
-    """
-
-    FIELD_TYPES = POOL_CONFIG_FIELD_TYPES
-    REQUIRED_FIELDS = COMMON_REQUIRED_FIELDS
-
-    def __init__(
-        self,
-        pool_id: str,
-        data: dict[str, Any],
-        base_dir: Path | None = None,
-        _flattened: set[str] | None = None,
-    ) -> None:
-        super().__init__(pool_id, data, base_dir)
-
-        # specific fields defined in pool config
-        parents_data = data.get("parents", [])
-        assert parents_data is not None
-        self.parents = parents_data.copy()
-
-        top_level = False
-        if _flattened is None:
-            top_level = True
-            _flattened = {self.pool_id}
-        self._flatten(_flattened)
-        if top_level:
-            # set defaults
-            if self.artifacts is None:
-                self.artifacts = {}
-            if self.command is None:
-                self.command = []
-            if self.env is None:
-                self.env = {}
-            if self.machine_types is None:
-                self.machine_types = []
-            if self.max_run_time is None:
-                self.max_run_time = self.cycle_time
-            if self.parents is None:
-                self.parents = []
-            if self.preprocess is None:
-                self.preprocess = ""
-            if self.routes is None:
-                self.routes = []
-            if self.scopes is None:
-                self.scopes = []
-            # assert complete
-            missing = {
-                field for field in self.FIELD_TYPES if getattr(self, field) is None
-            }
-            missing.discard("schedule_start")  # this field can be null
-            assert not missing, f"Pool is missing fields: {list(missing)!r}"
-
-    def create_preprocess(self) -> PoolConfiguration | None:
-        """
-        Return a new PoolConfiguration based on the value of self.preprocess
-        """
-        if not self.preprocess:
-            return None
-        data = yaml.safe_load((self.base_dir / f"{self.preprocess}.yml").read_text())
-        pool_id = self.pool_id + "/preprocess"
-        assert data["tasks"] == 1 or (self.tasks == 1 and data["tasks"] is None), (
-            f"{self.preprocess} must set tasks = 1"
-        )
-        cannot_set = [
-            "disk_size",
-            "cpu",
-            "cloud",
-            "cycle_time",
-            "demand",
-            "imageset",
-            "machine_types",
-            "nested_virtualization",
-            "platform",
-            "preprocess",
-            "schedule_start",
-        ]
-        for field in cannot_set:
-            assert data.get(field) is None, f"{self.preprocess} cannot set {field}"
-        data["preprocess"] = ""  # blank the preprocess field to avoid inheritance
-        data["parents"] = [self.pool_id, *data.get("parents", [])]
-        result = type(self)(pool_id, data, self.base_dir)
-        result.name = f"{self.name} ({result.name})"
-        return result
-
-    def _flatten(self, flattened: set[str] | None) -> None:
-        overwriting_fields = (
-            "cloud",
-            "command",
-            "container",
-            "cpu",
-            "cycle_time",
-            "demand",
-            "disk_size",
-            "imageset",
-            "machine_types",
-            "max_run_time",
-            "name",
-            "nested_virtualization",
-            "platform",
-            "preprocess",
-            "schedule_start",
-            "tasks",
-            "run_as_admin",
-            "worker",
-        )
-        merge_dict_fields = ("artifacts", "env")
-        merge_list_fields = ("routes", "scopes")
-        null_fields = {
-            field for field in overwriting_fields if getattr(self, field) is None
-        }
-        # need to update dict values defined in self at the very end
-        my_merge_dict_values = {
-            field: getattr(self, field).copy() for field in merge_dict_fields
-        }
-
-        assert flattened is not None
-        for parent_id in self.parents:
-            assert parent_id not in flattened, (
-                f"attempt to resolve cyclic configuration, {parent_id} already "
-                "encountered"
-            )
-            flattened.add(parent_id)
-            parent_obj = self.from_file(
-                self.base_dir / f"{parent_id}.yml", _flattened=flattened
-            )
-
-            # "normal" overwriting fields
-            for field in overwriting_fields:
-                if field in null_fields:
-                    if getattr(parent_obj, field) is not None:
-                        LOG.debug(
-                            f"overwriting field {field} in {self.pool_id} from "
-                            f"{parent_id}"
-                        )
-                        setattr(self, field, getattr(parent_obj, field))
-
-            # merged dict fields
-            for field in merge_dict_fields:
-                if getattr(parent_obj, field):
-                    LOG.debug(
-                        f"merging dict field {field} in {self.pool_id} from {parent_id}"
-                    )
-                    getattr(self, field).update(getattr(parent_obj, field))
-
-            # merged list fields
-            for field in merge_list_fields:
-                if getattr(parent_obj, field):
-                    LOG.debug(
-                        f"merging list field {field} in {self.pool_id} from {parent_id}"
-                    )
-                    setattr(
-                        self,
-                        field,
-                        list(
-                            set(getattr(self, field)) | set(getattr(parent_obj, field))
-                        ),
-                    )
-
-        # dict values defined in self take precedence over values defined in parents
-        for field, values in my_merge_dict_values.items():
-            getattr(self, field).update(values)
-
-
-class PoolConfigMap(CommonPoolConfiguration):
-    """A pool map is a pool config that has no `parents`, but instead has a list of
-    `apply_to`.
-
-    For each pool config in `apply_to`, the map will be applied as though it were a
-    child of that config.
-    """
-
-    FIELD_TYPES = POOL_MAP_FIELD_TYPES
-    REQUIRED_FIELDS = POOL_MAP_REQUIRED_FIELDS
-    RESULT_TYPE = PoolConfiguration
-
-    def __init__(
-        self,
-        pool_id: str,
-        data: dict[str, Any],
-        base_dir: Path | None = None,
-    ) -> None:
-        super().__init__(pool_id, data, base_dir)
-
-        # specific fields defined in pool config
-        self.apply_to = data["apply_to"].copy()
-
-        # while these fields are not required to be defined here, they must be the same
-        # for the entire set .. at least for now
-        same_fields = (
-            "cloud",
-            "cpu",
-            "cycle_time",
-            "demand",
-            "disk_size",
-            "imageset",
-            "nested_virtualization",
-            "platform",
-            "schedule_start",
-            "worker",
-        )
-        not_allowed = ("preprocess",)
-        pools = list(self.iterpools())
-        if not pools:
-            return
-        for field in same_fields:
-            assert len({getattr(pool, field) for pool in pools}) == 1, (
-                f"{field} has multiple values"
-            )
-            # set the field on self, so it can easily be used by decision
-            setattr(self, field, getattr(pools[0], field))
-        # handle machine_types separately because it is unhashable
-        assert (
-            len(
-                {
-                    frozenset(pool.machine_types)
-                    if pool.machine_types is not None
-                    else None
-                    for pool in pools
-                }
-            )
-            == 1
-        ), "machine_types has multiple values"
-        self.machine_types = pools[0].machine_types
-        for field in not_allowed:
-            assert not any(getattr(pool, field) for pool in pools), (
-                f"{field} cannot be defined"
-            )
-
-    def apply(self, parent: str) -> CommonPoolConfiguration:
-        pool_id = f"{parent}/{self.pool_id}"
-        data = {k: getattr(self, k, None) for k in COMMON_FIELD_TYPES}
-        # convert special fields
-        if data["disk_size"] is not None:
-            value = data["disk_size"]
-            assert value is not None
-            data["disk_size"] = value * 1024 * 1024 * 1024
-        if data["schedule_start"] is not None:
-            assert isinstance(data["schedule_start"], datetime)
-            data["schedule_start"] = data["schedule_start"].isoformat()
-        # override fields
-        data["parents"] = [parent]
-        data["name"] = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").name
-        return self.RESULT_TYPE(pool_id, data, self.base_dir)
-
-    def iterpools(self) -> Iterator[CommonPoolConfiguration]:
-        for parent in self.apply_to:
-            yield self.apply(parent)
-
-
-class PoolConfigLoader:
-    @staticmethod
-    def from_file(pool_yml: Path):
-        assert pool_yml.is_file()
-        data = yaml.safe_load(pool_yml.read_text())
-        for cls in (PoolConfiguration, PoolConfigMap):
-            if (
-                set(cls.FIELD_TYPES)  # type: ignore
-                >= set(data.keys())
-                >= cls.REQUIRED_FIELDS  # type: ignore
-            ):
-                return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
-        LOG.error(
-            f"{pool_yml} has keys {data.keys()} and expected all of either "
-            f"{PoolConfiguration.REQUIRED_FIELDS} or {PoolConfigMap.REQUIRED_FIELDS} "
-            f"to exist."
-        )
-        raise RuntimeError(f"{pool_yml} type could not be identified!")

@@ -4,21 +4,20 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 from datetime import datetime, timedelta, timezone
+from itertools import chain
 from pathlib import Path
 
+import dateutil.parser
 import pytest
 import slugid
 import yaml
 
-from fuzzing_decision.common.pool import PoolConfigLoader as CommonPoolConfigLoader
-from fuzzing_decision.common.pool import PoolConfigMap as CommonPoolConfigMap
-from fuzzing_decision.common.pool import PoolConfiguration as CommonPoolConfiguration
-from fuzzing_decision.common.pool import parse_size
+from fuzzing_decision.common.pool import FuzzingPoolConfig
+from fuzzing_decision.common.util import parse_size, parse_time
 from fuzzing_decision.decision.pool import (
     DOCKER_WORKER_DEVICES,
-    PoolConfigLoader,
-    PoolConfigMap,
-    PoolConfiguration,
+    build_resources,
+    build_tasks,
 )
 
 POOL_FIXTURES = Path(__file__).parent / "fixtures" / "pools"
@@ -138,33 +137,35 @@ def test_aws_resources(
     demand,
     worker,
 ):
-    conf = PoolConfiguration(
-        "test",
-        {
-            "cloud": "aws",
-            "command": ["run-fuzzing.sh"],
-            "container": "MozillaSecurity/fuzzer:latest",
-            "cpu": "arm64",
-            "cycle_time": "12h",
-            "demand": demand,
-            "disk_size": "120g",
-            "env": {},
-            "imageset": "docker-worker" if worker == "docker" else "generic-worker-A",
-            "machine_types": ["a2"],
-            "max_run_time": "12h",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": platform,
-            "preprocess": None,
-            "schedule_start": "1970-01-01T00:00:00Z",
-            "scopes": [],
-            "tasks": 3,
-            "run_as_admin": False,
-            "nested_virtualization": False,
-            "worker": worker,
-        },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={},
+        base_dir=Path.cwd(),
+        cloud="aws",
+        command=["run-fuzzing.sh"],
+        container="MozillaSecurity/fuzzer:latest",
+        cpu="arm64",
+        cycle_time=parse_time("12h"),
+        demand=demand,
+        disk_size=120,
+        env={},
+        imageset="docker-worker" if worker == "docker" else "generic-worker-A",
+        machine_types=["a2"],
+        max_run_time=parse_time("12h"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform=platform,
+        pool_id="test",
+        preprocess="",
+        routes=[],
+        run_as_admin=False,
+        schedule_start=dateutil.parser.isoparse("1970-01-01T00:00:00Z"),
+        scopes=[],
+        tasks=3,
+        worker=worker,
     )
-    resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
+    resources = list(build_resources([conf], mock_clouds, mock_machines, env=env))
     assert len(resources) == 3
     pool, hook, role = resources
 
@@ -275,33 +276,35 @@ def test_azure_resources(
     mock_machines,
     demand,
 ):
-    conf = PoolConfiguration(
-        "test",
-        {
-            "cloud": "azure",
-            "command": ["run-fuzzing.sh"],
-            "container": "MozillaSecurity/fuzzer:latest",
-            "cpu": "x64",
-            "cycle_time": "12h",
-            "demand": demand,
-            "disk_size": "120g",
-            "env": {},
-            "imageset": "generic-worker-A",
-            "machine_types": ["standard"],
-            "max_run_time": "12h",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": "windows",
-            "preprocess": None,
-            "schedule_start": "1970-01-01T00:00:00Z",
-            "scopes": [],
-            "tasks": 3,
-            "run_as_admin": False,
-            "nested_virtualization": False,
-            "worker": "generic",
-        },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={},
+        base_dir=Path.cwd(),
+        cloud="azure",
+        command=["run-fuzzing.sh"],
+        container="MozillaSecurity/fuzzer:latest",
+        cpu="x64",
+        cycle_time=parse_time("12h"),
+        demand=demand,
+        disk_size=120,
+        env={},
+        imageset="generic-worker-A",
+        machine_types=["standard"],
+        max_run_time=parse_time("12h"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform="windows",
+        pool_id="test",
+        preprocess="",
+        routes=[],
+        run_as_admin=False,
+        schedule_start=dateutil.parser.isoparse("1970-01-01T00:00:00Z"),
+        scopes=[],
+        tasks=3,
+        worker="generic",
     )
-    resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
+    resources = list(build_resources([conf], mock_clouds, mock_machines, env=env))
     assert len(resources) == 3
     pool, hook, role = resources
 
@@ -394,33 +397,35 @@ def test_gcp_resources(
     mock_machines,
     demand,
 ):
-    conf = PoolConfiguration(
-        "test",
-        {
-            "cloud": "gcp",
-            "command": ["run-fuzzing.sh"],
-            "container": "MozillaSecurity/fuzzer:latest",
-            "cpu": "x64",
-            "cycle_time": "12h",
-            "demand": demand,
-            "disk_size": "120g",
-            "env": {},
-            "imageset": "docker-worker",
-            "machine_types": ["2-cpus", "gcp1"],
-            "max_run_time": "12h",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": "linux",
-            "preprocess": None,
-            "schedule_start": "1970-01-01T00:00:00Z",
-            "scopes": [],
-            "tasks": 3,
-            "run_as_admin": False,
-            "nested_virtualization": False,
-            "worker": "docker",
-        },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={},
+        base_dir=Path.cwd(),
+        cloud="gcp",
+        command=["run-fuzzing.sh"],
+        container="MozillaSecurity/fuzzer:latest",
+        cpu="x64",
+        cycle_time=parse_time("12h"),
+        demand=demand,
+        disk_size=120,
+        env={},
+        imageset="docker-worker",
+        machine_types=["2-cpus", "gcp1"],
+        max_run_time=parse_time("12h"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform="linux",
+        pool_id="test",
+        preprocess="",
+        routes=[],
+        run_as_admin=False,
+        schedule_start=dateutil.parser.isoparse("1970-01-01T00:00:00Z"),
+        scopes=[],
+        tasks=3,
+        worker="docker",
     )
-    resources = list(conf.build_resources(mock_clouds, mock_machines, env=env))
+    resources = list(build_resources([conf], mock_clouds, mock_machines, env=env))
     assert len(resources) == 3
     pool, hook, role = resources
 
@@ -595,53 +600,53 @@ def test_tasks(
                 "generic-worker:run-as-administrator:proj-fuzzing/windows-test",
             )
         )
-    conf = PoolConfiguration(
-        "test",
-        {
-            "artifacts": {
-                "/some-file.txt": {
-                    "type": "file",
-                    "url": "project/fuzzing/private/file.txt",
-                },
-                "/var/log/": {
-                    "type": "directory",
-                    "url": "project/fuzzing/private/var-log",
-                },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={
+            "/some-file.txt": {
+                "type": "file",
+                "url": "project/fuzzing/private/file.txt",
             },
-            "cloud": "gcp",
-            "command": ["run-fuzzing.sh"],
-            "container": (
-                "MozillaSecurity/fuzzer:latest"
-                if platform != "windows"
-                else {
-                    "namespace": "orion.fuzzer.main",
-                    "type": "indexed-image",
-                    "path": "public/msys2.tar.bz2",
-                }
-            ),
-            "cpu": "x64",
-            "cycle_time": "1h",
-            "demand": False,
-            "disk_size": "10g",
-            "env": {},
-            "imageset": "anything",
-            "machine_types": ["a2"],
-            "max_run_time": "30s",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": platform,
-            "preprocess": None,
-            "routes": ["notify.email.test@example.com"],
-            "schedule_start": None,
-            "scopes": scopes,
-            "tasks": 2,
-            "run_as_admin": run_as_admin,
-            "nested_virtualization": False,
-            "worker": "docker" if platform == "linux" else "generic",
+            "/var/log/": {
+                "type": "directory",
+                "url": "project/fuzzing/private/var-log",
+            },
         },
+        base_dir=Path.cwd(),
+        cloud="gcp",
+        command=["run-fuzzing.sh"],
+        container=(
+            "MozillaSecurity/fuzzer:latest"
+            if platform != "windows"
+            else {
+                "namespace": "orion.fuzzer.main",
+                "type": "indexed-image",
+                "path": "public/msys2.tar.bz2",
+            }
+        ),
+        cpu="x64",
+        cycle_time=parse_time("1h"),
+        demand=False,
+        disk_size=10,
+        env={},
+        imageset="anything",
+        machine_types=["a2"],
+        max_run_time=parse_time("30s"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform=platform,
+        pool_id="test",
+        preprocess="",
+        routes=["notify.email.test@example.com"],
+        run_as_admin=run_as_admin,
+        schedule_start=None,
+        scopes=scopes,
+        tasks=2,
+        worker="docker" if platform == "linux" else "generic",
     )
 
-    task_ids, tasks = zip(*conf.build_tasks("someTaskId", env=env))
+    task_ids, tasks = zip(*build_tasks(conf, "someTaskId", env=env))
 
     # Check we have 2 valid generated task ids
     assert len(task_ids) == 2
@@ -764,9 +769,9 @@ def test_tasks(
 
 
 def test_preprocess_tasks():
-    conf = PoolConfiguration.from_file(POOL_FIXTURES / "pre-pool.yml")
+    conf = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pre-pool.yml"))
 
-    task_ids, tasks = zip(*conf.build_tasks("someTaskId"))
+    task_ids, tasks = zip(*build_tasks(conf, "someTaskId"))
 
     # Check we have 2 valid generated task ids
     assert len(task_ids) == 2
@@ -846,13 +851,9 @@ def test_preprocess_tasks():
 
 @pytest.mark.parametrize("pool_path", POOL_FIXTURES.glob("pool*.yml"))
 def test_flatten(pool_path):
-    class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _):
-            pass
-
-    pool = CommonPoolConfiguration.from_file(pool_path)
+    pool = next(FuzzingPoolConfig.from_file(pool_path))
     expect_path = pool_path.with_name(pool_path.name.replace("pool", "expect"))
-    expect = PoolConfigNoFlatten.from_file(expect_path)
+    expect = next(FuzzingPoolConfig.from_file(expect_path))
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
@@ -876,12 +877,9 @@ def test_flatten(pool_path):
 
 
 def test_pool_map():
-    class PoolConfigNoFlatten(CommonPoolConfiguration):
-        def _flatten(self, _):
-            pass
-
-    cfg_map = CommonPoolConfigMap.from_file(POOL_FIXTURES / "map1.yml")
-    expect = PoolConfigNoFlatten.from_file(POOL_FIXTURES / "expect1.yml")
+    pools = list(FuzzingPoolConfig.from_file(POOL_FIXTURES / "map1.yml"))
+    expect = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "expect1.yml"))
+    """
     assert cfg_map.apply_to == ["pool1"]
     assert cfg_map.cloud == expect.cloud
     assert cfg_map.command is None
@@ -902,11 +900,10 @@ def test_pool_map():
     assert cfg_map.tasks is None
     assert cfg_map.nested_virtualization == expect.nested_virtualization
     assert cfg_map.worker == expect.worker
+    """
 
-    pools = list(cfg_map.iterpools())
     assert len(pools) == 1
     pool = pools[0]
-    assert isinstance(pool, CommonPoolConfiguration)
     assert pool.cloud == expect.cloud
     assert pool.command == expect.command
     assert pool.container == expect.container
@@ -918,8 +915,8 @@ def test_pool_map():
     assert pool.imageset == expect.imageset
     assert set(pool.machine_types) == set(expect.machine_types)
     assert pool.max_run_time == expect.max_run_time
-    assert pool.name == f"{expect.name}"
-    assert pool.parents == ["pool1"]
+    assert pool.name == "mixed"
+    assert pool.parents == []
     assert pool.platform == expect.platform
     assert pool.preprocess == expect.preprocess
     assert pool.schedule_start == expect.schedule_start
@@ -935,11 +932,13 @@ def test_pool_map_admin(mocker):
         {"orion.fuzzer.main": "task-mount-abc"},
     )
 
-    cfg_map = PoolConfigMap.from_file(POOL_FIXTURES / "map2.yml")
-    cfg_map.run_as_admin = True
+    cfg_maps = FuzzingPoolConfig.from_file(POOL_FIXTURES / "map2.yml")
     with (POOL_FIXTURES / "expect-task-map2.yml").open() as expect_fd:
         expect = yaml.safe_load(expect_fd)
-    _task_ids, tasks = zip(*cfg_map.build_tasks("someTaskId"))
+    _task_ids, tasks = zip(
+        *chain.from_iterable(build_tasks(p, "someTaskId") for p in cfg_maps)
+    )
+
     assert len(tasks) == 2
     task = tasks[0]
     # remove timestamps. these are tested elsewhere
@@ -963,56 +962,39 @@ def test_pool_map_disabled(mocker):
         {"orion.fuzzer.main": "task-mount-abc"},
     )
 
-    cfg_map = PoolConfigMap.from_file(POOL_FIXTURES / "map3.yml")
-    cfg_map.run_as_admin = True
-    tasks = list(cfg_map.build_tasks("someTaskId"))
+    cfg_map = FuzzingPoolConfig.from_file(POOL_FIXTURES / "map3.yml")
+    tasks = list(chain.from_iterable(build_tasks(p, "someTaskId") for p in cfg_map))
     assert not tasks
 
 
-@pytest.mark.parametrize(
-    "loader, config_cls, map_cls",
-    [
-        (CommonPoolConfigLoader, CommonPoolConfiguration, CommonPoolConfigMap),
-        (PoolConfigLoader, PoolConfiguration, PoolConfigMap),
-    ],
-)
-def test_pool_loader(
-    loader,
-    config_cls,
-    map_cls,
-):
-    obj = loader.from_file(POOL_FIXTURES / "load-cfg.yml")
-    assert isinstance(obj, config_cls)
-    obj = loader.from_file(POOL_FIXTURES / "load-map.yml")
-    assert isinstance(obj, map_cls)
-
-
 def test_cycle_crons():
-    conf = CommonPoolConfiguration(
-        "test",
-        {
-            "cloud": "gcp",
-            "command": ["run-fuzzing.sh"],
-            "container": "MozillaSecurity/fuzzer:latest",
-            "cpu": "x64",
-            "cycle_time": "6h",
-            "demand": False,
-            "disk_size": "10g",
-            "imageset": "anything",
-            "env": {},
-            "machine_types": ["a2"],
-            "max_run_time": "6h",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": "linux",
-            "preprocess": None,
-            "schedule_start": "1970-01-01T00:00:00Z",
-            "scopes": [],
-            "tasks": 2,
-            "run_as_admin": False,
-            "nested_virtualization": False,
-            "worker": "docker",
-        },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={},
+        base_dir=Path.cwd(),
+        cloud="gcp",
+        command=["run-fuzzing.sh"],
+        container="MozillaSecurity/fuzzer:latest",
+        cpu="x64",
+        cycle_time=parse_time("6h"),
+        demand=False,
+        disk_size=10,
+        env={},
+        imageset="anything",
+        machine_types=["a2"],
+        max_run_time=parse_time("6h"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform="linux",
+        pool_id="test",
+        preprocess=None,
+        routes=[],
+        run_as_admin=False,
+        schedule_start=dateutil.parser.isoparse("1970-01-01T00:00:00Z"),
+        scopes=[],
+        tasks=2,
+        worker="docker",
     )
 
     # cycle time 6h
@@ -1068,32 +1050,26 @@ def test_cycle_crons():
         assert calc_none == list(conf.cycle_crons())
 
 
-def test_required():
-    CommonPoolConfiguration("test", {"name": "test pool"}, _flattened=set())
-    with pytest.raises(AssertionError):
-        CommonPoolConfiguration("test", {}, _flattened=set())
-
-
 def test_aws_nested_virt(
     mock_clouds,
     mock_machines,
 ):
-    pool = PoolConfiguration.from_file(POOL_FIXTURES / "pool1.yml")
+    pool = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pool1.yml"))
     pool.cloud = "aws"
     pool.nested_virtualization = True
     with pytest.raises(AssertionError):
-        list(pool.build_resources(mock_clouds, mock_machines))
+        list(build_resources([pool], mock_clouds, mock_machines))
 
 
 def test_gcp_nested_virt(
     mock_clouds,
     mock_machines,
 ):
-    cfg = PoolConfiguration.from_file(POOL_FIXTURES / "pool4.yml")
+    cfg = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pool4.yml"))
     cfg.cloud = "gcp"
     cfg.nested_virtualization = True
     cfg.imageset = "generic-worker-A"
-    pool_obj, _hook, _role = cfg.build_resources(mock_clouds, mock_machines)
+    pool_obj, _hook, _role = build_resources([cfg], mock_clouds, mock_machines)
     configs = pool_obj.to_json()["config"]["launchConfigs"]
     assert configs
     for launch_cfg in configs:
@@ -1103,49 +1079,49 @@ def test_gcp_nested_virt(
 
 
 def test_task_image(mocker):
-    conf = PoolConfiguration(
-        "test",
-        {
-            "artifacts": {
-                "/some-file.txt": {
-                    "type": "file",
-                    "url": "project/fuzzing/private/file.txt",
-                },
-                "/var/log/": {
-                    "type": "directory",
-                    "url": "project/fuzzing/private/var-log",
-                },
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={
+            "/some-file.txt": {
+                "type": "file",
+                "url": "project/fuzzing/private/file.txt",
             },
-            "cloud": "gcp",
-            "command": ["run-fuzzing.sh"],
-            "container": {
-                "taskId": "task-image-abc",
-                "type": "task-image",
-                "path": "public/msys2.tar.bz2",
+            "/var/log/": {
+                "type": "directory",
+                "url": "project/fuzzing/private/var-log",
             },
-            "cpu": "x64",
-            "cycle_time": "1h",
-            "demand": False,
-            "disk_size": "10g",
-            "imageset": "anything",
-            "env": {},
-            "machine_types": ["a2"],
-            "max_run_time": "30s",
-            "name": "Amazing fuzzing pool",
-            "parents": [],
-            "platform": "linux",
-            "preprocess": None,
-            "routes": ["notify.email.test@example.com"],
-            "schedule_start": None,
-            "scopes": [],
-            "tasks": 2,
-            "run_as_admin": False,
-            "nested_virtualization": False,
-            "worker": "docker",
         },
+        base_dir=Path.cwd(),
+        cloud="gcp",
+        command=["run-fuzzing.sh"],
+        container={
+            "taskId": "task-image-abc",
+            "type": "task-image",
+            "path": "public/msys2.tar.bz2",
+        },
+        cpu="x64",
+        cycle_time=parse_time("1h"),
+        demand=False,
+        disk_size=10,
+        env={},
+        imageset="anything",
+        machine_types=["a2"],
+        max_run_time=parse_time("30s"),
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        platform="linux",
+        pool_id="test",
+        preprocess=None,
+        routes=["notify.email.test@example.com"],
+        run_as_admin=False,
+        schedule_start=None,
+        scopes=[],
+        tasks=2,
+        worker="docker",
     )
 
-    task_ids, tasks = zip(*conf.build_tasks("someTaskId"))
+    task_ids, tasks = zip(*build_tasks(conf, "someTaskId"))
 
     # Check we have 2 valid generated task ids
     assert len(task_ids) == 2

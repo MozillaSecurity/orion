@@ -9,6 +9,7 @@ import logging
 import re
 import shutil
 import tempfile
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +17,11 @@ import yaml
 from tcadmin.appconfig import AppConfig
 
 from ..common import taskcluster
-from ..common.pool import MachineTypes
+from ..common.pool import FuzzingPoolConfig, MachineTypes
 from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
-from .pool import PoolConfigLoader, WorkerPool, cancel_tasks
+from .pool import WorkerPool, build_resources, build_tasks, cancel_tasks
 from .providers import AWS, GCP, Azure, Static
 
 LOG = logging.getLogger(__name__)
@@ -103,8 +104,8 @@ class Workflow(CommonWorkflow):
 
         # Browse the files in the repo
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
-            pool_config = PoolConfigLoader.from_file(config_file)
-            resources.update(pool_config.build_resources(clouds, machines, env))
+            pool_configs = list(FuzzingPoolConfig.from_file(config_file))
+            resources.update(build_resources(pool_configs, clouds, machines, env))
 
         extra_pools_path = self.fuzzing_config_dir / "workers.yml"
         if extra_pools_path.is_file():
@@ -171,13 +172,13 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
         # Build tasks needed for a specific pool
-        pool_config = PoolConfigLoader.from_file(path_)
+        pool_configs = list(FuzzingPoolConfig.from_file(path_))
 
         # cancel any previously running tasks
         if not dry_run:
-            cancel_tasks(pool_config.task_id)
+            cancel_tasks(pool_configs[0].hook_id)
 
-        tasks = pool_config.build_tasks(task_id, env)
+        tasks = chain.from_iterable(build_tasks(p, task_id, env) for p in pool_configs)
 
         if not dry_run:
             # Create all the tasks on taskcluster

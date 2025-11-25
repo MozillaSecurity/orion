@@ -14,7 +14,7 @@ from shutil import which
 from subprocess import call
 from typing import Any
 
-from ..common.pool import PoolConfigLoader
+from ..common.pool import FuzzingPoolConfig
 from ..common.workflow import Workflow
 
 LOG = getLogger(__name__)
@@ -49,16 +49,25 @@ class PoolLauncher(Workflow):
 
     def load_params(self) -> None:
         assert self.pool_name is not None
-        path = self.fuzzing_config_dir / f"{self.pool_name}.yml"
-        assert path.exists(), f"Missing pool {self.pool_name}"
+        if self.apply is not None:
+            path = self.fuzzing_config_dir / f"{self.apply}.yml"
+        else:
+            path = self.fuzzing_config_dir / f"{self.pool_name}.yml"
+        assert path.exists(), f"Missing pool {path.stem}"
 
         # Build tasks needed for a specific pool
-        pool_config = PoolConfigLoader.from_file(path)
-        if self.preprocess:
-            pool_config = pool_config.create_preprocess()
-            assert pool_config is not None, "preprocess given, but could not be loaded"
+        pool_configs = FuzzingPoolConfig.from_file(path)
         if self.apply is not None:
-            pool_config = pool_config.apply(self.apply)
+            pool_id = f"{self.pool_name}/{self.apply}"
+            for pool_config in pool_configs:
+                if pool_config.pool_id == pool_id:
+                    break
+            else:
+                raise Exception(f"Failed to find {pool_id}")
+        else:
+            pool_config = next(pool_configs)
+            if self.preprocess:
+                pool_config = next(pool_config.get_preprocess())
 
         if pool_config.command:
             assert not self.command, "Specify command-line args XOR pool.command"

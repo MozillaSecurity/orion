@@ -20,6 +20,7 @@ parents: []
 cpu: arm64
 platform: linux
 preprocess: null
+machine_types: []
 env:
   ENVVAR1: 123456
   ENVVAR2: 789abc

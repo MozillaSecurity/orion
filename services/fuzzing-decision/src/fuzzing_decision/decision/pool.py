@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Iterator, cast
+from typing import Any, Iterator
 
 import dateutil.parser
 import yaml
@@ -22,10 +22,7 @@ from tcadmin.resources import Hook, Role
 from tcadmin.resources import WorkerPool as TCWorkerPool
 
 from ..common import taskcluster
-from ..common.pool import CPU_ALIASES, MachineTypes
-from ..common.pool import CommonPoolConfiguration as BasePoolConfiguration
-from ..common.pool import PoolConfigMap as CommonPoolConfigMap
-from ..common.pool import PoolConfiguration as CommonPoolConfiguration
+from ..common.pool import CPU_ALIASES, FuzzingPoolConfig, MachineTypes
 from ..common.util import parse_size, parse_time, validate_schema_by_name
 from . import (
     CANCEL_TASK_DAYS,
@@ -74,7 +71,7 @@ class MountArtifactResolver:
         return cls.CACHE[namespace]
 
 
-def add_task_image(task: dict[str, Any], config: PoolConfiguration) -> None:
+def add_task_image(task: dict[str, Any], config: FuzzingPoolConfig) -> None:
     """Add image or mount to task payload, depending on platform."""
     # generic-worker linux still uses docker images, but need to be loaded
     # into podman, can't use mounts to do it
@@ -136,15 +133,15 @@ def add_capabilities_for_scopes(task: dict[str, Any]) -> None:
 
 def configure_task(
     task: dict[str, Any],
-    config: PoolConfiguration,
+    config: FuzzingPoolConfig,
     now: datetime,
     env: dict[str, str] | None,
 ) -> None:
     task["payload"]["artifacts"].update(
-        config.artifact_map(stringDate(fromNow("4 weeks", now)))
+        artifact_map(config, stringDate(fromNow("4 weeks", now)))
     )
     task["routes"] = sorted(set(config.routes + task["routes"]))
-    task["scopes"] = sorted(set(chain(config.get_scopes(), task["scopes"])))
+    task["scopes"] = sorted(set(chain(get_scopes(config), task["scopes"])))
     add_capabilities_for_scopes(task)
     add_task_image(task, config)
     if config.platform == "windows":
@@ -267,354 +264,196 @@ def cancel_tasks(worker_type: str) -> None:
             LOG.exception(f"Exception calling cancelTask({task_id})")
 
 
-class PoolConfiguration(CommonPoolConfiguration):
-    @property
-    def task_id(self) -> str:
-        return f"{self.platform}-{self.pool_id}"
+def get_scopes(pool: FuzzingPoolConfig) -> list[str]:
+    result = pool.scopes.copy()
 
-    def get_scopes(self) -> list[str]:
-        result = self.scopes.copy()
-
-        # for scope calculations, the real worker pool name must be used
-        if "/" in self.pool_id:
-            _apply, pool_id = self.pool_id.split("/", 1)
-            task_id = f"{self.platform}-{pool_id}"
-        else:
-            task_id = self.task_id
-
-        if self.platform == "windows" and self.run_as_admin:
-            result.extend(
+    if pool.platform == "windows" and pool.run_as_admin:
+        result.extend(
+            (
                 (
-                    (
-                        "generic-worker:"
-                        f"os-group:{PROVISIONER_ID}/{task_id}/Administrators"
-                    ),
-                    (f"generic-worker:run-as-administrator:{PROVISIONER_ID}/{task_id}"),
-                )
-            )
-
-        result.extend(f"queue:route:{route}" for route in self.routes)
-
-        return result
-
-    def build_resources(
-        self,
-        providers: dict[str, Provider],
-        machine_type_db: MachineTypes,
-        env: dict[str, str] | None = None,
-    ) -> Iterator[TCWorkerPool | Hook | Role]:
-        """Build the full tc-admin resources to compare and build the pool"""
-
-        # Select a cloud provider according to configuration
-        assert self.cloud in providers, f"Cloud Provider {self.cloud} not available"
-        assert self.cpu is not None
-        assert self.cycle_time is not None
-        assert self.demand is not None
-        assert self.disk_size is not None
-        assert self.imageset is not None
-        assert self.machine_types is not None
-        assert self.max_run_time is not None
-        assert self.nested_virtualization is not None
-        assert self.platform is not None
-        assert self.tasks is not None
-        assert self.worker is not None
-
-        # Build the pool configuration for selected machines
-        worker = WorkerPool(
-            cloud=self.cloud,
-            cpu=self.cpu,
-            demand=self.demand,
-            disk_size=self.disk_size,
-            imageset=self.imageset,
-            include_tasks_in_taskmanager=True,
-            machine_types=self.machine_types,
-            # * 2 since Taskcluster seems to not reuse workers very quickly in some
-            # cases, so we end up with a lot of pending tasks.
-            max_capacity=max(1, math.ceil(self.max_run_time / self.cycle_time))
-            * self.tasks
-            * 2,
-            min_capacity=0,
-            name=self.task_id,
-            nested_virtualization=self.nested_virtualization,
-            owner=OWNER_EMAIL,
-            platform=self.platform,
-            worker=self.worker,
-        )
-        yield from worker.build_resources(providers, machine_type_db)
-
-        # Build the decision task payload that will trigger the new fuzzing tasks
-        decision_task = yaml.safe_load(
-            DECISION_TASK.substitute(
-                description=DESCRIPTION.replace("\n", "\\n"),
-                max_run_time=parse_time("1h"),
-                owner_email=OWNER_EMAIL,
-                pool_id=self.pool_id,
-                provisioner=PROVISIONER_ID,
-                scheduler=SCHEDULER_ID,
-                secret=DECISION_TASK_SECRET,
-                task_id=self.task_id,
+                    "generic-worker:"
+                    f"os-group:{PROVISIONER_ID}/{pool.hook_id}/Administrators"
+                ),
+                (
+                    f"generic-worker:run-as-administrator:{PROVISIONER_ID}/{pool.hook_id}"
+                ),
             )
         )
-        decision_task["scopes"] = sorted(
-            chain(decision_task["scopes"], self.get_scopes())
-        )
-        if env is not None:
-            assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
-            decision_task["payload"]["env"].update(env)
 
-        self_cycle_crons = self.cycle_crons()
-        assert self_cycle_crons is not None
+    result.extend(f"queue:route:{route}" for route in pool.routes)
 
-        scopes = decision_task["scopes"] + [
-            "queue:create-task:highest:proj-fuzzing/decision",
-        ]
-        decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
+    return result
 
-        yield Hook(
-            bindings=(),
-            description=DESCRIPTION,
-            emailOnError=True,
-            hookGroupId=HOOK_PREFIX,
-            hookId=self.task_id,
-            name=self.task_id,
-            owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
-            task=decision_task,
-            triggerSchema={},
-        )
 
-        yield Role(
-            description=DESCRIPTION,
-            roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
-            scopes=scopes,
+def build_resources(
+    pools: list[FuzzingPoolConfig],
+    providers: dict[str, Provider],
+    machine_type_db: MachineTypes,
+    env: dict[str, str] | None = None,
+) -> Iterator[TCWorkerPool | Hook | Role]:
+    """Build the full tc-admin resources to compare and build the pool"""
+
+    assert pools
+    pool = pools[0]
+
+    if len(pools) > 1:
+        # apply_to pool
+        max_capacity = max(sum(p.tasks for p in pools if p.tasks) * 2, 3)
+    else:
+        # * 2 since Taskcluster seems to not reuse workers very quickly in some
+        # cases, so we end up with a lot of pending tasks.
+        max_capacity = (
+            max(1, math.ceil(pool.max_run_time / pool.cycle_time)) * pool.tasks * 2
         )
 
-    def artifact_map(self, expires: str) -> dict[str, dict[str, str]]:
-        result = {}
-        for local_path, value in self.artifacts.items():
-            assert isinstance(value["url"], str)
-            assert value["type"] in {"directory", "file"}
-            result[value["url"]] = {
-                "expires": expires,
-                "path": local_path,
-                "type": value["type"],
-            }
-        # this artifact is required by pool_launch
-        result["project/fuzzing/private/logs"] = {
-            "expires": expires,
-            "path": "/logs/" if self.platform == "linux" else "logs",
-            "type": "directory",
-        }
-        return result
+    # Build the pool configuration for selected machines
+    worker = WorkerPool(
+        cloud=pool.cloud,
+        cpu=pool.cpu,
+        demand=pool.demand,
+        disk_size=pool.disk_size,
+        imageset=pool.imageset,
+        include_tasks_in_taskmanager=True,
+        machine_types=pool.machine_types,
+        max_capacity=max_capacity,
+        min_capacity=0,
+        name=pool.hook_id,
+        nested_virtualization=pool.nested_virtualization,
+        owner=OWNER_EMAIL,
+        platform=pool.platform,
+        worker=pool.worker,
+    )
+    yield from worker.build_resources(providers, machine_type_db)
 
-    def build_tasks(
-        self, parent_task_id: str, env: dict[str, str] | None = None
-    ) -> Iterator[tuple[str, dict]]:
-        """Create fuzzing tasks and attach them to a decision task"""
-        now = datetime.now(timezone.utc)
-        preprocess_task_id = None
-
-        preprocess = cast(PoolConfiguration, self.create_preprocess())
-        if preprocess is not None:
-            assert preprocess.cycle_time is not None
-            assert preprocess.max_run_time is not None
-            task = yaml.safe_load(
-                FUZZING_TASK.substitute(
-                    created=stringDate(now),
-                    deadline=stringDate(
-                        now
-                        + min(
-                            timedelta(days=5), timedelta(seconds=preprocess.cycle_time)
-                        )
-                    ),
-                    description=DESCRIPTION.replace("\n", "\\n"),
-                    expires=stringDate(fromNow("4 weeks", now)),
-                    max_run_time=preprocess.max_run_time,
-                    name=f"Fuzzing task {self.task_id} - preprocess",
-                    owner_email=OWNER_EMAIL,
-                    pool_id=self.pool_id,
-                    provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
-                    secret=DECISION_TASK_SECRET,
-                    task_group=parent_task_id,
-                    task_id=self.task_id,
-                )
-            )
-            task["payload"]["env"]["TASKCLUSTER_FUZZING_PREPROCESS"] = "1"
-            configure_task(task, preprocess, now, env)
-            preprocess_task_id = slugId()
-            yield preprocess_task_id, task
-
-        assert self.cycle_time is not None
-        assert self.max_run_time is not None
-        assert self.tasks is not None
-        for i in range(1, self.tasks + 1):
-            task = yaml.safe_load(
-                FUZZING_TASK.substitute(
-                    created=stringDate(now),
-                    deadline=stringDate(
-                        now + min(timedelta(days=5), timedelta(seconds=self.cycle_time))
-                    ),
-                    description=DESCRIPTION.replace("\n", "\\n"),
-                    expires=stringDate(fromNow("4 weeks", now)),
-                    max_run_time=self.max_run_time,
-                    name=f"Fuzzing task {self.task_id} - {i}/{self.tasks}",
-                    owner_email=OWNER_EMAIL,
-                    pool_id=self.pool_id,
-                    provisioner=PROVISIONER_ID,
-                    scheduler=SCHEDULER_ID,
-                    secret=DECISION_TASK_SECRET,
-                    task_group=parent_task_id,
-                    task_id=self.task_id,
-                )
-            )
-            if preprocess_task_id is not None:
-                task["dependencies"].append(preprocess_task_id)
-            configure_task(task, self, now, env)
-            yield slugId(), task
-
-
-class PoolConfigMap(CommonPoolConfigMap):
-    RESULT_TYPE = PoolConfiguration
-
-    @property
-    def task_id(self) -> str:
-        return f"{self.platform}-{self.pool_id}"
-
-    def build_resources(
-        self,
-        providers: dict[str, Provider],
-        machine_type_db: MachineTypes,
-        env=None,
-    ) -> Iterator[TCWorkerPool | Hook | Role]:
-        """Build the full tc-admin resources to compare and build the pool"""
-        # Select a cloud provider according to configuration
-        assert self.cloud in providers, f"Cloud Provider {self.cloud} not available"
-        assert self.cpu is not None
-        assert self.demand is not None
-        assert self.disk_size is not None
-        assert self.imageset is not None
-        assert self.machine_types is not None
-        assert self.nested_virtualization is not None
-        assert self.platform is not None
-        assert self.worker is not None
-        pools = list(self.iterpools())
-
-        # Build the pool configuration for selected machines
-        worker = WorkerPool(
-            cloud=self.cloud,
-            cpu=self.cpu,
-            demand=self.demand,
-            disk_size=self.disk_size,
-            imageset=self.imageset,
-            include_tasks_in_taskmanager=True,
-            machine_types=self.machine_types,
-            max_capacity=max(sum(pool.tasks for pool in pools if pool.tasks) * 2, 3),
-            min_capacity=0,
-            name=self.task_id,
-            nested_virtualization=self.nested_virtualization,
-            owner=OWNER_EMAIL,
-            platform=self.platform,
-            worker=self.worker,
+    # Build the decision task payload that will trigger the new fuzzing tasks
+    decision_task = yaml.safe_load(
+        DECISION_TASK.substitute(
+            description=DESCRIPTION.replace("\n", "\\n"),
+            max_run_time=parse_time("1h"),
+            owner_email=OWNER_EMAIL,
+            pool_id=pool.config_pool_id,
+            provisioner=PROVISIONER_ID,
+            scheduler=SCHEDULER_ID,
+            secret=DECISION_TASK_SECRET,
+            task_id=pool.hook_id,
         )
-        yield from worker.build_resources(providers, machine_type_db)
+    )
+    if env is not None:
+        assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
+        decision_task["payload"]["env"].update(env)
 
-        all_scopes = tuple(
+    self_cycle_crons = pool.cycle_crons()
+    assert self_cycle_crons is not None
+
+    scopes = [
+        *sorted(
             set(
-                chain.from_iterable(
-                    cast(PoolConfiguration, pool).get_scopes() for pool in pools
+                chain(
+                    decision_task["scopes"],
+                    chain.from_iterable(get_scopes(p) for p in pools),
                 )
             )
-        )
+        ),
+        "queue:create-task:highest:proj-fuzzing/decision",
+    ]
+    decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{pool.hook_id}"]
 
-        # Build the decision task payload that will trigger the new fuzzing tasks
-        decision_task = yaml.safe_load(
-            DECISION_TASK.substitute(
+    yield Hook(
+        bindings=(),
+        description=DESCRIPTION,
+        emailOnError=True,
+        hookGroupId=HOOK_PREFIX,
+        hookId=pool.hook_id,
+        name=pool.hook_id,
+        owner=OWNER_EMAIL,
+        schedule=list(pool.cycle_crons()),
+        task=decision_task,
+        triggerSchema={},
+    )
+
+    yield Role(
+        description=DESCRIPTION,
+        roleId=f"hook-id:{HOOK_PREFIX}/{pool.hook_id}",
+        scopes=scopes,
+    )
+
+
+def artifact_map(pool: FuzzingPoolConfig, expires: str) -> dict[str, dict[str, str]]:
+    result = {}
+    for local_path, value in pool.artifacts.items():
+        assert isinstance(value["url"], str)
+        assert value["type"] in {"directory", "file"}
+        result[value["url"]] = {
+            "expires": expires,
+            "path": local_path,
+            "type": value["type"],
+        }
+    # this artifact is required by pool_launch
+    result["project/fuzzing/private/logs"] = {
+        "expires": expires,
+        "path": "/logs/" if pool.platform == "linux" else "logs",
+        "type": "directory",
+    }
+    return result
+
+
+def build_tasks(
+    pool: FuzzingPoolConfig, parent_task_id: str, env: dict[str, str] | None = None
+) -> Iterator[tuple[str, dict]]:
+    """Create fuzzing tasks and attach them to a decision task"""
+    now = datetime.now(timezone.utc)
+    preprocess_task_id = None
+
+    for preprocess in pool.get_preprocess():
+        task = yaml.safe_load(
+            FUZZING_TASK.substitute(
+                created=stringDate(now),
+                deadline=stringDate(
+                    now
+                    + min(timedelta(days=5), timedelta(seconds=preprocess.cycle_time))
+                ),
                 description=DESCRIPTION.replace("\n", "\\n"),
-                max_run_time=parse_time("1h"),
+                expires=stringDate(fromNow("4 weeks", now)),
+                max_run_time=preprocess.max_run_time,
+                name=f"Fuzzing task {pool.task_id} - preprocess",
                 owner_email=OWNER_EMAIL,
-                pool_id=self.pool_id,
+                pool_id=pool.pool_id,
                 provisioner=PROVISIONER_ID,
                 scheduler=SCHEDULER_ID,
                 secret=DECISION_TASK_SECRET,
-                task_id=self.task_id,
+                task_group=parent_task_id,
+                task_id=pool.hook_id,
             )
         )
-        decision_task["scopes"] = sorted(chain(decision_task["scopes"], all_scopes))
-        if env is not None:
-            assert set(decision_task["payload"]["env"]).isdisjoint(set(env))
-            decision_task["payload"]["env"].update(env)
+        task["payload"]["env"]["TASKCLUSTER_FUZZING_PREPROCESS"] = "1"
+        configure_task(task, preprocess, now, env)
+        preprocess_task_id = slugId()
+        yield preprocess_task_id, task
 
-        self_cycle_crons = self.cycle_crons()
-        assert self_cycle_crons is not None
-
-        scopes = decision_task["scopes"] + [
-            "queue:create-task:highest:proj-fuzzing/decision",
-        ]
-        decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{self.task_id}"]
-
-        yield Hook(
-            bindings=(),
-            description=DESCRIPTION,
-            emailOnError=True,
-            hookGroupId=HOOK_PREFIX,
-            hookId=self.task_id,
-            name=self.task_id,
-            owner=OWNER_EMAIL,
-            schedule=list(self.cycle_crons()),
-            task=decision_task,
-            triggerSchema={},
+    for i in range(1, pool.tasks + 1):
+        task = yaml.safe_load(
+            FUZZING_TASK.substitute(
+                created=stringDate(now),
+                deadline=stringDate(
+                    now + min(timedelta(days=5), timedelta(seconds=pool.cycle_time))
+                ),
+                description=DESCRIPTION.replace("\n", "\\n"),
+                expires=stringDate(fromNow("4 weeks", now)),
+                max_run_time=pool.max_run_time,
+                name=f"Fuzzing task {pool.task_id} - {i}/{pool.tasks}",
+                owner_email=OWNER_EMAIL,
+                pool_id=pool.pool_id,
+                provisioner=PROVISIONER_ID,
+                scheduler=SCHEDULER_ID,
+                secret=DECISION_TASK_SECRET,
+                task_group=parent_task_id,
+                task_id=pool.hook_id,
+            )
         )
-
-        yield Role(
-            roleId=f"hook-id:{HOOK_PREFIX}/{self.task_id}",
-            description=DESCRIPTION,
-            scopes=scopes,
-        )
-
-    def iterpools(self) -> Iterator[BasePoolConfiguration]:
-        for parent in self.apply_to:
-            # skip if base pool is disabled (.tasks == 0)
-            tasks = self.RESULT_TYPE.from_file(self.base_dir / f"{parent}.yml").tasks
-            if tasks:
-                yield self.apply(parent)
-
-    def build_tasks(
-        self, parent_task_id: str, env: dict[str, str] | None = None
-    ) -> Iterator[tuple[str, dict]]:
-        """Create fuzzing tasks and attach them to a decision task"""
-        now = datetime.now(timezone.utc)
-
-        for pool in self.iterpools():
-            assert pool.cycle_time is not None
-            assert pool.max_run_time is not None
-            assert pool.tasks is not None
-            for i in range(1, pool.tasks + 1):
-                task = yaml.safe_load(
-                    FUZZING_TASK.substitute(
-                        created=stringDate(now),
-                        deadline=stringDate(
-                            now
-                            + min(timedelta(days=5), timedelta(seconds=pool.cycle_time))
-                        ),
-                        description=DESCRIPTION.replace("\n", "\\n"),
-                        expires=stringDate(fromNow("4 weeks", now)),
-                        max_run_time=pool.max_run_time,
-                        name=(
-                            f"Fuzzing task {pool.platform}-{pool.pool_id} - "
-                            f"{i}/{pool.tasks}"
-                        ),
-                        owner_email=OWNER_EMAIL,
-                        pool_id=pool.pool_id,
-                        provisioner=PROVISIONER_ID,
-                        scheduler=SCHEDULER_ID,
-                        secret=DECISION_TASK_SECRET,
-                        task_group=parent_task_id,
-                        task_id=self.task_id,
-                    )
-                )
-                configure_task(task, cast(PoolConfiguration, pool), now, env)
-                yield slugId(), task
+        if preprocess_task_id is not None:
+            task["dependencies"].append(preprocess_task_id)
+        configure_task(task, pool, now, env)
+        yield slugId(), task
 
 
 @dataclass
@@ -710,26 +549,3 @@ class WorkerPool:
                 providerId=PROVIDER_IDS[self.cloud],
                 workerPoolId=f"{WORKER_POOL_PREFIX}/{self.name}",
             )
-
-
-class PoolConfigLoader:
-    @staticmethod
-    def from_file(pool_yml: Path) -> PoolConfiguration | PoolConfigMap:
-        assert pool_yml.is_file()
-        data = yaml.safe_load(pool_yml.read_text())
-        # temporarily support macros as alias for env
-        if "env" not in data and "macros" in data:
-            data["env"] = data.pop("macros")
-        for cls in (PoolConfiguration, PoolConfigMap):
-            if (
-                set(cls.FIELD_TYPES)  # type: ignore
-                >= set(data)
-                >= cls.REQUIRED_FIELDS  # type: ignore
-            ):
-                return cls(pool_yml.stem, data, base_dir=pool_yml.parent)
-        LOG.error(
-            f"{pool_yml} has keys {data.keys()} and expected all of either "
-            f"{PoolConfiguration.REQUIRED_FIELDS} or {PoolConfigMap.REQUIRED_FIELDS} "
-            f"to exist."
-        )
-        raise RuntimeError(f"{pool_yml} type could not be identified!")
