@@ -16,7 +16,7 @@ Taskcluster = TaskclusterConfig(TASKCLUSTER_ROOT_URL)
 
 ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
 CRON_PERIOD = timedelta(days=7)
-DEADLINE = timedelta(hours=2)
+DEADLINE = timedelta(days=1)
 MAX_RUN_TIME = timedelta(hours=1)
 OWNER_EMAIL = "truber@mozilla.com"
 PROVISIONER_ID = "proj-fuzzing"
