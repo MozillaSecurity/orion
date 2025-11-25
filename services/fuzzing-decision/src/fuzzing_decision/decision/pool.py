@@ -22,7 +22,12 @@ from tcadmin.resources import Hook, Role
 from tcadmin.resources import WorkerPool as TCWorkerPool
 
 from ..common import taskcluster
-from ..common.pool import CPU_ALIASES, FuzzingPoolConfig, MachineTypes
+from ..common.pool import (
+    CPU_ALIASES,
+    ConfigurationError,
+    FuzzingPoolConfig,
+    MachineTypes,
+)
 from ..common.util import parse_size, parse_time, validate_schema_by_name
 from . import (
     CANCEL_TASK_DAYS,
@@ -187,7 +192,12 @@ def configure_task(
             for name, artifact in task["payload"]["artifacts"].items()
         ]
     if env is not None:
-        assert set(task["payload"]["env"]).isdisjoint(set(env))
+        if not set(task["payload"]["env"]).isdisjoint(set(env)):
+            overwrites = set(task["payload"]["env"]) & set(env)
+            raise ConfigurationError(
+                f"Config {config.pool_id} overwrites required env vars: "
+                f"{','.join(overwrites)}"
+            )
         task["payload"]["env"].update(env)
 
 
