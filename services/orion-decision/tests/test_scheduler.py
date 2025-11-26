@@ -55,7 +55,7 @@ def test_main(mocker: MockerFixture) -> None:
     assert create.call_count == 1
 
 
-def test_mark_rebuild_01(mocker: MockerFixture) -> None:
+def test_mark_rebuild_force_all(mocker: MockerFixture) -> None:
     """test that "/force-rebuild" marks all services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -71,7 +71,7 @@ def test_mark_rebuild_01(mocker: MockerFixture) -> None:
     assert evt.list_changed_paths.call_count == 0
 
 
-def test_mark_rebuild_02(mocker: MockerFixture) -> None:
+def test_mark_rebuild_path(mocker: MockerFixture) -> None:
     """test that changed paths mark dependent services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -93,7 +93,7 @@ def test_mark_rebuild_02(mocker: MockerFixture) -> None:
     assert not sched.services["test7"].dirty
 
 
-def test_mark_rebuild_03(mocker: MockerFixture) -> None:
+def test_mark_rebuild_force_one(mocker: MockerFixture) -> None:
     """test that "/force-rebuild=svc" marks some services dirty"""
     root = FIXTURES / "services03"
     evt = mocker.Mock(spec=GithubEvent())
@@ -115,7 +115,7 @@ def test_mark_rebuild_03(mocker: MockerFixture) -> None:
     assert not sched.services["test7"].dirty
 
 
-def test_create_01(mocker: MockerFixture) -> None:
+def test_create_none(mocker: MockerFixture) -> None:
     """test no task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -131,7 +131,7 @@ def test_create_01(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_02(mocker: MockerFixture) -> None:
+def test_create_no_push(mocker: MockerFixture) -> None:
     """test non-push task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -174,7 +174,7 @@ def test_create_02(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_03(mocker: MockerFixture) -> None:
+def test_create_push(mocker: MockerFixture) -> None:
     """test push task creation for single arch"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -244,7 +244,7 @@ def test_create_03(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_04(mocker: MockerFixture) -> None:
+def test_create_deps(mocker: MockerFixture) -> None:
     """test dependent tasks creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -310,7 +310,7 @@ def test_create_04(mocker: MockerFixture) -> None:
     assert task2 == expected2
 
 
-def test_create_05(mocker: MockerFixture) -> None:
+def test_create_release(mocker: MockerFixture) -> None:
     """test no tasks are created for release event"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -327,7 +327,7 @@ def test_create_05(mocker: MockerFixture) -> None:
     assert queue.createTask.call_count == 0
 
 
-def test_create_06(mocker: MockerFixture) -> None:
+def test_create_dry_run(mocker: MockerFixture) -> None:
     """test no tasks are created for --dry-run"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -350,7 +350,7 @@ def test_create_06(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_07(mocker: MockerFixture) -> None:
+def test_create_pr(mocker: MockerFixture) -> None:
     """test PR doesn't create push task"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -410,7 +410,7 @@ def test_create_07(mocker: MockerFixture) -> None:
         (False, False, True, "python:latest"),
     ],
 )
-def test_create_08(
+def test_create_test_dirty_image(
     mocker: MockerFixture,
     ci1_dirty: bool,
     svc1_dirty: bool,
@@ -519,7 +519,7 @@ def test_create_08(
 
 
 @freeze_time()
-def test_create_09(mocker: MockerFixture) -> None:
+def test_create_recipe_test(mocker: MockerFixture) -> None:
     """test recipe test task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -607,7 +607,7 @@ def test_create_09(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_10(mocker: MockerFixture) -> None:
+def test_create_msys(mocker: MockerFixture) -> None:
     """test msys task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -649,7 +649,7 @@ def test_create_10(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_11(mocker: MockerFixture) -> None:
+def test_create_homebrew(mocker: MockerFixture) -> None:
     """test homebrew task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -691,7 +691,7 @@ def test_create_11(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_12(mocker: MockerFixture) -> None:
+def test_create_test_only(mocker: MockerFixture) -> None:
     """test test task non-creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -739,7 +739,7 @@ def test_create_12(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.parametrize("branch, tasks", [("dev", 0), ("main", 0), ("push", 2)])
-def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
+def test_create_pr_no_push(mocker: MockerFixture, branch: str, tasks: int) -> None:
     """test push in PR task creation skipped"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -762,7 +762,7 @@ def test_create_13(mocker: MockerFixture, branch: str, tasks: int) -> None:
 
 
 @freeze_time()
-def test_create_14(mocker: MockerFixture) -> None:
+def test_create_combine(mocker: MockerFixture) -> None:
     """test combine task creation"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value
@@ -848,7 +848,7 @@ def test_create_14(mocker: MockerFixture) -> None:
 
 
 @freeze_time()
-def test_create_15(mocker: MockerFixture) -> None:
+def test_create_push_multiarch(mocker: MockerFixture) -> None:
     """test push task creation for multiple archs"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)
     queue = taskcluster.get_service.return_value

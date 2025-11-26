@@ -22,7 +22,7 @@ from orion_decision.orion import (
 FIXTURES = (Path(__file__).parent / "fixtures").resolve()
 
 
-def test_service_load01() -> None:
+def test_service_load() -> None:
     """test that service is loaded from metadata"""
     root = FIXTURES / "services01"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
@@ -37,7 +37,7 @@ def test_service_load01() -> None:
     assert not svc.dirty
 
 
-def test_service_load02() -> None:
+def test_service_load_arm64() -> None:
     """test that service is loaded from metadata"""
     root = FIXTURES / "services02"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
@@ -52,7 +52,7 @@ def test_service_load02() -> None:
     assert not svc.dirty
 
 
-def test_service_load03() -> None:
+def test_service_load_tests() -> None:
     """test that service tests are loaded from metadata"""
     root = FIXTURES / "services04"
     svc = Service.from_metadata_yaml(root / "test" / "service.yaml", root)
@@ -83,7 +83,7 @@ def test_service_load03() -> None:
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )
-def test_service_load04(defn: Dict[str, Any]) -> None:
+def test_service_load_error(defn: Dict[str, Any]) -> None:
     """test that service test errors are raised"""
     expect = defn.pop("expect")
     if "raises" in expect:
@@ -97,7 +97,7 @@ def test_service_load04(defn: Dict[str, Any]) -> None:
             assert getattr(result, field) == value
 
 
-def test_service_load05() -> None:
+def test_service_load_msys() -> None:
     """test that msys service type is loaded from metadata"""
     root = FIXTURES / "services11"
     svc = Service.from_metadata_yaml(root / "test-msys" / "service.yaml", root)
@@ -113,8 +113,8 @@ def test_service_load05() -> None:
     assert not svc.dirty
 
 
-def test_service_load06() -> None:
-    """test that msys service type is loaded from metadata"""
+def test_service_load_homebrew() -> None:
+    """test that homebrew service type is loaded from metadata"""
     root = FIXTURES / "services11"
     svc = Service.from_metadata_yaml(root / "test-brew" / "service.yaml", root)
     assert isinstance(svc, ServiceHomebrew)
@@ -129,7 +129,7 @@ def test_service_load06() -> None:
     assert not svc.dirty
 
 
-def test_service_load07() -> None:
+def test_service_load_test_only() -> None:
     """test that test service type is loaded from metadata"""
     root = FIXTURES / "services11"
     svc = Service.from_metadata_yaml(root / "test-only" / "service.yaml", root)
