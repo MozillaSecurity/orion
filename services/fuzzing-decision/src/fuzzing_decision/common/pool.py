@@ -165,6 +165,7 @@ class FuzzingPoolConfig:
         raw.setdefault("command", [])
         raw.setdefault("preprocess", "")
         raw.setdefault("routes", [])
+        raw.setdefault("machine_types", [])
         raw["env"] = {k: str(v) for k, v in raw["env"].items()}
         raw["base_dir"] = path.parent
         raw["pool_id"] = path.stem
