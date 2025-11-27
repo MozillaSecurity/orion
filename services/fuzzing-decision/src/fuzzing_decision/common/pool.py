@@ -190,7 +190,10 @@ class FuzzingPoolConfig:
 
         if not raw.get("apply_to"):
             cls._fixup_fields(raw, path)
-            yield cls(**raw)
+            try:
+                yield cls(**raw)
+            except TypeError as exc:
+                raise ConfigurationError(f"{apply_pool} has invalid fields") from exc
             return
 
         # must be the same for the entire set .. at least for now
@@ -242,7 +245,10 @@ class FuzzingPoolConfig:
                     "not allowed with apply_to"
                 )
 
-            yield cls(**new)
+            try:
+                yield cls(**new)
+            except TypeError as exc:
+                raise ConfigurationError(f"{apply_pool} has invalid fields") from exc
 
     @property
     def task_id(self) -> str:
