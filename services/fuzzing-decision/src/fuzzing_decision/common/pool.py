@@ -149,7 +149,10 @@ class FuzzingPoolConfig:
 
         # time fields
         raw["cycle_time"] = parse_time(str(raw["cycle_time"]))
-        raw["max_run_time"] = parse_time(str(raw["max_run_time"]))
+        if raw.get("max_run_time"):
+            raw["max_run_time"] = parse_time(str(raw["max_run_time"]))
+        else:
+            raw["max_run_time"] = raw["cycle_time"]
         if raw.get("schedule_start"):
             raw["schedule_start"] = dateutil.parser.isoparse(raw["schedule_start"])
         else:
