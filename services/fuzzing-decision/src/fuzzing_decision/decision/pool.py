@@ -353,7 +353,6 @@ def build_resources(
         decision_task["payload"]["env"].update(env)
 
     cycle_crons = list(pool.cycle_crons())
-    assert cycle_crons
 
     scopes = [
         *sorted(

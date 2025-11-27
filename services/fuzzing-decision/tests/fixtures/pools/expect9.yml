@@ -17,7 +17,6 @@ container:
   type: docker-image
 imageset: generic-worker-A
 parents: []
-machine_types: []
 cpu: arm64
 platform: linux
 preprocess: ""
