@@ -55,16 +55,16 @@ cargo install cargo-fuzz
 
 # Clone nss/nspr
 HG_REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
-GIT_REVISION="$(retry-curl --compressed https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION | jshon -e "git_hash" -u)"
+GIT_REVISION="$(retry-curl --compressed "https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION" | jshon -e "git_hash" -u)"
 
 update-status "setup: cloning nss/nspr"
 if [[ ! -d firefox ]]; then
   retry git clone --no-checkout --depth 1 --filter=tree:0 https://github.com/mozilla-firefox/firefox.git
 
   pushd firefox
-  git fetch --depth 1 origin $GIT_REVISION
+  git fetch --depth 1 origin "$GIT_REVISION"
   git sparse-checkout set --no-cone /security/nss /nsprpub /third_party/rust/neqo-bin/Cargo.toml
-  git checkout $GIT_REVISION
+  git checkout "$GIT_REVISION"
   popd
 
   mv firefox/security/nss nss
@@ -90,7 +90,7 @@ popd
 update-status "setup: building neqo"
 pushd neqo
 NSS_DIR="$HOME/nss" RUSTFLAGS="$RUSTFLAGS -Cinstrument-coverage" \
-CARGO_PROFILE_RELEASE_LTO="false" \
+  CARGO_PROFILE_RELEASE_LTO="false" \
   cargo fuzz build --release --debug-assertions
 popd
 
@@ -98,7 +98,7 @@ popd
 update-status "setup: pulling gcloud creds"
 mkdir -p ~/.config/gcloud
 get-tc-secret ossfuzz-gutils ~/.config/gcloud/application_default_credentials.json raw
-echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" > .boto
+echo -e "[Credentials]\ngs_service_key_file = /home/worker/.config/gcloud/application_default_credentials.json" >.boto
 
 # Pull corpus & run fuzzer
 BINARY_PATH="$HOME/neqo/target/x86_64-unknown-linux-gnu/release"
@@ -128,8 +128,8 @@ function run-target {
     --source-dir "$HOME/neqo" \
     --prefix-dir "$HOME/neqo" \
     --llvm-path "$HOME/clang/bin" \
-    > coverage-neqo.json
-  python map-coverage.py coverage-neqo.json > "coverage-$1.json"
+    >coverage-neqo.json
+  python map-coverage.py coverage-neqo.json >"coverage-$1.json"
 
   if [[ $NO_REPORT != "1" ]]; then
     # Submit coverage data
@@ -145,10 +145,10 @@ for fuzzer in neqo/fuzz/fuzz_targets/*.rs; do
   name="$(basename "$fuzzer" .rs)"
 
   update-status "fuzz: cloning corpus for $name"
-  clone-corpus $name
+  clone-corpus "$name"
 
   update-status "fuzz: running target $name"
-  run-target $name
+  run-target "$name"
 done
 
 update-status "done"

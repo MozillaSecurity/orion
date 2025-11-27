@@ -46,15 +46,15 @@ export LDFLAGS="$CFLAGS"
 update-status "setup: cloning nss"
 
 HG_REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
-GIT_REVISION="$(retry-curl --compressed https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION | jshon -e "git_hash" -u)"
+GIT_REVISION="$(retry-curl --compressed "https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION" | jshon -e "git_hash" -u)"
 
 if [[ ! -d firefox ]]; then
   retry git clone --no-checkout --depth 1 --filter=tree:0 https://github.com/mozilla-firefox/firefox.git
 
   pushd firefox
-  git fetch --depth 1 origin $GIT_REVISION
+  git fetch --depth 1 origin "$GIT_REVISION"
   git sparse-checkout set --no-cone /security/nss /nsprpub
-  git checkout $GIT_REVISION
+  git checkout "$GIT_REVISION"
   popd
 
   mv firefox/security/nss nss
