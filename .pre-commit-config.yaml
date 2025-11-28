@@ -32,6 +32,12 @@ repos:
       - id: codespell
         exclude_types: [json]
         exclude: ^(.*\.ron)|(pools*.yaml)$
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+    - id: detect-secrets
+      args: ['--baseline', '.secrets.baseline']
+      exclude: \.yaml$|/tests/
   - repo: https://github.com/marco-c/taskcluster_yml_validator
     rev: v0.0.11
     hooks:
