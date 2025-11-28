@@ -1,1 +1,2 @@
 include src/fuzzing_decision/py.typed
+include src/fuzzing_decision/schemas/*.yaml
