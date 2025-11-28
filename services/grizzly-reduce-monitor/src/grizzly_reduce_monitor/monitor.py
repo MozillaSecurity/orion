@@ -323,6 +323,7 @@ class ReductionMonitor(ReductionWorkflow):
             LOG.warning("No tools specified on CLI, fetching from Taskcluster")
             tool_list = Taskcluster.load_secrets(TOOL_LIST_SECRET)["tools"]
         self.tool_list = list(tool_list or [])
+        self.error_occurred = False
 
     def image_artifact_task(self, namespace):
         if namespace not in self._gw_image_artifact_tasks:
@@ -384,6 +385,7 @@ class ReductionMonitor(ReductionWorkflow):
             queue.createTask(task_id, task)
         except TaskclusterFailure as exc:
             LOG.error("Error creating task: %s", exc)
+            self.error_occurred = True
             return None
         LOG.info("Marking %d Q4 (in progress)", crash.id)
         CrashManager().update_testcase_quality(crash.id, Quality.REDUCING.value)
@@ -447,7 +449,8 @@ class ReductionMonitor(ReductionWorkflow):
             format_seconds(time() - start_time),
             queued,
         )
-        return 0
+        # return 0 if no error occurred, 1 otherwise
+        return int(self.error_occurred)
 
     @staticmethod
     def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
