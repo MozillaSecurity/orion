@@ -171,6 +171,57 @@ def test_load_params_4(tmp_path, pool_data):
     }
 
 
+@patch("os.environ", {})
+def test_load_params_apply(tmp_path, pool_data):
+    """test that apply_to overlays pools correctly"""
+    os.environ["STATIC"] = "value"
+    pool_data["env"]["ENVVAR1"] = "123456"
+    pool_data["env"]["ENVVAR2"] = "789abc"
+    pool_data["env"]["ENVVAR3"] = "failed!"
+
+    with (tmp_path / "test-pool.yml").open("w") as test_cfg:
+        yaml.dump(pool_data, stream=test_cfg)
+
+    apply_data: Dict[str, Any] = {
+        "apply_to": ["test-pool"],
+        "cloud": None,
+        "scopes": [],
+        "disk_size": None,
+        "cycle_time": None,
+        "max_run_time": None,
+        "schedule_start": None,
+        "demand": None,
+        "env": {"ENVVAR1": "xyz"},
+        "name": "apply",
+        "tasks": 1,
+        "command": None,
+        "container": None,
+        "imageset": None,
+        "parents": [],
+        "cpu": None,
+        "platform": None,
+        "preprocess": None,
+        "run_as_admin": False,
+        "worker": "generic",
+    }
+    with (tmp_path / "test-apply.yml").open("w") as test_cfg:
+        yaml.dump(apply_data, stream=test_cfg)
+
+    # test 1: environment from pool is merged
+    launcher = PoolLauncher(["command", "arg"], "test-pool/test-apply")
+    launcher.environment["ENVVAR3"] = "NO_MOD"
+    launcher.fuzzing_config_dir = tmp_path
+    launcher.load_params()
+    assert launcher.command == ["command", "arg"]
+    assert launcher.environment == {
+        "ENVVAR1": "xyz",
+        "ENVVAR2": "789abc",
+        "ENVVAR3": "NO_MOD",
+        "FUZZING_POOL_NAME": "apply",
+        "STATIC": "value",
+    }
+
+
 def test_launch_exec(tmp_path, monkeypatch, mocker):
     # Start with taskcluster detection disabled, even on CI
     monkeypatch.delenv("TASK_ID", raising=False)

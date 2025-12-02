@@ -33,7 +33,7 @@ class PoolLauncher(Workflow):
         self.environment = os.environ.copy()
         self.pool_name: str | None
         if pool_name is not None and "/" in pool_name:
-            self.apply, self.pool_name = pool_name.split("/")
+            self.pool_name, self.apply = pool_name.split("/")
         else:
             self.pool_name = pool_name
             self.apply = None
