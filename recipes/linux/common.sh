@@ -122,11 +122,11 @@ function get-target-time() {
       echo "warning: TARGET_TIME given, but exceeds task deadline!" >&2
     fi
   else
-    if [[ $remaining_time -lt $((5 * 60)) ]]; then
-      echo "warning: less than 5 minutes remains before task deadline!" >&2
+    if [[ $remaining_time -lt $((10 * 60)) ]]; then
+      echo "warning: less than 10 minutes remains before task deadline!" >&2
       exit 0
     fi
-    result=$((remaining_time - 5 * 60))
+    result=$((remaining_time - 10 * 60))
   fi
   echo "$result"
 }
