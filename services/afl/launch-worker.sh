@@ -16,6 +16,12 @@ source "/srv/repos/setup/common.sh"
 mkdir -p ~/.config/gcloud
 get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
 
+# check sufficient time remaining
+if [[ "$(get-target-time)" -lt 0 ]]; then
+  update-status "Not enough time remaining before deadline!"
+  exit 0
+fi
+
 #guided-fuzzing-daemon
 for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon; do
   pushd "/srv/repos/$r" >/dev/null
@@ -181,12 +187,18 @@ else
     echo "Hello world" >./corpus/input0
   fi
 
+  TARGET_DURATION="$(get-target-time)"
+  if [[ $TARGET_DURATION -lt 0 ]]; then
+    update-status "Not enough time remaining before deadline!"
+    exit 0
+  fi
+
   # run and watch for results
   update-status "launching guided-fuzzing-daemon"
   time xvfb-run guided-fuzzing-daemon "${S3_PROJECT_ARGS[@]}" \
     --afl-log-pattern /logs/afl%d.log \
     --fuzzmanager \
-    --max-runtime "$(get-target-time)" \
+    --max-runtime "$TARGET_DURATION" \
     --afl-async-corpus \
     --queue-upload \
     --tool "$TOOLNAME" \

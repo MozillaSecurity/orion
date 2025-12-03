@@ -55,6 +55,12 @@ if [[ -z $NO_SECRETS ]]; then
   setup-aws-credentials
 fi
 
+# check sufficient time remaining
+if [[ "$(get-target-time)" -lt 0 ]]; then
+  update-status "Not enough time remaining before deadline!"
+  exit 0
+fi
+
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -e ~/.fuzzmanagerconf ]]; then
@@ -281,6 +287,13 @@ if [[ -n $S3_CORPUS_REFRESH ]]; then
       "${DAEMON_ARGS[@]}"
   fi
 else
+  # check sufficient time remaining
+  TARGET_DURATION="$(get-target-time)"
+  if [[ $TARGET_DURATION -lt 0 ]]; then
+    update-status "Not enough time remaining before deadline!"
+    exit 0
+  fi
+
   if [[ $NYX_FUZZER == "IPC_SingleMessage" ]]; then
     mkdir -p corpus.add
     xvfb-run nyx-ipc-manager --single --sharedir ./sharedir --file "$NYX_PAGE_HTMLNAME" --file-zip "$NYX_PAGE"
@@ -335,7 +348,7 @@ else
   update-status "launching guided-fuzzing-daemon"
   time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" \
     --fuzzmanager \
-    --max-runtime "$(get-target-time)" \
+    --max-runtime "$TARGET_DURATION" \
     --afl-async-corpus \
     --instances "$NYX_INSTANCES" \
     --queue-upload \

@@ -140,8 +140,8 @@ export BUILD_DIR
 FUZZDATA_URL="https://github.com/mozillasecurity/fuzzdata.git/trunk"
 function run-afl-libfuzzer-daemon() {
   TARGET_TIME=$(get-target-time)
-  if ((TARGET_TIME - 60 < 0)); then
-    echo "Not enough time remaining ($TARGET_TIME) to start fuzzing."
+  if [[ $TARGET_TIME -lt 0 ]]; then
+    update-status "Not enough time remaining before deadline!"
     exit 0
   fi
 
