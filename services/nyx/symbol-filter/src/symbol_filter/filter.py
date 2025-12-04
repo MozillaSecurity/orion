@@ -55,7 +55,7 @@ class ReportConfiguration(Reporter):  # type: ignore[misc]
 
     def __init__(self) -> None:
         """Initializes ReportConfiguration."""
-        super().__init__()
+        super().__init__(tool="symbol-filter")
 
     @remote_checks  # type: ignore[misc]
     def get_report_configuration(self, ident: int) -> ReportConfigurationResult:
