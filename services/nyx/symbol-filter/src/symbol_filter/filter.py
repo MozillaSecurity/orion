@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from logging import DEBUG, INFO, basicConfig, getLogger
 from pathlib import Path
-from typing import  TypedDict
+from typing import TypedDict
 
 from fuzzfetch import BuildFlags, Fetcher, download_url
 from Reporter.Reporter import Reporter, remote_checks
@@ -34,17 +34,20 @@ class FilterType(Enum):
     INCLUDE = 1
     EXCLUDE = 2
 
+
 class ReportConfigurationResult(TypedDict):
     """The result returned from FuzzManager."""
+
     id: int
     directives: str
+
 
 @dataclass
 class FilterPattern:
     """A filter pattern."""
+
     type: FilterType
     pattern: str
-
 
 
 class ReportConfiguration(Reporter):  # type: ignore[misc]
@@ -112,9 +115,9 @@ def load_path_map() -> dict[str, str]:
             # Format: <type><dist_path><source_path> (tab-separated with \x1f)
             if SOURCE_PREFIX in line:
                 parts = line.split("\x1f")
-                assert (
-                    len(parts) == 3
-                ), f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${index}"
+                assert len(parts) == 3, (
+                    f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${index}"
+                )
                 _, dist_path, source_path = parts
                 mapping[dist_path] = source_path
 
@@ -129,12 +132,15 @@ def matches_pattern(path: str, pattern: str) -> bool:
     """
     # Escape special regex characters except * and **
     # Replace ** with a placeholder first
-    return re.fullmatch(
-        re.escape(pattern)
-        .replace("\*\*", ".*")  # ** matches anything including /
-        .replace(r"\*", "[^/]*"),  # * matches anything except /
-        path
-    ) is not None
+    return (
+        re.fullmatch(
+            re.escape(pattern)
+            .replace(r"\*\*", ".*")  # ** matches anything including /
+            .replace(r"\*", "[^/]*"),  # * matches anything except /
+            path,
+        )
+        is not None
+    )
 
 
 def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
