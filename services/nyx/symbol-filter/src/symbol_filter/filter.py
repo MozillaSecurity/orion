@@ -130,15 +130,15 @@ def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
     :param path: The path to evaluate.
     :param patterns: The patterns to match.
     """
-    included = False
-    for action, pattern in patterns:
+    # last matching pattern wins
+    for action, pattern in reversed(patterns):
         if matches_pattern(path, pattern):
             if action == FilterType.INCLUDE:
-                included = True
+                return True
             elif action == FilterType.EXCLUDE:
-                included = False
+                return False
 
-    return included
+    return False
 
 
 def resolve_symbol_path(symbol_path: str, path_map: dict[str, str]) -> str | None:
