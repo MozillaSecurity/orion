@@ -144,11 +144,11 @@ def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
     :param patterns: The patterns to match.
     """
     # last matching pattern wins
-    for action, pattern in reversed(patterns):
-        if matches_pattern(path, pattern):
-            if action == FilterType.INCLUDE:
+    for filter_pattern in reversed(patterns):
+        if matches_pattern(path, filter_pattern.pattern):
+            if filter_pattern.type == FilterType.INCLUDE:
                 return True
-            elif action == FilterType.EXCLUDE:
+            elif filter_pattern.type == FilterType.EXCLUDE:
                 return False
 
     return False

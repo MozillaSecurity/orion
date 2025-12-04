@@ -188,19 +188,25 @@ def test_matches_pattern(path: str, pattern: str, expected: bool) -> None:
         # No patterns - default False
         ("foo/bar.cpp", [], False),
         # Single include
-        ("foo/bar.cpp", [(FilterType.INCLUDE, "foo/bar.cpp")], True),
-        ("baz.cpp", [(FilterType.INCLUDE, "foo/bar.cpp")], False),
+        ("foo/bar.cpp", [FilterPattern(FilterType.INCLUDE, "foo/bar.cpp")], True),
+        ("baz.cpp", [FilterPattern(FilterType.INCLUDE, "foo/bar.cpp")], False),
         # Single exclude
-        ("foo/bar.cpp", [(FilterType.EXCLUDE, "foo/bar.cpp")], False),
+        ("foo/bar.cpp", [FilterPattern(FilterType.EXCLUDE, "foo/bar.cpp")], False),
         # Last matching pattern wins
         (
             "dom/webgpu/file.cpp",
-            [(FilterType.EXCLUDE, "**"), (FilterType.INCLUDE, "dom/webgpu/**")],
+            [
+                FilterPattern(FilterType.EXCLUDE, "**"),
+                FilterPattern(FilterType.INCLUDE, "dom/webgpu/**"),
+            ],
             True,
         ),
         (
             "dom/webgpu/file.cpp",
-            [(FilterType.INCLUDE, "dom/**"), (FilterType.EXCLUDE, "dom/webgpu/**")],
+            [
+                FilterPattern(FilterType.INCLUDE, "dom/**"),
+                FilterPattern(FilterType.EXCLUDE, "dom/webgpu/**"),
+            ],
             False,
         ),
     ],
