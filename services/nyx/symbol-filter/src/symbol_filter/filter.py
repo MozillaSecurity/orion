@@ -198,7 +198,7 @@ def filter_symbols(
     resolved_symbols = 0
 
     with symbol_path.open("r") as f:
-        for line in f:
+        for index, line in enumerate(f):
             total_symbols += 1
             line = line.rstrip("\n")
 
@@ -206,7 +206,7 @@ def filter_symbols(
             parts = line.split("\t")
             if len(parts) < 4:
                 raise SymbolFilterException(
-                    "Symbol map contains unexpected number of columns!"
+                    f"Symbol map contains unexpected number of columns at line ${index}!"
                 )
 
             file_path = parts[3]
