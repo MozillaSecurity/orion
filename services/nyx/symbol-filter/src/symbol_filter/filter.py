@@ -259,10 +259,10 @@ def main() -> int:
 
     args = parser.parse_args()
     if not args.symbol_path.exists():
-        raise ArgumentTypeError(f"Symbol path does not exist: {args.symbol_path}")
+        parser.error(f"Symbol path does not exist: {args.symbol_path}")
 
     if not args.symbol_path.is_file():
-        raise ArgumentTypeError(f"Path is not a file: {args.symbol_path}")
+        parser.error(f"Path is not a file: {args.symbol_path}")
 
     result = filter_symbols(args.symbol_path, args.filter_id)
 
