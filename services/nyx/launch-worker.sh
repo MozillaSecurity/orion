@@ -171,10 +171,10 @@ if [[ $MOZ_LOG_CHILD_CRASHES -eq 1 ]]; then
 fi
 
 # Generate dynamic instrumentation map
-if [[ -n $COV_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
+if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
   if [[ ! -f target.symbols.txt ]]; then
     python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so >libxul.symbols.txt
-    symbol-filter libxul.symbols.txt "$COV_REPORT_CONFIG" -o target.symbols.txt
+    symbol-filter libxul.symbols.txt "$PC_FILTER_REPORT_CONFIG" -o target.symbols.txt
   fi
   echo "export __AFL_PC_FILTER=1" >>session.sh
 fi
