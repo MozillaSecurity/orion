@@ -144,7 +144,7 @@ S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJ
 export AFL_MAP_SIZE=8388608
 
 # Generate dynamic instrumentation map
-if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
+if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]] && percent_chance 98; then
   if [[ ! -f target.symbols.txt ]]; then
     FILTER_PATH="$(dirname -- "$HOME/$TARGET_BIN")/libxul.so"
     if [[ -n $JSRT ]]; then
