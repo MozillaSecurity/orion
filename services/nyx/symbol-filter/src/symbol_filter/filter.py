@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from logging import DEBUG, INFO, basicConfig, getLogger
 from pathlib import Path
+from typing import  TypedDict
 
 from fuzzfetch import BuildFlags, Fetcher, download_url
 from Reporter.Reporter import Reporter, remote_checks
@@ -33,6 +34,11 @@ class FilterType(Enum):
     INCLUDE = 1
     EXCLUDE = 2
 
+class ReportConfigurationResult(TypedDict):
+    """The result returned from FuzzManager."""
+    id: int
+    directives: str
+
 @dataclass
 class FilterPattern:
     """A filter pattern."""
@@ -49,7 +55,7 @@ class ReportConfiguration(Reporter):  # type: ignore[misc]
         super().__init__(tool="grizzly-dominode")
 
     @remote_checks  # type: ignore[misc]
-    def get_report_configuration(self, ident: int) -> dict[str, object]:
+    def get_report_configuration(self, ident: int) -> ReportConfigurationResult:
         """Fetch report configuration by ID from the API."""
         url = (
             f"{self.serverProtocol}://{self.serverHost}:"
