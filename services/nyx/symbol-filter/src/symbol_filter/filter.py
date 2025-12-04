@@ -129,9 +129,8 @@ def matches_pattern(path: str, pattern: str) -> bool:
     """
     # Escape special regex characters except * and **
     # Replace ** with a placeholder first
-    pattern = pattern.replace("**", "\x00")
     pattern = re.escape(pattern)
-    pattern = pattern.replace("\x00", ".*")  # ** matches anything including /
+    pattern = pattern.replace("\*\*", ".*")  # ** matches anything including /
     pattern = pattern.replace(r"\*", "[^/]*")  # * matches anything except /
     return re.match(f"^{pattern}$", path) is not None
 
