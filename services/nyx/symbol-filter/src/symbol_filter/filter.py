@@ -250,7 +250,7 @@ def main() -> int:
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             for line in result:
-                f.write(line + "\n")
+                print(line, file=f)
     else:
         for line in result:
             print(line)
