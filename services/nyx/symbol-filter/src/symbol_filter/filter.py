@@ -129,10 +129,12 @@ def matches_pattern(path: str, pattern: str) -> bool:
     """
     # Escape special regex characters except * and **
     # Replace ** with a placeholder first
-    pattern = re.escape(pattern)
-    pattern = pattern.replace("\*\*", ".*")  # ** matches anything including /
-    pattern = pattern.replace(r"\*", "[^/]*")  # * matches anything except /
-    return re.match(f"^{pattern}$", path) is not None
+    return re.fullmatch(
+        re.escape(pattern)
+        .replace("\*\*", ".*")  # ** matches anything including /
+        .replace(r"\*", "[^/]*"),  # * matches anything except /
+        path
+    ) is not None
 
 
 def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
