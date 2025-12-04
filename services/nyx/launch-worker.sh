@@ -177,7 +177,7 @@ if [[ $MOZ_LOG_CHILD_CRASHES -eq 1 ]]; then
 fi
 
 # Generate dynamic instrumentation map
-if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
+if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]] && percent_chance 98; then
   if [[ ! -f target.symbols.txt ]]; then
     python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so >libxul.symbols.txt
     symbol-filter libxul.symbols.txt "$PC_FILTER_REPORT_CONFIG" -o target.symbols.txt
@@ -327,7 +327,7 @@ else
     # Sometimes, don't download the existing corpus.
     # This can increase coverage in large targets and prevents bad corpora.
     # Results will be merged with the existing corpus on next refresh.
-    if [[ $COVERAGE -eq 1 ]] || [[ $(python3 -c "import random;print(random.randint(1,100))") -le 98 ]]; then
+    if [[ $COVERAGE -eq 1 ]] || percent_chance 98; then
       # Download the corpus from S3
       update-status "downloading corpus"
       time guided-fuzzing-daemon "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" --corpus-download ./corpus

@@ -411,3 +411,7 @@ function install-apt-key() {
   rm -rf "$TMPD"
   echo "$output"
 }
+
+percent_chance() {
+  [[ $(python3 -c "import random;print(random.randint(1,100))") -le $1 ]]
+}
