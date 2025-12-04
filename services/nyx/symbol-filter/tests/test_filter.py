@@ -78,8 +78,8 @@ def test_load_filter_patterns_basic(mock_report_configuration) -> None:
 
     patterns = load_filter_patterns(filter_id=1)
     assert patterns == [
-        (FilterType.INCLUDE, "include_this/**"),
-        (FilterType.EXCLUDE, "exclude_that/*.py"),
+        FilterPattern(FilterType.INCLUDE, "include_this/**"),
+        FilterPattern(FilterType.EXCLUDE, "exclude_that/*.py"),
     ]
 
 

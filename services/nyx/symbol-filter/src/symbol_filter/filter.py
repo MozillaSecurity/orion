@@ -7,10 +7,10 @@ import os
 import re
 import tempfile
 from argparse import ArgumentParser, ArgumentTypeError
+from dataclasses import dataclass
 from enum import Enum
 from logging import DEBUG, INFO, basicConfig, getLogger
 from pathlib import Path
-from typing import TypeAlias
 
 from fuzzfetch import BuildFlags, Fetcher, download_url
 from Reporter.Reporter import Reporter, remote_checks
@@ -33,8 +33,12 @@ class FilterType(Enum):
     INCLUDE = 1
     EXCLUDE = 2
 
+@dataclass
+class FilterPattern:
+    """A filter pattern."""
+    type: FilterType
+    pattern: str
 
-FilterPattern: TypeAlias = tuple[FilterType, str]
 
 
 class ReportConfiguration(Reporter):  # type: ignore[misc]
@@ -69,10 +73,10 @@ def load_filter_patterns(filter_id: int) -> list[FilterPattern]:
 
         if directive.startswith("+:"):
             pattern = directive[2:].strip()
-            patterns.append((FilterType.INCLUDE, pattern))
+            patterns.append(FilterPattern(FilterType.INCLUDE, pattern))
         elif directive.startswith("-:"):
             pattern = directive[2:].strip()
-            patterns.append((FilterType.EXCLUDE, pattern))
+            patterns.append(FilterPattern(FilterType.EXCLUDE, pattern))
         else:
             raise SymbolFilterException("Invalid filter type directive!")
 
