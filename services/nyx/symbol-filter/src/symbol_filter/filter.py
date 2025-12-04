@@ -104,7 +104,7 @@ def load_path_map() -> dict[str, str]:
         with open(temp_file, encoding="utf-8") as f:
             lines = f.readlines()
 
-        for line in lines:
+        for index, line in enumerate(lines):
             line = line.strip()
             if not line:
                 continue
@@ -112,7 +112,9 @@ def load_path_map() -> dict[str, str]:
             # Format: <type><dist_path><source_path> (tab-separated with \x1f)
             if SOURCE_PREFIX in line:
                 parts = line.split("\x1f")
-                assert len(parts) == 3, f"Malformed line in {MOZSEARCH_ARTIFACT}"
+                assert (
+                    len(parts) == 3
+                ), f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${index}"
                 _, dist_path, source_path = parts
                 mapping[dist_path] = source_path
 
