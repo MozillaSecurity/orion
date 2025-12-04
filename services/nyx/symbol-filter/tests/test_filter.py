@@ -157,7 +157,8 @@ def test_load_path_map_resolve_dist_include_path_not_found() -> None:
         ("foo/bar.cpp", "foo/baz.cpp", False),
         # ** matches zero or more directory segments
         ("dom/webgpu/Adapter.cpp", "dom/webgpu/**", True),
-        ("dom/webgpu/subdir/File.cpp", "dom/webgpu/**", True),
+        ("dom/webgpu/Adapter.cpp", "dom/**/Adapter.cpp", True),
+        ("dom/webgpu/Adapter.cpp", "dom/**", True),
         ("dom/media/File.cpp", "dom/webgpu/**", False),
         # * matches single segment only (not /)
         ("foo/a/bar.cpp", "foo/*/bar.cpp", True),
