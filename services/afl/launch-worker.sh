@@ -150,14 +150,14 @@ S3_PROJECT_ARGS=(--provider GCS --bucket guided-fuzzing-data --project "$S3_PROJ
 export AFL_MAP_SIZE=8388608
 
 # Generate dynamic instrumentation map
-if [[ -n $COV_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
+if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]]; then
   if [[ ! -f target.symbols.txt ]]; then
     FILTER_PATH="$(dirname -- "$HOME/$TARGET_BIN")/libxul.so"
     if [[ -n $JSRT ]]; then
       FILTER_PATH="$HOME/${TARGET_BIN}"
     fi
     python3 /opt/afl-instrumentation/bin/make_symbol_list.py "$FILTER_PATH" >all_symbols.txt
-    symbol-filter all_symbols.txt "$COV_REPORT_CONFIG" -o filtered_symbols.txt
+    symbol-filter all_symbols.txt "$PC_FILTER_REPORT_CONFIG" -o filtered_symbols.txt
   fi
   export AFL_PC_FILTER_FILE="$HOME/filtered_symbols.txt"
 fi
