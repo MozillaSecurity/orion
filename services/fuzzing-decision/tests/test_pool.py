@@ -155,6 +155,7 @@ def test_aws_resources(
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform=platform,
         pool_id="test",
         preprocess="",
@@ -294,6 +295,7 @@ def test_azure_resources(
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform="windows",
         pool_id="test",
         preprocess="",
@@ -415,6 +417,7 @@ def test_gcp_resources(
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform="linux",
         pool_id="test",
         preprocess="",
@@ -635,6 +638,7 @@ def test_tasks(
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform=platform,
         pool_id="test",
         preprocess="",
@@ -874,6 +878,7 @@ def test_flatten(pool_path):
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
+    assert pool.performance_monitoring_unit == expect.performance_monitoring_unit
 
 
 def test_pool_map():
@@ -923,6 +928,7 @@ def test_pool_map():
     assert set(pool.scopes) == set(expect.scopes)
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
+    assert pool.performance_monitoring_unit == expect.performance_monitoring_unit
     assert pool.worker == expect.worker
 
 
@@ -986,6 +992,7 @@ def test_cycle_crons():
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform="linux",
         pool_id="test",
         preprocess=None,
@@ -1050,15 +1057,41 @@ def test_cycle_crons():
         assert calc_none == list(conf.cycle_crons())
 
 
-def test_aws_nested_virt(
+@pytest.mark.parametrize(
+    "attr", ("nested_virtualization", "performance_monitoring_unit")
+)
+@pytest.mark.parametrize("cloud", ("azure", "aws"))
+def test_unsupported_flags(
+    mock_clouds,
+    mock_machines,
+    attr,
+    cloud,
+):
+    pool = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pool1.yml"))
+    pool.cloud = cloud
+    setattr(pool, attr, True)
+    with pytest.raises(AssertionError):
+        list(build_resources([pool], mock_clouds, mock_machines))
+
+
+def test_gcp_pmu(
     mock_clouds,
     mock_machines,
 ):
-    pool = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pool1.yml"))
-    pool.cloud = "aws"
-    pool.nested_virtualization = True
-    with pytest.raises(AssertionError):
-        list(build_resources([pool], mock_clouds, mock_machines))
+    cfg = next(FuzzingPoolConfig.from_file(POOL_FIXTURES / "pool4.yml"))
+    cfg.cloud = "gcp"
+    cfg.performance_monitoring_unit = True
+    cfg.imageset = "generic-worker-A"
+    pool_obj, _hook, _role = build_resources([cfg], mock_clouds, mock_machines)
+    configs = pool_obj.to_json()["config"]["launchConfigs"]
+    assert configs
+    for launch_cfg in configs:
+        assert "advancedMachineFeatures" in launch_cfg
+        assert "performanceMonitoringUnit" in launch_cfg["advancedMachineFeatures"]
+        assert (
+            launch_cfg["advancedMachineFeatures"]["performanceMonitoringUnit"]
+            == "STANDARD"
+        )
 
 
 def test_gcp_nested_virt(
@@ -1110,6 +1143,7 @@ def test_task_image(mocker):
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
+        performance_monitoring_unit=False,
         platform="linux",
         pool_id="test",
         preprocess=None,
