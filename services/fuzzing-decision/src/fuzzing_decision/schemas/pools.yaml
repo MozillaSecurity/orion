@@ -112,6 +112,10 @@ properties:
     type: array
     items:
       type: string
+  performance_monitoring_unit:
+    description: Boolean indicating if task requires an instance with PMU virtualization enabled (for rr)
+    type: boolean
+    default: false
   platform:
     type: string
     pattern: "^(linux|windows|macos)$"
