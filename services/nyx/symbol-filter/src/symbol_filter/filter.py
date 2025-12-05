@@ -198,7 +198,7 @@ def filter_symbols(
     resolved_symbols = 0
 
     with symbol_path.open("r") as f:
-        for index, line in enumerate(f):
+        for index, line in enumerate(f, start=1):
             total_symbols += 1
             line = line.rstrip("\n")
 
