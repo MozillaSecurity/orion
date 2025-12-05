@@ -107,7 +107,7 @@ def load_path_map() -> dict[str, str]:
         with open(temp_file, encoding="utf-8") as f:
             lines = f.readlines()
 
-        for index, line in enumerate(lines):
+        for index, line in enumerate(lines, start=1):
             line = line.strip()
             if not line:
                 continue
