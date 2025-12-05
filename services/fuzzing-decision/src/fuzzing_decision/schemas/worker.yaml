@@ -62,6 +62,10 @@ properties:
     description: Owner email address
     format: email
     type: string
+  performance_monitoring_unit:
+    description: Boolean indicating if task requires an instance with PMU virtualization enabled (for rr)
+    type: boolean
+    default: false
   platform:
     description: Platform type
     type: string

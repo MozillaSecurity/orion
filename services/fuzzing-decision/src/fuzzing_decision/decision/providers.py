@@ -29,6 +29,7 @@ class Provider(ABC):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        performance_monitoring_unit: bool,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         raise NotImplementedError()
@@ -133,9 +134,11 @@ class AWS(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        performance_monitoring_unit: bool,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         assert not nested_virtualization
+        assert not performance_monitoring_unit
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
         worker_config = self.get_worker_config(imageset, platform, worker_type)
@@ -204,9 +207,11 @@ class Azure(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        performance_monitoring_unit: bool,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         assert not nested_virtualization
+        assert not performance_monitoring_unit
         # Load the Azure infos for that imageset
         images = self.get_images(imageset)
         worker_config = self.get_worker_config(imageset, platform, worker_type)
@@ -277,6 +282,7 @@ class GCP(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        performance_monitoring_unit: bool,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         # Load source image
@@ -323,12 +329,13 @@ class GCP(Provider):
                 )
         if nested_virtualization:
             for config in result:
-                config.update(
-                    {
-                        "advancedMachineFeatures": {
-                            "enableNestedVirtualization": True,
-                        },
-                    }
+                config.setdefault("advancedMachineFeatures", {})
+                config["advancedMachineFeatures"]["enableNestedVirtualization"] = True
+        if performance_monitoring_unit:
+            for config in result:
+                config.setdefault("advancedMachineFeatures", {})
+                config["advancedMachineFeatures"]["performanceMonitoringUnit"] = (
+                    "STANDARD"
                 )
         return result
 
@@ -347,6 +354,7 @@ class Static(Provider):
         platform: str,
         demand: bool,
         nested_virtualization: bool,
+        performance_monitoring_unit: bool,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         return []

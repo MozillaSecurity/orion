@@ -100,6 +100,8 @@ class FuzzingPoolConfig:
     name: str
     # Task requires an instance type that supported nested virtualization
     nested_virtualization: bool
+    # Task requires an instance with PMU virtualization enabled (for rr)
+    performance_monitoring_unit: bool
     # An array of configurations to inherit from
     parents: list[str]
     # Platform (OS)
@@ -166,6 +168,7 @@ class FuzzingPoolConfig:
         raw.setdefault("preprocess", "")
         raw.setdefault("routes", [])
         raw.setdefault("machine_types", [])
+        raw.setdefault("performance_monitoring_unit", False)
         raw["env"] = {k: str(v) for k, v in raw["env"].items()}
         raw["base_dir"] = path.parent
         raw["pool_id"] = path.stem
@@ -209,6 +212,7 @@ class FuzzingPoolConfig:
             "disk_size",
             "imageset",
             "nested_virtualization",
+            "performance_monitoring_unit",
             "platform",
             "schedule_start",
             "worker",
@@ -293,6 +297,7 @@ class FuzzingPoolConfig:
                 "imageset",
                 "machine_types",
                 "nested_virtualization",
+                "performance_monitoring_unit",
                 "platform",
                 "preprocess",
                 "schedule_start",

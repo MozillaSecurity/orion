@@ -329,6 +329,7 @@ def build_resources(
         min_capacity=0,
         name=pool.hook_id,
         nested_virtualization=pool.nested_virtualization,
+        performance_monitoring_unit=pool.performance_monitoring_unit,
         owner=OWNER_EMAIL,
         platform=pool.platform,
         worker=pool.worker,
@@ -478,6 +479,7 @@ class WorkerPool:
     min_capacity: int
     name: str
     nested_virtualization: bool
+    performance_monitoring_unit: bool
     owner: str
     platform: str
     worker: str
@@ -493,6 +495,7 @@ class WorkerPool:
             "include_tasks_in_taskmanager": False,
             "min_capacity": 0,
             "nested_virtualization": False,
+            "performance_monitoring_unit": False,
             "platform": "linux",
             "worker": "d2g",
         }
@@ -536,6 +539,7 @@ class WorkerPool:
                 self.platform,
                 self.demand,
                 self.nested_virtualization,
+                self.performance_monitoring_unit,
                 self.worker,
             ),
             "maxCapacity": self.max_capacity,
