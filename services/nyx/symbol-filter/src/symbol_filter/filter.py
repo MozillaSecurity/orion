@@ -6,7 +6,7 @@
 import os
 import re
 import tempfile
-from argparse import ArgumentParser, ArgumentTypeError
+from argparse import ArgumentParser
 from dataclasses import dataclass
 from enum import Enum
 from logging import DEBUG, INFO, basicConfig, getLogger
@@ -107,7 +107,7 @@ def load_path_map() -> dict[str, str]:
         with open(temp_file, encoding="utf-8") as f:
             lines = f.readlines()
 
-        for index, line in enumerate(lines, start=1):
+        for idx, line in enumerate(lines, start=1):
             line = line.strip()
             if not line:
                 continue
@@ -116,7 +116,7 @@ def load_path_map() -> dict[str, str]:
             if SOURCE_PREFIX in line:
                 parts = line.split("\x1f")
                 assert len(parts) == 3, (
-                    f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${index}"
+                    f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${idx}"
                 )
                 _, dist_path, source_path = parts
                 mapping[dist_path] = source_path
@@ -198,7 +198,7 @@ def filter_symbols(
     resolved_symbols = 0
 
     with symbol_path.open("r") as f:
-        for index, line in enumerate(f, start=1):
+        for idx, line in enumerate(f, start=1):
             total_symbols += 1
             line = line.rstrip("\n")
 
@@ -206,7 +206,7 @@ def filter_symbols(
             parts = line.split("\t")
             if len(parts) < 4:
                 raise SymbolFilterException(
-                    f"Symbol map contains unexpected number of columns at line ${index}!"
+                    f"Symbol map contains unexpected number of columns at line ${idx}!"
                 )
 
             file_path = parts[3]
