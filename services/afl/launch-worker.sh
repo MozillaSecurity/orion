@@ -151,7 +151,7 @@ export AFL_MAP_SIZE=8388608
 
 # Generate dynamic instrumentation map
 if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]] && percent_chance 98; then
-  if [[ ! -f target.symbols.txt ]]; then
+  if [[ ! -f filtered_symbols.txt ]]; then
     FILTER_PATH="$(dirname -- "$HOME/$TARGET_BIN")/libxul.so"
     if [[ -n $JSRT ]]; then
       FILTER_PATH="$HOME/${TARGET_BIN}"
