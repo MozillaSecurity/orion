@@ -71,6 +71,9 @@ class Provider(ABC):
             # Increase max runtime to 3 days
             out["genericWorker"]["config"]["maxTaskRunTime"] = parse_time("3d")
 
+            # Allow machines to idle for some time to prevent churn
+            out["genericWorker"]["config"]["idleTimeoutSecs"] = parse_time("15m")
+
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
