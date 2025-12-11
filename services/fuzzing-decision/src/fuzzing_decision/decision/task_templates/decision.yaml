@@ -36,4 +36,4 @@ scopes:
   - "queue:scheduler-id:${scheduler}"
   - "secrets:get:${secret}"
 tags: {}
-workerType: decision
+workerType: ci-decision
