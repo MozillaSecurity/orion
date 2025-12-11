@@ -364,7 +364,7 @@ def build_resources(
                 )
             )
         ),
-        "queue:create-task:highest:proj-fuzzing/decision",
+        "queue:create-task:highest:proj-fuzzing/ci-decision",
     ]
     decision_task["scopes"] = [f"assume:hook-id:{HOOK_PREFIX}/{pool.hook_id}"]
 

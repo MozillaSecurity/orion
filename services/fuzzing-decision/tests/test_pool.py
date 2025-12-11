@@ -91,7 +91,7 @@ def _get_expected_hook(platform="linux"):
             "schedulerId": "test",
             "scopes": [f"assume:hook-id:project-fuzzing/{platform}-test"],
             "tags": {},
-            "workerType": "decision",
+            "workerType": "ci-decision",
         },
         "triggerSchema": {},
     }
@@ -110,7 +110,7 @@ def _get_expected_role(
         "roleId": f"hook-id:project-fuzzing/{platform}-test",
         "scopes": [
             "queue:cancel-task:test/*",
-            "queue:create-task:highest:proj-fuzzing/decision",
+            "queue:create-task:highest:proj-fuzzing/ci-decision",
             f"queue:create-task:highest:proj-fuzzing/{platform}-test",
             "queue:scheduler-id:test",
             "secrets:get:project/fuzzing/decision",
