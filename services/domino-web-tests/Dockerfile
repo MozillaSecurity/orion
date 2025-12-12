@@ -1,4 +1,4 @@
-FROM mozillasecurity/ci-node-20:latest
+FROM mozillasecurity/ci-node-22:latest
 
 COPY recipes/linux /tmp/recipes
 COPY services/domino-web-tests/setup.sh /tmp/recipes

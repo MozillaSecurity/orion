@@ -2,9 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM mozillasecurity/ci-node-20:latest
+FROM mozillasecurity/ci-node-22:latest
 
-LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
+LABEL maintainer="Jason Kratzer <jkratzer@mozilla.com>"
 
 ENV LOGNAME         worker
 ENV HOSTNAME        taskcluster-worker
