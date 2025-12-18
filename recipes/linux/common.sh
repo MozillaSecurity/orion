@@ -290,12 +290,6 @@ function setup-aws-credentials() {
   fi
   if [[ ! -f "$HOME/.aws/credentials" ]]; then
     case "$(echo "${SHIP-$(get-provider)}" | tr "[:upper:]" "[:lower:]")" in
-      gce)
-        # Get AWS credentials for GCE to be able to read from Credstash
-        mkdir -p "$HOME/.aws"
-        retry berglas access fuzzmanager-cluster-secrets/credstash-aws-auth >"$HOME/.aws/credentials"
-        chmod 0600 "$HOME/.aws/credentials"
-        ;;
       taskcluster)
         # Get AWS credentials for TC to be able to read from Credstash
         mkdir -p "$HOME/.aws"
