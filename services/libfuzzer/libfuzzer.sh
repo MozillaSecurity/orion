@@ -38,11 +38,6 @@ if [[ -z $FUZZER ]]; then
   exit 1
 fi
 
-if [[ -z $NO_SECRETS ]]; then
-  # setup AWS credentials to use S3
-  setup-aws-credentials
-fi
-
 mkdir -p ~/.ssh
 if [[ ! -e ~/.ssh/id_rsa.fuzzing-shells-private ]] && [[ -z $NO_SECRETS ]]; then
   get-tc-secret deploy-fuzzing-shells-private ~/.ssh/id_rsa.fuzzing-shells-private
@@ -173,11 +168,7 @@ if [[ -n $S3_PROJECT ]]; then
   # into a new corpus.
 
   # Generic parameters for S3
-  if [[ ${USE_GCS:-0} == "1" ]]; then
-    S3_PROJECT_ARGS+=(--bucket guided-fuzzing-data --provider GCS --project "$S3_PROJECT")
-  else
-    S3_PROJECT_ARGS+=(--bucket mozilla-aflfuzz --project "$S3_PROJECT")
-  fi
+  S3_PROJECT_ARGS+=(--bucket guided-fuzzing-data --provider GCS --project "$S3_PROJECT")
 
   # This option ensures that we synchronize local finds from/to S3 queues.
   # When generating coverage, it does not make sense to use this.

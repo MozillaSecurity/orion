@@ -30,9 +30,6 @@ for r in fuzzfetch fuzzmanager prefpicker guided-fuzzing-daemon; do
   popd >/dev/null
 done
 
-# setup AWS credentials to use S3
-setup-aws-credentials
-
 # Get FuzzManager configuration
 # We require FuzzManager credentials in order to submit our results.
 if [[ ! -e ~/.fuzzmanagerconf ]]; then
