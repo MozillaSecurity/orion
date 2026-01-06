@@ -179,7 +179,7 @@ fi
 # Generate dynamic instrumentation map
 if [[ -n $PC_FILTER_REPORT_CONFIG && $COVERAGE -ne 1 ]] && percent_chance 98; then
   if [[ ! -f target.symbols.txt ]]; then
-    python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/libxul.so >libxul.symbols.txt
+    python3 /srv/repos/AFLplusplus/utils/dynamic_covfilter/make_symbol_list.py ./firefox/gtest/libxul.so >libxul.symbols.txt
     symbol-filter libxul.symbols.txt "$PC_FILTER_REPORT_CONFIG" -o target.symbols.txt
   fi
   echo "export __AFL_PC_FILTER=1" >>session.sh
