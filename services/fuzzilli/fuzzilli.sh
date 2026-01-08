@@ -13,6 +13,8 @@ ulimit -c 0
 # shellcheck source=recipes/linux/common.sh
 source "$HOME/.local/bin/common.sh"
 
+mkdir -p "$HOME/results/crashes"
+
 if [[ -z $NO_SECRETS ]]; then
   # setup AWS credentials to use S3
   setup-aws-credentials
