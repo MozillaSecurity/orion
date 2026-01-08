@@ -77,14 +77,6 @@ if [[ -z $COVERAGE ]]; then
   esac
 fi
 
-if [[ -z $NO_PULL ]]; then
-  (
-    cd ~/trees/funfuzz
-    retry git fetch --depth 1 --no-tags origin master HEAD
-    git reset --hard FETCH_HEAD
-  )
-fi
-
 BUILDS="$HOME/builds"
 mkdir -p "$BUILDS"
 
