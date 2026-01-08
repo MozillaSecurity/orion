@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM alpine:3.19
+FROM alpine:3.23
 
 LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
 
@@ -21,7 +21,6 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
         py3-pip \
         py3-requests \
         py3-wheel \
-        py3-yaml \
         python3 \
         python3-dev \
         zstd \
