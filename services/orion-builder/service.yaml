@@ -5,5 +5,5 @@ arch:
 tests:
   - name: lint
     type: tox
-    image: ci-py-39
+    image: ci-py-310
     toxenv: lint
