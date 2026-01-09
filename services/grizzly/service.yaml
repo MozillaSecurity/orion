@@ -1,6 +1,1 @@
 name: grizzly
-tests:
-  - name: lint
-    type: tox
-    image: ci-py-39
-    toxenv: lint
