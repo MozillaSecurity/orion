@@ -2,9 +2,6 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-target-version = ["py38"]
-
 [tool.coverage.run]
 omit = [
     "*/setup.py",
@@ -45,7 +42,7 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [

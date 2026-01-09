@@ -1,22 +1,21 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-"""Common definitions for Grizzly reduction in Taskcluster
-"""
-
+"""Common definitions for Grizzly reduction in Taskcluster"""
 
 import argparse
 import json
 import re
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from functools import wraps
 from json import loads
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any
 
 from dateutil.parser import isoparse
 from Reporter.Reporter import Reporter
@@ -32,7 +31,7 @@ def format_seconds(duration: float) -> str:
     # format H:M:S, and then remove all leading zeros with regex
     minutes, seconds = divmod(int(duration), 60)
     hours, minutes = divmod(minutes, 60)
-    result = re.sub("^[0:]*", "", "%d:%02d:%02d" % (hours, minutes, seconds))
+    result = re.sub("^[0:]*", "", f"{hours:02d}:{minutes:02d}:{seconds:02d}")
     # if the result is all zeroes, ensure one zero is output
     if not result:
         result = "0"
@@ -100,16 +99,16 @@ class CommonArgParser(ArgumentParser):
 @dataclass(frozen=True)
 class CrashEntry:
     id: int
-    bucket: Optional[int]
+    bucket: int | None
     tool: str
     created: datetime
     os: str
     testcase_quality: int
     shortSignature: str
-    env: Dict[str, str]
+    env: dict[str, str]
 
     @classmethod
-    def _from_result(cls, result: Dict[str, Any]) -> "CrashEntry":
+    def _from_result(cls, result: dict[str, Any]) -> "CrashEntry":
         assert isinstance(result["id"], int)
         assert result["bucket"] is None or isinstance(result["bucket"], int)
         assert isinstance(result["tool"], str)
@@ -135,7 +134,7 @@ class Bucket:
     best_quality: int
 
     @classmethod
-    def _from_result(cls, result: Dict[str, Any]) -> "Bucket":
+    def _from_result(cls, result: dict[str, Any]) -> "Bucket":
         assert isinstance(result["id"], int)
         assert isinstance(result["shortDescription"], str)
         assert isinstance(result["best_quality"], int)
@@ -153,28 +152,23 @@ class CrashManager(Reporter):
     def _list_objs(
         self,
         endpoint: str,
-        query: Optional[Dict[str, Any]] = None,
-        ordering: Optional[List[str]] = None,
-    ) -> Iterator[Dict[str, Any]]:
+        query: dict[str, Any] | None = None,
+        ordering: list[str] | None = None,
+    ) -> Iterator[dict[str, Any]]:
         """Iterate over results possibly paginated by Django Rest Framework."""
-        params: Optional[Dict[str, Any]] = {
-            "ignore_toolfilter": 1,
-        }
+        params: dict[str, Any] | None = {"ignore_toolfilter": 1}
+        assert params is not None
         if query is not None:
-            assert params is not None
             params["query"] = json.dumps(query)
         if ordering is not None:
-            assert params is not None
             params["ordering"] = ",".join(ordering)
         if endpoint == "crashes":
-            assert params is not None
             params["include_raw"] = "0"
-        assert params is not None
         params["limit"] = 1000
 
         returned = 0
 
-        next_url: Optional[str] = (
+        next_url: str | None = (
             f"{self.serverProtocol}://{self.serverHost}:{self.serverPort}"
             f"/crashmanager/rest/{endpoint}/"
         )
@@ -203,8 +197,8 @@ class CrashManager(Reporter):
 
     def list_crashes(
         self,
-        query: Optional[Dict[str, Any]] = None,
-        ordering: Optional[List[str]] = None,
+        query: dict[str, Any] | None = None,
+        ordering: list[str] | None = None,
     ) -> Iterator[CrashEntry]:
         """List all CrashEntry objects.
 
@@ -219,7 +213,7 @@ class CrashManager(Reporter):
         for result in self._list_objs("crashes", query=query, ordering=ordering):
             yield CrashEntry._from_result(result)
 
-    def list_buckets(self, query: Optional[Dict[str, Any]] = None) -> Iterator[Bucket]:
+    def list_buckets(self, query: dict[str, Any] | None = None) -> Iterator[Bucket]:
         """List all Bucket objects.
 
         Arguments:
@@ -251,7 +245,7 @@ class ReductionWorkflow(ABC):
     """Common framework for reduction scripts."""
 
     @abstractmethod
-    def run(self) -> Optional[int]:
+    def run(self) -> int | None:
         """Run the actual reduction script.
         Any necessary parameters must be set on the instance in `from_args`/`__init__`.
 
@@ -261,7 +255,7 @@ class ReductionWorkflow(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         """Parse CLI arguments and return the parsed result.
 
         This should used `CommonArgParser` to ensure the default arguments exist for
@@ -298,7 +292,7 @@ class ReductionWorkflow(ABC):
             conf_path.chmod(0o400)
 
     @classmethod
-    def main(cls, args: Optional[argparse.Namespace] = None) -> Optional[int]:
+    def main(cls, args: argparse.Namespace | None = None) -> int | None:
         """Main entrypoint for reduction scripts."""
         if args is None:
             args = cls.parse_args()

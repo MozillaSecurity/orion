@@ -1,12 +1,12 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-"""Check CrashManager for reducible crashes, and queue them in Taskcluster.
-"""
+"""Check CrashManager for reducible crashes, and queue them in Taskcluster."""
 
 import argparse
 import os
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from logging import WARNING, getLogger
@@ -14,7 +14,6 @@ from pathlib import Path
 from random import choice, random
 from string import Template
 from time import time
-from typing import Dict, Iterator, List, Optional, Tuple
 
 from grizzly.common.reporter import Quality
 from taskcluster.exceptions import TaskclusterFailure
@@ -65,7 +64,7 @@ REDUCE_TASKS = {
 @dataclass(frozen=True)
 class ReducibleCrash:
     id: int
-    bucket: Optional[int]
+    bucket: int | None
     tool: str
     description: str
     os: str
@@ -73,9 +72,7 @@ class ReducibleCrash:
     has_gpu: bool
 
 
-def _fuzzmanager_get_crashes(
-    tool_list: List[str],
-) -> Iterator[ReducibleCrash]:
+def _fuzzmanager_get_crashes(tool_list: list[str]) -> Iterator[ReducibleCrash]:
     """This function is responsible for getting CrashInfo objects to try to reduce
     from FuzzManager.
 
@@ -137,7 +134,7 @@ def _fuzzmanager_get_crashes(
         len(bucket_tools),
     )
 
-    buckets_by_tool: Dict[str, List[int]] = {}
+    buckets_by_tool: dict[str, list[int]] = {}
     for bucket_id, tool in bucket_tools:
         buckets_by_tool.setdefault(tool, [])
         buckets_by_tool[tool].append(bucket_id)
@@ -210,9 +207,7 @@ def _fuzzmanager_get_crashes(
         )
 
 
-def _filter_reducing_unbucketed(
-    tool_list: List[str],
-) -> Iterator[ReducibleCrash]:
+def _filter_reducing_unbucketed(tool_list: list[str]) -> Iterator[ReducibleCrash]:
     """This function calls `_fuzzmanager_get_crashes` and filters unbucketed
     tool/shortSignature crashes if any are reducing already.
 
@@ -223,10 +218,10 @@ def _filter_reducing_unbucketed(
         Description and all info needed to queue a crash for reduction
     """
     # dict of tag -> min quality where we have a quality < UNREDUCED
-    skip: Dict[Tuple[Optional[int], str, str], int] = {}
+    skip: dict[tuple[int | None, str, str], int] = {}
     # dict of tag -> list of crashes, for crashes where a reducing crash has not been
     # seen yet
-    queue: Dict[Tuple[Optional[int], str, str], List[ReducibleCrash]] = {}
+    queue: dict[tuple[int | None, str, str], list[ReducibleCrash]] = {}
 
     for crash in _fuzzmanager_get_crashes(tool_list):
         tag = (crash.bucket, crash.tool, crash.description)
@@ -268,7 +263,7 @@ def _filter_reducing_unbucketed(
         yield from crashes
 
 
-def _get_unique_crashes(tool_list: List[str]) -> Iterator[Tuple[str, ReducibleCrash]]:
+def _get_unique_crashes(tool_list: list[str]) -> Iterator[tuple[str, ReducibleCrash]]:
     """This function calls `_filter_reducing_unbucketed` and picks one unique result
     per bucket/shortSignature to reduce.
 
@@ -312,11 +307,11 @@ class ReductionMonitor(ReductionWorkflow):
     """
 
     def __init__(
-        self, dry_run: bool = False, tool_list: Optional[List[str]] = None
+        self, dry_run: bool = False, tool_list: list[str] | None = None
     ) -> None:
         super().__init__()
         self.dry_run = dry_run
-        self._gw_image_artifact_tasks: Dict[str, str] = {}
+        self._gw_image_artifact_tasks: dict[str, str] = {}
         if self.dry_run:
             LOG.warning("*** DRY RUN -- SIMULATION ONLY ***")
         if not tool_list:
@@ -333,7 +328,7 @@ class ReductionMonitor(ReductionWorkflow):
         return self._gw_image_artifact_tasks[namespace]
 
     def queue_reduction_task(
-        self, os_name: str, crash: ReducibleCrash, no_repro_quality: Optional[int]
+        self, os_name: str, crash: ReducibleCrash, no_repro_quality: int | None
     ) -> None:
         """Queue a reduction task in Taskcluster.
 
@@ -390,7 +385,7 @@ class ReductionMonitor(ReductionWorkflow):
         LOG.info("Marking %d Q4 (in progress)", crash.id)
         CrashManager().update_testcase_quality(crash.id, Quality.REDUCING.value)
 
-    def run(self) -> Optional[int]:
+    def run(self) -> int:
         start_time = time()
         srv = CrashManager()
 
@@ -453,7 +448,7 @@ class ReductionMonitor(ReductionWorkflow):
         return int(self.error_occurred)
 
     @staticmethod
-    def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         parser = CommonArgParser(prog="grizzly-reduce-tc-monitor")
         parser.add_argument(
             "-n",

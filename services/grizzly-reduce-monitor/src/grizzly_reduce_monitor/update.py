@@ -1,14 +1,11 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-"""Update the original crash in CrashManager following reduction.
-"""
-
+"""Update the original crash in CrashManager following reduction."""
 
 import argparse
 import sys
 from logging import getLogger
-from typing import List, Optional
 
 from grizzly.common.fuzzmanager import CrashEntry
 from grizzly.common.reporter import Quality
@@ -32,8 +29,8 @@ class ReductionUpdater(ReductionWorkflow):
         self,
         crash_id: int,
         quality: int,
-        only_if_quality: Optional[int] = None,
-        task_os: Optional[str] = None,
+        only_if_quality: int | None = None,
+        task_os: str | None = None,
     ) -> None:
         super().__init__()
         self.crash_id = crash_id
@@ -41,7 +38,7 @@ class ReductionUpdater(ReductionWorkflow):
         self.only_if_quality = only_if_quality
         self.task_os = None
 
-    def run(self) -> Optional[int]:
+    def run(self) -> int | None:
         try:
             crash = CrashEntry(self.crash_id)
             if (
@@ -64,7 +61,7 @@ class ReductionUpdater(ReductionWorkflow):
         return 0
 
     @staticmethod
-    def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
+    def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         parser = CommonArgParser(prog="grizzly-reduce-tc-update")
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument("--crash", type=int, help="Crash ID to update.")
@@ -86,7 +83,7 @@ class ReductionUpdater(ReductionWorkflow):
 
     @classmethod
     def from_args(cls, args: argparse.Namespace) -> "ReductionUpdater":
-        task_os: Optional[str] = None
+        task_os: str | None = None
         if args.crash_from_reduce_task:
             LOG.info(
                 "Fetching crash ID from reduction task %s", args.crash_from_reduce_task
