@@ -16,9 +16,6 @@ source "$HOME/.local/bin/common.sh"
 mkdir -p "$HOME/results/crashes"
 
 if [[ -z $NO_SECRETS ]]; then
-  # setup AWS credentials to use S3
-  setup-aws-credentials
-
   # get gcp fuzzdata credentials
   mkdir -p ~/.config/gcloud
   get-tc-secret google-cloud-storage-guided-fuzzing ~/.config/gcloud/application_default_credentials.json raw
@@ -128,18 +125,9 @@ args=(
   --instances "${INSTANCES:-$(python3 -c 'import os;print(len(os.sched_getaffinity(0))//2)')}"
   --project "$S3_PROJECT"
   --stats ./stats
+  --bucket guided-fuzzing-data
+  --provider GCS
 )
-
-if [[ -n $USE_GCS ]]; then
-  args+=(
-    --bucket guided-fuzzing-data
-    --provider GCS
-  )
-else
-  args+=(
-    --bucket mozilla-aflfuzz
-  )
-fi
 
 if [[ -n $DIFFERENTIAL ]]; then
   args+=(--differential)
