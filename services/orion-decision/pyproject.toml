@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orion-decision"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 description = "Scheduler for Orion tasks"
 license = {text = "MPL 2.0"}
 maintainers = [
@@ -85,7 +85,7 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 ignore = []

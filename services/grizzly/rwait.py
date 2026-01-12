@@ -9,7 +9,6 @@ import sys
 import tempfile
 import time
 import uuid
-from typing import Optional
 
 import fasteners
 
@@ -17,8 +16,8 @@ TOKEN_PATH = pathlib.Path(tempfile.gettempdir()) / "rwait"
 
 
 class RemoteWait:
-    def __init__(self, token: Optional[str] = None) -> None:
-        self._token: Optional[str] = None
+    def __init__(self, token: str | None = None) -> None:
+        self._token: str | None = None
         if token is not None:
             self.token = token
 
@@ -27,12 +26,12 @@ class RemoteWait:
         return TOKEN_PATH / str(self.token)
 
     @property
-    def token(self) -> Optional[str]:
+    def token(self) -> str | None:
         assert self._token is not None, "token has not been created/set"
         return self._token
 
     @token.setter
-    def token(self, value: Optional[str]) -> None:
+    def token(self, value: str | None) -> None:
         assert self._token is None, "token already has a value"
         self._token = value
 
@@ -122,7 +121,7 @@ class RemoteWait:
         return parser
 
     @classmethod
-    def main(cls, input_args: Optional[list[str]] = None) -> None:
+    def main(cls, input_args: list[str] | None = None) -> None:
         parser = cls.arg_parser()
         args = parser.parse_args(input_args)
         rwait = cls(args.token)
@@ -142,7 +141,7 @@ class RemoteWait:
         parser.error(f"unknown subcommand: {args.subcommand}")
 
 
-def main(args: Optional[list[str]] = None):
+def main(args: list[str] | None = None):
     RemoteWait.main(args)
 
 

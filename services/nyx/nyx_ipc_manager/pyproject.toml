@@ -13,7 +13,7 @@ max-line-length = 88
 
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 ignore = []

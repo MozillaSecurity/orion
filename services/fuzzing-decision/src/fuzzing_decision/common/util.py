@@ -7,14 +7,15 @@ from __future__ import annotations
 import os
 import re
 import stat
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Union
+from typing import Any
 
 import yaml
 from jsonschema import validate
 from referencing import Registry, Resource
 
-PathArg = Union[str, Path]
+PathArg = str | Path
 
 
 def _load_schema_cache() -> Registry:

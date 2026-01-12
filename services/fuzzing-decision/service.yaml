@@ -1,9 +1,5 @@
 name: fuzzing-decision
 tests:
-  - name: python 3.9 unittests
-    type: tox
-    image: ci-py-39
-    toxenv: py39
   - name: python 3.10 unittests
     type: tox
     image: ci-py-310
