@@ -1,6 +1,0 @@
-name: failed-log-ingestor
-tests:
-  - name: lint
-    type: tox
-    image: ci-py-312
-    toxenv: lint
