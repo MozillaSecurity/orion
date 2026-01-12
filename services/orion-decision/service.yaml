@@ -20,7 +20,3 @@ tests:
     type: tox
     image: ci-py-313
     toxenv: py313
-  - name: lint
-    type: tox
-    image: ci-py-39
-    toxenv: lint

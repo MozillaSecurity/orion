@@ -72,14 +72,6 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^services/grizzly/.*
-      - id: grizzly-android-lint
-        name: Run linters for grizzly-android
-        entry: bash -c 'cd services/grizzly-android && exec tox -e lint'
-        language: system
-        require_serial: true
-        pass_filenames: false
-        types: [python]
-        files: ^services/grizzly-android/.*
       - id: grizzly-reduce-monitor-lint
         name: Run linters for grizzly_reduce_monitor
         entry: bash -c 'cd services/grizzly-reduce-monitor && exec tox -e lint'
@@ -118,6 +110,22 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^services/orion-builder/.*
+      - id: nyx-ipc-manager-lint
+        name: Run linters for nyx-ipc-manager
+        entry: bash -c 'cd services/nyx/nyx_ipc_manager && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
+        files: ^services/nyx/nyx_ipc_manager/.*
+      - id: symbol-filter-lint
+        name: Run linters for symbol-filter
+        entry: bash -c 'cd services/nyx/symbol-filter && exec tox -e lint'
+        language: system
+        require_serial: true
+        pass_filenames: false
+        types: [python]
+        files: ^services/nyx/symbol-filter/.*
 
 default_language_version:
   python: python3
