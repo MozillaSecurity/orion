@@ -38,9 +38,6 @@ Homepage = "https://github.com/MozillaSecurity/orion"
 Issues = "https://github.com/MozillaSecurity/orion/issues"
 Repository = "https://github.com/MozillaSecurity/orion.git"
 
-[tool.black]
-target-version = ["py39"]
-
 [tool.coverage.run]
 omit = [
     "*/setup.py",

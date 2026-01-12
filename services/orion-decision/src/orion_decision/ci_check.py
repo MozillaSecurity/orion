@@ -100,9 +100,9 @@ def check_matrix(args: Namespace) -> None:
                     raise NotImplementedError(
                         "checking --matrix isn't supported yet, use CI_MATRIX"
                     )
-                assert "CI_MATRIX" in task["payload"].get(
-                    "env", {}
-                ), "CI_MATRIX is missing (required by ci-decision)"
+                assert "CI_MATRIX" in task["payload"].get("env", {}), (
+                    "CI_MATRIX is missing (required by ci-decision)"
+                )
                 matrix = yaml_load(task["payload"]["env"]["CI_MATRIX"])
 
                 # get all `branch:` references

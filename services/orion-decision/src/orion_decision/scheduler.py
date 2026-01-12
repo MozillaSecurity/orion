@@ -159,9 +159,9 @@ class Scheduler:
         ):
             if "=" in match.group(0):
                 for svc in match.group(1)[1:].split(","):
-                    assert (
-                        svc in self.services
-                    ), f"/force-rebuild of unknown service {svc}"
+                    assert svc in self.services, (
+                        f"/force-rebuild of unknown service {svc}"
+                    )
                     self.services[svc].dirty = True
                     forced.add(svc)
             else:

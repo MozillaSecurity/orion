@@ -491,7 +491,7 @@ def test_create_test_dirty_image(
     task2_id, task2 = queue.createTask.call_args_list[call_idx][0]
     call_idx += 1
     assert task2 == expected2
-    task3_id, task3 = queue.createTask.call_args_list[call_idx][0]
+    _task3_id, task3 = queue.createTask.call_args_list[call_idx][0]
     call_idx += 1
     expected3 = yaml_load(
         BUILD_TASK.substitute(
@@ -893,7 +893,6 @@ def test_create_push_multiarch(mocker: MockerFixture) -> None:
     sched.create_tasks()
     assert queue.createTask.call_count == 4
 
-    build_task_id, build_task = queue.createTask.call_args_list[0][0]
     build_task1_id, build_task1 = queue.createTask.call_args_list[0][0]
     build_expected = yaml_load(
         BUILD_TASK.substitute(

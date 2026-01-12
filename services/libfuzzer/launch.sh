@@ -69,7 +69,7 @@ EOF
     mkdir -p /tests
 
     # See https://github.com/koalaman/shellcheck/issues/2660
-    # shellcheck disable=SC2317
+    # shellcheck disable=SC2329
     function onexit() {
       echo "Waiting for logs to flush..." >&2
       sleep 15
@@ -103,7 +103,7 @@ else
 
     if [[ -z $TASK_ID ]]; then
       # See https://github.com/koalaman/shellcheck/issues/2660
-      # shellcheck disable=SC2317
+      # shellcheck disable=SC2329
       function onexit {
         disable-ec2-pool || true
       }
@@ -122,7 +122,7 @@ fi
 exit_code=$?
 echo "returned $exit_code" >&2
 if [[ $exit_code -eq 124 ]]; then
-  # timeout coreutil exit code.
+  # coreutils `timeout` exit code.
   exit 0
 else
   exit $exit_code

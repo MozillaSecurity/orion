@@ -99,8 +99,8 @@ class MatrixJob:
     """
 
     __slots__ = (
-        "env",
         "artifacts",
+        "env",
         "language",
         "name",
         "platform",
@@ -177,27 +177,27 @@ class MatrixJob:
             f"platform '{self.platform}'"
         )
         assert isinstance(self.env, dict), "`env` must be a dict"
-        assert all(
-            isinstance(key, str) for key in self.env
-        ), "all `env` keys must be strings"
-        assert all(
-            isinstance(value, str) for value in self.env.values()
-        ), "all `env` values must be strings"
+        assert all(isinstance(key, str) for key in self.env), (
+            "all `env` keys must be strings"
+        )
+        assert all(isinstance(value, str) for value in self.env.values()), (
+            "all `env` values must be strings"
+        )
         assert isinstance(self.script, list), "`script` must be a list"
         assert self.script, "`script` must not be empty"
-        assert all(
-            isinstance(cmd, str) for cmd in self.script
-        ), "`script` must be a list of strings"
+        assert all(isinstance(cmd, str) for cmd in self.script), (
+            "`script` must be a list of strings"
+        )
         for secret in self.secrets:
-            assert isinstance(
-                secret, CISecret
-            ), "`secrets` must be a list of `CISecret` objects"
-        assert (
-            isinstance(self.stage, int) and self.stage > 0
-        ), "`stage` must be a positive integer"
-        assert isinstance(
-            self.require_previous_stage_pass, bool
-        ), "`require_previous_stage_pass` must be a boolean"
+            assert isinstance(secret, CISecret), (
+                "`secrets` must be a list of `CISecret` objects"
+            )
+        assert isinstance(self.stage, int) and self.stage > 0, (
+            "`stage` must be a positive integer"
+        )
+        assert isinstance(self.require_previous_stage_pass, bool), (
+            "`require_previous_stage_pass` must be a boolean"
+        )
         assert (
             self.language,
             self.platform,
@@ -206,12 +206,12 @@ class MatrixJob:
             f"no image available for language '{self.language}', "
             f"platform '{self.platform}', version '{self.version}'"
         )
-        assert len(self.artifacts) == len(
-            {a.src for a in self.artifacts}
-        ), "`src` for all artifacts must be unique"
-        assert len(self.artifacts) == len(
-            {a.url for a in self.artifacts}
-        ), "`url` for all artifacts must be unique"
+        assert len(self.artifacts) == len({a.src for a in self.artifacts}), (
+            "`src` for all artifacts must be unique"
+        )
+        assert len(self.artifacts) == len({a.url for a in self.artifacts}), (
+            "`url` for all artifacts must be unique"
+        )
 
     @classmethod
     def from_json(cls, data: str) -> MatrixJob:
@@ -395,7 +395,7 @@ class CISecret(ABC):
              instead of the dict.
     """
 
-    __slots__ = ("secret", "key")
+    __slots__ = ("key", "secret")
 
     def __init__(self, secret: str, key: str | None = None) -> None:
         """Initialize CISecret object.
@@ -528,7 +528,7 @@ class CISecretFile(CISecret):
         (see CISecret for attributes defined there)
     """
 
-    __slots__ = ("path", "append", "mask")
+    __slots__ = ("append", "mask", "path")
 
     def __init__(
         self,
@@ -663,7 +663,7 @@ class CIMatrix:
         artifacts: Artifact files/directories defined for all jobs.
     """
 
-    __slots__ = ("jobs", "secrets", "artifacts")
+    __slots__ = ("artifacts", "jobs", "secrets")
 
     def __init__(
         self,
@@ -868,21 +868,21 @@ class CIMatrix:
         artifact_srcs = {a.src for a in self.artifacts}
         artifact_urls = {a.url for a in self.artifacts}
 
-        assert len(self.artifacts) == len(
-            artifact_srcs
-        ), "`src` for all artifacts must be unique"
-        assert len(self.artifacts) == len(
-            artifact_urls
-        ), "`url` for all artifacts must be unique"
+        assert len(self.artifacts) == len(artifact_srcs), (
+            "`src` for all artifacts must be unique"
+        )
+        assert len(self.artifacts) == len(artifact_urls), (
+            "`url` for all artifacts must be unique"
+        )
 
         for job in self.jobs:
             job.check()
-            assert not any(
-                artifact_srcs & {a.src for a in job.artifacts}
-            ), "job artifact src redefines matrix artifact"
-            assert not any(
-                artifact_urls & {a.url for a in job.artifacts}
-            ), "job artifact url redefines matrix artifact"
+            assert not any(artifact_srcs & {a.src for a in job.artifacts}), (
+                "job artifact src redefines matrix artifact"
+            )
+            assert not any(artifact_urls & {a.url for a in job.artifacts}), (
+                "job artifact url redefines matrix artifact"
+            )
 
     def _parse_secrets(self, secrets: str) -> Iterator[CISecret]:
         for secret in secrets:
@@ -905,11 +905,11 @@ def _validate_globals() -> None:
     # validate IMAGES
     missing_images = ["/".join(img) for img in set(valid_image_keys) - set(IMAGES)]
     assert not missing_images, (
-        "IMAGES: missing images for: " f"[{', '.join(missing_images)}]"
+        f"IMAGES: missing images for: [{', '.join(missing_images)}]"
     )
     extra_images = ["/".join(img) for img in set(IMAGES) - set(valid_image_keys)]
     assert not extra_images, (
-        "IMAGES: unnecessary images given: " f"[{', '.join(extra_images)}]"
+        f"IMAGES: unnecessary images given: [{', '.join(extra_images)}]"
     )
 
 

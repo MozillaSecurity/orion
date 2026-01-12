@@ -454,9 +454,9 @@ class Services(dict):
             path = self.root / match
             part0 = Path(match).parts[0]
             if (not path.is_file() and match in self.recipes) or part0 == "recipes":
-                assert (
-                    path.name in self.recipes
-                ), f"{type(obj).__name__} {obj.name} depends on unknown recipe {match}"
+                assert path.name in self.recipes, (
+                    f"{type(obj).__name__} {obj.name} depends on unknown recipe {match}"
+                )
                 if path.name not in obj.recipe_deps:
                     obj.recipe_deps.add(path.name)
                     LOG.info(

@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI functions for Orion builder"""
 
-
 import argparse
 from locale import LC_ALL, setlocale
 from logging import DEBUG, INFO, WARN, basicConfig, getLogger
