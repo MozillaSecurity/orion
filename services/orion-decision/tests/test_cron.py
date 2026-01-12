@@ -6,7 +6,6 @@
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
 from pathlib import Path
-from typing import Set
 
 import pytest
 from freezegun import freeze_time
@@ -62,9 +61,9 @@ def test_cron_main(mocker: MockerFixture) -> None:
 )
 def test_cron_mark_rebuild(
     mocker: MockerFixture,
-    expired_svcs: Set[str],
-    missing_svcs: Set[str],
-    dirty_svcs: Set[str],
+    expired_svcs: set[str],
+    missing_svcs: set[str],
+    dirty_svcs: set[str],
 ) -> None:
     """test mark_services_for_rebuild"""
     now = datetime.now(timezone.utc)

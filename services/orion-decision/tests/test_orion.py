@@ -4,7 +4,7 @@
 """Tests for Orion service classes"""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 import pytest
 from pytest_mock import MockerFixture
@@ -69,7 +69,7 @@ def test_service_load_tests() -> None:
     assert svc.tests[0].name == "test-test"
     assert svc.tests[0].image == "test-test-image"
     assert svc.tests[0].toxenv == "toxenvpy3"
-    task: Dict[str, Dict[str, str]] = {"payload": {}}
+    task: dict[str, dict[str, str]] = {"payload": {}}
     svc.tests[0].update_task(
         task, "{clone_url}", "{branch}", "{commit}", "/path/to/test"
     )
@@ -83,7 +83,7 @@ def test_service_load_tests() -> None:
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )
-def test_service_load_error(defn: Dict[str, Any]) -> None:
+def test_service_load_error(defn: dict[str, Any]) -> None:
     """test that service test errors are raised"""
     expect = defn.pop("expect")
     if "raises" in expect:
@@ -174,9 +174,9 @@ def test_service_load_test_only() -> None:
 )
 def test_service_deps(
     mocker: MockerFixture,
-    dirty_paths: List[Path],
-    expect_services: Set[str],
-    expect_recipes: Set[Optional[str]],
+    dirty_paths: list[Path],
+    expect_services: set[str],
+    expect_recipes: set[Optional[str]],
 ) -> None:
     """test that service dependencies are calculated and changes propagated"""
     root = FIXTURES / "services03"

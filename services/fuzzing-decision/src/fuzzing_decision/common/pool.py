@@ -6,13 +6,12 @@ from __future__ import annotations
 
 import logging
 import types
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import (
     Any,
-    Iterable,
-    Iterator,
 )
 
 import dateutil.parser

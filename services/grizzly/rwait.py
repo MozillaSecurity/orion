@@ -9,7 +9,7 @@ import sys
 import tempfile
 import time
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 import fasteners
 
@@ -43,7 +43,7 @@ class RemoteWait:
             assert not self._token_file.is_file()
             self._token_file.write_text(json.dumps({"state": "new"}))
 
-    def run(self, cmd: List[str]) -> int:
+    def run(self, cmd: list[str]) -> int:
         with fasteners.InterProcessLock(str(self._token_file) + ".lck"):
             data = json.loads(self._token_file.read_text())
             assert data["state"] == "new"
@@ -122,7 +122,7 @@ class RemoteWait:
         return parser
 
     @classmethod
-    def main(cls, input_args: Optional[List[str]] = None) -> None:
+    def main(cls, input_args: Optional[list[str]] = None) -> None:
         parser = cls.arg_parser()
         args = parser.parse_args(input_args)
         rwait = cls(args.token)
@@ -142,7 +142,7 @@ class RemoteWait:
         parser.error(f"unknown subcommand: {args.subcommand}")
 
 
-def main(args: Optional[List[str]] = None):
+def main(args: Optional[list[str]] = None):
     RemoteWait.main(args)
 
 

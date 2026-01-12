@@ -11,7 +11,8 @@ from collections.abc import Iterable, Iterator
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Pattern
+from re import Pattern
+from typing import Any
 
 from dockerfile_parse import DockerfileParser
 from yaml import safe_load as yaml_load
