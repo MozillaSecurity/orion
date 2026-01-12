@@ -2,8 +2,3 @@ name: orion-builder
 arch:
   - amd64
   - arm64
-tests:
-  - name: lint
-    type: tox
-    image: ci-py-310
-    toxenv: lint

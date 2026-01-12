@@ -5,4 +5,3 @@ tests:
     type: tox
     image: ci-py-310
     toxenv: lint
-
