@@ -62,7 +62,7 @@ def test_configure_local(tmp_path):
     workflow = Workflow()
 
     # Fails on missing file
-    with pytest.raises(AssertionError, match="Missing configuration in nope.yml"):
+    with pytest.raises(AssertionError, match=r"Missing configuration in nope\.yml"):
         workflow.configure(local_path=Path("nope.yml"))
 
     # Read a local conf

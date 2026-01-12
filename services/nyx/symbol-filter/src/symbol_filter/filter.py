@@ -57,7 +57,7 @@ class ReportConfiguration(Reporter):  # type: ignore[misc]
         """Initializes ReportConfiguration."""
         super().__init__(tool="symbol-filter")
 
-    @remote_checks  # type: ignore[misc]
+    @remote_checks  # type: ignore[untyped-decorator]
     def get_report_configuration(self, ident: int) -> ReportConfigurationResult:
         """Fetch report configuration by ID from the API."""
         url = (

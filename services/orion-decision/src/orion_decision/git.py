@@ -32,7 +32,7 @@ class GitRepo:
         path: The location where the repository is cloned.
     """
 
-    __slots__ = ("path", "_cloned")
+    __slots__ = ("_cloned", "path")
 
     def __init__(
         self,

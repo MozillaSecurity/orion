@@ -126,7 +126,7 @@ def parse_args(argv: list[str] | None = None) -> Namespace:
     parser.add_argument(
         "--push-branch",
         default=getenv("PUSH_BRANCH", "master"),
-        help="Push to Docker Hub if push event is on this branch " "(default: master).",
+        help="Push to Docker Hub if push event is on this branch (default: master).",
     )
     parser.add_argument(
         "--docker-hub-secret",
@@ -295,7 +295,7 @@ def parse_cron_args(argv: list[str] | None = None) -> Namespace:
     parser.add_argument(
         "--push-branch",
         default=getenv("PUSH_BRANCH", "master"),
-        help="Push to Docker Hub if push event is on this branch " "(default: master).",
+        help="Push to Docker Hub if push event is on this branch (default: master).",
     )
     parser.add_argument(
         "--docker-hub-secret",
@@ -360,9 +360,9 @@ def ci_launch() -> None:
     LOG.info("Running %r", args.job.script)
     if args.job.platform == "windows" and not Path(args.job.script[0]).is_file():
         binary = which(args.job.script[0])
-        assert (
-            binary is not None
-        ), f"Couldn't resolve script executable: {args.job.script[0]}"
+        assert binary is not None, (
+            f"Couldn't resolve script executable: {args.job.script[0]}"
+        )
         args.job.script[0] = binary
     sys.exit(run(args.job.script, env=env, check=True).returncode)
 

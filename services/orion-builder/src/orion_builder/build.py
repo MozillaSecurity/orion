@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """CLI for Orion builder/build script"""
 
-
 import argparse
 import logging
 import sys

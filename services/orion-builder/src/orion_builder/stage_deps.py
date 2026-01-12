@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Stage build deps Orion builder"""
 
-
 import argparse
 import sys
 from pathlib import Path

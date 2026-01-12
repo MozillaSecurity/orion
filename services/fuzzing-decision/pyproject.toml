@@ -12,9 +12,6 @@ omit = [
     "*/.egg/*",
 ]
 
-[tool.black]
-target-version = ["py39"]
-
 [[tool.mypy.overrides]]
 module = [
     "setuptools",
