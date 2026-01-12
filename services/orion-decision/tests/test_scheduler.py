@@ -5,7 +5,6 @@
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
 
 import pytest
 from freezegun import freeze_time
@@ -415,7 +414,7 @@ def test_create_test_dirty_image(
     ci1_dirty: bool,
     svc1_dirty: bool,
     svc2_dirty: bool,
-    expected_image: Dict[str, str],
+    expected_image: dict[str, str],
 ) -> None:
     """test "test" tasks creation with dirty ci image"""
     taskcluster = mocker.patch("orion_decision.scheduler.Taskcluster", autospec=True)

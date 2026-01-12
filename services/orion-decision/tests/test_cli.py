@@ -6,7 +6,7 @@
 from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -217,7 +217,7 @@ def test_ci_launch_01(
     run = mocker.patch("orion_decision.cli.run", autospec=True)
     repo = mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value="secret")
-    copy: Dict[str, str] = {}
+    copy: dict[str, str] = {}
     environ.copy.return_value = copy
 
     if platform == "windows":
@@ -276,7 +276,7 @@ def test_ci_launch_02(mocker: MockerFixture) -> None:
     mocker.patch("orion_decision.cli.run", autospec=True)
     mocker.patch("orion_decision.cli.GitRepo", autospec=True)
     mocker.patch.object(CISecretEnv, "get_secret_data", return_value={"key": "secret"})
-    copy: Dict[str, str] = {}
+    copy: dict[str, str] = {}
     environ.copy.return_value = copy
 
     sec = CISecretEnv("secret", "name")

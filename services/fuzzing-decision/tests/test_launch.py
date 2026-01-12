@@ -4,7 +4,7 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -133,7 +133,7 @@ def test_load_params_4(tmp_path, pool_data):
     pool_data["preprocess"] = "preproc"
 
     # test 4: preprocess task is loaded
-    preproc_data: Dict[str, Any] = {
+    preproc_data: dict[str, Any] = {
         "cloud": None,
         "scopes": [],
         "disk_size": None,
@@ -182,7 +182,7 @@ def test_load_params_apply(tmp_path, pool_data):
     with (tmp_path / "test-pool.yml").open("w") as test_cfg:
         yaml.dump(pool_data, stream=test_cfg)
 
-    apply_data: Dict[str, Any] = {
+    apply_data: dict[str, Any] = {
         "apply_to": ["test-pool"],
         "cloud": None,
         "scopes": [],

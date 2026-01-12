@@ -12,7 +12,7 @@ from pathlib import Path
 from shutil import rmtree
 from subprocess import PIPE
 from tempfile import mkdtemp
-from typing import List, Optional
+from typing import Optional
 
 import taskcluster
 from taskboot.config import Configuration
@@ -92,7 +92,7 @@ class CombineArgs(CommonArgs):
             self.parser.error("--image (or IMAGE_NAME) is required!")
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def main(argv: Optional[list[str]] = None) -> None:
     """Combine entrypoint. Does not return."""
 
     args = CombineArgs.parse_args(argv)

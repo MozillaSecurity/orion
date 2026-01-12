@@ -14,7 +14,7 @@ from shutil import rmtree
 from subprocess import PIPE, CalledProcessError
 from tempfile import mkdtemp
 from time import sleep
-from typing import List, Optional
+from typing import Optional
 
 import taskcluster
 from taskboot.config import Configuration
@@ -98,7 +98,7 @@ class PushArgs(CommonArgs):
             self.parser.error("--service-name is required!")
 
 
-def main(argv: Optional[List[str]] = None) -> None:
+def main(argv: Optional[list[str]] = None) -> None:
     """Push entrypoint. Does not return."""
     args = PushArgs.parse_args(argv)
     configure_logging(level=args.log_level)

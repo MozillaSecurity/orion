@@ -7,12 +7,13 @@ from __future__ import annotations
 import logging
 import math
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from itertools import chain
 from pathlib import Path
 from string import Template
-from typing import Any, Iterator
+from typing import Any
 
 import dateutil.parser
 import yaml

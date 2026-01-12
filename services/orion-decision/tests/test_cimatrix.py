@@ -4,7 +4,6 @@
 """Tests for Orion CI matrix loading"""
 
 from pathlib import Path
-from typing import List
 
 import pytest
 from yaml import safe_load as yaml_load
@@ -106,7 +105,7 @@ def test_matrix_unused(caplog: pytest.LogCaptureFixture) -> None:
     ],
 )
 def test_matrix_job_serialize(
-    secrets: List[CISecret], artifacts: List[CIArtifact]
+    secrets: list[CISecret], artifacts: list[CIArtifact]
 ) -> None:
     """test that MatrixJob serialize/deserialize is lossless"""
     job = MatrixJob(

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orion-decision"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 description = "Scheduler for Orion tasks"
 license = {text = "MPL 2.0"}
 maintainers = [
@@ -39,7 +39,7 @@ Issues = "https://github.com/MozillaSecurity/orion/issues"
 Repository = "https://github.com/MozillaSecurity/orion.git"
 
 [tool.black]
-target-version = ["py38"]
+target-version = ["py39"]
 
 [tool.coverage.run]
 omit = [
@@ -88,7 +88,7 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 ignore = []
