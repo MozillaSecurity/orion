@@ -4,7 +4,7 @@
 """Tests for Orion service classes"""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 from pytest_mock import MockerFixture
@@ -176,7 +176,7 @@ def test_service_deps(
     mocker: MockerFixture,
     dirty_paths: list[Path],
     expect_services: set[str],
-    expect_recipes: set[Optional[str]],
+    expect_recipes: set[str | None],
 ) -> None:
     """test that service dependencies are calculated and changes propagated"""
     root = FIXTURES / "services03"

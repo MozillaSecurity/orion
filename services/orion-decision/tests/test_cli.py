@@ -6,7 +6,6 @@
 from json import dumps as json_dump
 from logging import DEBUG
 from pathlib import Path
-from typing import Optional
 from unittest.mock import MagicMock, call
 
 import pytest
@@ -207,7 +206,7 @@ def test_ci_check(mocker: MockerFixture) -> None:
     ],
 )
 def test_ci_launch_01(
-    mocker: MockerFixture, platform: Optional[str], secret: Optional[str]
+    mocker: MockerFixture, platform: str | None, secret: str | None
 ) -> None:
     """test CLI entrypoint for CI launch"""
     log_init = mocker.patch("orion_decision.cli.configure_logging", autospec=True)

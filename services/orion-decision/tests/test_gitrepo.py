@@ -6,7 +6,6 @@
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import gettempdir
-from typing import Optional
 from unittest.mock import call
 
 import pytest
@@ -215,7 +214,7 @@ def test_github_tc(
     mocker: MockerFixture,
     action: str,
     event: dict[str, dict[str, str]],
-    result: dict[str, Optional[str]],
+    result: dict[str, str | None],
     repo_args: str,
 ) -> None:
     """test github event parsing from taskcluster"""

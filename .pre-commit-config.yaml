@@ -61,6 +61,12 @@ repos:
         always_run: true
         require_serial: true
         verbose: true
+      - id: hadolint
+        name: Lint dockerfiles
+        language: system
+        files: "Dockerfile(-[A-Za-z_.-]+)?"
+        require_serial: true
+        entry: ./scripts/pre-commit-hadolint.sh
       - id: grizzly-lint
         name: Run linters for grizzly
         entry: bash -c 'cd services/grizzly && exec tox -e lint'
@@ -77,12 +83,6 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^services/grizzly-reduce-monitor/.*
-      - id: hadolint
-        name: Lint dockerfiles
-        language: system
-        files: "Dockerfile(-[A-Za-z_.-]+)?"
-        require_serial: true
-        entry: ./scripts/pre-commit-hadolint.sh
       - id: fuzzing-decision-lint
         name: Run linters for fuzzing_decision
         entry: bash -c 'cd services/fuzzing-decision && exec tox -e lint'
