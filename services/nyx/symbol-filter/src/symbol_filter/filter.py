@@ -125,7 +125,7 @@ def load_path_map() -> dict[str, str]:
                     f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${idx}"
                 )
                 _, dist_path, source_path = parts
-                mapping[dist_path] = source_path
+                mapping[dist_path] = source_path.replace(SOURCE_PREFIX, "")
 
     return mapping
 
@@ -166,7 +166,9 @@ def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
     return False
 
 
-def resolve_symbol_path(symbol_path: str, path_map: dict[str, str]) -> str | None:
+def resolve_symbol_path(
+    symbol_path: str, path_map: dict[str, str], local_path: Path | None = None
+) -> str | None:
     """
     Resolve a symbol file path to its source tree location.
 
@@ -174,12 +176,19 @@ def resolve_symbol_path(symbol_path: str, path_map: dict[str, str]) -> str | Non
     1. Find absolute path for includes.
     2. Strip local build path to get relative source tree path.
     """
+    if local_path and symbol_path.startswith(str(local_path)):
+        trimmed_path = symbol_path.replace(f"{local_path}/", "")
+        if trimmed_path.startswith("obj-asan-afl/dist/include"):
+            return path_map.get(trimmed_path.replace("obj-asan-afl/dist/include", ""))
+
+        return trimmed_path
+
     if symbol_path.startswith(SOURCE_PREFIX):
         return symbol_path[len(SOURCE_PREFIX) :]
 
     if symbol_path.startswith(DIST_INCLUDE_PREFIX):
-        dist_relative = symbol_path[len(DIST_INCLUDE_PREFIX) :]
-        return path_map.get(dist_relative)
+        trimmed_path = symbol_path.replace(DIST_INCLUDE_PREFIX, "")
+        return path_map.get(trimmed_path)
 
     return None
 
@@ -187,11 +196,13 @@ def resolve_symbol_path(symbol_path: str, path_map: dict[str, str]) -> str | Non
 def filter_symbols(
     symbol_path: Path,
     filter_spec: int | Path,
+    local_path: Path | None = None,
 ) -> list[str]:
     """
     Filter symbols based on filter patterns.
     :param symbol_path: Symbol file path.
     :param filter_spec: Fuzzmanager report configuration identifier or local file path.
+    :param local_path: Local path substitution for builds not from Taskcluster.
     """
     patterns = load_filter_patterns(filter_spec)
     LOG.info("Loaded %d filter patterns", len(patterns))
@@ -218,7 +229,7 @@ def filter_symbols(
             file_path = parts[3]
 
             # Resolve to source tree path
-            source_path = resolve_symbol_path(file_path, path_map)
+            source_path = resolve_symbol_path(file_path, path_map, local_path)
 
             if source_path is None:
                 continue
