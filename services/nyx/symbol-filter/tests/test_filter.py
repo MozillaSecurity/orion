@@ -76,7 +76,7 @@ def test_load_filter_patterns_basic(mock_report_configuration) -> None:
         )
     )
 
-    patterns = load_filter_patterns(filter_id=1)
+    patterns = load_filter_patterns(1)
     assert patterns == [
         FilterPattern(FilterType.INCLUDE, "include_this/**"),
         FilterPattern(FilterType.EXCLUDE, "exclude_that/*.py"),
@@ -89,7 +89,28 @@ def test_load_filter_patterns_invalid_line_raises(mock_report_configuration) -> 
     mock_report_configuration(directives)
 
     with pytest.raises(SymbolFilterException, match="Invalid filter type directive"):
-        load_filter_patterns(filter_id=1)
+        load_filter_patterns(1)
+
+
+def test_load_filter_patterns_from_file(tmp_path) -> None:
+    """Test loading filter patterns from a local file."""
+    filter_file = tmp_path / "filter.txt"
+    filter_file.write_text(
+        "\n".join(
+            [
+                "# Include the following",
+                "+:include_this/**",
+                "# Exclude the following",
+                "-:exclude_that/*.py",
+            ]
+        )
+    )
+
+    patterns = load_filter_patterns(filter_file)
+    assert patterns == [
+        FilterPattern(FilterType.INCLUDE, "include_this/**"),
+        FilterPattern(FilterType.EXCLUDE, "exclude_that/*.py"),
+    ]
 
 
 def test_load_path_map_basic(mock_fuzzfetch) -> None:
@@ -97,7 +118,8 @@ def test_load_path_map_basic(mock_fuzzfetch) -> None:
     mock_fuzzfetch(
         [
             "5",  # header line skipped
-            "1\x1fVideoUtils.h\x1f/builds/worker/checkouts/gecko/dom/media/VideoUtils.h",
+            "1\x1fmozilla/MozPromise.h\x1f/builds/worker/checkouts/gecko/xpcom/threads/MozPromise.h",
+            "1\x1ffmt/ranges.h\x1f/builds/worker/checkouts/gecko/third_party/fmt/include/fmt/ranges.h",
             "",  # blank line skipped
             "1\x1fNotRelevant.h\x1f/not/a/gecko/path",  # doesn't include dist path
         ]
@@ -105,7 +127,8 @@ def test_load_path_map_basic(mock_fuzzfetch) -> None:
 
     mapping = load_path_map()
     assert mapping == {
-        "VideoUtils.h": "/builds/worker/checkouts/gecko/dom/media/VideoUtils.h",
+        "mozilla/MozPromise.h": "xpcom/threads/MozPromise.h",
+        "fmt/ranges.h": "third_party/fmt/include/fmt/ranges.h",
     }
 
 
@@ -117,7 +140,7 @@ def test_load_path_map_asserts_on_malformed_line(mock_fuzzfetch) -> None:
         load_path_map()
 
 
-def test_load_path_map_resolve_direct_source_path() -> None:
+def test_resolve_symbol_path__direct_source_path() -> None:
     """Test resolving direct source paths from gecko checkout."""
     path_map: dict[str, str] = {}
     symbol_path = "/builds/worker/checkouts/gecko/dom/media/VideoUtils.h"
@@ -127,7 +150,7 @@ def test_load_path_map_resolve_direct_source_path() -> None:
     assert result == "dom/media/VideoUtils.h"
 
 
-def test_load_path_map_resolve_dist_include_path_found() -> None:
+def test_resolve_symbol_path_dist_include_path_found() -> None:
     """Test resolving dist/include paths using the path map."""
     path_map: dict[str, str] = {
         "VideoUtils.h": "dom/media/VideoUtils.h",
@@ -139,7 +162,7 @@ def test_load_path_map_resolve_dist_include_path_found() -> None:
     assert result == "dom/media/VideoUtils.h"
 
 
-def test_load_path_map_resolve_dist_include_path_not_found() -> None:
+def test_resolve_symbol_path_dist_include_path_not_found() -> None:
     """Test that unknown paths return None."""
     path_map: dict[str, str] = {}
     symbol_path = "VideoUtils.h"
@@ -240,7 +263,7 @@ def test_filter_symbols_basic(
         ["1\x1fVideoUtils.h\x1f/builds/worker/checkouts/gecko/dom/media/VideoUtils.h"]
     )
 
-    result = filter_symbols(symbol_file, filter_id=1)
+    result = filter_symbols(symbol_file, 1)
 
     # Only webgpu path should match
     assert len(result) == 1
@@ -265,7 +288,7 @@ def test_filter_symbols_with_exclusions(
     mock_report_configuration(directives)
     mock_fuzzfetch([])
 
-    result = filter_symbols(symbol_file, filter_id=1)
+    result = filter_symbols(symbol_file, 1)
 
     # Should match webgpu but not media
     assert len(result) == 1
@@ -285,4 +308,29 @@ def test_filter_symbols_malformed_line(
     with pytest.raises(
         SymbolFilterException, match="Symbol map contains unexpected number"
     ):
-        filter_symbols(symbol_file, filter_id=1)
+        filter_symbols(symbol_file, 1)
+
+
+def test_filter_symbols_with_local_file(tmp_path, mock_fuzzfetch) -> None:
+    """Test symbol filtering using a local filter file."""
+    # Create symbol file
+    symbol_file = tmp_path / "symbols.txt"
+    symbol_file.write_text(
+        "0x1000\t100\tlib.so\t"
+        "/builds/worker/checkouts/gecko/dom/webgpu/Adapter.cpp\tsymbol1\n"
+        "0x2000\t200\tlib.so\t"
+        "/builds/worker/checkouts/gecko/dom/media/VideoUtils.cpp\tsymbol2\n"
+    )
+
+    # Create local filter file
+    filter_file = tmp_path / "filter.txt"
+    filter_file.write_text("+:dom/webgpu/**")
+
+    # Setup mocks
+    mock_fuzzfetch([])
+
+    result = filter_symbols(symbol_file, filter_file)
+
+    # Only webgpu path should match
+    assert len(result) == 1
+    assert "dom/webgpu/Adapter.cpp" in result[0]
