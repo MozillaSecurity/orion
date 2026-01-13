@@ -110,9 +110,11 @@ if [[ -n $CRASH_STATS ]]; then
   python3 -m venv /tmp/tranco-venv
   retry /tmp/tranco-venv/bin/pip install tranco
   /tmp/tranco-venv/bin/python /src/site-scout-private/src/tranco_top_sites.py --lists top-1M
+  # download CrUX list (crux-urls-1000000.txt)
+  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crux_url_collector.py -r 1000000
   # download crash-urls.jsonl from crash-stats.mozilla.org
   # NOTE: currently filtering by top 1M
-  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS"
+  /tmp/crashstats-tools-venv/bin/python /src/site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt crux-urls-1000000.txt --include-path --scan-hours "$SCAN_HOURS"
   cp crash-urls.jsonl ./active_lists/
 elif [[ -n $QUEUE_NAME ]]; then
   python3 -m venv /tmp/queue-list-venv

@@ -176,9 +176,11 @@ if [[ -n $CRASH_STATS ]]; then
   # download allow list (top-1M.txt), this is temporary for initial test run
   retry python -m pip install tranco
   python ./site-scout-private/src/tranco_top_sites.py --lists top-1M
+  # download CrUX list (crux-urls-1000000.txt)
+  python ./site-scout-private/src/crux_url_collector.py -r 1000000
   # download crash-urls.jsonl from crash-stats.mozilla.org
   # NOTE: currently filtering by top 1M
-  python ./site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt --include-path --scan-hours "$SCAN_HOURS" --api-token crash_stats_token
+  python ./site-scout-private/src/crash_stats_collector.py --allowed-domains top-1M.txt crux-urls-1000000.txt --include-path --scan-hours "$SCAN_HOURS"
   rm crash_stats_token
   mkdir active_lists
   cp crash-urls.jsonl ./active_lists/
