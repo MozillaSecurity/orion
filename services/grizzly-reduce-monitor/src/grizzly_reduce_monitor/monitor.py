@@ -45,7 +45,7 @@ TOOL_LIST_SECRET = "project/fuzzing/grizzly-reduce-tool-list"
 OWNER_EMAIL = "truber@mozilla.com"
 REDUCTION_MAX_RUN_TIME = timedelta(hours=6)
 REDUCTION_DEADLINE = timedelta(days=1)
-REDUCTION_EXPIRES = timedelta(weeks=2)
+REDUCTION_EXPIRES = timedelta(weeks=4)
 SCHEDULER_ID = "fuzzing"
 PROVISIONER_ID = "proj-fuzzing"
 DESCRIPTION = """*DO NOT EDIT* - This resource is configured automatically.
