@@ -213,6 +213,7 @@ def filter_symbols(
     matched_symbols = []
     total_symbols = 0
     resolved_symbols = 0
+    ignored_symbols = 0
 
     with symbol_path.open("r") as f:
         for idx, line in enumerate(f, start=1):
@@ -232,6 +233,7 @@ def filter_symbols(
             source_path = resolve_symbol_path(file_path, path_map, local_path)
 
             if source_path is None:
+                ignored_symbols += 1
                 continue
 
             resolved_symbols += 1
@@ -242,6 +244,7 @@ def filter_symbols(
 
     LOG.info("Total symbols: %d", total_symbols)
     LOG.info("Resolved symbols: %d", resolved_symbols)
+    LOG.info("Ignored symbols: %d", ignored_symbols)
     LOG.info("Matched symbols: %d", len(matched_symbols))
 
     return matched_symbols
