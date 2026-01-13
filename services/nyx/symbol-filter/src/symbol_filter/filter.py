@@ -68,14 +68,20 @@ class ReportConfiguration(Reporter):  # type: ignore[misc]
         return self.get(url).json()  # type: ignore[no-untyped-call, no-any-return]
 
 
-def load_filter_patterns(filter_id: int) -> list[FilterPattern]:
-    """Load filter patterns from remote report configuration."""
-    LOG.info("Requesting report configuration...")
-    reporter = ReportConfiguration()
-    configuration = reporter.get_report_configuration(filter_id)
+def load_filter_patterns(filter_spec: int | Path) -> list[FilterPattern]:
+    """Load filter patterns from remote report configuration or local file."""
+    if isinstance(filter_spec, int):
+        LOG.info("Requesting report configuration...")
+        reporter = ReportConfiguration()
+        configuration = reporter.get_report_configuration(filter_spec)
+        directives = configuration["directives"]
+    else:
+        LOG.info("Reading filter from local file: %s", filter_spec)
+        with open(filter_spec, encoding="utf-8") as f:
+            directives = f.read()
 
     patterns = []
-    for directive in configuration["directives"].splitlines():
+    for directive in directives.splitlines():
         directive = directive.strip()
         if not directive or directive.startswith("#"):
             continue
@@ -180,14 +186,14 @@ def resolve_symbol_path(symbol_path: str, path_map: dict[str, str]) -> str | Non
 
 def filter_symbols(
     symbol_path: Path,
-    filter_id: int,
+    filter_spec: int | Path,
 ) -> list[str]:
     """
     Filter symbols based on filter patterns.
     :param symbol_path: Symbol file path.
-    :param filter_id:  Fuzzmanager report configuration identifier.
+    :param filter_spec: Fuzzmanager report configuration identifier or local file path.
     """
-    patterns = load_filter_patterns(filter_id)
+    patterns = load_filter_patterns(filter_spec)
     LOG.info("Loaded %d filter patterns", len(patterns))
 
     path_map = load_path_map()
@@ -246,10 +252,11 @@ def main() -> int:
         help="Path to symbol file",
     )
     parser.add_argument(
-        "filter_id",
-        type=int,
-        help="Fuzzmanager coverage report configuration ID",
+        "filter",
+        type=str,
+        help="Fuzzmanager coverage report configuration ID or path to local file",
     )
+    parser.add_argument("--local-path", type=Path, help="Local source path")
     parser.add_argument(
         "--output",
         "-o",
@@ -264,7 +271,17 @@ def main() -> int:
     if not args.symbol_path.is_file():
         parser.error(f"Path is not a file: {args.symbol_path}")
 
-    result = filter_symbols(args.symbol_path, args.filter_id)
+    # Determine if filter is an integer or a file path
+    try:
+        filter_spec: int | Path = int(args.filter)
+    except ValueError:
+        filter_spec = Path(args.filter)
+        if not filter_spec.exists():
+            parser.error(f"Filter file does not exist: {filter_spec}")
+        if not filter_spec.is_file():
+            parser.error(f"Filter path is not a file: {filter_spec}")
+
+    result = filter_symbols(args.symbol_path, filter_spec, args.local_path)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
