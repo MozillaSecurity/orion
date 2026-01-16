@@ -167,7 +167,7 @@ def should_include_path(path: str, patterns: list[FilterPattern]) -> bool:
 
 
 def resolve_symbol_path(
-    symbol_path: str, path_map: dict[str, str], local_path: Path | None = None
+    symbol_path: Path, path_map: dict[str, str], local_path: Path | None = None
 ) -> str | None:
     """
     Resolve a symbol file path to its source tree location.
@@ -176,19 +176,21 @@ def resolve_symbol_path(
     1. Find absolute path for includes.
     2. Strip local build path to get relative source tree path.
     """
-    if local_path and symbol_path.startswith(str(local_path)):
-        trimmed_path = symbol_path.replace(f"{local_path}/", "")
-        if trimmed_path.startswith("obj-asan-afl/dist/include"):
-            return path_map.get(trimmed_path.replace("obj-asan-afl/dist/include", ""))
+    if local_path and symbol_path.is_relative_to(local_path):
+        trimmed_path = symbol_path.relative_to(local_path)
+        if trimmed_path.is_relative_to("obj-asan-afl/dist/include"):
+            return path_map.get(
+                str(trimmed_path.relative_to("obj-asan-afl/dist/include"))
+            )
 
-        return trimmed_path
+        return str(trimmed_path)
 
-    if symbol_path.startswith(SOURCE_PREFIX):
-        return symbol_path[len(SOURCE_PREFIX) :]
+    if symbol_path.is_relative_to(SOURCE_PREFIX):
+        return str(symbol_path.relative_to(SOURCE_PREFIX))
 
-    if symbol_path.startswith(DIST_INCLUDE_PREFIX):
-        trimmed_path = symbol_path.replace(DIST_INCLUDE_PREFIX, "")
-        return path_map.get(trimmed_path)
+    if symbol_path.is_relative_to(DIST_INCLUDE_PREFIX):
+        trimmed_path = symbol_path.relative_to(DIST_INCLUDE_PREFIX)
+        return path_map.get(str(trimmed_path))
 
     return None
 
@@ -227,7 +229,7 @@ def filter_symbols(
                     f"Symbol map contains unexpected number of columns at line ${idx}!"
                 )
 
-            file_path = parts[3]
+            file_path = Path(parts[3])
 
             # Resolve to source tree path
             source_path = resolve_symbol_path(file_path, path_map, local_path)
