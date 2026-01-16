@@ -125,7 +125,7 @@ def load_path_map() -> dict[str, str]:
                     f"Malformed entry in {MOZSEARCH_ARTIFACT} at line ${idx}"
                 )
                 _, dist_path, source_path = parts
-                mapping[dist_path] = source_path.replace(SOURCE_PREFIX, "")
+                mapping[dist_path] = str(Path(source_path).relative_to(SOURCE_PREFIX))
 
     return mapping
 
