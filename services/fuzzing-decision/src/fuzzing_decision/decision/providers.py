@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -87,12 +85,6 @@ class Provider(ABC):
             if worker_type == "d2g":
                 out["genericWorker"]["config"].setdefault("d2gConfig", {})
                 out["genericWorker"]["config"]["d2gConfig"]["enableD2G"] = True
-
-            # Add a deploymentId by hashing the config
-            payload = json.dumps(out, sort_keys=True).encode("utf-8")
-            out["genericWorker"]["config"]["deploymentId"] = hashlib.sha256(
-                payload
-            ).hexdigest()[:16]
 
             # Clear any Docker specific config
             out.pop("dockerConfig", None)

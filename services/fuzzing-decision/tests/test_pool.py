@@ -235,7 +235,6 @@ def test_aws_resources(
                 "genericWorker": {
                     "config": {
                         "anyKey": "anyValue",
-                        "deploymentId": "537b40b615fbc313",
                         "disableOOMProtection": True,
                         "idleTimeoutSecs": 900,
                         "maxTaskRunTime": 259200,
@@ -255,7 +254,6 @@ def test_aws_resources(
                     "d2gConfig": {
                         "enableD2G": True,
                     },
-                    "deploymentId": "4d89e09e8ba0bdf9",
                 }
             )
 
@@ -344,7 +342,6 @@ def test_azure_resources(
                         "genericWorker": {
                             "config": {
                                 "anyKey": "anyValue",
-                                "deploymentId": "537b40b615fbc313",
                                 "disableOOMProtection": True,
                                 "idleTimeoutSecs": 900,
                                 "maxTaskRunTime": 259200,
