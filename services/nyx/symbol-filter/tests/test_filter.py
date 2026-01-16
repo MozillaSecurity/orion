@@ -3,6 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """Tests for symbol_filter.filter module."""
 
+from pathlib import Path
 from unittest.mock import patch
 
 # Suppress decorator before loading Reporter
@@ -143,7 +144,7 @@ def test_load_path_map_asserts_on_malformed_line(mock_fuzzfetch) -> None:
 def test_resolve_symbol_path__direct_source_path() -> None:
     """Test resolving direct source paths from gecko checkout."""
     path_map: dict[str, str] = {}
-    symbol_path = "/builds/worker/checkouts/gecko/dom/media/VideoUtils.h"
+    symbol_path = Path("/builds/worker/checkouts/gecko/dom/media/VideoUtils.h")
 
     result = resolve_symbol_path(symbol_path, path_map)
 
@@ -155,7 +156,7 @@ def test_resolve_symbol_path_dist_include_path_found() -> None:
     path_map: dict[str, str] = {
         "VideoUtils.h": "dom/media/VideoUtils.h",
     }
-    symbol_path = "/builds/worker/workspace/obj-build/dist/include/VideoUtils.h"
+    symbol_path = Path("/builds/worker/workspace/obj-build/dist/include/VideoUtils.h")
 
     result = resolve_symbol_path(symbol_path, path_map)
 
@@ -165,7 +166,7 @@ def test_resolve_symbol_path_dist_include_path_found() -> None:
 def test_resolve_symbol_path_dist_include_path_not_found() -> None:
     """Test that unknown paths return None."""
     path_map: dict[str, str] = {}
-    symbol_path = "VideoUtils.h"
+    symbol_path = Path("VideoUtils.h")
 
     result = resolve_symbol_path(symbol_path, path_map)
 
