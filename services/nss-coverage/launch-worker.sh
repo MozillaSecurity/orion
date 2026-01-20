@@ -137,7 +137,7 @@ for fuzzer in dist/Debug/bin/nssfuzz-*; do
   popd
 
   update-status "running target $name"
-  readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
+  readarray -t options < <(python "nss/fuzz/config/libfuzzer_options.py nss/fuzz/options/$name.options")
   run-target "$fuzzer" "$name" "${options[@]}"
 done
 
@@ -198,7 +198,7 @@ for fuzzer in dist/Debug/bin/nssfuzz-*; do
     popd
 
     update-status "running target $name"
-    readarray -t options < <(python "nss/fuzz/config/libfuzzer-options.py nss/fuzz/options/$name.options")
+    readarray -t options < <(python "nss/fuzz/config/libfuzzer_options.py nss/fuzz/options/$name.options")
     run-target "$fuzzer" "$name" "${options[@]}"
   fi
 done
