@@ -57,7 +57,7 @@ function git-clone-rev() {
 # build AFL++ w/ Nyx
 mkdir -p /srv/repos
 pushd /srv/repos >/dev/null
-git-clone-rev https://github.com/AFLplusplus/AFLplusplus 78b7e14c73baacf1d88b3c03955e78f5080d17ba
+git-clone-rev https://github.com/AFLplusplus/AFLplusplus ada0855022ac6e77de74622d0ab61ca7a37b9a9c
 pushd AFLplusplus >/dev/null
 
 # Enable passing AFL_MAP_SIZE and add resume mode to afl-cmin

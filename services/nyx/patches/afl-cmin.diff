@@ -1,8 +1,8 @@
-diff --git a/afl-cmin b/afl-cmin
-index a88460a8..4de07878 100755
---- a/afl-cmin
-+++ b/afl-cmin
-@@ -103,7 +103,7 @@ function usage() {
+diff --git a/afl-cmin.awk b/afl-cmin.awk
+index c1fc1608..1c13747b 100755
+--- a/afl-cmin.awk
++++ b/afl-cmin.awk
+@@ -107,7 +107,7 @@ function usage() {
  "afl-cmin [ options ] -- /path/to/target_app [ ... ]\n" \
  "\n" \
  "Required parameters:\n" \
@@ -11,7 +11,7 @@ index a88460a8..4de07878 100755
  "  -o dir        - output directory for minimized files\n" \
  "\n" \
  "Execution control settings:\n" \
-@@ -115,6 +115,8 @@ function usage() {
+@@ -119,6 +119,8 @@ function usage() {
  "  -Q            - use binary-only instrumentation (QEMU mode)\n" \
  "  -U            - use unicorn-based instrumentation (unicorn mode)\n" \
  "  -X            - use Nyx mode\n" \
@@ -20,7 +20,7 @@ index a88460a8..4de07878 100755
  "\n" \
  "Minimization settings:\n" \
  "  -A            - allow crashes and timeouts (not recommended)\n" \
-@@ -163,11 +165,10 @@ BEGIN {
+@@ -167,11 +169,10 @@ BEGIN {
    # process options
    Opterr = 1    # default is to diagnose
    Optind = 1    # skip ARGV[0]
@@ -34,7 +34,7 @@ index a88460a8..4de07878 100755
        continue
      } else 
      if (_go_c == "T") {
-@@ -237,6 +238,15 @@ BEGIN {
+@@ -241,6 +242,15 @@ BEGIN {
        nyx_mode = 1
        continue
      } else 
@@ -50,7 +50,7 @@ index a88460a8..4de07878 100755
      if (_go_c == "?") {
        exit 1
      } else 
-@@ -256,7 +266,7 @@ BEGIN {
+@@ -260,7 +270,7 @@ BEGIN {
    }
  
    # sanity checks
@@ -59,7 +59,7 @@ index a88460a8..4de07878 100755
  
    target_bin = prog_args[0] 
  
-@@ -264,11 +274,14 @@ BEGIN {
+@@ -268,11 +278,14 @@ BEGIN {
    # handle this safely from an awk script.
  
    if (!ENVIRON["AFL_ALLOW_TMP"]) {
@@ -79,12 +79,12 @@ index a88460a8..4de07878 100755
      for (dirind in dirlist) {
        dir = dirlist[dirind]
        if (dir ~ /^(\/var)?\/tmp/) {
-@@ -330,14 +343,18 @@ BEGIN {
+@@ -334,14 +347,18 @@ BEGIN {
      target_bin = tnew
    }
  
 -  if (0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
--    echo "[!] Trying to obtain the map size of the target ..."
+-    print "[!] Trying to obtain the map size of the target ..."
 -    get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
 -    get_map_size | getline mapsize
 -    close(get_map_size)
@@ -93,7 +93,7 @@ index a88460a8..4de07878 100755
 -      print "[+] Setting "AFL_MAP_SIZE
 +  if (!nyx_mode) {
 +    if (!ENVIRON["AFL_MAP_SIZE"] && 0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
-+      echo "[!] Trying to obtain the map size of the target ..."
++      print "[!] Trying to obtain the map size of the target ..."
 +      get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
 +      get_map_size | getline mapsize
 +      close(get_map_size)
@@ -106,7 +106,7 @@ index a88460a8..4de07878 100755
      }
    }
  
-@@ -348,9 +365,13 @@ BEGIN {
+@@ -352,9 +369,13 @@ BEGIN {
      }
    }
  
@@ -123,7 +123,7 @@ index a88460a8..4de07878 100755
    }
  
    #if (0 == system( "test -d "in_dir"/default" )) {
-@@ -361,8 +382,21 @@ BEGIN {
+@@ -365,8 +386,21 @@ BEGIN {
    #  in_dir = in_dir "/queue"
    #}
  
@@ -147,7 +147,7 @@ index a88460a8..4de07878 100755
  
    cmd = "ls "out_dir"/* 2>/dev/null | wc -l"
    cmd | getline noofentries
-@@ -419,7 +453,7 @@ BEGIN {
+@@ -423,7 +457,7 @@ BEGIN {
      exit 1
    }
  
@@ -156,11 +156,11 @@ index a88460a8..4de07878 100755
    i = 0
    # yuck, gnu stat is option incompatible to bsd stat
    # we use a heuristic to differentiate between
-@@ -432,22 +466,32 @@ BEGIN {
+@@ -436,22 +470,32 @@ BEGIN {
    } else {
      stat_format = "-f '%z %N'" # *BSD, MacOS
    }
--  cmdline = "(cd "in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o -type f -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
+-  cmdline = "(cd "in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o \\( -type f -a ! -name \"cmdline\" -a ! -name \"fastresume.bin\" -a ! -name \"fuzz_bitmap\" -a ! -name \"fuzzer_setup\" -a ! -name \"fuzzer_stats\" -a ! -name \"plot_data\" -a ! -name \"target_hash\" \\) -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
 -  #cmdline = "ls "in_dir" | (cd "in_dir" && xargs stat "stat_format" 2>/dev/null) | sort -k1n -k2r"
 -  #cmdline = "(cd "in_dir" && stat "stat_format" *) | sort -k1n -k2r"
 -  #cmdline = "(cd "in_dir" && ls | xargs stat "stat_format" ) | sort -k1n -k2r"
@@ -178,7 +178,7 @@ index a88460a8..4de07878 100755
 +  # Process each input directory
 +  for (dir_idx = 1; dir_idx <= in_dir_count; dir_idx++) {
 +    current_in_dir = in_dirs[dir_idx]
-+    cmdline = "(cd "current_in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o -type f -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
++    cmdline = "(cd "current_in_dir" && find . \\( ! -name \".*\" -a -type d \\) -o \\( -type f -a ! -name \"cmdline\" -a ! -name \"fastresume.bin\" -a ! -name \"fuzz_bitmap\" -a ! -name \"fuzzer_setup\" -a ! -name \"fuzzer_stats\" -a ! -name \"plot_data\" -a ! -name \"target_hash\" \\) -exec stat "stat_format" \\{\\} + | sort -k1n -k2r) | grep -Ev '^0'"
 +    while (cmdline | getline) {
 +      sub(/^[0-9]+ (\.\/)?/,"",$0)
 +      # Store the full path including the source directory
@@ -203,7 +203,7 @@ index a88460a8..4de07878 100755
    first_file = infilesSmallToBigFull[0]
    
    #if (0 == system("test -d ""\""in_dir"/"first_file"\"")) {
-@@ -455,13 +499,13 @@ BEGIN {
+@@ -459,13 +503,13 @@ BEGIN {
    #  exit 1
    #}
  
@@ -220,7 +220,7 @@ index a88460a8..4de07878 100755
  
    if (!ENVIRON["AFL_SKIP_BIN_CHECK"]) {
      # Make sure that we can actually get anything out of afl-showmap before we
-@@ -470,10 +514,10 @@ BEGIN {
+@@ -474,10 +518,10 @@ BEGIN {
      print "[*] Testing the target binary..."
  
      if (!stdin_file) {
@@ -234,7 +234,7 @@ index a88460a8..4de07878 100755
      }
  
      first_count = 0
-@@ -505,6 +549,7 @@ BEGIN {
+@@ -509,6 +553,7 @@ BEGIN {
    #############################
    # STEP 1: Collecting traces #
    #############################
@@ -242,7 +242,7 @@ index a88460a8..4de07878 100755
  
    if (threads) {
  
-@@ -517,17 +562,23 @@ BEGIN {
+@@ -521,17 +566,23 @@ BEGIN {
      tmpfile=out_dir "/.filelist"
      for (instance = 1; instance < threads; instance++) {
        for (i = 0; i < inputsperfile; i++) {
@@ -269,7 +269,7 @@ index a88460a8..4de07878 100755
  
    cur = 0;
  
-@@ -537,12 +588,12 @@ BEGIN {
+@@ -541,12 +592,12 @@ BEGIN {
      for (i = 1; i <= threads; i++) {
  
        if (!stdin_file) {
@@ -286,7 +286,7 @@ index a88460a8..4de07878 100755
        }
      }
      print "[*] Waiting for parallel tasks to complete ..."
-@@ -559,16 +610,23 @@ BEGIN {
+@@ -563,16 +614,23 @@ BEGIN {
      print "[*] Done!"
      system("rm -f "tmpfile"*")
    } else {
@@ -314,7 +314,7 @@ index a88460a8..4de07878 100755
      if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
        print "[!] Exit code "retval" != 0 received from afl-showmap (this means a crashing or timeout input is likely present), terminating..."
  
-@@ -581,16 +639,24 @@ BEGIN {
+@@ -585,16 +643,24 @@ BEGIN {
  
    }
  
@@ -340,7 +340,7 @@ index a88460a8..4de07878 100755
  
    # from rare to frequent new tuples
    # get the best (smallest) file for it
-@@ -602,14 +668,20 @@ BEGIN {
+@@ -606,14 +672,20 @@ BEGIN {
      else { print "    Processing file "cur"/"in_count }
      # create path for the trace file from afl-showmap
      tracefile_path = trace_dir"/"fn
@@ -368,7 +368,7 @@ index a88460a8..4de07878 100755
      }
      # gather all keys, and count them
      while ((getline line < tracefile_path) > 0) {
-@@ -665,7 +737,7 @@ BEGIN {
+@@ -669,7 +741,7 @@ BEGIN {
      # copy file unless already done
      if (! (fn in file_already_copied)) {
        realfile = infilesSmallToBigMap[fn]
@@ -377,7 +377,7 @@ index a88460a8..4de07878 100755
        file_already_copied[fn] = ""
        ++out_count
        #printf "tuple nr %d (%d cnt=%d) -> %s\n",tcnt,key,key_count[key],fn > trace_dir"/.log"
-@@ -674,6 +746,7 @@ BEGIN {
+@@ -678,6 +750,7 @@ BEGIN {
    close(sortedKeys)
    print ""
    print "[+] Found "tuple_count" unique tuples across "in_count" files."
