@@ -40,7 +40,7 @@ export LD_LIBRARY_PATH
 # Clone all source repositories for their tests
 git-clone https://github.com/v8/v8
 git-clone https://github.com/Microsoft/ChakraCore
-git-clone https://github.com/mozilla/gecko-dev
+git-clone https://github.com/mozilla/firefox
 
 # Compose tests
 $DISTILLER --microsoft-chakra $CHAKRA --google-v8-mjsunit $V8 --mozilla-jstests $JSTESTS --mozilla-jittests $JITTESTS --output $OUTPUT
