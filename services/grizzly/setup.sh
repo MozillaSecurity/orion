@@ -49,6 +49,8 @@ packages=(
   libosmesa6
   libpulse0
   p7zip-full
+  pulseaudio
+  pulseaudio-utils
   python3-wheel
   screen
   subversion

@@ -93,6 +93,11 @@ if [[ -e /dev/kvm ]]; then
   usermod -a -G "$kvm_grp" worker
 fi
 
+# create virtual audio sink
+pactl load-module module-null-sink sink_name=Virtual_Sink sink_description="Virtual Sink"
+pactl set-default-sink Virtual_Sink
+pactl list short sinks
+
 # disable ASLR for TSan
 sysctl -w kernel.randomize_va_space=0
 
