@@ -15,22 +15,24 @@ source "${0%/*}/taskgraph-m-c-latest.sh"
 
 #### Install LLVM Symbolizer
 
-if ! is-arm64; then
+case "${1-install}" in
+  install)
+    apt-install-auto \
+      binutils \
+      ca-certificates \
+      curl \
+      zstd
 
-  case "${1-install}" in
-    install)
-      apt-install-auto \
-        binutils \
-        ca-certificates \
-        curl \
-        zstd
-
-      retry-curl "$(resolve-tc llvm-symbolizer)" | zstdcat | tar -x -v --strip-components=2 -C /usr/local/bin
-      strip --strip-unneeded /usr/local/bin/llvm-symbolizer
-      ;;
-    test)
-      llvm-symbolizer --version
-      ;;
-  esac
-
-fi
+    if is-arm64; then
+      clang_ver="$(resolve-tc-alias aarch64-clang)"
+      retry-curl "$(resolve-tc "$clang_ver")" | tar -I zstd -x -v --wildcards --strip-components=1 -C /usr/local clang/bin/llvm-symbolizer clang/lib/libLLVM.so.\*
+      strip --strip-unneeded /usr/local/lib/libLLVM.so.*
+    else
+      retry-curl "$(resolve-tc llvm-symbolizer)" | tar -I zstd -x -v --strip-components=2 -C /usr/local/bin
+    fi
+    strip --strip-unneeded /usr/local/bin/llvm-symbolizer
+    ;;
+  test)
+    llvm-symbolizer --version
+    ;;
+esac

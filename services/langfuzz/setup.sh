@@ -28,9 +28,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 ./llvm-cov.sh
-if ! is-arm64; then
-  ./llvm-symbolizer.sh
-fi
+./llvm-symbolizer.sh
 ./sentry.sh
 ./taskcluster.sh
 
@@ -96,18 +94,9 @@ if ! is-arm64; then
     g++-multilib
     gcc-multilib
   )
-else
-  # install llvm for llvm-symbolizer on arm64
-  packages+=(llvm-15)
 fi
 
 retry apt-get install -y -qq --no-install-recommends "${packages[@]}"
-
-if is-arm64; then
-  update-alternatives --install \
-    /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-15 100 \
-    --slave /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-15
-fi
 
 python_packages=(
   google-cloud-storage
