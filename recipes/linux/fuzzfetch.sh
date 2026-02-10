@@ -30,7 +30,7 @@ case "${1-install}" in
       git-clone https://github.com/MozillaSecurity/fuzzfetch fuzzfetch
       PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e "./fuzzfetch[sentry]"
     else
-      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "git+https://github.com/MozillaSecurity/fuzzfetch.git#egg=fuzzfetch[sentry]"
+      PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install "fuzzfetch[sentry] @ git+https://github.com/MozillaSecurity/fuzzfetch.git"
     fi
     ;;
   test)
