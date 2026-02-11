@@ -67,6 +67,10 @@ if [ ! -d /src/bearspray ]; then
   git-clone git@bearspray:MozillaSecurity/bearspray.git /src/bearspray
 fi
 
+# Start pulseaudio
+update-status "Setup: starting pulseaudio"
+pulseaudio --daemonize --exit-idle-time=-1
+
 update-status "Setup: installing bearspray"
 retry python3 -m pip install --user --no-build-isolation -e /src/bearspray
 
