@@ -269,16 +269,18 @@ if [[ -n $S3_CORPUS_REFRESH ]]; then
     exit 2
   fi
   if [[ $NYX_FUZZER == "IPC_SingleMessage" ]]; then
-    refresh_ipc_projects() {
-      guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" | while read -r project; do
+    # run in a subshell so timeout will kill the entire process group
+    timeout -s 2 "$MAX_RUN_TIME" bash -e <<EOF
+    guided-fuzzing-daemon --list-projects "${S3_BUCKET_ARGS[@]}" "${S3_PROJECT_ARGS[@]}" |
+      shuf |
+      while read -r project; do
         time guided-fuzzing-daemon \
           "${S3_BUCKET_ARGS[@]}" \
-          --project "$project" \
+          --project "\$project" \
           --corpus-refresh ./corpus \
           "${DAEMON_ARGS[@]}"
       done
-    }
-    timeout -s 2 "$MAX_RUN_TIME" refresh_ipc_projects
+EOF
   else
     time timeout -s 2 "$MAX_RUN_TIME" guided-fuzzing-daemon \
       "${S3_BUCKET_ARGS[@]}" \
