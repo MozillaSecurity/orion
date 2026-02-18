@@ -12,8 +12,10 @@ import sys
 from argparse import REMAINDER, ArgumentParser
 from pathlib import Path, PurePosixPath
 from random import choice, randint
-from subprocess import TimeoutExpired, check_call, run
+from subprocess import TimeoutExpired, run
 from typing import TYPE_CHECKING
+
+from ffpuppet.profile import Profile
 
 if TYPE_CHECKING:
     from io import TextIOBase
@@ -129,19 +131,16 @@ def run_file_local(
     prefs_file = sharedir / "prefs.js"
     firefox_path = bindir / "firefox"
 
-    # TODO: Make this more robust, use ffpuppet etc.
-    env = os.environ.copy()
-    env["LD_LIBRARY_PATH"] = str(bindir)
-    env["AFL_IGNORE_PROBLEMS"] = "1"
-    check_call([str(firefox_path), "-CreateProfile", "testnyx"], env=env)
-    profile_path = next((Path.home() / ".mozilla" / "firefox").glob("*.testnyx"))
-    shutil.copy(prefs_file, profile_path)
-
-    args = [str(firefox_path), "-P", "testnyx", f"file://{PurePosixPath(local_file)}"]
-
-    return run_generic(
-        args, bindir, local_file_cache_path, min_msg_size, ignore_message_types, 30
-    )
+    with Profile(prefs_file=prefs_file, working_path=str(Path.cwd())) as profile:
+        args = [
+            str(firefox_path),
+            "-P",
+            str(profile.path),
+            f"file://{PurePosixPath(local_file)}",
+        ]
+        return run_generic(
+            args, bindir, local_file_cache_path, min_msg_size, ignore_message_types, 30
+        )
 
 
 def add_nyx_env_vars(fd: TextIOBase) -> None:
