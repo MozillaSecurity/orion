@@ -14,7 +14,7 @@ source "${0%/*}/common.sh"
 cd "${0%/*}"
 ./js32_deps.sh
 ./pernosco_submit.sh
-./poetry.sh
+./uv.sh
 sys-embed libc6-dbg:i386
 ./cleanup.sh
 

@@ -17,7 +17,7 @@ export TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 git-clone https://github.com/MozillaSecurity/bugmon-tc.git ./bugmon-tc
 cd bugmon-tc
-poetry install
+uv sync
 
 mkdir -p /home/worker/.cache/autobisect
 mkdir -p /home/worker/.config/autobisect
@@ -40,7 +40,7 @@ case "$BUG_ACTION" in
     export BZ_API_KEY
     export BZ_API_ROOT="https://bugzilla.mozilla.org/rest"
     if [ "$BUG_ACTION" == "monitor" ]; then
-      poetry run bugmon-monitor "$ARTIFACT_DEST" "${CONFIRM_ARGS[@]}"
+      uv run bugmon-monitor "$ARTIFACT_DEST" "${CONFIRM_ARGS[@]}"
     else
       PERNOSCO_USER="$(get-tc-secret pernosco-user)"
       PERNOSCO_GROUP="$(get-tc-secret pernosco-group)"
@@ -51,7 +51,7 @@ case "$BUG_ACTION" in
       if [ -v TRACE_ARTIFACT ]; then
         TRACE_ARGS+=("--trace-artifact" "$TC_ARTIFACT_ROOT/$TRACE_ARTIFACT")
       fi
-      poetry run bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT" "${TRACE_ARGS[@]}"
+      uv run bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT" "${TRACE_ARGS[@]}"
     fi
     ;;
   process)
@@ -60,7 +60,7 @@ case "$BUG_ACTION" in
       TRACE_ARGS+=("--trace-artifact" "$ARTIFACT_DEST/$TRACE_ARTIFACT")
     fi
 
-    poetry run bugmon-process \
+    uv run bugmon-process \
       "$TC_ARTIFACT_ROOT/$MONITOR_ARTIFACT" \
       "$ARTIFACT_DEST/$PROCESSOR_ARTIFACT" \
       "${TRACE_ARGS[@]}" \
