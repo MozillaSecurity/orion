@@ -117,7 +117,7 @@ function clone-corpus {
 function run-target {
   find . -name "*.profraw" -delete
   timeout -s 2 -k $((COVRUNTIME + 60)) $((COVRUNTIME + 30)) \
-    "$BINARY_PATH/$1" "$HOME/corpus/$1" -max_total_time="$COVRUNTIME" || :
+    "$BINARY_PATH/$1" "$HOME/corpus/$1" -rss_limit_mb=4096 -max_total_time="$COVRUNTIME" || :
 
   RUST_BACKTRACE=1 grcov . \
     -t coveralls+ \
