@@ -29,8 +29,8 @@ DISTILLER=/home/ubuntu/LangFuzz/tools/tests/distiller.py
 V8=/home/ubuntu/v8/test/mjsunit/
 CHAKRA=/home/ubuntu/ChakraCore/test/
 OUTPUT=/home/ubuntu/tests/
-JITTESTS=/home/ubuntu/gecko-dev/js/src/jit-test/
-JSTESTS=/home/ubuntu/gecko-dev/js/src/tests/
+JITTESTS=/home/ubuntu/firefox/js/src/jit-test/
+JSTESTS=/home/ubuntu/firefox/js/src/tests/
 
 # Fetch a build for timeout testing later
 retry fuzzfetch --target js --debug -n debug64
@@ -40,7 +40,7 @@ export LD_LIBRARY_PATH
 # Clone all source repositories for their tests
 git-clone https://github.com/v8/v8
 git-clone https://github.com/Microsoft/ChakraCore
-git-clone https://github.com/mozilla/firefox
+git-clone https://github.com/mozilla-firefox/firefox
 
 # Compose tests
 $DISTILLER --microsoft-chakra $CHAKRA --google-v8-mjsunit $V8 --mozilla-jstests $JSTESTS --mozilla-jittests $JITTESTS --output $OUTPUT
