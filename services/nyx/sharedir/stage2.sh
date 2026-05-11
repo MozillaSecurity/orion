@@ -74,7 +74,7 @@ vmtouch -dl /home/user/
 
 free -m
 
-export AFL_MAP_SIZE=8388608
+export AFL_MAP_SIZE=16777216
 export AFL_IGNORE_PROBLEMS=1
 export AFL_IGNORE_PROBLEMS_COVERAGE=1
 export AFL_DEBUG=1
