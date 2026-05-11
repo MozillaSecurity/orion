@@ -109,15 +109,12 @@ DESTDIR=/srv/repos EDIT=1 ./fuzzmanager.sh
 PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx inject fuzzmanager boto
 DESTDIR=/srv/repos EDIT=1 ./fuzzfetch.sh
 
-chown -R ubuntu:ubuntu /home/ubuntu /srv/repos
-
 cd ..
-su ubuntu <<EOF
-source ./setup/common.sh
 git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
-EOF
-
 PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin retry pipx install -e ./guided-fuzzing-daemon[sentry]
+cd setup
+
+chown -R ubuntu:ubuntu /home/ubuntu /srv/repos
 
 # Cleanup
 "${0%/*}/cleanup.sh"

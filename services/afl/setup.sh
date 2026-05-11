@@ -79,6 +79,18 @@ DESTDIR=/srv/repos EDIT=1 ./fuzzmanager.sh
 DESTDIR=/srv/repos EDIT=1 ./fuzzfetch.sh
 DESTDIR=/srv/repos EDIT=1 ./prefpicker.sh
 
+cd ..
+git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
+
+export PIPX_HOME=/opt/pipx
+export PIPX_BIN_DIR=/usr/local/bin
+
+retry pipx install -e ./guided-fuzzing-daemon[sentry]
+retry pipx inject --include-apps -e guided-fuzzing-daemon ./nyx_utils
+
+retry pipx install -e ./symbol-filter
+cd setup
+
 chown -R worker:worker /home/worker /srv/repos
 
 afl_ver="$(resolve-tc-alias afl-instrumentation)"
@@ -88,19 +100,5 @@ echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >>/etc/bash.bashrc
 pushd /opt/afl-instrumentation/bin
 patch -p1 </home/worker/patches/afl-cmin.diff
 popd >/dev/null
-
-cd ..
-su worker <<EOF
-source ./setup/common.sh
-git-clone "https://github.com/MozillaSecurity/guided-fuzzing-daemon"
-EOF
-
-export PIPX_HOME=/opt/pipx
-export PIPX_BIN_DIR=/usr/local/bin
-
-retry pipx install -e ./guided-fuzzing-daemon[sentry]
-retry pipx inject --include-apps -e guided-fuzzing-daemon ./nyx_utils
-
-retry pipx install -e ./symbol-filter
 
 /srv/repos/setup/cleanup.sh
