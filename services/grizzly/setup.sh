@@ -92,26 +92,24 @@ packages_with_recommends=(
 )
 
 dbgsym_packages=(
-  # 2025-05-27: disabled because temporarily missing from dbgsym repo
+  # 2026-05-14: disabled because temporarily missing from dbgsym repo
+  # libcairo2
+  # libegl-mesa0
+  # libgl1-mesa-dri
+  # libglapi-mesa
   # libglib2.0-0
+  # libglx-mesa0
+  # libgtk-3-0
+  # libosmesa6
+  # libspeechd2
   # libwayland-egl1
+  # mesa-vulkan-drivers
 
-  libcairo2
-  libegl-mesa0
   libegl1
   libgl1
-  libgl1-mesa-dri
-  libglapi-mesa
   libglu1-mesa
   libglvnd0
-  libglx-mesa0
   libglx0
-  libgtk-3-0
-  libosmesa6
-  libspeechd2
-  mesa-va-drivers
-  mesa-vdpau-drivers
-  mesa-vulkan-drivers
 )
 
 sys-embed "${packages_with_recommends[@]}"
