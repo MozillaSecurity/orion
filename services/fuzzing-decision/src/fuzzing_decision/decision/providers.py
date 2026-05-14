@@ -29,12 +29,17 @@ class Provider(ABC):
         demand: bool,
         nested_virtualization: bool,
         performance_monitoring_unit: bool,
+        max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         raise NotImplementedError()
 
     def get_worker_config(
-        self, worker: str, platform: str, worker_type: str
+        self,
+        worker: str,
+        platform: str,
+        max_tasks: int,
+        worker_type: str,
     ) -> dict[str, Any]:
         assert worker in self.imagesets, f"Missing worker {worker}"
         out: dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
@@ -72,6 +77,9 @@ class Provider(ABC):
 
             # Allow machines to idle for some time to prevent churn
             out["genericWorker"]["config"]["idleTimeoutSecs"] = parse_time("15m")
+
+            # Maximum number of tasks before restart
+            out["genericWorker"]["config"]["numberOfTasksToRun"] = max_tasks
 
             # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
@@ -131,13 +139,16 @@ class AWS(Provider):
         demand: bool,
         nested_virtualization: bool,
         performance_monitoring_unit: bool,
+        max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         assert not nested_virtualization
         assert not performance_monitoring_unit
         # Load the AWS infos for that imageset
         amis = self.get_amis(imageset)
-        worker_config = self.get_worker_config(imageset, platform, worker_type)
+        worker_config = self.get_worker_config(
+            imageset, platform, max_tasks, worker_type
+        )
 
         result: list[dict[str, Any]] = [
             {
@@ -204,13 +215,16 @@ class Azure(Provider):
         demand: bool,
         nested_virtualization: bool,
         performance_monitoring_unit: bool,
+        max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         assert not nested_virtualization
         assert not performance_monitoring_unit
         # Load the Azure infos for that imageset
         images = self.get_images(imageset)
-        worker_config = self.get_worker_config(imageset, platform, worker_type)
+        worker_config = self.get_worker_config(
+            imageset, platform, max_tasks, worker_type
+        )
 
         result: list[dict[str, Any]] = [
             {
@@ -279,6 +293,7 @@ class GCP(Provider):
         demand: bool,
         nested_virtualization: bool,
         performance_monitoring_unit: bool,
+        max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         # Load source image
@@ -287,7 +302,9 @@ class GCP(Provider):
             f"No GCP implementation for imageset {imageset}"
         )
         source_image = self.imagesets[imageset]["gcp"]["image"]
-        worker_config = self.get_worker_config(imageset, platform, worker_type)
+        worker_config = self.get_worker_config(
+            imageset, platform, max_tasks, worker_type
+        )
 
         result = [
             {
@@ -351,6 +368,7 @@ class Static(Provider):
         demand: bool,
         nested_virtualization: bool,
         performance_monitoring_unit: bool,
+        max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
         return []

@@ -46,6 +46,10 @@ properties:
   max_capacity:
     description: Maximum number of workers to launch
     type: integer
+  max_tasks:
+    description: Maximum number of tasks before restart
+    type: integer
+    default: 0
   min_capacity:
     description: Minimum number of workers to keep available
     type: integer

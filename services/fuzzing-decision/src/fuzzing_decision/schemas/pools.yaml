@@ -99,6 +99,10 @@ properties:
       type: string
   max_run_time:
     pattern: "^(\\d+|(\\d+[sSmMhHdDwW])+)$"
+  max_tasks:
+    description: Maximum number of tasks before restart
+    type: integer
+    default: 0
   name:
     type: string
   nested_virtualization:

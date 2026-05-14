@@ -327,6 +327,7 @@ def build_resources(
         include_tasks_in_taskmanager=True,
         machine_types=pool.machine_types,
         max_capacity=max_capacity,
+        max_tasks=pool.max_tasks,
         min_capacity=0,
         name=pool.hook_id,
         nested_virtualization=pool.nested_virtualization,
@@ -477,6 +478,7 @@ class WorkerPool:
     include_tasks_in_taskmanager: bool
     machine_types: list[str]
     max_capacity: int
+    max_tasks: int
     min_capacity: int
     name: str
     nested_virtualization: bool
@@ -494,6 +496,7 @@ class WorkerPool:
             "demand": False,
             "disk_size": "60g",
             "include_tasks_in_taskmanager": False,
+            "max_tasks": 0,
             "min_capacity": 0,
             "nested_virtualization": False,
             "performance_monitoring_unit": False,
@@ -541,6 +544,7 @@ class WorkerPool:
                 self.demand,
                 self.nested_virtualization,
                 self.performance_monitoring_unit,
+                self.max_tasks,
                 self.worker,
             ),
             "maxCapacity": self.max_capacity,
