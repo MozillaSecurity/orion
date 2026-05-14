@@ -152,6 +152,7 @@ def test_aws_resources(
         imageset="docker-worker" if worker == "docker" else "generic-worker-A",
         machine_types=["a2"],
         max_run_time=parse_time("12h"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
@@ -238,6 +239,7 @@ def test_aws_resources(
                         "disableOOMProtection": True,
                         "idleTimeoutSecs": 900,
                         "maxTaskRunTime": 259200,
+                        "numberOfTasksToRun": 0,
                         "wstAudience": "communitytc",
                         "wstServerURL": (
                             "https://community-websocktunnel.services.mozilla.com"
@@ -291,6 +293,7 @@ def test_azure_resources(
         imageset="generic-worker-A",
         machine_types=["standard"],
         max_run_time=parse_time("12h"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
@@ -345,6 +348,7 @@ def test_azure_resources(
                                 "disableOOMProtection": True,
                                 "idleTimeoutSecs": 900,
                                 "maxTaskRunTime": 259200,
+                                "numberOfTasksToRun": 0,
                                 "wstAudience": "communitytc",
                                 "wstServerURL": "https://community-websocktunnel.services.mozilla.com",
                             },
@@ -413,6 +417,7 @@ def test_gcp_resources(
         imageset="docker-worker",
         machine_types=["2-cpus", "gcp1"],
         max_run_time=parse_time("12h"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
@@ -556,6 +561,66 @@ def test_gcp_resources(
     assert role.to_json() == _get_expected_role()
 
 
+@pytest.mark.usefixtures("appconfig")
+@pytest.mark.parametrize(
+    "cloud, platform, cpu, imageset, machine_types, worker",
+    [
+        ("aws", "linux", "arm64", "generic-worker-A", ["a2"], "d2g"),
+        ("aws", "windows", "arm64", "generic-worker-A", ["a2"], "generic"),
+        ("azure", "windows", "x64", "generic-worker-A", ["standard"], "generic"),
+        ("gcp", "linux", "x64", "generic-worker-A", ["gcp1"], "generic"),
+    ],
+)
+def test_max_tasks_propagated(
+    mock_clouds,
+    mock_machines,
+    cloud,
+    platform,
+    cpu,
+    imageset,
+    machine_types,
+    worker,
+):
+    conf = FuzzingPoolConfig(
+        apply_to=[],
+        artifacts={},
+        base_dir=Path.cwd(),
+        cloud=cloud,
+        command=["run-fuzzing.sh"],
+        container="MozillaSecurity/fuzzer:latest",
+        cpu=cpu,
+        cycle_time=parse_time("12h"),
+        demand=True,
+        disk_size=120,
+        env={},
+        imageset=imageset,
+        machine_types=machine_types,
+        max_run_time=parse_time("12h"),
+        max_tasks=5,
+        name="Amazing fuzzing pool",
+        nested_virtualization=False,
+        parents=[],
+        performance_monitoring_unit=False,
+        platform=platform,
+        pool_id="test",
+        preprocess="",
+        routes=[],
+        run_as_admin=False,
+        schedule_start=dateutil.parser.isoparse("1970-01-01T00:00:00Z"),
+        scopes=[],
+        tasks=1,
+        worker=worker,
+    )
+    pool, _hook, _role = build_resources([conf], mock_clouds, mock_machines)
+    for launch_config in pool.to_json()["config"]["launchConfigs"]:
+        assert (
+            launch_config["workerConfig"]["genericWorker"]["config"][
+                "numberOfTasksToRun"
+            ]
+            == 5
+        )
+
+
 @pytest.mark.parametrize("env", [None, {"someKey": "someValue"}])
 @pytest.mark.parametrize(
     "scope_caps",
@@ -634,6 +699,7 @@ def test_tasks(
         imageset="anything",
         machine_types=["a2"],
         max_run_time=parse_time("30s"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
@@ -878,6 +944,7 @@ def test_flatten(pool_path):
     assert pool.tasks == expect.tasks
     assert pool.nested_virtualization == expect.nested_virtualization
     assert pool.performance_monitoring_unit == expect.performance_monitoring_unit
+    assert pool.max_tasks == expect.max_tasks
 
 
 def test_pool_map():
@@ -929,6 +996,7 @@ def test_pool_map():
     assert pool.nested_virtualization == expect.nested_virtualization
     assert pool.performance_monitoring_unit == expect.performance_monitoring_unit
     assert pool.worker == expect.worker
+    assert pool.max_tasks == expect.max_tasks
 
 
 def test_pool_map_admin(mocker):
@@ -988,6 +1056,7 @@ def test_cycle_crons():
         imageset="anything",
         machine_types=["a2"],
         max_run_time=parse_time("6h"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],
@@ -1139,6 +1208,7 @@ def test_task_image(mocker):
         imageset="anything",
         machine_types=["a2"],
         max_run_time=parse_time("30s"),
+        max_tasks=0,
         name="Amazing fuzzing pool",
         nested_virtualization=False,
         parents=[],

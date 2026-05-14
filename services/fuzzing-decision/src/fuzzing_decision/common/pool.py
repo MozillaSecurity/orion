@@ -95,6 +95,8 @@ class FuzzingPoolConfig:
     machine_types: list
     # Maximum time to run each instance
     max_run_time: int
+    # Maximum number of tasks before restart
+    max_tasks: int
     # Human description
     name: str
     # Task requires an instance type that supported nested virtualization
@@ -167,6 +169,7 @@ class FuzzingPoolConfig:
         raw.setdefault("preprocess", "")
         raw.setdefault("routes", [])
         raw.setdefault("machine_types", [])
+        raw.setdefault("max_tasks", 0)
         raw.setdefault("performance_monitoring_unit", False)
         raw["env"] = {k: str(v) for k, v in raw["env"].items()}
         raw["base_dir"] = path.parent
@@ -210,6 +213,7 @@ class FuzzingPoolConfig:
             "demand",
             "disk_size",
             "imageset",
+            "max_tasks",
             "nested_virtualization",
             "performance_monitoring_unit",
             "platform",
@@ -295,6 +299,7 @@ class FuzzingPoolConfig:
                 "demand",
                 "imageset",
                 "machine_types",
+                "max_tasks",
                 "nested_virtualization",
                 "performance_monitoring_unit",
                 "platform",
