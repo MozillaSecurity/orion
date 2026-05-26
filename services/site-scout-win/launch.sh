@@ -116,7 +116,7 @@ EOF
 ./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf &
 
 # ensure we use the latest FM
-retry pip install "git+https://github.com/MozillaSecurity/FuzzManager#egg=FuzzManager[sentry]"
+retry pip install "FuzzManager[sentry] @ git+https://github.com/MozillaSecurity/FuzzManager"
 
 # Get fuzzmanager configuration from TC
 set +x
@@ -137,7 +137,7 @@ chmod 0600 .fuzzmanagerconf
 
 # Install site-scout
 status "Setup: installing site-scout"
-retry python -m pip install "git+https://github.com/MozillaSecurity/fuzzfetch.git#egg=fuzzfetch[sentry]" site-scout
+retry python -m pip install "fuzzfetch[sentry] @ git+https://github.com/MozillaSecurity/fuzzfetch.git" site-scout
 
 # Clone site-scout private
 # only clone if it wasn't already mounted via docker run -v

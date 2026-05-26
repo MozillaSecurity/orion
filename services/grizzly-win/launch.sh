@@ -83,7 +83,7 @@ EOF
 ./td-agent-bit/bin/fluent-bit.exe -c td-agent-bit.conf &
 
 # ensure we use the latest FM
-retry pip install "git+https://github.com/MozillaSecurity/FuzzManager#egg=FuzzManager[sentry]"
+retry pip install "FuzzManager[sentry] @ git+https://github.com/MozillaSecurity/FuzzManager"
 
 # Get fuzzmanager configuration from TC
 set +x
