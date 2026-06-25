@@ -3,7 +3,11 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import os
+
 from taskcluster.helper import TaskclusterConfig
 
-# Shared taskcluster configuration
-taskcluster = TaskclusterConfig("https://community-tc.services.mozilla.com")
+# Shared taskcluster configuration, defaulting to community-tc.
+taskcluster = TaskclusterConfig(
+    os.environ.get("TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com")
+)
