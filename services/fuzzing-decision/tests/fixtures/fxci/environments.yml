@@ -1,0 +1,26 @@
+---
+# FXCI environments config fixture, including an unused region for filtering.
+firefoxci:
+  azure_config:
+    untrusted_subscription: 108d46d5-fe9b-4850-9a7d-8c914aa6c1f0
+    location:
+      - centralus
+      - eastus
+      - eastus2
+      - northcentralus
+      - northeurope
+      - southcentralus
+      - westus
+      - westus2
+      - westeurope
+    wst_server_url: https://firefoxci-websocktunnel.services.mozilla.com/
+    wst_audience: firefoxcitc
+  google_config:
+    wst_server_url: https://gcp-websocktunnel.services.mozilla.com/
+    wst_audience: firefoxci-gcp
+    zones:
+      by-region:
+        us-central1: [us-central1-a]
+        us-west1: [us-west1-a, us-west1-b]
+        # Outside the fuzzing region allowlist; the provider must ignore it.
+        europe-west4: [europe-west4-a]

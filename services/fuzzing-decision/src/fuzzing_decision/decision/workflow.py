@@ -13,16 +13,14 @@ from itertools import chain
 from pathlib import Path
 from typing import Any
 
-import yaml
 from tcadmin.appconfig import AppConfig
 
 from ..common import taskcluster
 from ..common.pool import FuzzingPoolConfig, MachineTypes
 from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
-from . import HOOK_PREFIX, WORKER_POOL_PREFIX
 from .pool import WorkerPool, build_resources, build_tasks, cancel_tasks
-from .providers import AWS, GCP, Azure, Static
+from .providers import AWS, GCP, Azure, Provider, Static
 
 LOG = logging.getLogger(__name__)
 
@@ -34,7 +32,7 @@ class Workflow(CommonWorkflow):
         super().__init__()
 
         self.fuzzing_config_dir: Path | None = None
-        self.community_config_dir: Path | None = None
+        self.fxci_config_dir: Path | None = None
 
         # Automatic cleanup at end of execution
         atexit.register(self.cleanup)
@@ -74,23 +72,23 @@ class Workflow(CommonWorkflow):
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
-        # Clone fuzzing & community configuration repos
+        # Clone fuzzing & FXCI configuration repos
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
-        self.community_config_dir = self.git_clone(**config["community_config"])
+        self.fxci_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config: dict[str, Any]) -> None:
-        # Setup resources manager to track only fuzzing instances
-        for pattern in self.build_resources_patterns():
-            resources.manage(pattern)
-
-        # Load the cloud configuration from community config
-        assert self.community_config_dir is not None
-        clouds = {
-            "aws": AWS(self.community_config_dir),
-            "azure": Azure(self.community_config_dir),
-            "gcp": GCP(self.community_config_dir),
+    def _clouds(self) -> dict[str, Provider]:
+        """Cloud providers for FXCI's supported worker pool types."""
+        assert self.fxci_config_dir is not None
+        base = self.fxci_config_dir
+        return {
+            "aws": AWS(base),
+            "azure": Azure(base),
+            "gcp": GCP(base),
             "static": Static(),
         }
+
+    def generate(self, resources, config: dict[str, Any]) -> None:
+        clouds = self._clouds()
 
         # Load the machine types
         assert self.fuzzing_config_dir is not None
@@ -102,57 +100,23 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REPOSITORY"] = config["fuzzing_config"]["url"]
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
-        # Browse the files in the repo
+        generated: list[Any] = []
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_configs = list(FuzzingPoolConfig.from_file(config_file))
-            resources.update(build_resources(pool_configs, clouds, machines, env))
+            generated.extend(build_resources(pool_configs, clouds, machines, env))
 
         extra_pools_path = self.fuzzing_config_dir / "workers.yml"
         if extra_pools_path.is_file():
             for pool in WorkerPool.from_file_iter(extra_pools_path):
-                resources.update(pool.build_resources(clouds, machines))
+                generated.extend(pool.build_resources(clouds, machines))
 
-    def build_resources_patterns(self) -> list[str] | str:
-        """Build regex patterns to manage our resources"""
+        # fxci-config manages its own infrastructure resources. Manage only the
+        # exact IDs generated here so unrelated resources cannot be removed. Removed
+        # pools are not automatically cleaned up.
+        for resource in generated:
+            resources.manage(f"^{re.escape(resource.id)}$")
 
-        # Load existing workerpools from community config
-        assert self.community_config_dir is not None
-        path_ = self.community_config_dir / "config" / "projects" / "fuzzing.yml"
-        assert path_.exists(), f"Missing fuzzing community config in {path_}"
-        community = yaml.safe_load(path_.read_text())
-        assert "fuzzing" in community, "Missing fuzzing main key in community config"
-
-        def _suffix(data: dict[str, Any], key: str) -> str:
-            existing = data.get(key, {})
-            if not existing:
-                # Manage every resource possible
-                return ".*"
-
-            # Exclude existing resources from managed resources
-            LOG.info(
-                "Found existing {} in community config: {}".format(
-                    key, ", ".join(existing)
-                )
-            )
-            return "(?!({})$)".format("|".join(existing))
-
-        hook_suffix = _suffix(community["fuzzing"], "hooks")
-        pool_suffix = _suffix(community["fuzzing"], "workerPools")
-        grant_roles = {
-            "grants": {
-                re.escape(role.split(f"{HOOK_PREFIX}/", 1)[1])
-                for grant in community["fuzzing"].get("grants", [])
-                for role in grant.get("to", [])
-                if role.startswith(f"hook-id:{HOOK_PREFIX}/")
-            }
-        }
-        role_suffix = _suffix(grant_roles, "grants")
-
-        return [
-            rf"Hook={HOOK_PREFIX}/{hook_suffix}",
-            rf"WorkerPool={WORKER_POOL_PREFIX}/{pool_suffix}",
-            rf"Role=hook-id:{HOOK_PREFIX}/{role_suffix}",
-        ]
+        resources.update(generated)
 
     def build_tasks(
         self,
@@ -189,7 +153,7 @@ class Workflow(CommonWorkflow):
 
     def cleanup(self) -> None:
         """Cleanup temporary folders at end of execution"""
-        for folder in (self.community_config_dir, self.fuzzing_config_dir):
+        for folder in (self.fxci_config_dir, self.fuzzing_config_dir):
             if folder is None or not folder.exists():
                 continue
             folder_ = str(folder)

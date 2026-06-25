@@ -1,17 +1,17 @@
 # Fuzzing automated deployment on Taskcluster
 
-This Python 3 project manages Taskcluster resources and their deployment using public [community configuration](https://github.com/taskcluster/community-tc-config/) & private fuzzing configuration.
+This Python 3 project manages Taskcluster resources and their deployment using public [fxci-config](https://github.com/mozilla-releng/fxci-config) and private fuzzing configuration.
 
 It uses [tc-admin](https://github.com/taskcluster/tc-admin) to allow admins to easily update those resources using a Git workflow.
 
-A docker image is produced and stored [as Taskcluster artifacts](https://community-tc.services.mozilla.com/tasks/index/project.fuzzing.config). The [stable image](https://community-tc.services.mozilla.com/tasks/index/project.fuzzing.config/master) used in production, is built from the master branch of this repository.
+A Docker image is produced and stored as Taskcluster artifacts. The stable image used in production is built from the main branch of this repository.
 
 ## Running in production
 
 Three modes of execution are available through the same code base (and Docker image):
 
 1. Using `tc-admin` on a CI/CD git workflow of private configuration repositories, to manage resources.
-2. Using `fuzzing-decision` in a Taskcluster hook or task, to bootstrap a fuzzing workflow across several tasks in the same group.
+2. Using `fuzzing-decision` in an FXCI hook or task, to bootstrap a fuzzing workflow across several tasks in the same group.
 3. Using `fuzzing-pool-launch` as a Docker image entrypoint, which detects if it is running in a Taskcluster deployment, and if so uses the private fuzzing configuration repository to load a private command-line and environment, as well as redirect stdout/err to a private log artifact.
 
 ### Managing resources
@@ -19,18 +19,18 @@ Three modes of execution are available through the same code base (and Docker im
 The goal of this project is to create Taskcluster hooks that will run fuzzers continuously, across several tasks.
 
 So we need to manage:
-- Worker pools, either on AWS or GCP,
-- [Hooks](https://community-tc.services.mozilla.com/hooks/), to describe fuzzers usage,
+- Worker pools on GCP and FXCI Azure2 (AWS fuzzing pools are currently unsupported),
+- [Hooks](https://firefox-ci-tc.services.mozilla.com/hooks/), to describe fuzzers usage,
 - Roles, to allow execution of said hooks.
 
 tc-admin has several modes (`diff`, `apply` to update resources, `generate` to view the current configuration).
 It should be used as a Taskcluster CI pipeline on a private configuration repository:
 - running `tc-admin diff` on a pull request to view the potential changes.
-- running `tc-admin apply` on a merge to the master branch. No credentials are needed, as all Taskcluster actions will go through the taskcluster proxy.
+- running `tc-admin apply` on a merge to the main branch. No credentials are needed, as all Taskcluster actions will go through the taskcluster proxy.
 
 This pipeline is configured using the Taskcluster secret described below.
 
-Produced hooks are triggered automatically at a specified cadence, but can also be triggered manually by administrators.
+Produced hooks are triggered automatically at a specified cadence, but can also be triggered manually by administrators. Resource generation manages only exact IDs it generates; when a pool is removed from fuzzing configuration, clean it up manually.
 
 Each hook will create a decision task using this code, and will run the `fuzzing-decision` Python executable.
 
@@ -41,7 +41,7 @@ A fuzzing workflow starts by an execution of the decision task.
 That task will:
 1. retrieve configuration from a Taskcluster secret, set with `TASKCLUSTER_SECRET` environment variable,
 2. setup the ssh private key
-3. clone the community repository, and the configured private fuzzing repository,
+3. clone fxci-config and the configured private fuzzing repository,
 4. load the fuzzing pool configuration specified by the CLI args,
 5. create dependent tasks in the same task group, following the fuzzing configuration for that pool.
 
@@ -54,10 +54,11 @@ A Taskcluster secret is used by both modes to be able to clone private repositor
 ```yaml
 ---
 
-# Repository with public base information for the Taskcluster instance
+# Public FXCI configuration repository. The `community_config` key is retained
+# for compatibility with existing secrets; it now points to fxci-config.
 community_config:
-  url: 'https://github.com/taskcluster/community-tc-config.git'
-  revision: master
+  url: 'https://github.com/mozilla-releng/fxci-config.git'
+  revision: main
 
 # Repository with private fuzzing configuration
 fuzzing_config:
@@ -115,9 +116,9 @@ It's possible to replace Taskcluster secret usage by a local YAML configuration 
 ```yaml
 ---
 
-# Use a local community configuration
+# Use a local FXCI configuration
 community_config:
-  path: /path/to/taskcluster/community-tc-config
+  path: /path/to/mozilla-releng/fxci-config
 
 # Use a local fuzzing configuration
 fuzzing_config:
@@ -132,7 +133,7 @@ To use that file, specify the following arguments:
 
 ### Applying changes
 
-As a fuzzing admin, you are able to publish changes without relying on the CI/CD pipeline, but you need to [create a Taskcluster client](https://community-tc.services.mozilla.com/auth/clients/create) with the following scopes:
+As a fuzzing admin, you are able to publish changes without relying on the CI/CD pipeline, but you need to [create an FXCI Taskcluster client](https://firefox-ci-tc.services.mozilla.com/auth/clients/create) with the following scopes:
 
 ```
 assume:hook-id:project-fuzzing/*
@@ -144,7 +145,8 @@ queue:scheduler-id:fuzzing
 queue:cancel-task:fuzzing/*
 secrets:get:project/fuzzing/decision
 worker-manager:manage-worker-pool:proj-fuzzing/*
-worker-manager:provider:community-tc-workers-*
+worker-manager:provider:fxci-level1-gcp
+worker-manager:provider:azure2
 ```
 
 This set of scopes allows you to:
@@ -155,7 +157,9 @@ This set of scopes allows you to:
 - read the decision secret, and allow hooks to read it
 - manage fuzzing worker pools
 
-On the community taskcluster instance, you need to prefix your client name with your own ClientId ([found on your profile](https://community-tc.services.mozilla.com/profile))
+Set `TASKCLUSTER_ROOT_URL` when running locally against a non-default Taskcluster endpoint. It only changes the service endpoint; provider IDs, worker configuration, and cloud config layout remain FXCI-specific.
+
+On the FXCI Taskcluster instance, prefix your client name with your own ClientId ([found on your profile](https://firefox-ci-tc.services.mozilla.com/profile)).
 
 Once your client is created, you'll get a client id and access token.
 

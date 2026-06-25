@@ -4,21 +4,17 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml
 
 from ..common.util import parse_time
+from . import GCP_REGIONS, PROVIDER_IDS
 
 LOG = logging.getLogger(__name__)
 
 
 class Provider(ABC):
-    def __init__(self, base_dir: Path) -> None:
-        self.imagesets = yaml.safe_load(
-            (base_dir / "config" / "imagesets.yml").read_text()
-        )
-
     @abstractmethod
     def build_launch_configs(
         self,
@@ -40,14 +36,11 @@ class Provider(ABC):
         platform: str,
         max_tasks: int,
         worker_type: str,
+        wst_audience: str,
+        wst_server_url: str,
     ) -> dict[str, Any]:
-        assert worker in self.imagesets, f"Missing worker {worker}"
-        out: dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
-
-        # worker implementation might be generic-worker or docker-worker
-        # although we also support d2g (docker payload on generic worker)
-        # so check explicitly for the worker implementation declared
-        worker_impl = self.imagesets[worker]["workerImplementation"]
+        worker_impl = "docker-worker" if worker_type == "docker" else "generic-worker"
+        out: dict[str, Any] = {}
         if worker_impl == "docker-worker":
             out.setdefault("dockerConfig", {})
             out.update(
@@ -81,13 +74,10 @@ class Provider(ABC):
             # Maximum number of tasks before restart
             out["genericWorker"]["config"]["numberOfTasksToRun"] = max_tasks
 
-            # Fixed config for websocket tunnel
             out["genericWorker"]["config"].update(
                 {
-                    "wstAudience": "communitytc",
-                    "wstServerURL": (
-                        "https://community-websocktunnel.services.mozilla.com"
-                    ),
+                    "wstAudience": wst_audience,
+                    "wstServerURL": wst_server_url,
                 }
             )
             if worker_type == "d2g":
@@ -101,34 +91,13 @@ class Provider(ABC):
         return out
 
 
-class AWS(Provider):
-    """Amazon Cloud provider config for Taskcluster"""
+class _UnsupportedCloud(Provider):
+    """Cloud provider not yet supported by fuzzing on FXCI."""
+
+    cloud = ""
 
     def __init__(self, base_dir: Path) -> None:
-        # Load configuration from cloned community config
-        super().__init__(base_dir)
-        self.regions = self.load_regions(base_dir / "config" / "aws.yml")
-        LOG.info("Loaded AWS configuration")
-
-    def load_regions(self, path: Path) -> dict[str, Any]:
-        """Load AWS regions from community tc file"""
-        aws = yaml.safe_load(path.read_text())
-        assert "subnets" in aws, "Missing subnets in AWS config"
-        assert "security_groups" in aws, "Missing security_groups in AWS config"
-        assert aws["subnets"].keys() == aws["security_groups"].keys(), (
-            "Keys mismatch in AWS config"
-        )
-        return {
-            region: {
-                "subnets": subnets,
-                "security_groups": aws["security_groups"][region],
-            }
-            for region, subnets in aws["subnets"].items()
-        }
-
-    def get_amis(self, worker: str):
-        assert worker in self.imagesets, f"Missing worker {worker}"
-        return self.imagesets[worker]["aws"]["amis"]
+        del base_dir
 
     def build_launch_configs(
         self,
@@ -142,69 +111,58 @@ class AWS(Provider):
         max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
-        assert not nested_virtualization
-        assert not performance_monitoring_unit
-        # Load the AWS infos for that imageset
-        amis = self.get_amis(imageset)
-        worker_config = self.get_worker_config(
-            imageset, platform, max_tasks, worker_type
+        raise NotImplementedError(
+            f"{self.cloud} worker pools are not supported on FXCI"
         )
 
-        result: list[dict[str, Any]] = [
-            {
-                "capacityPerInstance": 1,
-                "region": region_name,
-                "launchConfig": {
-                    "ImageId": amis[region_name],
-                    "Placement": {"AvailabilityZone": az},
-                    "SubnetId": subnet,
-                    "SecurityGroupIds": [
-                        # Always use the no-inbound sec group
-                        region["security_groups"]["no-inbound"]
-                    ],
-                    "InstanceType": instance,
-                    "BlockDeviceMappings": [
-                        {
-                            "DeviceName": "/dev/sda1",
-                            "Ebs": {
-                                "VolumeSize": disk_size,
-                                "VolumeType": "gp3",
-                                "DeleteOnTermination": True,
-                            },
-                        }
-                    ],
-                },
-                "workerConfig": worker_config,
-            }
-            for instance, az_blacklist in machines
-            for region_name, region in self.regions.items()
-            for az, subnet in region["subnets"].items()
-            if region_name in amis and az not in az_blacklist
-        ]
-        if not demand:
-            for config in result:
-                config["launchConfig"]["InstanceMarketOptions"] = {"MarketType": "spot"}
-        return result
+
+class AWS(_UnsupportedCloud):
+    cloud = "AWS"
 
 
 class Azure(Provider):
-    """Azure Cloud provider config for Taskcluster"""
+    """Azure2 worker-manager launch configs backed by FXCI configuration."""
+
+    cloud = "Azure"
+    # Only these regions have the proj-fuzzing VNets/subnets managed by relops.
+    locations: ClassVar[dict[str, str]] = {
+        "central-us": "centralus",
+        "east-us": "eastus",
+        "east-us-2": "eastus2",
+        "south-central-us": "southcentralus",
+        "west-us-2": "westus2",
+    }
 
     def __init__(self, base_dir: Path) -> None:
-        # Load configuration from cloned community config
-        super().__init__(base_dir)
-        self.locations = self.load_locations(base_dir / "config" / "azure.yml")
-        LOG.info("Loaded Azure configuration")
+        self.images = yaml.safe_load((base_dir / "worker-images.yml").read_text())
+        env = yaml.safe_load((base_dir / "environments.yml").read_text())
+        self.config = env["firefoxci"]["azure_config"]
+        self.allowed_locations = set(self.config["location"])
+        LOG.info("Loaded FXCI Azure configuration")
 
-    def load_locations(self, path: Path) -> dict[str, Any]:
-        """Load Azure regions from community tc file"""
-        data = yaml.safe_load(path.read_text())
-        assert "subnets" in data, "Missing subnets in Azure config"
-        return {location: subnet for location, subnet in data["subnets"].items()}
+    def _image(self, imageset: str) -> dict[str, Any]:
+        assert imageset in self.images, f"Missing image {imageset}"
+        provider = PROVIDER_IDS["azure"]
+        assert provider in self.images[imageset], f"No {provider} image for {imageset}"
+        return self.images[imageset]
 
-    def get_images(self, worker: str):
-        assert worker in self.imagesets, f"Missing worker {worker}"
-        return self.imagesets[worker]["azure"]["images"]
+    def _image_id(self, image: dict[str, Any], location: str, subscription: str) -> str:
+        azure_image = image[PROVIDER_IDS["azure"]]
+        resource_group = azure_image["resource_group"]
+        subscription_path = f"/subscriptions/{subscription}"
+        if azure_image.get("version") == "NA":
+            assert location in azure_image, f"No Azure image for {image} in {location}"
+            return (
+                f"{subscription_path}/resourceGroups/{resource_group}/providers/"
+                f"Microsoft.Compute/images/{azure_image[location]}"
+            )
+
+        name = azure_image["name"]
+        version = azure_image["version"]
+        return (
+            f"{subscription_path}/resourceGroups/{resource_group}/providers/"
+            f"Microsoft.Compute/galleries/{name}/images/{name}/versions/{version}"
+        )
 
     def build_launch_configs(
         self,
@@ -218,55 +176,105 @@ class Azure(Provider):
         max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
-        assert not nested_virtualization
-        assert not performance_monitoring_unit
-        # Load the Azure infos for that imageset
-        images = self.get_images(imageset)
-        worker_config = self.get_worker_config(
-            imageset, platform, max_tasks, worker_type
-        )
+        if nested_virtualization or performance_monitoring_unit:
+            unsupported = (
+                "nested virtualization"
+                if nested_virtualization
+                else "performance monitoring unit"
+            )
+            raise NotImplementedError(
+                f"Azure worker pools do not support {unsupported}"
+            )
 
-        result: list[dict[str, Any]] = [
-            {
-                "capacityPerInstance": 1,
-                "location": location,
-                "storageProfile": {
-                    "osDisk": {
-                        "osType": "Windows",
-                        "caching": "ReadOnly",
-                        "createOption": "FromImage",
-                        "diffDiskSettings": {
-                            "option": "Local",
+        image = self._image(imageset)
+        azure_image = image[PROVIDER_IDS["azure"]]
+        subscription = self.config["untrusted_subscription"]
+        worker_config = self.get_worker_config(
+            imageset,
+            platform,
+            max_tasks,
+            worker_type,
+            self.config["wst_audience"],
+            self.config["wst_server_url"],
+        )
+        generic_worker = worker_config.get("genericWorker", {}).get("config")
+        if generic_worker is not None:
+            if platform == "windows":
+                generic_worker.setdefault(
+                    "livelogExecutable", r"C:\generic-worker\livelog.exe"
+                )
+                generic_worker.setdefault(
+                    "ed25519SigningKeyLocation",
+                    r"C:\generic-worker\generic-worker-ed25519-signing-key.key",
+                )
+                generic_worker.setdefault("shutdownMachineOnIdle", True)
+                generic_worker.setdefault("shutdownMachineOnInternalError", True)
+                generic_worker.setdefault(
+                    "taskclusterProxyExecutable",
+                    r"C:\generic-worker\taskcluster-proxy.exe",
+                )
+        metadata = image.get("worker-type-metadata")
+        if metadata and generic_worker is not None:
+            generic_worker.setdefault("workerTypeMetadata", metadata)
+
+        if azure_image.get("version") == "NA":
+            image_locations = [
+                location for location in self.locations if location in azure_image
+            ]
+        else:
+            image_locations = list(self.locations)
+
+        result = []
+        for machine, region_blacklist in machines:
+            for location in image_locations:
+                azure_location = self.locations[location]
+                if azure_location not in self.allowed_locations:
+                    continue
+                if location in region_blacklist or azure_location in region_blacklist:
+                    continue
+
+                resource_suffix = f"{location}-proj-fuzzing"
+                subnet_id = (
+                    f"/subscriptions/{subscription}/resourceGroups/rg-{resource_suffix}/"
+                    f"providers/Microsoft.Network/virtualNetworks/vn-{resource_suffix}/"
+                    f"subnets/sn-{resource_suffix}"
+                )
+                launch_config: dict[str, Any] = {
+                    "location": azure_location,
+                    "subnetId": subnet_id,
+                    "hardwareProfile": {"vmSize": machine},
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "diskSizeGB": disk_size,
+                        },
+                        "imageReference": {
+                            "id": self._image_id(image, location, subscription)
                         },
                     },
-                    "imageReference": {
-                        "id": images[location],
-                    },
-                },
-                "osProfile": {
-                    "windowsConfiguration": {
-                        "timeZone": "UTC",
-                        "enableAutomaticUpdates": False,
-                    },
-                },
-                "subnetId": subnet,
-                "hardwareProfile": {
-                    "vmSize": instance,
-                },
-                "workerConfig": worker_config,
-            }
-            for instance, az_blacklist in machines
-            for location, subnet in self.locations.items()
-            if location in images and location not in az_blacklist
-        ]
-        if not demand:
-            for config in result:
-                config.update(
-                    {
-                        "priority": "spot",
-                        "evictionPolicy": "Delete",
+                    "workerConfig": worker_config,
+                    "workerManager": {"capacityPerInstance": 1},
+                }
+                if platform == "windows":
+                    launch_config["osProfile"] = {
+                        "windowsConfiguration": {
+                            "timeZone": "UTC",
+                            "enableAutomaticUpdates": False,
+                        }
                     }
-                )
+                if azure_image.get("version") != "NA":
+                    launch_config["tags"] = {
+                        "deploymentId": azure_image["deployment_id"]
+                    }
+                if not demand:
+                    launch_config.update(
+                        {
+                            "priority": "spot",
+                            "billingProfile": {"maxPrice": -1},
+                            "evictionPolicy": "Delete",
+                        }
+                    )
+                result.append(launch_config)
         return result
 
 
@@ -274,15 +282,20 @@ class GCP(Provider):
     """Google Cloud provider config for Taskcluster"""
 
     def __init__(self, base_dir: Path) -> None:
-        # Load configuration from cloned community config
-        super().__init__(base_dir)
-        gcp_config = yaml.safe_load((base_dir / "config" / "gcp.yml").read_text())
-        assert "regions" in gcp_config, "Missing regions in gcp config"
+        self.images = yaml.safe_load((base_dir / "worker-images.yml").read_text())
+        env = yaml.safe_load((base_dir / "environments.yml").read_text())
+        self.config = env["firefoxci"]["google_config"]
+        regions = self.config["zones"]["by-region"]
         self.regions = {
-            region: [f"{region}-{zone}" for zone in details["zones"]]
-            for region, details in gcp_config["regions"].items()
+            region: regions[region] for region in GCP_REGIONS if region in regions
         }
-        LOG.info("Loaded GCP configuration")
+        LOG.info("Loaded FXCI GCP configuration")
+
+    def _gcp_source_image(self, imageset: str) -> str:
+        assert imageset in self.images, f"Missing image {imageset}"
+        provider = PROVIDER_IDS["gcp"]
+        assert provider in self.images[imageset], f"No {provider} image for {imageset}"
+        return self.images[imageset][provider]
 
     def build_launch_configs(
         self,
@@ -296,14 +309,14 @@ class GCP(Provider):
         max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
-        # Load source image
-        assert imageset in self.imagesets, f"Missing imageset {imageset}"
-        assert "gcp" in self.imagesets[imageset], (
-            f"No GCP implementation for imageset {imageset}"
-        )
-        source_image = self.imagesets[imageset]["gcp"]["image"]
+        source_image = self._gcp_source_image(imageset)
         worker_config = self.get_worker_config(
-            imageset, platform, max_tasks, worker_type
+            imageset,
+            platform,
+            max_tasks,
+            worker_type,
+            self.config["wst_audience"],
+            self.config["wst_server_url"],
         )
 
         result = [

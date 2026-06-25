@@ -1,0 +1,33 @@
+---
+# Fake fxci worker images (keyed by image name -> provider -> image path)
+fuzzing-gw-ubuntu-24-04:
+  fxci-level1-gcp: projects/fake/global/images/fuzzing-gw-ubuntu-24-04
+docker-worker:
+  fxci-level1-gcp: projects/fake/global/images/docker-worker
+generic-worker-A:
+  fxci-level1-gcp: projects/fake/global/images/generic-worker-A
+fuzzing-win2022:
+  worker-type-metadata:
+    machine-setup:
+      script: https://example.invalid/setup.ps1
+  azure2:
+    version: NA
+    resource_group: rg-packer-worker-images
+    central-us: gw-win2022-central
+    east-us: gw-win2022-east
+fuzzing-win2022-gpu:
+  worker-type-metadata:
+    machine-setup:
+      script: https://example.invalid/setup.ps1
+  azure2:
+    version: NA
+    resource_group: rg-packer-worker-images
+    east-us-2: gw-win2022-east-2
+    south-central-us: gw-win2022-south-central
+    west-us-2: gw-win2022-west
+fuzzing-win2025-gallery:
+  azure2:
+    version: 1.3.14
+    resource_group: rg-packer-worker-images
+    deployment_id: 78fbc06
+    name: win2025_64_24h2

@@ -1,5 +1,5 @@
 $schema: "https://json-schema.org/draft/2020-12/schema"
-$id: "https://github.com/MozillaSecurity/orion/raw/master/services/fuzzing-decision/src/fuzzing_decision/schemas/pools.yaml"
+$id: "https://github.com/MozillaSecurity/orion/raw/main/services/fuzzing-decision/src/fuzzing_decision/schemas/pools.yaml"
 title: "Pool"
 type: object
 required:
