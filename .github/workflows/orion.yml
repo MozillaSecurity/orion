@@ -1,0 +1,722 @@
+name: Orion CI and builds
+'on':
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch:
+    inputs:
+      rebuild_all:
+        description: Rebuild every image and rerun recipe checks
+        required: false
+        default: false
+        type: boolean
+  schedule:
+  - cron: 17 5 * * 1
+permissions:
+  actions: read
+  contents: read
+concurrency:
+  group: orion-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      dirty: ${{ steps.plan.outputs.dirty }}
+      test_matrix: ${{ steps.plan.outputs.test_matrix }}
+      recipe_matrix: ${{ steps.plan.outputs.recipe_matrix }}
+      publish_matrix: ${{ steps.plan.outputs.publish_matrix }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@v10
+      with:
+        python-version: '3.12'
+        cache-dependency-glob: ci/uv.lock
+    - name: Install workflow tools
+      run: uv sync --project ci --locked --no-dev
+    - id: baseline
+      name: Find the last successfully published revision
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: uv run --project ci --locked --no-dev python -m ci.baseline
+    - id: plan
+      name: Plan tests and image builds
+      env:
+        BASE: ${{ steps.baseline.outputs.base }}
+        REBUILD_ALL: ${{ inputs.rebuild_all }}
+      shell: bash
+      run: |-
+        all_args=()
+        if [[ "$GITHUB_EVENT_NAME" == "schedule" || ("$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$REBUILD_ALL" == "true") ]]; then
+          all_args+=(--all)
+        fi
+        uv run --project ci --locked --no-dev python -m ci.plan --base "$BASE" --head "$GITHUB_SHA" --output plan.json "${all_args[@]}"
+        uv run --project ci --locked --no-dev python - <<'PY'
+        import json, os
+        from pathlib import Path
+        plan = json.loads(Path('plan.json').read_text())
+        services = plan['services']
+        buildable = {'docker', 'msys', 'homebrew'}
+        publish = [{'service': name} for name in plan['dirty'] if services[name]['kind'] in buildable]
+        recipes = [{'recipe': name} for name in plan['recipes']]
+        tests = [item for item in plan['test_matrix'] if item['service'] != 'orion']
+        root_tests = plan['services'].get('orion', {}).get('tests', [])
+        for item in root_tests:
+            tests.append({'service': 'orion', 'path': '.', 'python': item.get('python', '3.10'), 'toxenv': item.get('toxenv', 'lint'), 'name': item.get('name', 'root lint')})
+        tests = tests or [{'service': '', 'path': '.', 'python': '3.10', 'toxenv': 'lint', 'name': ''}]
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            output.write('dirty=' + json.dumps(plan['dirty'], separators=(',', ':')) + '\n')
+            output.write('test_matrix=' + json.dumps({'include': tests}, separators=(',', ':')) + '\n')
+            output.write('recipe_matrix=' + json.dumps({'include': recipes or [{'recipe': ''}]}, separators=(',', ':')) + '\n')
+            output.write('publish_matrix=' + json.dumps({'include': publish or [{'service': ''}]}, separators=(',', ':')) + '\n')
+        PY
+    - uses: actions/upload-artifact@v4
+      with:
+        name: orion-plan
+        path: plan.json
+        retention-days: 2
+  tests:
+    needs:
+    - plan
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.test_matrix || '{"include":[{"service":"","path":".","python":"3.10","toxenv":"lint","name":""}]}')
+        }}
+    steps:
+    - if: ${{ matrix.service != '' }}
+      uses: actions/checkout@v6
+    - if: ${{ matrix.service != '' }}
+      uses: astral-sh/setup-uv@v10
+      with:
+        python-version: ${{ matrix.python }}
+        cache-dependency-glob: ci/uv.lock
+    - if: ${{ matrix.service != '' }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python }}
+    - if: ${{ matrix.service != '' }}
+      name: Run ${{ matrix.name }}
+      working-directory: ${{ matrix.path }}
+      run: uv tool run tox -e ${{ matrix.toxenv }}
+  ci_tests:
+    needs:
+    - plan
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+    - uses: astral-sh/setup-uv@v10
+      with:
+        python-version: '3.12'
+        cache-dependency-glob: ci/uv.lock
+    - name: Install CI test dependencies
+      run: uv sync --project ci --locked
+    - name: Test planner, builder, workflow and publisher
+      run: uv run --project ci --locked python -m pytest -q ci/tests
+  test_gate:
+    needs:
+    - tests
+    - ci_tests
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Require all test jobs to pass
+      env:
+        NEEDS: ${{ toJSON(needs) }}
+      run: python -c "import json,os,sys; s=[j['result'] for j in json.loads(os.environ['NEEDS']).values()]; sys.exit(any(x
+        in {'failure','cancelled'} for x in s))"
+  recipes:
+    needs:
+    - plan
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.recipe_matrix || '{"include":[{"recipe":""}]}') }}
+    steps:
+    - if: ${{ matrix.recipe != '' }}
+      uses: actions/checkout@v6
+    - if: ${{ matrix.recipe != '' }}
+      name: Install Podman
+      run: sudo apt-get update && sudo apt-get install -y podman
+    - name: Test Linux recipe ${{ matrix.recipe }}
+      if: ${{ matrix.recipe != '' }}
+      shell: bash
+      run: |-
+        recipe="${{ matrix.recipe }}"
+        dockerfile="services/test-recipes/Dockerfile-${recipe%.sh}"
+        if [[ ! -f "$dockerfile" ]]; then dockerfile=services/test-recipes/Dockerfile; fi
+        podman build --file "$dockerfile" --build-arg "recipe=$recipe" .
+  recipe_gate:
+    needs:
+    - recipes
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Require all recipe jobs to pass
+      env:
+        RESULT: ${{ needs.recipes.result }}
+      run: test "$RESULT" != failure && test "$RESULT" != cancelled
+  build_afl:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'afl') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: afl
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_base_node:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'base-node') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: base-node
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_base_python:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'base-python') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: base-python
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_bugmon:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_grizzly
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'bugmon') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: bugmon
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_bugmon_win:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'bugmon-win') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: bugmon-win
+      kind: msys
+      arch: amd64
+      base: https://github.com/msys2/msys2-installer/releases/download/2022-10-28/msys2-base-x86_64-20221028.tar.xz
+  build_covdiff:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_base_python
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'covdiff') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: covdiff
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_coverage_revision:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'coverage-revision') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: coverage-revision
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_domino_web_tests:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_base_node
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'domino-web-tests') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: domino-web-tests
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_funfuzz:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'funfuzz') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: funfuzz
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_fuzzilli:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'fuzzilli') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: fuzzilli
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+        - arm64
+  build_fuzzing_decision:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'fuzzing-decision') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: fuzzing-decision
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_grizzly:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'grizzly') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: grizzly
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_grizzly_android:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_grizzly
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'grizzly-android') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: grizzly-android
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_grizzly_reduce_monitor:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'grizzly-reduce-monitor') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: grizzly-reduce-monitor
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_grizzly_win:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'grizzly-win') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: grizzly-win
+      kind: msys
+      arch: amd64
+      base: https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz
+  build_js_tests_distiller:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'js-tests-distiller') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: js-tests-distiller
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_langfuzz:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'langfuzz') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: langfuzz
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+        - arm64
+  build_libfuzzer:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'libfuzzer') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: libfuzzer
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_neqo_coverage:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'neqo-coverage') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: neqo-coverage
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_nss_corpus_update:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'nss-corpus-update') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: nss-corpus-update
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_nss_coverage:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'nss-coverage') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: nss-coverage
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_nyx:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'nyx') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: nyx
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_prefmonitor:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_base_python
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'prefmonitor') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: prefmonitor
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_site_scout:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_grizzly
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'site-scout') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: site-scout
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_site_scout_android:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_site_scout
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'site-scout-android') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: site-scout-android
+      kind: docker
+      arch: ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - amd64
+  build_site_scout_win:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
+      || '[]'), 'site-scout-win') }}
+    uses: ./.github/workflows/build-service.yml
+    with:
+      service: site-scout-win
+      kind: msys
+      arch: amd64
+      base: https://github.com/msys2/msys2-installer/releases/download/2023-10-26/msys2-base-x86_64-20231026.tar.xz
+  publish:
+    needs:
+    - plan
+    - test_gate
+    - recipe_gate
+    - build_afl
+    - build_base_node
+    - build_base_python
+    - build_bugmon
+    - build_bugmon_win
+    - build_covdiff
+    - build_coverage_revision
+    - build_domino_web_tests
+    - build_funfuzz
+    - build_fuzzilli
+    - build_fuzzing_decision
+    - build_grizzly
+    - build_grizzly_android
+    - build_grizzly_reduce_monitor
+    - build_grizzly_win
+    - build_js_tests_distiller
+    - build_langfuzz
+    - build_libfuzzer
+    - build_neqo_coverage
+    - build_nss_corpus_update
+    - build_nss_coverage
+    - build_nyx
+    - build_prefmonitor
+    - build_site_scout
+    - build_site_scout_android
+    - build_site_scout_win
+    if: ${{ always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && !contains(needs.*.result,
+      'failure') && !contains(needs.*.result, 'cancelled') }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.publish_matrix || '{"include":[{"service":""}]}') }}
+    runs-on: ubuntu-24.04
+    env:
+      TASKCLUSTER_CLIENT_ID: ${{ secrets.TASKCLUSTER_CLIENT_ID }}
+      TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_ACCESS_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL || 'https://firefox-ci-tc.services.mozilla.com' }}
+    steps:
+    - if: ${{ matrix.service != '' }}
+      uses: actions/checkout@v6
+    - if: ${{ matrix.service != '' }}
+      uses: astral-sh/setup-uv@v10
+      with:
+        python-version: '3.12'
+        cache-dependency-glob: ci/uv.lock
+    - if: ${{ matrix.service != '' }}
+      name: Install publisher dependencies
+      run: uv sync --project ci --locked --no-dev
+    - if: ${{ matrix.service != '' }}
+      name: Install Podman and zstd
+      run: sudo apt-get update && sudo apt-get install -y podman zstd
+    - if: ${{ matrix.service != '' }}
+      name: Download plan
+      uses: actions/download-artifact@v5
+      with:
+        name: orion-plan
+        path: .
+    - if: ${{ matrix.service != '' }}
+      name: Download exact service artifacts
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: uv run --project ci --locked --no-dev python -m ci.download_publication --plan plan.json --service '${{
+        matrix.service }}' --run-id '${{ github.run_id }}' --repository '${{ github.repository }}' --token "$GH_TOKEN"
+        --output artifacts
+    - if: ${{ matrix.service != '' }}
+      name: Publish ${{ matrix.service }}
+      run: uv run --project ci --locked --no-dev python -m ci.publish --plan plan.json --artifacts artifacts --service
+        '${{ matrix.service }}'
+  complete:
+    needs:
+    - plan
+    - tests
+    - ci_tests
+    - test_gate
+    - recipes
+    - recipe_gate
+    - build_afl
+    - build_base_node
+    - build_base_python
+    - build_bugmon
+    - build_bugmon_win
+    - build_covdiff
+    - build_coverage_revision
+    - build_domino_web_tests
+    - build_funfuzz
+    - build_fuzzilli
+    - build_fuzzing_decision
+    - build_grizzly
+    - build_grizzly_android
+    - build_grizzly_reduce_monitor
+    - build_grizzly_win
+    - build_js_tests_distiller
+    - build_langfuzz
+    - build_libfuzzer
+    - build_neqo_coverage
+    - build_nss_corpus_update
+    - build_nss_coverage
+    - build_nyx
+    - build_prefmonitor
+    - build_site_scout
+    - build_site_scout_android
+    - build_site_scout_win
+    - publish
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Fail the required check if any job failed or was cancelled
+      env:
+        NEEDS: ${{ toJSON(needs) }}
+      run: python -c "import json,os,sys; s=[j['result'] for j in json.loads(os.environ['NEEDS']).values()]; sys.exit(any(x
+        in {'failure','cancelled'} for x in s))"
