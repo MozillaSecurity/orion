@@ -3,7 +3,11 @@
 # obtain one at http://mozilla.org/MPL/2.0/.
 
 
+import os
+
 from taskcluster.helper import TaskclusterConfig
 
-# Shared taskcluster configuration
-taskcluster = TaskclusterConfig("https://community-tc.services.mozilla.com")
+# Keep the Taskcluster endpoint configurable for local and task environments.
+taskcluster = TaskclusterConfig(
+    os.environ.get("TASKCLUSTER_ROOT_URL", "https://firefox-ci-tc.services.mozilla.com")
+)

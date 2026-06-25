@@ -51,8 +51,9 @@ class Workflow:
 
         assert isinstance(config, dict)
         if "community_config" not in config:
+            # Keep the historical secret key while targeting FXCI's config repo.
             config["community_config"] = {
-                "url": "git@github.com:taskcluster/community-tc-config.git",
+                "url": "git@github.com:mozilla-releng/fxci-config.git",
                 "revision": "main",
             }
 

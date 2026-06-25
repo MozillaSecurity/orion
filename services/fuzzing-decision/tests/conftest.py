@@ -68,9 +68,9 @@ def mock_taskcluster_workflow():
 
 @pytest.fixture
 def mock_clouds():
-    """Mock Cloud providers setup"""
-    community = FIXTURES_DIR / "community"
-    return {"aws": AWS(community), "azure": Azure(community), "gcp": GCP(community)}
+    """Build FXCI providers backed by the local provider configuration fixture."""
+    fxci = FIXTURES_DIR / "fxci"
+    return {"aws": AWS(fxci), "azure": Azure(fxci), "gcp": GCP(fxci)}
 
 
 @pytest.fixture

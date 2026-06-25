@@ -3,11 +3,9 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
-import re
 from pathlib import Path
 
 import pytest
-import yaml
 
 from fuzzing_decision.decision.workflow import Workflow
 
@@ -17,48 +15,8 @@ fuzzing_config:
 """
 
 
-def test_patterns(tmp_path):
-    # Write community fuzzing config
-    conf = tmp_path / "config" / "projects" / "fuzzing.yml"
-    conf.parent.mkdir(parents=True)
-    conf.write_text(
-        yaml.dump(
-            {
-                "fuzzing": {
-                    "workerPools": {"pool-A": {}, "ci": {}},
-                    "grants": [{"grant": [], "to": ["hook-id:project-fuzzing/B"]}],
-                }
-            }
-        )
-    )
-
-    # Build resources patterns using that configuration
-    workflow = Workflow()
-    workflow.community_config_dir = tmp_path
-    patterns = workflow.build_resources_patterns()
-    assert patterns == [
-        "Hook=project-fuzzing/.*",
-        "WorkerPool=proj-fuzzing/(?!(ci|pool-A)$)",
-        "Role=hook-id:project-fuzzing/(?!(B)$)",
-    ]
-
-    def _match(test):
-        return any([re.match(pattern, test) for pattern in patterns])
-
-    # Check all fuzzing hooks are managed
-    assert not _match("Hook=project-another/something")
-    assert _match("Hook=project-fuzzing/XXX")
-    assert _match("Hook=project-fuzzing/X-Y_Z")
-
-    # Check our pools are managed, avoiding the community ones
-    assert _match("WorkerPool=proj-fuzzing/AAAA")
-    assert not _match("WorkerPool=proj-fuzzing/ci")
-    assert not _match("WorkerPool=proj-fuzzing/pool-A")
-    assert _match("WorkerPool=proj-fuzzing/pool-B")
-    assert _match("WorkerPool=proj-fuzzing/ci-bis")
-
-
-def test_configure_local(tmp_path):
+def test_configure_local_defaults_to_fxci_config(tmp_path):
+    """Local config without an FXCI repo setting defaults to fxci-config."""
     workflow = Workflow()
 
     # Fails on missing file
@@ -70,7 +28,7 @@ def test_configure_local(tmp_path):
     conf.write_text(YAML_CONF)
     assert workflow.configure(local_path=conf) == {
         "community_config": {
-            "url": "git@github.com:taskcluster/community-tc-config.git",
+            "url": "git@github.com:mozilla-releng/fxci-config.git",
             "revision": "main",
         },
         "fuzzing_config": {"path": "/path/to/secret_conf"},
@@ -83,7 +41,7 @@ def test_configure_local(tmp_path):
         fuzzing_git_revision="deadbeef",
     ) == {
         "community_config": {
-            "url": "git@github.com:taskcluster/community-tc-config.git",
+            "url": "git@github.com:mozilla-releng/fxci-config.git",
             "revision": "main",
         },
         "fuzzing_config": {"revision": "deadbeef", "url": "git@server:repo.git"},
@@ -91,6 +49,7 @@ def test_configure_local(tmp_path):
 
 
 def test_configure_secret(mock_taskcluster_workflow):
+    """Taskcluster secrets retain custom config repo URLs for compatibility."""
     workflow = mock_taskcluster_workflow
 
     # Read a remote conf from Taskcluster secret

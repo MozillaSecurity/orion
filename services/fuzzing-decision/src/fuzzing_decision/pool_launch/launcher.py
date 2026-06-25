@@ -44,7 +44,7 @@ class PoolLauncher(Workflow):
         """Clone remote repositories according to current setup"""
         super().clone(config)
 
-        # Clone fuzzing & community configuration repos
+        # Clone the private fuzzing configuration repository.
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
 
     def load_params(self) -> None:
