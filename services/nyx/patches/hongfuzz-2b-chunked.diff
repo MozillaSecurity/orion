@@ -1,3 +1,9 @@
+commit 5beaed42468388ddc1b74cb24cb5b136c595eb52
+Author: Christian Holler (:decoder) <choller@mozilla.com>
+Date:   Tue Oct 31 17:07:44 2023 +0100
+
+    WIP 2-byte chunked variant of honggfuzz custom mutator
+
 diff --git a/custom_mutators/honggfuzz/Makefile b/custom_mutators/honggfuzz/Makefile
 index 5c2fcddb..83ae5fc7 100644
 --- a/custom_mutators/honggfuzz/Makefile
@@ -20,7 +26,7 @@ index 5c2fcddb..83ae5fc7 100644
  	@# seriously? --unlink is a dud option? sigh ...
  	rm -f mangle.c mangle.h honggfuzz.h
 diff --git a/custom_mutators/honggfuzz/honggfuzz.c b/custom_mutators/honggfuzz/honggfuzz.c
-index 0dd59aee..02e93575 100644
+index 0dd59aee..6b5b372f 100644
 --- a/custom_mutators/honggfuzz/honggfuzz.c
 +++ b/custom_mutators/honggfuzz/honggfuzz.c
 @@ -112,6 +112,142 @@ uint8_t afl_custom_queue_get(void *data, const uint8_t *filename) {
@@ -175,4 +181,3 @@ index 0dd59aee..02e93575 100644
  /**
   * Deinitialize everything
   *
-
