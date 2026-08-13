@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM ubuntu:22.04 as afl
+FROM ubuntu:22.04 AS afl
 
 COPY \
     recipes/linux/common.sh \
@@ -16,7 +16,7 @@ RUN /srv/repos/setup/build_afl.sh
 
 FROM ubuntu:22.04
 
-LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
+LABEL maintainer "Jesse Schwartzentruber <truber@mozilla.com>"
 
 COPY \
     recipes/linux/cleanup.sh \

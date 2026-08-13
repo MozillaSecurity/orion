@@ -1,5 +1,11 @@
+commit cfeabf50456745842f728e66c457f1be287e7d9b
+Author: pyoor <pyoor@users.noreply.github.com>
+Date:   Thu Sep 4 10:09:34 2025 -0400
+
+    feat(nyx): allow separate trace collection and processing in afl-cmin
+
 diff --git a/afl-cmin.awk b/afl-cmin.awk
-index c1fc1608..1c13747b 100755
+index ab2d398e..6ba45568 100755
 --- a/afl-cmin.awk
 +++ b/afl-cmin.awk
 @@ -107,7 +107,7 @@ function usage() {
@@ -79,34 +85,7 @@ index c1fc1608..1c13747b 100755
      for (dirind in dirlist) {
        dir = dirlist[dirind]
        if (dir ~ /^(\/var)?\/tmp/) {
-@@ -334,14 +347,18 @@ BEGIN {
-     target_bin = tnew
-   }
- 
--  if (0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
--    print "[!] Trying to obtain the map size of the target ..."
--    get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
--    get_map_size | getline mapsize
--    close(get_map_size)
--    if (mapsize && mapsize > 65535 && mapsize < 100000000) {
--      AFL_MAP_SIZE = "AFL_MAP_SIZE="mapsize" "
--      print "[+] Setting "AFL_MAP_SIZE
-+  if (!nyx_mode) {
-+    if (!ENVIRON["AFL_MAP_SIZE"] && 0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
-+      print "[!] Trying to obtain the map size of the target ..."
-+      get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
-+      get_map_size | getline mapsize
-+      close(get_map_size)
-+      if (mapsize && mapsize > 65535 && mapsize < 100000000) {
-+        AFL_MAP_SIZE = "AFL_MAP_SIZE="mapsize" "
-+        print "[+] Setting "AFL_MAP_SIZE
-+      }
-+    } else {
-+      AFL_MAP_SIZE = "AFL_MAP_SIZE=" ENVIRON["AFL_MAP_SIZE"] " "
-     }
-   }
- 
-@@ -352,9 +369,13 @@ BEGIN {
+@@ -355,9 +368,13 @@ BEGIN {
      }
    }
  
@@ -122,10 +101,10 @@ index c1fc1608..1c13747b 100755
 +    }
    }
  
-   #if (0 == system( "test -d "in_dir"/default" )) {
-@@ -365,8 +386,21 @@ BEGIN {
-   #  in_dir = in_dir "/queue"
-   #}
+   # Follow afl-cmin.bash: if the input dir looks like an AFL output dir
+@@ -372,8 +389,21 @@ BEGIN {
+     in_dir = in_dir "/queue"
+   }
  
 -  system("rm -rf "trace_dir" 2>/dev/null");
 -  system("rm "out_dir"/id[:_]* 2>/dev/null")
@@ -147,7 +126,7 @@ index c1fc1608..1c13747b 100755
  
    cmd = "ls "out_dir"/* 2>/dev/null | wc -l"
    cmd | getline noofentries
-@@ -423,7 +457,7 @@ BEGIN {
+@@ -430,7 +460,7 @@ BEGIN {
      exit 1
    }
  
@@ -156,7 +135,7 @@ index c1fc1608..1c13747b 100755
    i = 0
    # yuck, gnu stat is option incompatible to bsd stat
    # we use a heuristic to differentiate between
-@@ -436,22 +470,32 @@ BEGIN {
+@@ -443,22 +473,32 @@ BEGIN {
    } else {
      stat_format = "-f '%z %N'" # *BSD, MacOS
    }
@@ -203,7 +182,7 @@ index c1fc1608..1c13747b 100755
    first_file = infilesSmallToBigFull[0]
    
    #if (0 == system("test -d ""\""in_dir"/"first_file"\"")) {
-@@ -459,13 +503,13 @@ BEGIN {
+@@ -466,13 +506,13 @@ BEGIN {
    #  exit 1
    #}
  
@@ -220,7 +199,7 @@ index c1fc1608..1c13747b 100755
  
    if (!ENVIRON["AFL_SKIP_BIN_CHECK"]) {
      # Make sure that we can actually get anything out of afl-showmap before we
-@@ -474,10 +518,10 @@ BEGIN {
+@@ -481,10 +521,10 @@ BEGIN {
      print "[*] Testing the target binary..."
  
      if (!stdin_file) {
@@ -234,7 +213,7 @@ index c1fc1608..1c13747b 100755
      }
  
      first_count = 0
-@@ -509,6 +553,7 @@ BEGIN {
+@@ -516,6 +556,7 @@ BEGIN {
    #############################
    # STEP 1: Collecting traces #
    #############################
@@ -242,7 +221,7 @@ index c1fc1608..1c13747b 100755
  
    if (threads) {
  
-@@ -521,17 +566,23 @@ BEGIN {
+@@ -528,17 +569,23 @@ BEGIN {
      tmpfile=out_dir "/.filelist"
      for (instance = 1; instance < threads; instance++) {
        for (i = 0; i < inputsperfile; i++) {
@@ -269,7 +248,7 @@ index c1fc1608..1c13747b 100755
  
    cur = 0;
  
-@@ -541,12 +592,12 @@ BEGIN {
+@@ -548,12 +595,12 @@ BEGIN {
      for (i = 1; i <= threads; i++) {
  
        if (!stdin_file) {
@@ -286,7 +265,7 @@ index c1fc1608..1c13747b 100755
        }
      }
      print "[*] Waiting for parallel tasks to complete ..."
-@@ -563,16 +614,23 @@ BEGIN {
+@@ -570,16 +617,23 @@ BEGIN {
      print "[*] Done!"
      system("rm -f "tmpfile"*")
    } else {
@@ -314,7 +293,7 @@ index c1fc1608..1c13747b 100755
      if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
        print "[!] Exit code "retval" != 0 received from afl-showmap (this means a crashing or timeout input is likely present), terminating..."
  
-@@ -585,16 +643,24 @@ BEGIN {
+@@ -592,16 +646,24 @@ BEGIN {
  
    }
  
@@ -340,7 +319,7 @@ index c1fc1608..1c13747b 100755
  
    # from rare to frequent new tuples
    # get the best (smallest) file for it
-@@ -606,14 +672,20 @@ BEGIN {
+@@ -613,14 +675,20 @@ BEGIN {
      else { print "    Processing file "cur"/"in_count }
      # create path for the trace file from afl-showmap
      tracefile_path = trace_dir"/"fn
@@ -368,7 +347,7 @@ index c1fc1608..1c13747b 100755
      }
      # gather all keys, and count them
      while ((getline line < tracefile_path) > 0) {
-@@ -669,7 +741,7 @@ BEGIN {
+@@ -676,7 +744,7 @@ BEGIN {
      # copy file unless already done
      if (! (fn in file_already_copied)) {
        realfile = infilesSmallToBigMap[fn]
@@ -377,7 +356,7 @@ index c1fc1608..1c13747b 100755
        file_already_copied[fn] = ""
        ++out_count
        #printf "tuple nr %d (%d cnt=%d) -> %s\n",tcnt,key,key_count[key],fn > trace_dir"/.log"
-@@ -678,6 +750,7 @@ BEGIN {
+@@ -685,6 +753,7 @@ BEGIN {
    close(sortedKeys)
    print ""
    print "[+] Found "tuple_count" unique tuples across "in_count" files."

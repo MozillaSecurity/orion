@@ -4,7 +4,7 @@
 
 FROM ubuntu:22.04
 
-LABEL maintainer Jesse Schwartzentruber <truber@mozilla.com>
+LABEL maintainer "Jesse Schwartzentruber <truber@mozilla.com>"
 
 COPY \
     recipes/linux/cleanup.sh \
