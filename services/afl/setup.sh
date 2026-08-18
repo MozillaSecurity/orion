@@ -93,8 +93,7 @@ cd setup
 
 chown -R worker:worker /home/worker /srv/repos
 
-afl_ver="$(resolve-tc-alias afl-instrumentation)"
-retry-curl "$(resolve-tc "$afl_ver")" | zstdcat | tar -x -C /opt
+retry-curl "$(resolve-tc afl-instrumentation)" | zstdcat | tar -x -C /opt
 # shellcheck disable=SC2016
 echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >>/etc/bash.bashrc
 pushd /opt/afl-instrumentation/bin
