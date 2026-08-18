@@ -21,6 +21,9 @@ COPY \
     services/nss-coverage/launch-worker.sh \
     services/nss-coverage/launch-root.sh \
     /home/worker/
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /src/recipes/setup-nss-coverage.sh
 
 ENV LANG   en_US.UTF-8

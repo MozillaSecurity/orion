@@ -32,6 +32,9 @@ COPY \
     /srv/repos/setup/
 COPY services/fuzzing-decision /srv/repos/fuzzing-decision
 
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /srv/repos/setup/setup.sh
 COPY services/fuzzilli/coverage.sh \
      services/fuzzilli/fuzzilli.sh \

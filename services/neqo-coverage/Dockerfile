@@ -22,6 +22,9 @@ COPY \
     services/neqo-coverage/package-version.py \
     /home/worker/
 
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /src/recipes/setup-neqo-coverage.sh
 
 ENV LANG=en_US.UTF-8

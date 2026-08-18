@@ -22,6 +22,9 @@ COPY \
 COPY services/fuzzing-decision /src/fuzzing-tc
 COPY services/grizzly/setup.sh /src/recipes/setup-grizzly.sh
 COPY base/linux/etc/pip.conf /etc/pip.conf
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /src/recipes/setup-grizzly.sh
 COPY services/grizzly/launch-grizzly.sh services/grizzly/launch-grizzly-worker.sh /home/worker/
 

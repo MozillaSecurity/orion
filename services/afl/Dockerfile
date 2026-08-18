@@ -35,6 +35,9 @@ COPY \
     /srv/repos/nyx_utils/
 COPY services/nyx/patches/afl-cmin.diff /home/worker/patches/
 COPY services/nyx/symbol-filter/ /srv/repos/symbol-filter/
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/afl/launch-root.sh \
