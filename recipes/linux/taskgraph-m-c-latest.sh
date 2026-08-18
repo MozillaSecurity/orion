@@ -10,13 +10,31 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 _TC_CACHE="/tmp/resolve-tc-cache"
 
+# Which decision task the resolve-tc* helpers read toolchains from. The default
+# is the latest mozilla-central push. Set TASKGRAPH_REVISION (and, for anything
+# other than m-c, TASKGRAPH_PROJECT) to pin toolchains to a specific push, eg.
+# to pick up a toolchain built on try:
+#   TASKGRAPH_PROJECT=try TASKGRAPH_REVISION=<40-char sha> ...
+# Note that try artifacts expire much sooner than mozilla-central ones, so a
+# pinned try revision is only good for a few weeks.
+TASKGRAPH_PROJECT="${TASKGRAPH_PROJECT:-mozilla-central}"
+TASKGRAPH_REVISION="${TASKGRAPH_REVISION:-latest}"
+
 _ensure-tc-taskgraph-data() {
-  mkdir -p "$_TC_CACHE"
-  if [[ ! -e "$_TC_CACHE/full-task-graph.json" ]]; then
+  local index
+  if [[ $TASKGRAPH_REVISION == "latest" ]]; then
+    index="gecko.v2.$TASKGRAPH_PROJECT.latest.taskgraph.decision"
+  else
+    index="gecko.v2.$TASKGRAPH_PROJECT.revision.$TASKGRAPH_REVISION.taskgraph.decision"
+  fi
+  # cache per-index, so changing project/revision can't read a stale graph
+  _TC_GRAPH="$_TC_CACHE/$index.json"
+  if [[ ! -e $_TC_GRAPH ]]; then
+    mkdir -p "$_TC_CACHE"
     apt-install-auto \
       ca-certificates \
       curl
-    retry-curl -o "$_TC_CACHE/full-task-graph.json" "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/full-task-graph.json"
+    retry-curl -o "$_TC_GRAPH" "https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/$index/artifacts/public/full-task-graph.json"
   fi
 }
 
@@ -24,7 +42,7 @@ _ensure-tc-taskgraph-data() {
 resolve-tc-alias() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
+  python3 - "$_TC_GRAPH" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -49,7 +67,7 @@ resolve-tc-alias() {
 resolve-tc-artifact() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
+  python3 - "$_TC_GRAPH" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -63,7 +81,7 @@ resolve-tc-artifact() {
 resolve-tc-src-artifact() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
+  python3 - "$_TC_GRAPH" "$1" <<-"EOF"
 	import json
 	import sys
 	name=sys.argv[2]
@@ -77,7 +95,7 @@ resolve-tc-src-artifact() {
 resolve-tc() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
+  python3 - "$_TC_GRAPH" "$1" <<-"EOF"
 	import json
 	import sys
 	with open(sys.argv[1]) as fd:
@@ -108,7 +126,7 @@ resolve-tc() {
 resolve-tc-src() {
   _ensure-tc-taskgraph-data
   apt-install-auto python3
-  python3 - "$_TC_CACHE/full-task-graph.json" "$1" <<-"EOF"
+  python3 - "$_TC_GRAPH" "$1" <<-"EOF"
 	import json
 	import sys
 	with open(sys.argv[1]) as fd:

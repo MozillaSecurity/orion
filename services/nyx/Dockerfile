@@ -12,6 +12,9 @@ COPY \
     /srv/repos/setup/
 COPY services/nyx/patches/ /srv/repos/setup/patches/
 COPY services/nyx/custom_mutators/ /srv/repos/setup/custom_mutators/
+# see recipes/linux/taskgraph-m-c-latest.sh for details
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /srv/repos/setup/build_afl.sh
 
 FROM ubuntu:22.04
@@ -37,6 +40,8 @@ COPY services/fuzzing-decision /srv/repos/fuzzing-decision
 COPY services/nyx/nyx_ipc_manager /srv/repos/nyx_ipc_manager
 
 COPY services/nyx/symbol-filter /srv/repos/symbol-filter
+ARG TASKGRAPH_PROJECT
+ARG TASKGRAPH_REVISION
 RUN /srv/repos/setup/setup.sh
 COPY \
     services/nyx/launch-root.sh \
