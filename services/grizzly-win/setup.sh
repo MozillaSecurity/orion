@@ -43,7 +43,7 @@ cd ..
 pacman --noconfirm -Rs gcc make
 
 # get nuget
-retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+retry-curl "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -o msys64/usr/bin/nuget.exe
 
 # get fluentbit
 VER=2.1.10
