@@ -23,7 +23,7 @@ killall -TERM gpg-agent || true
 pacman --noconfirm -Rs psmisc
 
 # get nuget
-retry-curl "https://aka.ms/nugetclidl" -o msys64/usr/bin/nuget.exe
+retry-curl "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -o msys64/usr/bin/nuget.exe
 
 # get python
 VER=3.10.11
