@@ -22,12 +22,19 @@ elif [[ -z $COVERAGE ]]; then
 fi
 
 if [[ $COVERAGE == 1 ]]; then
-  FETCH_ARGS+=(--coverage --build "$REVISION")
+  FETCH_ARGS+=(--coverage)
 fi
 
-if [[ $REPO == "try" ]]; then
-  FETCH_ARGS+=(--try)
+if [[ -n $REVISION ]]; then
+  FETCH_ARGS+=(--build "$REVISION")
 fi
+
+# fuzzfetch branch names don't match repo names, and mozilla-central is already
+# the default
+case "${REPO-}" in
+  "" | mozilla-central | central) ;;
+  *) FETCH_ARGS+=(--branch "$REPO") ;;
+esac
 
 # Our default target is Firefox, but we support targeting the JS engine instead.
 # In either case, we check if the target is already mounted into the container.
