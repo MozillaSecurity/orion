@@ -3,7 +3,7 @@ set -e
 set -x
 set -o pipefail
 
-readarray -t flags < <(sed -nE 's/^\s*"(--.*)",/\1/p' "$HOME/fuzzilli/Sources/FuzzilliCli/Profiles/SpidermonkeyProfile.swift")
+readarray -t flags < <(sed -nE 's/^\s*"(--.*)",/\1/p' "$HOME/fuzzilli/Sources/Fuzzilli/Profiles/SpidermonkeyProfile.swift")
 
 if [[ ${#flags[@]} -eq 0 ]]; then
   echo "no flags parsed from profile" >&2
