@@ -3,7 +3,12 @@ set -e
 set -x
 set -o pipefail
 
-sed -nE 's/^\s*"(--.*)",/\1/p' "$HOME/fuzzilli/Sources/FuzzilliCli/Profiles/SpidermonkeyProfile.swift" | read -ar flags
+readarray -t flags < <(sed -nE 's/^\s*"(--.*)",/\1/p' "$HOME/fuzzilli/Sources/FuzzilliCli/Profiles/SpidermonkeyProfile.swift")
+
+if [[ ${#flags[@]} -eq 0 ]]; then
+  echo "no flags parsed from profile" >&2
+  exit 1
+fi
 
 if [[ -n $DIFFERENTIAL ]]; then
   flags+=(--differential-testing)
