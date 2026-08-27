@@ -17,7 +17,7 @@ export TC_ARTIFACT_ROOT="project/fuzzing/bugmon"
 
 git-clone https://github.com/MozillaSecurity/bugmon-tc.git ./bugmon-tc
 cd bugmon-tc
-uv sync
+uv sync --upgrade-package bugmon --upgrade-package prefpicker
 
 mkdir -p /home/worker/.cache/autobisect
 mkdir -p /home/worker/.config/autobisect
