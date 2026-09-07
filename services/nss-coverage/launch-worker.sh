@@ -92,12 +92,12 @@ function run-target {
     -s nss/out/Debug/ \
     -p "$PWD" \
     >coverage-nss.json
-  RUST_BACKTRACE=1 grcov nspr \
+  RUST_BACKTRACE=1 grcov dist/nspr \
     -t coveralls+ \
     --token NONE \
     --commit-sha "$HG_REVISION" \
     --guess-directory-when-missing \
-    -s nspr/Debug/dist/include/nspr/ \
+    -s nspr \
     -p "$PWD" \
     --path-mapping nspr_map.json \
     >coverage-nspr.json
