@@ -1,14 +1,8 @@
-commit cfeabf50456745842f728e66c457f1be287e7d9b
-Author: pyoor <pyoor@users.noreply.github.com>
-Date:   Thu Sep 4 10:09:34 2025 -0400
-
-    feat(nyx): allow separate trace collection and processing in afl-cmin
-
 diff --git a/afl-cmin.awk b/afl-cmin.awk
-index ab2d398e..6ba45568 100755
+index 7a51a3f..2164a93 100755
 --- a/afl-cmin.awk
 +++ b/afl-cmin.awk
-@@ -107,7 +107,7 @@ function usage() {
+@@ -105,7 +105,7 @@ function usage() {
  "afl-cmin [ options ] -- /path/to/target_app [ ... ]\n" \
  "\n" \
  "Required parameters:\n" \
@@ -17,7 +11,7 @@ index ab2d398e..6ba45568 100755
  "  -o dir        - output directory for minimized files\n" \
  "\n" \
  "Execution control settings:\n" \
-@@ -119,6 +119,8 @@ function usage() {
+@@ -117,6 +117,8 @@ function usage() {
  "  -Q            - use binary-only instrumentation (QEMU mode)\n" \
  "  -U            - use unicorn-based instrumentation (unicorn mode)\n" \
  "  -X            - use Nyx mode\n" \
@@ -26,7 +20,7 @@ index ab2d398e..6ba45568 100755
  "\n" \
  "Minimization settings:\n" \
  "  -A            - allow crashes and timeouts (not recommended)\n" \
-@@ -167,11 +169,10 @@ BEGIN {
+@@ -165,11 +167,10 @@ BEGIN {
    # process options
    Opterr = 1    # default is to diagnose
    Optind = 1    # skip ARGV[0]
@@ -40,7 +34,7 @@ index ab2d398e..6ba45568 100755
        continue
      } else 
      if (_go_c == "T") {
-@@ -241,6 +242,15 @@ BEGIN {
+@@ -239,6 +240,15 @@ BEGIN {
        nyx_mode = 1
        continue
      } else 
@@ -56,7 +50,7 @@ index ab2d398e..6ba45568 100755
      if (_go_c == "?") {
        exit 1
      } else 
-@@ -260,7 +270,7 @@ BEGIN {
+@@ -258,7 +268,7 @@ BEGIN {
    }
  
    # sanity checks
@@ -65,7 +59,7 @@ index ab2d398e..6ba45568 100755
  
    target_bin = prog_args[0] 
  
-@@ -268,11 +278,14 @@ BEGIN {
+@@ -266,11 +276,14 @@ BEGIN {
    # handle this safely from an awk script.
  
    if (!ENVIRON["AFL_ALLOW_TMP"]) {
@@ -85,7 +79,16 @@ index ab2d398e..6ba45568 100755
      for (dirind in dirlist) {
        dir = dirlist[dirind]
        if (dir ~ /^(\/var)?\/tmp/) {
-@@ -355,9 +368,13 @@ BEGIN {
+@@ -335,7 +348,7 @@ BEGIN {
+   # In Nyx mode, target_bin is the share dir (a directory), so skip this
+   # AFL_DUMP_MAP_SIZE probe entirely. Without the guard, grep prints a
+   # noisy "Is a directory" warning.
+-  if (!nyx_mode && 0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
++  if (!nyx_mode && !ENVIRON["AFL_MAP_SIZE"] && 0 == system ( "grep -aq AFL_DUMP_MAP_SIZE " target_bin )) {
+     print "[!] Trying to obtain the map size of the target ..."
+     get_map_size = "AFL_DUMP_MAP_SIZE=1 " target_bin
+     get_map_size | getline mapsize
+@@ -353,9 +366,13 @@ BEGIN {
      }
    }
  
@@ -102,7 +105,7 @@ index ab2d398e..6ba45568 100755
    }
  
    # Follow afl-cmin.bash: if the input dir looks like an AFL output dir
-@@ -372,8 +389,21 @@ BEGIN {
+@@ -370,8 +387,21 @@ BEGIN {
      in_dir = in_dir "/queue"
    }
  
@@ -126,7 +129,7 @@ index ab2d398e..6ba45568 100755
  
    cmd = "ls "out_dir"/* 2>/dev/null | wc -l"
    cmd | getline noofentries
-@@ -430,7 +460,7 @@ BEGIN {
+@@ -428,7 +458,7 @@ BEGIN {
      exit 1
    }
  
@@ -135,7 +138,7 @@ index ab2d398e..6ba45568 100755
    i = 0
    # yuck, gnu stat is option incompatible to bsd stat
    # we use a heuristic to differentiate between
-@@ -443,22 +473,32 @@ BEGIN {
+@@ -441,22 +471,32 @@ BEGIN {
    } else {
      stat_format = "-f '%z %N'" # *BSD, MacOS
    }
@@ -182,7 +185,7 @@ index ab2d398e..6ba45568 100755
    first_file = infilesSmallToBigFull[0]
    
    #if (0 == system("test -d ""\""in_dir"/"first_file"\"")) {
-@@ -466,13 +506,13 @@ BEGIN {
+@@ -464,13 +504,13 @@ BEGIN {
    #  exit 1
    #}
  
@@ -199,7 +202,7 @@ index ab2d398e..6ba45568 100755
  
    if (!ENVIRON["AFL_SKIP_BIN_CHECK"]) {
      # Make sure that we can actually get anything out of afl-showmap before we
-@@ -481,10 +521,10 @@ BEGIN {
+@@ -479,10 +519,10 @@ BEGIN {
      print "[*] Testing the target binary..."
  
      if (!stdin_file) {
@@ -213,7 +216,7 @@ index ab2d398e..6ba45568 100755
      }
  
      first_count = 0
-@@ -516,6 +556,7 @@ BEGIN {
+@@ -514,6 +554,7 @@ BEGIN {
    #############################
    # STEP 1: Collecting traces #
    #############################
@@ -221,7 +224,7 @@ index ab2d398e..6ba45568 100755
  
    if (threads) {
  
-@@ -528,17 +569,23 @@ BEGIN {
+@@ -526,17 +567,23 @@ BEGIN {
      tmpfile=out_dir "/.filelist"
      for (instance = 1; instance < threads; instance++) {
        for (i = 0; i < inputsperfile; i++) {
@@ -248,7 +251,7 @@ index ab2d398e..6ba45568 100755
  
    cur = 0;
  
-@@ -548,12 +595,12 @@ BEGIN {
+@@ -546,12 +593,12 @@ BEGIN {
      for (i = 1; i <= threads; i++) {
  
        if (!stdin_file) {
@@ -265,7 +268,7 @@ index ab2d398e..6ba45568 100755
        }
      }
      print "[*] Waiting for parallel tasks to complete ..."
-@@ -570,16 +617,23 @@ BEGIN {
+@@ -568,16 +615,23 @@ BEGIN {
      print "[*] Done!"
      system("rm -f "tmpfile"*")
    } else {
@@ -293,7 +296,7 @@ index ab2d398e..6ba45568 100755
      if (retval && (!AFL_CMIN_CRASHES_ONLY && !AFL_CMIN_ALLOW_ANY)) {
        print "[!] Exit code "retval" != 0 received from afl-showmap (this means a crashing or timeout input is likely present), terminating..."
  
-@@ -592,16 +646,24 @@ BEGIN {
+@@ -590,16 +644,24 @@ BEGIN {
  
    }
  
@@ -319,7 +322,7 @@ index ab2d398e..6ba45568 100755
  
    # from rare to frequent new tuples
    # get the best (smallest) file for it
-@@ -613,14 +675,20 @@ BEGIN {
+@@ -611,14 +673,20 @@ BEGIN {
      else { print "    Processing file "cur"/"in_count }
      # create path for the trace file from afl-showmap
      tracefile_path = trace_dir"/"fn
@@ -347,7 +350,7 @@ index ab2d398e..6ba45568 100755
      }
      # gather all keys, and count them
      while ((getline line < tracefile_path) > 0) {
-@@ -676,7 +744,7 @@ BEGIN {
+@@ -674,7 +742,7 @@ BEGIN {
      # copy file unless already done
      if (! (fn in file_already_copied)) {
        realfile = infilesSmallToBigMap[fn]
@@ -356,7 +359,7 @@ index ab2d398e..6ba45568 100755
        file_already_copied[fn] = ""
        ++out_count
        #printf "tuple nr %d (%d cnt=%d) -> %s\n",tcnt,key,key_count[key],fn > trace_dir"/.log"
-@@ -685,6 +753,7 @@ BEGIN {
+@@ -683,6 +751,7 @@ BEGIN {
    close(sortedKeys)
    print ""
    print "[+] Found "tuple_count" unique tuples across "in_count" files."
