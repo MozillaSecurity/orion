@@ -181,40 +181,6 @@ jobs:
       matrix:
         arch:
         - amd64
-  build_base_node:
-    needs:
-    - plan
-    - test_gate
-    - recipe_gate
-    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
-      || '[]'), 'base-node') }}
-    uses: ./.github/workflows/build-service.yml
-    with:
-      service: base-node
-      kind: docker
-      arch: ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-        - amd64
-  build_base_python:
-    needs:
-    - plan
-    - test_gate
-    - recipe_gate
-    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
-      || '[]'), 'base-python') }}
-    uses: ./.github/workflows/build-service.yml
-    with:
-      service: base-python
-      kind: docker
-      arch: ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        arch:
-        - amd64
   build_bugmon:
     needs:
     - plan
@@ -251,7 +217,6 @@ jobs:
     - plan
     - test_gate
     - recipe_gate
-    - build_base_python
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
       || '[]'), 'covdiff') }}
     uses: ./.github/workflows/build-service.yml
@@ -286,7 +251,6 @@ jobs:
     - plan
     - test_gate
     - recipe_gate
-    - build_base_node
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
       || '[]'), 'domino-web-tests') }}
     uses: ./.github/workflows/build-service.yml
@@ -541,7 +505,6 @@ jobs:
     - plan
     - test_gate
     - recipe_gate
-    - build_base_python
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && contains(fromJSON(needs.plan.outputs.dirty
       || '[]'), 'prefmonitor') }}
     uses: ./.github/workflows/build-service.yml
@@ -609,8 +572,6 @@ jobs:
     - test_gate
     - recipe_gate
     - build_afl
-    - build_base_node
-    - build_base_python
     - build_bugmon
     - build_bugmon_win
     - build_covdiff
@@ -686,8 +647,6 @@ jobs:
     - recipes
     - recipe_gate
     - build_afl
-    - build_base_node
-    - build_base_python
     - build_bugmon
     - build_bugmon_win
     - build_covdiff

@@ -23,12 +23,12 @@ def test_multistage_dockerfile_dependencies() -> None:
     bases, copies, copy_from = _dockerfile_dependencies(
         """FROM ubuntu:24.04 AS build
 COPY [\"src/a.c\", \"src/b.c\", \"/src/\"]
-FROM mozillasecurity/base-python:latest
+FROM mozillasecurity/grizzly:latest
 COPY --from=build /out /out
 COPY --from=mozillasecurity/toolchain:2 /tool /tool
 """
     )
-    assert bases == ["ubuntu:24.04", "mozillasecurity/base-python:latest"]
+    assert bases == ["ubuntu:24.04", "mozillasecurity/grizzly:latest"]
     assert copies == {"src/a.c", "src/b.c"}
     assert copy_from == {"mozillasecurity/toolchain:2"}
 

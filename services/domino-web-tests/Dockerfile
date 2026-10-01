@@ -1,4 +1,11 @@
-FROM mozillasecurity/base-node:latest
+FROM node:22-slim
+
+COPY base/linux/etc/pip.conf /etc/pip.conf
+COPY recipes/linux /src/recipes
+COPY services/domino-web-tests/setup-worker.sh /src/recipes/setup-worker.sh
+RUN /src/recipes/setup-worker.sh
+
+WORKDIR /home/worker
 
 COPY recipes/linux /tmp/recipes
 COPY services/domino-web-tests/setup.sh /tmp/recipes

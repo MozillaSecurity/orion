@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM mozillasecurity/base-python:latest
+FROM python:3.10-slim
 
 LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
@@ -11,7 +11,11 @@ ENV HOSTNAME        taskcluster-worker
 ARG DEBIAN_FRONTEND=noninteractive
 
 USER root
+COPY base/linux/etc/pip.conf /etc/pip.conf
 COPY recipes/linux/ /src/recipes/
+RUN /src/recipes/python-worker.sh
+
+WORKDIR /home/worker
 COPY services/covdiff/setup.sh /src/recipes/setup-covdiff.sh
 COPY services/covdiff/ssh_config /home/worker/.ssh/config
 COPY services/covdiff/launch.sh /home/worker

@@ -38,14 +38,7 @@ def _job_id(name: str) -> str:
 
 
 def _service_graph(root: Path) -> ServiceGraph:
-    tracked = _git_files(root)
-    # These renamed base images are deliberately represented as normal services.
-    # Include them while they are untracked in a local retirement worktree.
-    for name in ("base-python", "base-node"):
-        for rel in (f"services/{name}/service.yaml", f"services/{name}/Dockerfile"):
-            if (root / rel).is_file():
-                tracked.add(rel)
-    return ServiceGraph(root, tracked)
+    return ServiceGraph(root, _git_files(root))
 
 
 def _json_output(expression: str) -> str:

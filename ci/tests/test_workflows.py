@@ -28,8 +28,8 @@ def test_generated_workflow_gates_builds_and_uses_graph_dependencies() -> None:
     }
     assert set(jobs["complete"]["needs"]) == jobs.keys() - {"complete"}
     assert "ci_tests" in jobs["test_gate"]["needs"]
-    assert "build_base_python" in jobs["build_covdiff"]["needs"]
-    assert "build_base_node" in jobs["build_domino_web_tests"]["needs"]
+    for name in ("covdiff", "prefmonitor", "domino_web_tests"):
+        assert jobs[f"build_{name}"]["needs"] == ["plan", "test_gate", "recipe_gate"]
 
 
 def test_rendered_workflow_is_valid_yaml_and_deterministic() -> None:
