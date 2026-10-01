@@ -2,17 +2,11 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
-
 # Constants for our resources
 OWNER_EMAIL = "truber@mozilla.com"
 SCHEDULER_ID = "fuzzing"
 PROVISIONER_ID = "proj-fuzzing"
 WORKER_POOL_PREFIX = "proj-fuzzing"
 HOOK_PREFIX = "project-fuzzing"
-PROVIDER_IDS = {
-    "aws": "community-tc-workers-aws",
-    "azure": "community-tc-workers-azure",
-    "gcp": "community-tc-workers-google",
-}
 DECISION_TASK_SECRET = "project/fuzzing/decision"
 CANCEL_TASK_DAYS = 2

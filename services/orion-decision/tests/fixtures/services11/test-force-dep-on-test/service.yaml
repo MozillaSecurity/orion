@@ -1,3 +1,0 @@
-name: dep-svc
-force_deps:
-  - test-svc

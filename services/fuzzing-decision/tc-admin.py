@@ -32,8 +32,10 @@ appconfig.options.add(
     default=os.environ.get("FUZZING_GIT_REVISION"),
 )
 
-# We always want to run against community Taskcluster instance
-os.environ["TASKCLUSTER_ROOT_URL"] = "https://community-tc.services.mozilla.com"
+# Default for local runs; don't override the root URL Taskcluster provides.
+os.environ.setdefault(
+    "TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com"
+)
 
 # Setup our workflow as resource generator
 appconfig.generators.register(Workflow.tc_admin_boot)

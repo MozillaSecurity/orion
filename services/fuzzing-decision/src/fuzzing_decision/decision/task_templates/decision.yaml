@@ -20,7 +20,7 @@ payload:
   features:
     taskclusterProxy: true
   image:
-    namespace: project.fuzzing.orion.fuzzing-decision.master
+    namespace: project.fuzzing.orion.fuzzing-decision.main
     path: public/fuzzing-decision.tar.zst
     type: indexed-image
   maxRunTime: !!int "${max_run_time}"

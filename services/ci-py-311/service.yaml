@@ -1,3 +1,0 @@
-name: ci-py-311
-force_dirty:
-  - orion-decision

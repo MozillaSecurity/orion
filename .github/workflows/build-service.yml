@@ -1,0 +1,80 @@
+name: Build Orion service
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      kind:
+        required: true
+        type: string
+      arch:
+        required: false
+        type: string
+        default: amd64
+      base:
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  docker:
+    if: ${{ inputs.kind == 'docker' }}
+    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download build plan
+        uses: actions/download-artifact@v5
+        with:
+          name: orion-plan
+          path: .
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          cache-dependency-glob: ci/uv.lock
+      - name: Install CI tools
+        run: uv sync --project ci --locked --no-dev
+      - name: Download rebuilt direct dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          uv run --project ci --locked --no-dev python -m ci.download_dependencies --plan plan.json --service "${{ inputs.service }}"
+          --arch "${{ inputs.arch }}" --run-id "${{ github.run_id }}"
+          --repository "${{ github.repository }}" --token "$GH_TOKEN" --output artifacts
+      - name: Install Podman and zstd
+        run: sudo apt-get update && sudo apt-get install -y podman zstd
+      - name: Build ${{ inputs.service }} for ${{ inputs.arch }}
+        run: >-
+          uv run --project ci --locked --no-dev python -m ci.build --plan plan.json --service "${{ inputs.service }}"
+          --arch "${{ inputs.arch }}" --artifacts artifacts --output output
+      - name: Save build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ inputs.service }}-${{ inputs.arch }}
+          path: output/${{ inputs.service }}-${{ inputs.arch }}.tar.zst
+          if-no-files-found: error
+          retention-days: 2
+
+  msys:
+    if: ${{ inputs.kind == 'msys' }}
+    runs-on: windows-2022
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: orion
+      - name: Build ${{ inputs.service }} MSYS bundle
+        shell: pwsh
+        run: >-
+          ./orion/ci/build_msys.ps1
+          -Service '${{ inputs.service }}'
+          -BaseUrl '${{ inputs.base }}'
+      - name: Save MSYS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ inputs.service }}-msys
+          path: msys2.tar.bz2
+          if-no-files-found: error
+          retention-days: 2

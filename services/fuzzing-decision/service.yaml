@@ -2,17 +2,17 @@ name: fuzzing-decision
 tests:
   - name: python 3.10 unittests
     type: tox
-    image: ci-py-310
+    python: "3.10"
     toxenv: py310
   - name: python 3.11 unittests
     type: tox
-    image: ci-py-311
+    python: "3.11"
     toxenv: py311
   - name: python 3.12 unittests
     type: tox
-    image: ci-py-312
+    python: "3.12"
     toxenv: py312
   - name: python 3.13 unittests
     type: tox
-    image: ci-py-313
+    python: "3.13"
     toxenv: py313

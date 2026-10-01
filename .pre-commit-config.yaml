@@ -4,9 +4,9 @@ repos:
     hooks:
       - id: ruff-check
         args: ['--fix']
-        files: ^scripts/.*|^setup.py
+        files: ^(scripts|ci)/.*\.py$
       - id: ruff-format
-        files: ^scripts/.*|^setup.py
+        files: ^(scripts|ci)/.*\.py$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -35,10 +35,6 @@ repos:
     - id: detect-secrets
       args: ['--baseline', '.secrets.baseline']
       exclude: \.yaml$|/tests/
-  - repo: https://github.com/marco-c/taskcluster_yml_validator
-    rev: v0.0.12
-    hooks:
-      - id: taskcluster_yml
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
@@ -55,12 +51,29 @@ repos:
   - repo: local
     hooks:
       - id: orion-service-load
-        name: Check that Orion services can be loaded
-        entry: bash -c 'cd services/orion-decision && exec tox -qq -e check -- -q ../.. "$@"' orion-check
-        language: system
+        name: Check Orion service and recipe graph
+        entry: uv run --project ci --locked --no-dev python -m ci.graph --check
+        language: python
+        additional_dependencies: [uv]
         always_run: true
         require_serial: true
+        pass_filenames: false
         verbose: true
+      - id: orion-workflow-generated
+        name: Check generated GitHub Actions workflow
+        entry: uv run --project ci --locked --no-dev python -m ci.workflows --check
+        language: python
+        additional_dependencies: [uv]
+        always_run: true
+        require_serial: true
+        pass_filenames: false
+      - id: orion-ci-tests
+        name: Test CI tooling
+        entry: uv run --project ci --locked python -m pytest -q ci/tests
+        language: python
+        additional_dependencies: [uv]
+        files: ^ci/.*(\.py|\.toml|\.lock)$
+        pass_filenames: false
       - id: hadolint
         name: Lint dockerfiles
         language: system
@@ -91,22 +104,6 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^services/fuzzing-decision/.*
-      - id: orion-decision-lint
-        name: Run linters for orion_decision
-        entry: bash -c 'cd services/orion-decision && exec tox -e lint'
-        language: system
-        require_serial: true
-        pass_filenames: false
-        types: [python]
-        files: ^services/orion-decision/.*
-      - id: orion-builder-lint
-        name: Run linters for orion_builder
-        entry: bash -c 'cd services/orion-builder && exec tox -e lint'
-        language: system
-        require_serial: true
-        pass_filenames: false
-        types: [python]
-        files: ^services/orion-builder/.*
       - id: nyx-ipc-manager-lint
         name: Run linters for nyx-ipc-manager
         entry: bash -c 'cd services/nyx/nyx_ipc_manager && exec tox -e lint'

@@ -1,6 +1,0 @@
-- id: orion_ci
-  name: orion_ci
-  description: Checks validity of CI matrix for Orion CI tasks
-  entry: ci-check
-  language: python
-  files: "^\\.taskcluster\\.yml$"

@@ -18,7 +18,7 @@ payload:
       hostSharedMemory: true
       loopbackAudio: true
   image:
-    namespace: project.fuzzing.orion.grizzly.master
+    namespace: project.fuzzing.orion.grizzly.main
     path: public/grizzly.tar.zst
     type: indexed-image
   env:
