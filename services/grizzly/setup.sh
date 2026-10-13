@@ -27,6 +27,10 @@ EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 ./llvm-cov.sh
 ./nodejs.sh
+retry npm install --global prettier
+command -v node
+command -v npx
+command -v prettier
 ./radamsa.sh
 ./rr.sh
 ./sentry.sh

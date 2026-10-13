@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e -x -o pipefail
 PATH="$PWD/msys64/opt/node:$PATH"
+export PATH
+command -v npx
+command -v prettier
 
 retry() {
   i=0
