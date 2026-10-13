@@ -106,9 +106,13 @@ rm -rf msys64/opt/node
 mkdir -p msys64/opt
 mv "node-v${VER}-win-x64" msys64/opt/node
 PATH="$PWD/msys64/opt/node:$PATH"
+export PATH
 which node
 node -v
 npm -v
+retry npm install --global --prefix "$PWD/msys64/opt/node" prettier
+command -v npx
+command -v prettier
 
 retry-curl -O https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/gecko.v2.mozilla-central.latest.taskgraph.decision/artifacts/public/label-to-taskid.json
 resolve_tc() {

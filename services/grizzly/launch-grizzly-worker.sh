@@ -13,6 +13,10 @@ shift
 # shellcheck source=recipes/linux/common.sh
 source ~/.local/bin/common.sh
 
+command -v node
+command -v npx
+command -v prettier
+
 eval "$(ssh-agent -s)"
 mkdir -p .ssh
 
