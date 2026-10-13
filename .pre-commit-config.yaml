@@ -61,6 +61,14 @@ repos:
         always_run: true
         require_serial: true
         verbose: true
+      - id: orion-gha-workflow
+        name: Regenerate the Orion GitHub Actions workflow
+        entry: bash -c 'cd services/orion-decision && exec tox -qq -e gha-workflow'
+        language: system
+        always_run: true
+        pass_filenames: false
+        require_serial: true
+        verbose: true
       - id: hadolint
         name: Lint dockerfiles
         language: system
