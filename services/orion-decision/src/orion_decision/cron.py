@@ -15,7 +15,7 @@ from taskcluster.exceptions import TaskclusterRestFailure
 
 from . import ARTIFACTS_EXPIRE, CRON_PERIOD, Taskcluster
 from .git import GitRepo
-from .orion import Services
+from .orion import Services, ServiceTestOnly
 from .scheduler import Scheduler
 
 LOG = getLogger(__name__)
@@ -101,7 +101,7 @@ class CronScheduler(Scheduler):
         #   any service that would expire before next run, should be rebuilt
         next_run = self.now + CRON_PERIOD
         for svc in self.services.values():
-            if svc.dirty:
+            if svc.dirty or isinstance(svc, ServiceTestOnly):
                 continue
             index_path = self._build_index(svc.name)
             rebuild = False
