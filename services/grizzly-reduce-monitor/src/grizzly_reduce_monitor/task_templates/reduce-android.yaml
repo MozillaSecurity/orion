@@ -19,7 +19,7 @@ payload:
       loopbackAudio: true
     privileged: true
   image:
-    namespace: project.fuzzing.orion.grizzly-android.master
+    namespace: project.fuzzing.orion.grizzly-android.main
     path: public/grizzly-android.tar.zst
     type: indexed-image
   env:

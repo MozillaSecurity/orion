@@ -1,0 +1,4 @@
+---
+# Fake fxci worker images (keyed by image name -> provider -> image path)
+fuzzing-gw-ubuntu-24-04:
+  fxci-level1-gcp: projects/fake/global/images/fuzzing-gw-ubuntu-24-04

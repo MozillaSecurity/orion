@@ -347,7 +347,7 @@ class ReductionMonitor(ReductionWorkflow):
         now = datetime.now(timezone.utc)
         if os_name == "windows":
             image_task_id = self.image_artifact_task(
-                "project.fuzzing.orion.grizzly-win.master"
+                "project.fuzzing.orion.grizzly-win.main"
             )
         elif os_name == "macosx":
             image_task_id = self.image_artifact_task(

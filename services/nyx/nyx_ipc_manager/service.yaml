@@ -3,5 +3,5 @@ type: test
 tests:
   - name: lint
     type: tox
-    image: ci-py-310
+    python: "3.10"
     toxenv: lint

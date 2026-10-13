@@ -1,0 +1,10 @@
+---
+# Fake fxci environments config (subset used by FxciGCP)
+firefoxci:
+  google_config:
+    zones:
+      by-region:
+        us-central1: [us-central1-a]
+        us-west1: [us-west1-a, us-west1-b]
+        # not in fuzzing's gcp_regions -> should be ignored by FxciGCP
+        europe-west4: [europe-west4-a]

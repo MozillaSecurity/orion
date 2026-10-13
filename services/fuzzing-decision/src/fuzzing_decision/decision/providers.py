@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from ..common.util import parse_time
+from .instances import current_instance
 
 LOG = logging.getLogger(__name__)
 
@@ -34,6 +35,13 @@ class Provider(ABC):
     ) -> list[dict[str, Any]]:
         raise NotImplementedError()
 
+    def _worker_implementation(self, imageset: str, worker_type: str) -> str:
+        assert imageset in self.imagesets, f"Missing worker {imageset}"
+        return self.imagesets[imageset]["workerImplementation"]
+
+    def _base_worker_config(self, imageset: str) -> dict[str, Any]:
+        return self.imagesets[imageset].get("workerConfig", {})
+
     def get_worker_config(
         self,
         worker: str,
@@ -41,13 +49,8 @@ class Provider(ABC):
         max_tasks: int,
         worker_type: str,
     ) -> dict[str, Any]:
-        assert worker in self.imagesets, f"Missing worker {worker}"
-        out: dict[str, Any] = self.imagesets[worker].get("workerConfig", {})
-
-        # worker implementation might be generic-worker or docker-worker
-        # although we also support d2g (docker payload on generic worker)
-        # so check explicitly for the worker implementation declared
-        worker_impl = self.imagesets[worker]["workerImplementation"]
+        worker_impl = self._worker_implementation(worker, worker_type)
+        out: dict[str, Any] = self._base_worker_config(worker)
         if worker_impl == "docker-worker":
             out.setdefault("dockerConfig", {})
             out.update(
@@ -81,13 +84,11 @@ class Provider(ABC):
             # Maximum number of tasks before restart
             out["genericWorker"]["config"]["numberOfTasksToRun"] = max_tasks
 
-            # Fixed config for websocket tunnel
+            instance = current_instance()
             out["genericWorker"]["config"].update(
                 {
-                    "wstAudience": "communitytc",
-                    "wstServerURL": (
-                        "https://community-websocktunnel.services.mozilla.com"
-                    ),
+                    "wstAudience": instance.wst_audience,
+                    "wstServerURL": instance.wst_server_url,
                 }
             )
             if worker_type == "d2g":
@@ -284,6 +285,13 @@ class GCP(Provider):
         }
         LOG.info("Loaded GCP configuration")
 
+    def _gcp_source_image(self, imageset: str) -> str:
+        assert imageset in self.imagesets, f"Missing imageset {imageset}"
+        assert "gcp" in self.imagesets[imageset], (
+            f"No GCP implementation for imageset {imageset}"
+        )
+        return self.imagesets[imageset]["gcp"]["image"]
+
     def build_launch_configs(
         self,
         imageset: str,
@@ -296,12 +304,7 @@ class GCP(Provider):
         max_tasks: int,
         worker_type: str,
     ) -> list[dict[str, Any]]:
-        # Load source image
-        assert imageset in self.imagesets, f"Missing imageset {imageset}"
-        assert "gcp" in self.imagesets[imageset], (
-            f"No GCP implementation for imageset {imageset}"
-        )
-        source_image = self.imagesets[imageset]["gcp"]["image"]
+        source_image = self._gcp_source_image(imageset)
         worker_config = self.get_worker_config(
             imageset, platform, max_tasks, worker_type
         )
@@ -372,3 +375,69 @@ class Static(Provider):
         worker_type: str,
     ) -> list[dict[str, Any]]:
         return []
+
+
+class FxciGCP(GCP):
+    """GCP provider sourcing image/region data from the fxci-config layout.
+
+    Launch configs are identical to the community GCP provider; only the data
+    source differs (worker-images.yml / environments.yml instead of
+    config/{imagesets,gcp}.yml). Imageset names match worker-images.yml keys
+    (pools are renamed for fxci), so there is no in-code alias.
+    """
+
+    def __init__(self, base_dir: Path) -> None:
+        self._images = yaml.safe_load((base_dir / "worker-images.yml").read_text())
+        env = yaml.safe_load((base_dir / "environments.yml").read_text())
+        zones = env["firefoxci"]["google_config"]["zones"]["by-region"]
+        self.regions = {
+            region: zones[region]
+            for region in current_instance().gcp_regions
+            if region in zones
+        }
+        LOG.info("Loaded fxci GCP configuration")
+
+    def _gcp_source_image(self, imageset: str) -> str:
+        provider = current_instance().provider_ids["gcp"]
+        assert imageset in self._images, f"Missing image {imageset}"
+        assert provider in self._images[imageset], f"No {provider} image for {imageset}"
+        return self._images[imageset][provider]
+
+    def _worker_implementation(self, imageset: str, worker_type: str) -> str:
+        return "docker-worker" if worker_type == "docker" else "generic-worker"
+
+    def _base_worker_config(self, imageset: str) -> dict[str, Any]:
+        return {}
+
+
+class _FxciUnsupported(Provider):
+    """fxci provider for a cloud not yet validated for fuzzing (GCP only so far)."""
+
+    cloud = ""
+
+    def __init__(self, base_dir: Path) -> None:
+        pass
+
+    def build_launch_configs(
+        self,
+        imageset: str,
+        machines: Iterable[tuple[str, frozenset[str]]],
+        disk_size: int,
+        platform: str,
+        demand: bool,
+        nested_virtualization: bool,
+        performance_monitoring_unit: bool,
+        max_tasks: int,
+        worker_type: str,
+    ) -> list[dict[str, Any]]:
+        raise NotImplementedError(
+            f"{self.cloud} worker pools are not yet supported on fxci"
+        )
+
+
+class FxciAWS(_FxciUnsupported):
+    cloud = "AWS"
+
+
+class FxciAzure(_FxciUnsupported):
+    cloud = "Azure"

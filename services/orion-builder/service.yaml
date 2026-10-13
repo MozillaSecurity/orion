@@ -1,4 +1,0 @@
-name: orion-builder
-arch:
-  - amd64
-  - arm64

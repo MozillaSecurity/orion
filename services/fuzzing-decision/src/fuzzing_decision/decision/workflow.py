@@ -21,8 +21,9 @@ from ..common.pool import FuzzingPoolConfig, MachineTypes
 from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
 from . import HOOK_PREFIX, WORKER_POOL_PREFIX
+from .instances import current_instance
 from .pool import WorkerPool, build_resources, build_tasks, cancel_tasks
-from .providers import AWS, GCP, Azure, Static
+from .providers import AWS, GCP, Azure, FxciAWS, FxciAzure, FxciGCP, Provider, Static
 
 LOG = logging.getLogger(__name__)
 
@@ -78,19 +79,26 @@ class Workflow(CommonWorkflow):
         self.fuzzing_config_dir = self.git_clone(**config["fuzzing_config"])
         self.community_config_dir = self.git_clone(**config["community_config"])
 
-    def generate(self, resources, config: dict[str, Any]) -> None:
-        # Setup resources manager to track only fuzzing instances
-        for pattern in self.build_resources_patterns():
-            resources.manage(pattern)
-
-        # Load the cloud configuration from community config
+    def _clouds(self) -> dict[str, Provider]:
+        """Cloud providers for the running instance's config layout."""
         assert self.community_config_dir is not None
-        clouds = {
-            "aws": AWS(self.community_config_dir),
-            "azure": Azure(self.community_config_dir),
-            "gcp": GCP(self.community_config_dir),
+        base = self.community_config_dir
+        if current_instance().config_layout == "fxci":
+            return {
+                "aws": FxciAWS(base),
+                "azure": FxciAzure(base),
+                "gcp": FxciGCP(base),
+                "static": Static(),
+            }
+        return {
+            "aws": AWS(base),
+            "azure": Azure(base),
+            "gcp": GCP(base),
             "static": Static(),
         }
+
+    def generate(self, resources, config: dict[str, Any]) -> None:
+        clouds = self._clouds()
 
         # Load the machine types
         assert self.fuzzing_config_dir is not None
@@ -102,15 +110,26 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REPOSITORY"] = config["fuzzing_config"]["url"]
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
-        # Browse the files in the repo
+        generated: list[Any] = []
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_configs = list(FuzzingPoolConfig.from_file(config_file))
-            resources.update(build_resources(pool_configs, clouds, machines, env))
+            generated.extend(build_resources(pool_configs, clouds, machines, env))
 
         extra_pools_path = self.fuzzing_config_dir / "workers.yml"
         if extra_pools_path.is_file():
             for pool in WorkerPool.from_file_iter(extra_pools_path):
-                resources.update(pool.build_resources(clouds, machines))
+                generated.extend(pool.build_resources(clouds, machines))
+
+        if current_instance().config_layout == "fxci":
+            # fxci-config manages the fuzzing infra pools/hooks, so manage only what
+            # we generate to avoid deleting them. Removed pools aren't auto-cleaned.
+            for resource in generated:
+                resources.manage(f"^{re.escape(resource.id)}$")
+        else:
+            for pattern in self.build_resources_patterns():
+                resources.manage(pattern)
+
+        resources.update(generated)
 
     def build_resources_patterns(self) -> list[str] | str:
         """Build regex patterns to manage our resources"""

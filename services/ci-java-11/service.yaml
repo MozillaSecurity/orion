@@ -1,3 +1,0 @@
-name: ci-java-11
-force_dirty:
-  - orion-decision

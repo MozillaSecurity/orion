@@ -35,11 +35,11 @@ from . import (
     DECISION_TASK_SECRET,
     HOOK_PREFIX,
     OWNER_EMAIL,
-    PROVIDER_IDS,
     PROVISIONER_ID,
     SCHEDULER_ID,
     WORKER_POOL_PREFIX,
 )
+from .instances import current_instance
 from .providers import Provider
 
 LOG = logging.getLogger(__name__)
@@ -563,6 +563,6 @@ class WorkerPool:
                 description=DESCRIPTION,
                 emailOnError=True,
                 owner=self.owner,
-                providerId=PROVIDER_IDS[self.cloud],
+                providerId=current_instance().provider_ids[self.cloud],
                 workerPoolId=f"{WORKER_POOL_PREFIX}/{self.name}",
             )

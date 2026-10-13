@@ -78,7 +78,7 @@ def _get_expected_hook(platform="linux"):
                 "env": {"TASKCLUSTER_SECRET": "project/fuzzing/decision"},
                 "features": {"taskclusterProxy": True},
                 "image": {
-                    "namespace": "project.fuzzing.orion.fuzzing-decision.master",
+                    "namespace": "project.fuzzing.orion.fuzzing-decision.main",
                     "path": "public/fuzzing-decision.tar.zst",
                     "type": "indexed-image",
                 },

@@ -1,6 +1,0 @@
-Host *
-UseRoaming no
-
-Host gr-css-reports
-HostName github.com
-IdentityFile ~/.ssh/gr.css.reports_deploy

@@ -1,0 +1,17 @@
+[project]
+name = "orion-ci-tools"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6.0",
+    "taskcluster>=100,<110",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+extend = "../pyproject.toml"

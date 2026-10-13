@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/orion.png" alt="Orion logo" title="Orion"></p>
 
 <p align="center">
-<a href="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/latest"><img src="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/badge.svg" alt="Task Status"></a>
+<a href="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml?query=branch%3Amain"><img src="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml/badge.svg?branch=main" alt="GitHub Actions"></a>
 <a href="https://riot.im/app/#/room/#fuzzing:mozilla.org"> <img src="https://img.shields.io/badge/dynamic/json?color=green&label=chat&query=%24.chunk[%3F(%40.canonical_alias%3D%3D%22%23fuzzing%3Amozilla.org%22)].num_joined_members&suffix=%20users&url=https%3A%2F%2Fmozilla.modular.im%2F_matrix%2Fclient%2Fr0%2FpublicRooms&style=flat&logo=matrix" alt="Matrix"></a>
 </p>
 
@@ -18,13 +18,13 @@ Monorepo for building and publishing multiple Docker containers as microservices
 
 ### What is Orion?
 
-Orion is a build environment for containerized services we run in our Fuzzing infrastructure (eg. [libFuzzer](https://github.com/MozillaSecurity/orion/tree/master/services/libfuzzer)).
+Orion is a build environment for containerized services we run in our Fuzzing infrastructure (eg. [libFuzzer](https://github.com/MozillaSecurity/orion/tree/main/services/libfuzzer)).
 
 > For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
 
 ### How does it operate?
 
-CI and CD are performed autonomously with Taskcluster and the [Orion Decision](https://github.com/MozillaSecurity/orion/tree/master/services/orion-decision) service. A build process gets initiated only if a file of a particular service has been modified, or if a parent image is modified. Each image is either tagged with the latest `revision` or `latest` before being published to the [Docker registry](https://hub.docker.com/u/mozillasecurity/) and as [Taskcluster artifacts](https://community-tc.services.mozilla.com/tasks/index/project.fuzzing.orion). For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
+CI and container builds run through GitHub Actions. The workflow uses service dependency metadata to run tests, build changed images, and publish main-branch images to the [Docker registry](https://hub.docker.com/u/mozillasecurity/) and as [Taskcluster artifacts](https://community-tc.services.mozilla.com/tasks/index/project.fuzzing.orion). See [`ci/README.md`](ci/README.md) for workflow setup and local validation.
 
 ### Build Instructions and Development
 
