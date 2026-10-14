@@ -340,6 +340,20 @@ def render_workflow(services: Services) -> str:
                     },
                     {"run": "python -m pip install -e services/orion-decision"},
                     {
+                        "name": "Reject stale publication before manifest creation",
+                        "env": {
+                            "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_REVISION": HEAD_SHA,
+                            "ORION_BRANCH": "${{ github.ref_name }}",
+                        },
+                        "run": (
+                            "python -m orion_decision.gha_run check-head "
+                            '--repository "$GITHUB_REPOSITORY" '
+                            '--branch "$ORION_BRANCH" '
+                            '--revision "$ORION_REVISION"'
+                        ),
+                    },
+                    {
                         "name": "Write plan and bind exact build artifacts",
                         "env": {
                             "GITHUB_TOKEN": "${{ github.token }}",
@@ -470,7 +484,9 @@ def render_workflow(services: Services) -> str:
                             'wait "$monitor_pid"\n'
                             "monitor_status=$?\n"
                             'if kill -0 "$worker_pid" 2>/dev/null; then '
-                            'kill -TERM "$worker_pid"; fi\n'
+                            'if [ "$monitor_status" -eq 0 ]; then '
+                            'kill -USR1 "$worker_pid"; '
+                            'else kill -TERM "$worker_pid"; fi; fi\n'
                             'wait "$worker_pid"\n'
                             'cat "$RUNNER_TEMP/generic-worker.log"\n'
                             'cat "$RUNNER_TEMP/publication-monitor.log"\n'

@@ -19,7 +19,12 @@ check, and manual runs. Manual runs accept comma-separated service names in
 `force_services`. Pull requests build and test the head commit without publication
 credentials. Successful `master` runs push architecture images and a combined Docker
 `latest` manifest, then import per-architecture Docker archives and native archives
-into Taskcluster's existing artifact and index routes.
+into Taskcluster's existing artifact and index routes. An older run cannot be rerun
+for publication after a newer eligible `master` run; start a new manual run and select
+or force the services that still need publication.
+
+Windows 2025 runners use their preinstalled MSYS2 `bsdtar` only to extract the
+downloaded bootstrap archive; native builds then use that downloaded MSYS2 runtime.
 
 Configure the `dockerhub` GitHub environment with variable `DOCKERHUB_USERNAME` and
 secret `DOCKERHUB_TOKEN`. Configure repository Actions secret
