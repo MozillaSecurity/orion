@@ -26,7 +26,7 @@ payload:
     - - /bin/bash
       - "-c"
       - "-x"
-      - eval "$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch bash launch.sh
+      - eval "$$(homebrew/bin/brew shellenv)" && exec fuzzing-pool-launch bash launch.sh
   env:
     ADAPTER: reducer
     FUZZING_CPU_COUNT: "0"  # force single instance/task
