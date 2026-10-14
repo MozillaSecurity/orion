@@ -13,8 +13,6 @@ maintainers = [
 dynamic = ["readme"]
 dependencies = [
     "dockerfile-parse",
-    "json-e",
-    "jsonschema>=4.18.0",
     "python-dateutil",
     "pyyaml>=5.4",
     "taskcluster",
@@ -26,11 +24,6 @@ version = "0.0.1"
 dev = ["tox"]
 
 [project.scripts]
-ci-check = "orion_decision.cli:ci_check"
-ci-decision = "orion_decision.cli:ci_main"
-ci-launch = "orion_decision.cli:ci_launch"
-cron-decision = "orion_decision.cli:cron_main"
-decision = "orion_decision.cli:main"
 orion-check = "orion_decision.cli:check"
 
 [project.urls]
@@ -53,7 +46,6 @@ module = [
     "dockerfile_parse",
     "freezegun",
     "jsone",
-    "jsonschema",
     "setuptools",
     "taskcluster.*",
 ]

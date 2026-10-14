@@ -24,6 +24,7 @@ from .orion import (
 )
 
 WORKFLOW = Path(".github/workflows/orion.yml")
+HEAD_SHA = "${{ github.event.pull_request.head.sha || github.sha }}"
 HEADER = """# GENERATED FILE — DO NOT EDIT.
 # Regenerate with: python -m orion_decision.gha_workflows
 # Sources: tracked service.yaml files, Dockerfiles, service inputs, and recipes.
@@ -69,7 +70,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 "name": name,
                 "arch": arch or "",
                 "runner": runner,
-                "revision": "${{ github.sha }}",
+                "revision": HEAD_SHA,
                 "plan_json": "${{ needs.plan.outputs.plan_json }}",
             },
         }
@@ -238,6 +239,9 @@ def render_workflow(services: Services) -> str:
     workflow: dict[str, Any] = {
         "name": "Orion",
         "on": {
+            "pull_request": {"types": ["opened", "synchronize", "reopened"]},
+            "push": {"branches": ["master"]},
+            "schedule": [{"cron": "0 5 * * 1"}],
             "workflow_dispatch": {
                 "inputs": {
                     "force_services": {
@@ -246,7 +250,7 @@ def render_workflow(services: Services) -> str:
                         "type": "string",
                     },
                 }
-            }
+            },
         },
         "permissions": {"actions": "read", "contents": "read"},
         "jobs": {
@@ -264,7 +268,7 @@ def render_workflow(services: Services) -> str:
                 "steps": [
                     {
                         "uses": "actions/checkout@v5",
-                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                        "with": {"ref": HEAD_SHA, "fetch-depth": 0},
                     },
                     {
                         "uses": "actions/setup-python@v6",
@@ -277,7 +281,7 @@ def render_workflow(services: Services) -> str:
                         "id": "plan",
                         "env": {
                             "ORION_FORCE_SERVICES": "${{ inputs.force_services }}",
-                            "ORION_REVISION": "${{ github.sha }}",
+                            "ORION_REVISION": HEAD_SHA,
                             "ORION_EVENT": "${{ github.event_name }}",
                             "ORION_BRANCH": "${{ github.ref_name }}",
                             "ORION_BASE_REVISION": (
@@ -319,6 +323,8 @@ def render_workflow(services: Services) -> str:
                     "needs.graph-result.result == 'success' && "
                     "(needs.publish-docker.result == 'success' || "
                     "needs.plan.outputs.selected_docker_jobs == '[]') && "
+                    "github.event_name != 'pull_request' && "
+                    "github.ref == 'refs/heads/master' && "
                     "fromJSON(needs.plan.outputs.plan_json).publish"
                 ),
                 "runs-on": "ubuntu-24.04",
@@ -326,7 +332,7 @@ def render_workflow(services: Services) -> str:
                 "steps": [
                     {
                         "uses": "actions/checkout@v5",
-                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                        "with": {"ref": HEAD_SHA, "fetch-depth": 0},
                     },
                     {
                         "uses": "actions/setup-python@v6",
@@ -367,6 +373,8 @@ def render_workflow(services: Services) -> str:
                 "if": (
                     "always() && !cancelled() && "
                     "needs.publication-manifest.result == 'success' && "
+                    "github.event_name != 'pull_request' && "
+                    "github.ref == 'refs/heads/master' && "
                     "fromJSON(needs.plan.outputs.plan_json).publish"
                 ),
                 "runs-on": "ubuntu-24.04",
@@ -389,7 +397,7 @@ def render_workflow(services: Services) -> str:
                 "steps": [
                     {
                         "uses": "actions/checkout@v5",
-                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                        "with": {"ref": HEAD_SHA, "fetch-depth": 0},
                     },
                     {
                         "uses": "actions/setup-python@v6",
@@ -478,8 +486,9 @@ def render_workflow(services: Services) -> str:
                     "always() && !cancelled() && "
                     "needs.graph-result.result == 'success' && "
                     "needs.plan.outputs.selected_docker_jobs != '[]' && "
-                    "fromJSON(needs.plan.outputs.plan_json).publish && "
-                    "vars.ORION_DOCKER_PUBLISH == 'true'"
+                    "github.event_name != 'pull_request' && "
+                    "github.ref == 'refs/heads/master' && "
+                    "fromJSON(needs.plan.outputs.plan_json).publish"
                 ),
                 "runs-on": "ubuntu-24.04",
                 "environment": "dockerhub",
@@ -491,7 +500,7 @@ def render_workflow(services: Services) -> str:
                 "steps": [
                     {
                         "uses": "actions/checkout@v5",
-                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                        "with": {"ref": HEAD_SHA, "fetch-depth": 0},
                     },
                     {
                         "uses": "actions/setup-python@v6",
@@ -513,7 +522,7 @@ def render_workflow(services: Services) -> str:
                         "name": "Reject stale branch publication",
                         "env": {
                             "GITHUB_TOKEN": "${{ github.token }}",
-                            "ORION_REVISION": "${{ github.sha }}",
+                            "ORION_REVISION": HEAD_SHA,
                             "ORION_BRANCH": "${{ github.ref_name }}",
                         },
                         "run": (

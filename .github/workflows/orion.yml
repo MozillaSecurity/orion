@@ -3,6 +3,16 @@
 # Sources: tracked service.yaml files, Dockerfiles, service inputs, and recipes.
 name: Orion
 'on':
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+  push:
+    branches:
+    - master
+  schedule:
+  - cron: 0 5 * * 1
   workflow_dispatch:
     inputs:
       force_services:
@@ -24,7 +34,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       with:
-        ref: ${{ github.sha }}
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
@@ -33,7 +43,7 @@ jobs:
     - id: plan
       env:
         ORION_FORCE_SERVICES: ${{ inputs.force_services }}
-        ORION_REVISION: ${{ github.sha }}
+        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         ORION_EVENT: ${{ github.event_name }}
         ORION_BRANCH: ${{ github.ref_name }}
         ORION_BASE_REVISION: ${{ github.event.pull_request.base.sha }}
@@ -69,7 +79,7 @@ jobs:
       name: cleanup.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_common_sh:
     name: 'recipe_test: common.sh'
@@ -83,7 +93,7 @@ jobs:
       name: common.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_dbgsyms_sh:
     name: 'recipe_test: dbgsyms.sh'
@@ -99,7 +109,7 @@ jobs:
       name: dbgsyms.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_ff32_deps_sh:
     name: 'recipe_test: ff32 deps.sh'
@@ -120,7 +130,7 @@ jobs:
       name: ff32_deps.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fluentbit_sh:
     name: 'recipe_test: fluentbit.sh'
@@ -136,7 +146,7 @@ jobs:
       name: fluentbit.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzfetch_sh:
     name: 'recipe_test: fuzzfetch.sh'
@@ -152,7 +162,7 @@ jobs:
       name: fuzzfetch.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzing_tc_sh:
     name: 'recipe_test: fuzzing tc.sh'
@@ -168,7 +178,7 @@ jobs:
       name: fuzzing_tc.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzmanager_sh:
     name: 'recipe_test: fuzzmanager.sh'
@@ -184,7 +194,7 @@ jobs:
       name: fuzzmanager.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_gcov_9_sh:
     name: 'recipe_test: gcov-9.sh'
@@ -200,7 +210,7 @@ jobs:
       name: gcov-9.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_grcov_sh:
     name: 'recipe_test: grcov.sh'
@@ -219,7 +229,7 @@ jobs:
       name: grcov.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_gsutil_sh:
     name: 'recipe_test: gsutil.sh'
@@ -235,7 +245,7 @@ jobs:
       name: gsutil.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_htop_sh:
     name: 'recipe_test: htop.sh'
@@ -251,7 +261,7 @@ jobs:
       name: htop.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_js32_deps_sh:
     name: 'recipe_test: js32 deps.sh'
@@ -272,7 +282,7 @@ jobs:
       name: js32_deps.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_cov_sh:
     name: 'recipe_test: llvm-cov.sh'
@@ -291,7 +301,7 @@ jobs:
       name: llvm-cov.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_symbolizer_sh:
     name: 'recipe_test: llvm-symbolizer.sh'
@@ -310,7 +320,7 @@ jobs:
       name: llvm-symbolizer.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_sh:
     name: 'recipe_test: llvm.sh'
@@ -326,7 +336,7 @@ jobs:
       name: llvm.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_nodejs_sh:
     name: 'recipe_test: nodejs.sh'
@@ -342,7 +352,7 @@ jobs:
       name: nodejs.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_orion_decision_sh:
     name: 'recipe_test: orion decision.sh'
@@ -358,7 +368,7 @@ jobs:
       name: orion_decision.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_pernosco_submit_sh:
     name: 'recipe_test: pernosco submit.sh'
@@ -374,7 +384,7 @@ jobs:
       name: pernosco_submit.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_poetry_sh:
     name: 'recipe_test: poetry.sh'
@@ -390,7 +400,7 @@ jobs:
       name: poetry.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_prefpicker_sh:
     name: 'recipe_test: prefpicker.sh'
@@ -406,7 +416,7 @@ jobs:
       name: prefpicker.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_radamsa_sh:
     name: 'recipe_test: radamsa.sh'
@@ -422,7 +432,7 @@ jobs:
       name: radamsa.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_rr_sh:
     name: 'recipe_test: rr.sh'
@@ -441,7 +451,7 @@ jobs:
       name: rr.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_sentry_sh:
     name: 'recipe_test: sentry.sh'
@@ -457,7 +467,7 @@ jobs:
       name: sentry.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_taskcluster_sh:
     name: 'recipe_test: taskcluster.sh'
@@ -473,7 +483,7 @@ jobs:
       name: taskcluster.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_taskgraph_m_c_latest_sh:
     name: 'recipe_test: taskgraph-m-c-latest.sh'
@@ -489,7 +499,7 @@ jobs:
       name: taskgraph-m-c-latest.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_uv_sh:
     name: 'recipe_test: uv.sh'
@@ -505,7 +515,7 @@ jobs:
       name: uv.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_worker_sh:
     name: 'recipe_test: worker.sh'
@@ -521,7 +531,7 @@ jobs:
       name: worker.sh
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_afl_amd64:
     name: 'build: afl'
@@ -584,7 +594,7 @@ jobs:
       name: afl
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_bugmon_amd64:
     name: 'build: bugmon'
@@ -612,7 +622,7 @@ jobs:
       name: bugmon
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_bugmon_win_amd64:
     name: 'build: bugmon-win'
@@ -626,7 +636,7 @@ jobs:
       name: bugmon-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_java_11_amd64:
     name: 'build: ci-java-11'
@@ -650,7 +660,7 @@ jobs:
       name: ci-java-11
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_18_amd64:
     name: 'build: ci-node-18'
@@ -664,7 +674,7 @@ jobs:
       name: ci-node-18
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_18_win_amd64:
     name: 'build: ci-node-18-win'
@@ -678,7 +688,7 @@ jobs:
       name: ci-node-18-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_20_amd64:
     name: 'build: ci-node-20'
@@ -692,7 +702,7 @@ jobs:
       name: ci-node-20
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_20_win_amd64:
     name: 'build: ci-node-20-win'
@@ -706,7 +716,7 @@ jobs:
       name: ci-node-20-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_22_amd64:
     name: 'build: ci-node-22'
@@ -720,7 +730,7 @@ jobs:
       name: ci-node-22
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_22_win_amd64:
     name: 'build: ci-node-22-win'
@@ -734,7 +744,7 @@ jobs:
       name: ci-node-22-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_amd64:
     name: 'build: ci-py-310'
@@ -748,7 +758,7 @@ jobs:
       name: ci-py-310
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_osx_amd64:
     name: 'build: ci-py-310-osx'
@@ -762,7 +772,7 @@ jobs:
       name: ci-py-310-osx
       arch: amd64
       runner: macos-15-intel
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_win_amd64:
     name: 'build: ci-py-310-win'
@@ -776,7 +786,7 @@ jobs:
       name: ci-py-310-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_amd64:
     name: 'build: ci-py-311'
@@ -790,7 +800,7 @@ jobs:
       name: ci-py-311
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_osx_amd64:
     name: 'build: ci-py-311-osx'
@@ -804,7 +814,7 @@ jobs:
       name: ci-py-311-osx
       arch: amd64
       runner: macos-15-intel
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_win_amd64:
     name: 'build: ci-py-311-win'
@@ -818,7 +828,7 @@ jobs:
       name: ci-py-311-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_amd64:
     name: 'build: ci-py-312'
@@ -832,7 +842,7 @@ jobs:
       name: ci-py-312
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_osx_amd64:
     name: 'build: ci-py-312-osx'
@@ -846,7 +856,7 @@ jobs:
       name: ci-py-312-osx
       arch: amd64
       runner: macos-15-intel
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_win_amd64:
     name: 'build: ci-py-312-win'
@@ -860,7 +870,7 @@ jobs:
       name: ci-py-312-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_amd64:
     name: 'build: ci-py-313'
@@ -874,7 +884,7 @@ jobs:
       name: ci-py-313
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_osx_amd64:
     name: 'build: ci-py-313-osx'
@@ -888,7 +898,7 @@ jobs:
       name: ci-py-313-osx
       arch: amd64
       runner: macos-15-intel
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_win_amd64:
     name: 'build: ci-py-313-win'
@@ -902,7 +912,7 @@ jobs:
       name: ci-py-313-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_covdiff_amd64:
     name: 'build: covdiff'
@@ -926,7 +936,7 @@ jobs:
       name: covdiff
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_coverage_revision_amd64:
     name: 'build: coverage-revision'
@@ -942,7 +952,7 @@ jobs:
       name: coverage-revision
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_domino_web_tests_amd64:
     name: 'build: domino-web-tests'
@@ -966,7 +976,7 @@ jobs:
       name: domino-web-tests
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_funfuzz_amd64:
     name: 'build: funfuzz'
@@ -1015,7 +1025,7 @@ jobs:
       name: funfuzz
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzilli_amd64:
     name: 'build: fuzzilli'
@@ -1064,7 +1074,7 @@ jobs:
       name: fuzzilli
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzilli_arm64:
     name: 'build: fuzzilli'
@@ -1113,7 +1123,7 @@ jobs:
       name: fuzzilli
       arch: arm64
       runner: ubuntu-24.04-arm
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_fuzzing_decision:
     name: 'service_test: fuzzing-decision'
@@ -1137,7 +1147,7 @@ jobs:
       name: fuzzing-decision
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzing_decision_amd64:
     name: 'build: fuzzing-decision'
@@ -1153,7 +1163,7 @@ jobs:
       name: fuzzing-decision
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_amd64:
     name: 'build: grizzly'
@@ -1207,7 +1217,7 @@ jobs:
       name: grizzly
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_android_amd64:
     name: 'build: grizzly-android'
@@ -1228,7 +1238,7 @@ jobs:
       name: grizzly-android
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_reduce_monitor_amd64:
     name: 'build: grizzly-reduce-monitor'
@@ -1242,7 +1252,7 @@ jobs:
       name: grizzly-reduce-monitor
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_win_amd64:
     name: 'build: grizzly-win'
@@ -1256,7 +1266,7 @@ jobs:
       name: grizzly-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_js_tests_distiller_amd64:
     name: 'build: js-tests-distiller'
@@ -1282,7 +1292,7 @@ jobs:
       name: js-tests-distiller
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_langfuzz_amd64:
     name: 'build: langfuzz'
@@ -1328,7 +1338,7 @@ jobs:
       name: langfuzz
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_langfuzz_arm64:
     name: 'build: langfuzz'
@@ -1374,7 +1384,7 @@ jobs:
       name: langfuzz
       arch: arm64
       runner: ubuntu-24.04-arm
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_libfuzzer_amd64:
     name: 'build: libfuzzer'
@@ -1430,7 +1440,7 @@ jobs:
       name: libfuzzer
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_neqo_coverage_amd64:
     name: 'build: neqo-coverage'
@@ -1474,7 +1484,7 @@ jobs:
       name: neqo-coverage
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nss_corpus_update_amd64:
     name: 'build: nss-corpus-update'
@@ -1498,7 +1508,7 @@ jobs:
       name: nss-corpus-update
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nss_coverage_amd64:
     name: 'build: nss-coverage'
@@ -1542,7 +1552,7 @@ jobs:
       name: nss-coverage
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nyx_amd64:
     name: 'build: nyx'
@@ -1590,7 +1600,7 @@ jobs:
       name: nyx
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_nyx_ipc_manager:
     name: 'service_test: nyx ipc manager'
@@ -1606,7 +1616,7 @@ jobs:
       name: nyx_ipc_manager
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_orion:
     name: 'service_test: orion'
@@ -1622,35 +1632,7 @@ jobs:
       name: orion
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_orion_builder_amd64:
-    name: 'build: orion-builder'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_builder_amd64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: orion-builder
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_orion_builder_arm64:
-    name: 'build: orion-builder'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_builder_arm64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: orion-builder
-      arch: arm64
-      runner: ubuntu-24.04-arm
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_orion_decision:
     name: 'service_test: orion-decision'
@@ -1676,7 +1658,7 @@ jobs:
       name: orion-decision
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_orion_decision_amd64:
     name: 'build: orion-decision'
@@ -1695,7 +1677,7 @@ jobs:
       name: orion-decision
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_prefmonitor_amd64:
     name: 'build: prefmonitor'
@@ -1716,7 +1698,7 @@ jobs:
       name: prefmonitor
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_amd64:
     name: 'build: site-scout'
@@ -1742,7 +1724,7 @@ jobs:
       name: site-scout
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_android_amd64:
     name: 'build: site-scout-android'
@@ -1758,7 +1740,7 @@ jobs:
       name: site-scout-android
       arch: amd64
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_win_amd64:
     name: 'build: site-scout-win'
@@ -1772,7 +1754,7 @@ jobs:
       name: site-scout-win
       arch: amd64
       runner: windows-2025
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_symbol_filter:
     name: 'service_test: symbol-filter'
@@ -1796,7 +1778,7 @@ jobs:
       name: symbol-filter
       arch: ''
       runner: ubuntu-24.04
-      revision: ${{ github.sha }}
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   graph-result:
     name: Orion graph result
@@ -1843,8 +1825,6 @@ jobs:
     - build_nss_corpus_update_amd64
     - build_nss_coverage_amd64
     - build_nyx_amd64
-    - build_orion_builder_amd64
-    - build_orion_builder_arm64
     - build_orion_decision_amd64
     - build_prefmonitor_amd64
     - build_site_scout_amd64
@@ -1924,7 +1904,8 @@ jobs:
     - graph-result
     - publish-docker
     if: always() && !cancelled() && needs.graph-result.result == 'success' && (needs.publish-docker.result
-      == 'success' || needs.plan.outputs.selected_docker_jobs == '[]') && fromJSON(needs.plan.outputs.plan_json).publish
+      == 'success' || needs.plan.outputs.selected_docker_jobs == '[]') && github.event_name
+      != 'pull_request' && github.ref == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -1932,7 +1913,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       with:
-        ref: ${{ github.sha }}
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
@@ -1959,6 +1940,7 @@ jobs:
     - plan
     - publication-manifest
     if: always() && !cancelled() && needs.publication-manifest.result == 'success'
+      && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
       && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     permissions:
@@ -1972,7 +1954,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       with:
-        ref: ${{ github.sha }}
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
@@ -2039,8 +2021,8 @@ jobs:
     - plan
     - graph-result
     if: always() && !cancelled() && needs.graph-result.result == 'success' && needs.plan.outputs.selected_docker_jobs
-      != '[]' && fromJSON(needs.plan.outputs.plan_json).publish && vars.ORION_DOCKER_PUBLISH
-      == 'true'
+      != '[]' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+      && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     environment: dockerhub
     concurrency:
@@ -2052,7 +2034,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
       with:
-        ref: ${{ github.sha }}
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
@@ -2067,7 +2049,7 @@ jobs:
     - name: Reject stale branch publication
       env:
         GITHUB_TOKEN: ${{ github.token }}
-        ORION_REVISION: ${{ github.sha }}
+        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         ORION_BRANCH: ${{ github.ref_name }}
       run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
         --branch "$ORION_BRANCH" --revision "$ORION_REVISION"

@@ -31,6 +31,7 @@ tasks:
               python -m orion_decision.gha_publish decision --github-action "$GITHUB_ACTION" --task-group "$TASK_ID"
       scopes:
         - queue:create-task:highest:proj-fuzzing/orion-gha-publish
+        - queue:create-task:project:none
         - queue:route:index.project.fuzzing.orion.*
         - queue:scheduler-id:taskcluster-github
       metadata:

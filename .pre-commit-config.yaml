@@ -107,14 +107,6 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^services/orion-decision/.*
-      - id: orion-builder-lint
-        name: Run linters for orion_builder
-        entry: bash -c 'cd services/orion-builder && exec tox -e lint'
-        language: system
-        require_serial: true
-        pass_filenames: false
-        types: [python]
-        files: ^services/orion-builder/.*
       - id: nyx-ipc-manager-lint
         name: Run linters for nyx-ipc-manager
         entry: bash -c 'cd services/nyx/nyx_ipc_manager && exec tox -e lint'

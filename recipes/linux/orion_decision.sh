@@ -43,10 +43,6 @@ case "${1-install}" in
     rm -rf "$tmp"
     ;;
   test)
-    decision --help
     orion-check --help
-    ci-decision --help
-    ci-check --help
-    ci-launch --help
     ;;
 esac
