@@ -14,7 +14,14 @@ from yaml import safe_dump
 
 from .gha_plan import job_id
 from .git import GitRepo
-from .orion import Service, Services, ServiceTestOnly, ToxServiceTest
+from .orion import (
+    Service,
+    ServiceHomebrew,
+    ServiceMsys,
+    Services,
+    ServiceTestOnly,
+    ToxServiceTest,
+)
 
 WORKFLOW = Path(".github/workflows/orion.yml")
 HEADER = """# GENERATED FILE — DO NOT EDIT.
@@ -33,6 +40,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         *,
         object_name: str,
         object_arch: str | None = None,
+        runner: str = "ubuntu-24.04",
     ) -> None:
         if job in jobs:
             raise ValueError(f"Generated workflow job id collision: {job}")
@@ -60,6 +68,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 "operation": kind.replace("_", "-"),
                 "name": name,
                 "arch": arch or "",
+                "runner": runner,
                 "revision": "${{ github.sha }}",
                 "plan_json": "${{ needs.plan.outputs.plan_json }}",
             },
@@ -141,6 +150,15 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 "build",
                 object_name=service.name,
                 object_arch=arch,
+                runner=(
+                    "windows-2025"
+                    if isinstance(service, ServiceMsys)
+                    else "macos-15-intel"
+                    if isinstance(service, ServiceHomebrew)
+                    else "ubuntu-24.04-arm"
+                    if arch == "arm64"
+                    else "ubuntu-24.04"
+                ),
             )
 
     graph_job_ids = sorted(jobs)
@@ -194,13 +212,16 @@ def render_workflow(services: Services) -> str:
                 }
             }
         },
-        "permissions": {"contents": "read"},
+        "permissions": {"actions": "read", "contents": "read"},
         "jobs": {
             "plan": {
                 "name": "Plan Orion graph",
                 "runs-on": "ubuntu-latest",
                 "outputs": {
                     "selected_jobs": "${{ steps.plan.outputs.selected_jobs }}",
+                    "selected_docker_jobs": (
+                        "${{ steps.plan.outputs.selected_docker_jobs }}"
+                    ),
                     "plan_json": "${{ steps.plan.outputs.plan_json }}",
                 },
                 "steps": [
@@ -219,24 +240,115 @@ def render_workflow(services: Services) -> str:
                         "id": "plan",
                         "env": {
                             "ORION_FORCE_SERVICES": "${{ inputs.force_services }}",
+                            "ORION_REVISION": "${{ github.sha }}",
+                            "ORION_EVENT": "${{ github.event_name }}",
+                            "ORION_BRANCH": "${{ github.ref_name }}",
+                            "ORION_BASE_REVISION": "${{ vars.ORION_BASE_REVISION }}",
                         },
                         "run": (
                             "plan=$(python -m orion_decision.gha_plan --repo . "
-                            "--revision '${{ github.sha }}' "
-                            "--event '${{ github.event_name }}' "
-                            "--branch '${{ github.ref_name }}' "
-                            "--base-revision '${{ vars.ORION_BASE_REVISION }}' "
+                            '--revision "$ORION_REVISION" '
+                            '--event "$ORION_EVENT" '
+                            '--branch "$ORION_BRANCH" '
+                            '--base-revision "$ORION_BASE_REVISION" '
                             '--force-services "$ORION_FORCE_SERVICES")\n'
                             'echo "plan_json=$plan" >> "$GITHUB_OUTPUT"\n'
                             'selected=$(python -c "import json,sys; '
                             "print(json.dumps(json.load(sys.stdin)['selected_jobs'], "
                             "separators=(',', ':')))\" <<< \"$plan\")\n"
-                            'echo "selected_jobs=$selected" >> "$GITHUB_OUTPUT"'
+                            'echo "selected_jobs=$selected" >> "$GITHUB_OUTPUT"\n'
+                            'docker_selected=$(python -c "import json,sys; '
+                            "print(json.dumps(json.load(sys.stdin)['selected_docker_jobs']))"
+                            '" <<< "$plan")\n'
+                            'echo "selected_docker_jobs=$docker_selected" '
+                            '>> "$GITHUB_OUTPUT"'
                         ),
                     },
                 ],
             },
             **jobs,
+            "publish-docker": {
+                "name": "Publish Orion Docker manifests",
+                "needs": ["plan", "result"],
+                "if": (
+                    "always() && !cancelled() && needs.result.result == 'success' && "
+                    "needs.plan.outputs.selected_docker_jobs != '[]' && "
+                    "fromJSON(needs.plan.outputs.plan_json).publish && "
+                    "vars.ORION_DOCKER_PUBLISH == 'true'"
+                ),
+                "runs-on": "ubuntu-24.04",
+                "environment": "dockerhub",
+                "concurrency": {
+                    "group": "orion-docker-latest-${{ github.ref }}",
+                    "cancel-in-progress": False,
+                },
+                "permissions": {"actions": "read", "contents": "read"},
+                "steps": [
+                    {
+                        "uses": "actions/checkout@v5",
+                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                    },
+                    {
+                        "uses": "actions/setup-python@v6",
+                        "with": {"python-version": "3.13"},
+                    },
+                    {"run": "python -m pip install -e services/orion-decision"},
+                    {
+                        "name": "Write plan and install zstd",
+                        "env": {
+                            "ORION_PLAN_JSON": "${{ needs.plan.outputs.plan_json }}"
+                        },
+                        "run": (
+                            "printf '%s' \"$ORION_PLAN_JSON\" > "
+                            '"$RUNNER_TEMP/plan.json"\n'
+                            "sudo apt-get update && sudo apt-get install --yes zstd"
+                        ),
+                    },
+                    {
+                        "name": "Reject stale branch publication",
+                        "env": {
+                            "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_REVISION": "${{ github.sha }}",
+                            "ORION_BRANCH": "${{ github.ref_name }}",
+                        },
+                        "run": (
+                            "python -m orion_decision.gha_run check-head "
+                            '--repository "$GITHUB_REPOSITORY" '
+                            '--branch "$ORION_BRANCH" '
+                            '--revision "$ORION_REVISION"'
+                        ),
+                    },
+                    {"uses": "docker/setup-buildx-action@v3"},
+                    {
+                        "uses": "docker/login-action@v3",
+                        "with": {
+                            "username": "${{ vars.DOCKERHUB_USERNAME }}",
+                            "password": "${{ secrets.DOCKERHUB_TOKEN }}",
+                        },
+                    },
+                    {
+                        "name": "Push staging images and publish latest manifests",
+                        "env": {"GITHUB_TOKEN": "${{ github.token }}"},
+                        "run": (
+                            "python -m orion_decision.gha_run publish "
+                            '--repo . --plan-file "$RUNNER_TEMP/plan.json"'
+                        ),
+                    },
+                    {
+                        "name": "Record published image digests",
+                        "uses": "actions/upload-artifact@v5",
+                        "with": {
+                            "name": (
+                                "orion-published-image-digests-${{ github.run_id }}"
+                                "-${{ github.run_attempt }}"
+                            ),
+                            "path": "${{ runner.temp }}/published-images.json",
+                            "if-no-files-found": "error",
+                            "retention-days": 90,
+                        },
+                    },
+                ],
+            },
         },
     }
     return HEADER + safe_dump(workflow, sort_keys=False, allow_unicode=True)
