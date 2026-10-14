@@ -173,6 +173,7 @@ def build_plan(
     force_services: list[str] | None = None,
     expired_services: list[str] | None = None,
     main_branch: str = "master",
+    baseline_from_taskcluster: bool = False,
 ) -> dict[str, Any]:
     """Build a plan for the checked-out revision without mutating git state."""
     repo = GitRepo.from_existing(repo_path)
@@ -182,6 +183,13 @@ def build_plan(
             f"Requested revision {revision!r} does not match "
             f"checkout {actual_revision!r}"
         )
+    state: dict[str, Any] = {"base_revision": None, "expired_services": []}
+    if baseline_from_taskcluster and event in {"push", "schedule", "workflow_dispatch"}:
+        from .gha_publish import publication_state
+
+        state = publication_state()
+        base_revision = base_revision or state["base_revision"]
+        expired_services = list(expired_services or []) + state["expired_services"]
     graph = Services(repo)
     previous_graph = None
     snapshot_temp_dir = None
@@ -253,6 +261,8 @@ def build_plan(
             "publish": publish,
             "changed_paths": sorted(path.as_posix() for path in changed_paths),
             "full_rebuild_reason": full_rebuild_reason,
+            "baseline_revision": base_revision,
+            "expired_services": sorted(set(expired_services or [])),
         }
     )
     if full_rebuild_reason:
@@ -273,6 +283,7 @@ def main() -> None:
     parser.add_argument("--force-service", action="append", default=[])
     parser.add_argument("--force-services", default="")
     parser.add_argument("--expired-service", action="append", default=[])
+    parser.add_argument("--baseline-from-taskcluster", action="store_true")
     args = parser.parse_args()
     plan = build_plan(
         args.repo,
@@ -283,6 +294,7 @@ def main() -> None:
         force_services=args.force_service
         + [name for name in args.force_services.split(",") if name],
         expired_services=args.expired_service,
+        baseline_from_taskcluster=args.baseline_from_taskcluster,
     )
     print(json.dumps(plan, sort_keys=True, separators=(",", ":")))
 

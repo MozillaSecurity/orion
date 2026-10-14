@@ -41,7 +41,8 @@ def _archive_name(name: str, arch: str) -> str:
 
 def _artifact_name(name: str, arch: str) -> str:
     """Match the reusable workflow's exact upload-artifact name."""
-    return f"orion-build-{name}-{arch}"
+    attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+    return f"orion-build-{name}-{arch}-{attempt}"
 
 
 def _verify(repo: Path, revision: str, plan: dict[str, Any], selected_id: str) -> None:

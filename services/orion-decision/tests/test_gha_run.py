@@ -108,8 +108,8 @@ def test_selected_dependency_uses_current_run_archive(tmp_path, monkeypatch) -> 
 
     assert current_run == [
         (
-            "orion-build-base-amd64",
-            tmp_path / "runner/dependencies/orion-build-base-amd64",
+            "orion-build-base-amd64-1",
+            tmp_path / "runner/dependencies/orion-build-base-amd64-1",
         )
     ]
     assert indexed == []
@@ -213,7 +213,7 @@ def test_dependency_artifact_name_preserves_service_punctuation(tmp_path, monkey
         runner_temp=tmp_path / "runner",
     )
 
-    assert artifact_names == ["orion-build-base.service-amd64"]
+    assert artifact_names == ["orion-build-base.service-amd64-1"]
 
 
 def test_prepare_rejects_revision_mismatch_before_dependency_io(tmp_path, monkeypatch):
@@ -473,7 +473,7 @@ def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
 
     def download_artifact(name: str, destination: Path) -> None:
         destination.mkdir(parents=True)
-        (destination / f"multi-{name.rsplit('-', 1)[-1]}.tar.zst").touch()
+        (destination / f"multi-{name.rsplit('-', 2)[-2]}.tar.zst").touch()
 
     def run(command: list[str], **_kwargs: Any) -> None:
         commands.append(command)
