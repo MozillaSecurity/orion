@@ -1,34 +1,46 @@
 == Orion Decision ==
 
-This project includes code for handling Github Webhook events,
-scheduling Orion build/test tasks, scheduling CI build matrix,
-and running CI tasks.
+Orion Decision loads the repository's service graph, plans affected work, and runs
+the GitHub Actions plan, build, and Taskcluster publication commands. The checked-in
+`.github/workflows/orion.yml` is generated from tracked service definitions, Dockerfiles,
+service inputs, and recipes. Regenerate it with:
 
-It is also used by pre-commit hooks to validate the Orion service
-definitions and CI build matrix definitions.
+```sh
+cd services/orion-decision
+tox -e gha-workflow
+```
 
-### GitHub Actions publication workers
+The pre-commit hook rewrites the generated workflow. CI checks that the committed
+workflow matches the service graph. Protect `master` with the required status check
+**Orion workflow result**.
 
-The publication workflow uses the Taskcluster provisioner `proj-fuzzing` and
-dedicated worker type `orion-gha-publish`. Configure the Taskcluster worker
-client `project/fuzzing/worker-orion-gha-publish-gh` for that worker type, and
-store its access token as the repository Actions secret
-`TASKCLUSTER_ACCESS_TOKEN`. The client needs the generic-worker claim, resolve,
-reclaim, and worker-id scopes for `proj-fuzzing/orion-gha-publish`, plus task
-creation and route scopes for `index.project.fuzzing.orion.*` used by the
-artifact import tasks. The `taskcluster-github` decision role needs permission
-to create `proj-fuzzing/orion-gha-publish` tasks and route those publication
-tasks to the Orion index namespace.
+GitHub Actions runs pull requests, pushes to `master`, a Monday 05:00 UTC expiry
+check, and manual runs. Manual runs accept comma-separated service names in
+`force_services`. Pull requests build and test the head commit without publication
+credentials. Successful `master` runs push architecture images and a combined Docker
+`latest` manifest, then import per-architecture Docker archives and native archives
+into Taskcluster's existing artifact and index routes.
 
-The workflow also needs Actions artifact read access, supplied by its scoped
-`GITHUB_TOKEN`. That token is written to a mode-0600 file for generic-worker
-tasks; raw GitHub tokens are removed from the worker environment. Docker image
-publication uses the existing `DOCKERHUB_USERNAME` variable and
-`DOCKERHUB_TOKEN` secret. Keep the `ORION_DOCKER_PUBLISH` repository variable
-enabled only when the Docker `:latest` manifest push is authorized; selected
-native-only publication runs do not need Docker credentials.
+Configure the `dockerhub` GitHub environment with variable `DOCKERHUB_USERNAME` and
+secret `DOCKERHUB_TOKEN`. Configure repository Actions secret
+`TASKCLUSTER_ACCESS_TOKEN` for client `project/fuzzing/worker-orion-gha-publish-gh`.
+The worker client needs `queue:claim-work:proj-fuzzing/orion-gha-publish`,
+`queue:worker-id:proj-fuzzing/gh-orion-publish-*`,
+`queue:create-task:highest:proj-fuzzing/orion-gha-publish`,
+`queue:create-task:project:none`, `queue:scheduler-id:taskcluster-github`, and
+`queue:route:index.project.fuzzing.orion.*`. Task resolution and reclaim use the
+claimed task's task credentials. The `.taskcluster.yml` decision role also needs
+`queue:create-task:highest:proj-fuzzing/orion-gha-publish`,
+`queue:create-task:project:none`, `queue:scheduler-id:taskcluster-github`, and
+`queue:route:index.project.fuzzing.orion.*`.
 
-The import task IDs bind a repository, revision, workflow run, attempt, and
-artifact key. A failed-job-only workflow rerun may not have a complete set of
-attempt-specific build artifacts; in that case manifest creation fails with a
-rerun-all instruction instead of importing artifacts from another attempt.
+The workflow's `GITHUB_TOKEN` has Actions artifact read access and contents read
+access. The worker writes that token to a mode-0600 file for import tasks and strips
+the raw credential from generic-worker's environment and logs. Import task IDs bind
+the repository, revision, workflow run, attempt, and exact artifact. A failed-job-only
+workflow rerun without a full set of attempt artifacts stops with instructions to
+rerun all jobs.
+
+Disable the old external Taskcluster Orion expiry cron hook when enabling this
+workflow; otherwise both schedulers may rebuild expiring environments. The legacy
+hook is external deployment configuration and is not changed by this repository.

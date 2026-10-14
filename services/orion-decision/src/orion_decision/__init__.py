@@ -15,14 +15,8 @@ TASKCLUSTER_ROOT_URL = os.getenv(
 Taskcluster = TaskclusterConfig(TASKCLUSTER_ROOT_URL)
 
 ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
-CRON_PERIOD = timedelta(days=7)
 DEADLINE = timedelta(days=1)
-MAX_RUN_TIME = timedelta(hours=1)
 OWNER_EMAIL = "truber@mozilla.com"
 PROVISIONER_ID = "proj-fuzzing"
 SOURCE_URL = "https://github.com/MozillaSecurity/orion"
-WORKER_TYPE = "ci"
-WORKER_TYPE_ARM64 = "ci-arm64"
-WORKER_TYPE_MSYS = "ci-windows"
-WORKER_TYPE_BREW = "ci-osx"
 del os, relativedelta, timedelta, TaskclusterConfig
