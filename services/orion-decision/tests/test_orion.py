@@ -274,6 +274,7 @@ def test_service_deps(
 
 
 def test_services_force_dirty(mocker: MockerFixture) -> None:
+    """Verify a changed service marks its weakly dependent recipe dirty."""
     root = FIXTURES / "services10"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
     repo.path = root
