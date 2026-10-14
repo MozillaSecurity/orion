@@ -6,7 +6,7 @@
 import argparse
 import os
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from logging import WARNING, getLogger
@@ -46,6 +46,20 @@ OWNER_EMAIL = "truber@mozilla.com"
 REDUCTION_MAX_RUN_TIME = timedelta(hours=6)
 REDUCTION_DEADLINE = timedelta(days=1)
 REDUCTION_EXPIRES = timedelta(weeks=4)
+DEFAULT_REDUCTION_STRATEGIES = (
+    "list",
+    "lines",
+    "markup-tree-sitter",
+    "css-merge",
+    "css-tree-sitter",
+    "js-control-flow",
+    "js-remove-wrappers",
+    "js-inline-functions",
+    "js-proxy-inline",
+    "js-unused-vars",
+    "lines",
+    "prettier",
+)
 SCHEDULER_ID = "fuzzing"
 PROVISIONER_ID = "proj-fuzzing"
 DESCRIPTION = """*DO NOT EDIT* - This resource is configured automatically.
@@ -304,6 +318,7 @@ class ReductionMonitor(ReductionWorkflow):
         dry_run (bool): Scan CrashManager, but don't queue any work in Taskcluster
                         nor update any state in CrashManager.
         tool_list (list(str)): List of Grizzly tools to look for crashes under.
+        strategies (list(str)): Ordered reduction strategies passed to workers.
     """
 
     def __init__(
@@ -311,6 +326,9 @@ class ReductionMonitor(ReductionWorkflow):
     ) -> None:
         super().__init__()
         self.dry_run = dry_run
+        self.strategies = os.environ.get(
+            "REDUCE_STRATEGY", " ".join(DEFAULT_REDUCTION_STRATEGIES)
+        ).split()
         self._gw_image_artifact_tasks: dict[str, str] = {}
         if self.dry_run:
             LOG.warning("*** DRY RUN -- SIMULATION ONLY ***")
@@ -328,7 +346,11 @@ class ReductionMonitor(ReductionWorkflow):
         return self._gw_image_artifact_tasks[namespace]
 
     def queue_reduction_task(
-        self, os_name: str, crash: ReducibleCrash, no_repro_quality: int | None
+        self,
+        os_name: str,
+        crash: ReducibleCrash,
+        no_repro_quality: int | None,
+        strategies: Sequence[str] | None = None,
     ) -> None:
         """Queue a reduction task in Taskcluster.
 
@@ -336,6 +358,9 @@ class ReductionMonitor(ReductionWorkflow):
             os_name: The OS to schedule the task for.
             crash: The CrashManager crash to reduce.
             no_repro_quality: testcase Quality to set in FM if crash doesn't repro
+            strategies: Override the monitor's configured reduction strategies.
+                None uses REDUCE_STRATEGY or DEFAULT_REDUCTION_STRATEGIES.
+                An empty sequence uses Grizzly's built-in defaults.
         """
         if self.dry_run:
             return None
@@ -374,6 +399,10 @@ class ReductionMonitor(ReductionWorkflow):
         )
         if no_repro_quality is not None:
             task["payload"]["env"]["NO_REPRO_QUALITY"] = str(no_repro_quality)
+        if strategies is None:
+            strategies = self.strategies
+        if strategies:
+            task["payload"]["env"]["REDUCE_STRATEGY"] = " ".join(strategies)
         queue = Taskcluster.get_service("queue")
         LOG.info("Creating task %s: %s", task_id, task["metadata"]["name"])
         try:
