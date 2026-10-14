@@ -110,17 +110,15 @@ jobs:
         if: inputs.operation == 'build' && runner.os == 'Linux'
         uses: actions/upload-artifact@v5
         with:
-          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}
-          path: |
-            ${{ runner.temp }}/${{ inputs.name }}-${{ inputs.arch }}.tar.zst
-            ${{ runner.temp }}/build.json
+          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/${{ inputs.name }}-${{ inputs.arch }}.tar.zst
           if-no-files-found: error
           retention-days: 7
       - name: Upload native environment artifact
         if: inputs.operation == 'build' && runner.os != 'Linux'
         uses: actions/upload-artifact@v5
         with:
-          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}
+          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}-${{ github.run_attempt }}
           path: ${{ steps.prepare.outputs.native_archive }}
           if-no-files-found: error
           retention-days: 7

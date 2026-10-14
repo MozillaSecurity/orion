@@ -147,7 +147,8 @@ def test_root_lint_is_in_acyclic_graph_and_remains_an_aggregate_job(
         visit(name)
 
     assert job_id("service_test", "orion") in jobs
-    assert job_id("service_test", "orion") in jobs["result"]["needs"]
+    assert job_id("service_test", "orion") in jobs["graph-result"]["needs"]
+    assert "graph-result" in jobs["result"]["needs"]
 
 
 def test_duplicate_sanitized_job_ids_are_rejected(tmp_path: Path) -> None:

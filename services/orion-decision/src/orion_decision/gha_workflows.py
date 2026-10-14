@@ -162,8 +162,8 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
             )
 
     graph_job_ids = sorted(jobs)
-    jobs["result"] = {
-        "name": "Orion workflow result",
+    jobs["graph-result"] = {
+        "name": "Orion graph result",
         "needs": ["plan", *graph_job_ids],
         "if": "always()",
         "runs-on": "ubuntu-latest",
@@ -190,6 +190,42 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "ORION_SELECTED_JOBS": "${{ needs.plan.outputs.selected_jobs }}",
                     "ORION_JOB_RESULTS": "${{ toJSON(needs) }}",
                 },
+            }
+        ],
+    }
+    jobs["result"] = {
+        "name": "Orion workflow result",
+        "needs": [
+            "plan",
+            "graph-result",
+            "publication-manifest",
+            "publication-worker",
+        ],
+        "if": "always()",
+        "runs-on": "ubuntu-latest",
+        "steps": [
+            {
+                "name": "Require graph and publication success",
+                "env": {
+                    "ORION_GRAPH_RESULT": "${{ needs.graph-result.result }}",
+                    "ORION_PUBLISH": "${{ needs.plan.outputs.publish }}",
+                    "ORION_MANIFEST_RESULT": "${{ needs.publication-manifest.result }}",
+                    "ORION_WORKER_RESULT": "${{ needs.publication-worker.result }}",
+                },
+                "run": (
+                    "python - <<'PY'\n"
+                    "import os, sys\n"
+                    "if os.environ['ORION_GRAPH_RESULT'] != 'success':\n"
+                    "    sys.exit('Selected Orion graph jobs did not all succeed')\n"
+                    "if os.environ['ORION_PUBLISH'] == 'true':\n"
+                    "    if os.environ['ORION_MANIFEST_RESULT'] != 'success':\n"
+                    "        sys.exit('Taskcluster publication manifest "
+                    "was not created')\n"
+                    "    if os.environ['ORION_WORKER_RESULT'] != 'success':\n"
+                    "        sys.exit('Taskcluster artifact imports "
+                    "did not complete')\n"
+                    "PY"
+                ),
             }
         ],
     }
@@ -222,6 +258,7 @@ def render_workflow(services: Services) -> str:
                     "selected_docker_jobs": (
                         "${{ steps.plan.outputs.selected_docker_jobs }}"
                     ),
+                    "publish": "${{ steps.plan.outputs.publish }}",
                     "plan_json": "${{ steps.plan.outputs.plan_json }}",
                 },
                 "steps": [
@@ -243,7 +280,9 @@ def render_workflow(services: Services) -> str:
                             "ORION_REVISION": "${{ github.sha }}",
                             "ORION_EVENT": "${{ github.event_name }}",
                             "ORION_BRANCH": "${{ github.ref_name }}",
-                            "ORION_BASE_REVISION": "${{ vars.ORION_BASE_REVISION }}",
+                            "ORION_BASE_REVISION": (
+                                "${{ github.event.pull_request.base.sha }}"
+                            ),
                         },
                         "run": (
                             "plan=$(python -m orion_decision.gha_plan --repo . "
@@ -251,6 +290,7 @@ def render_workflow(services: Services) -> str:
                             '--event "$ORION_EVENT" '
                             '--branch "$ORION_BRANCH" '
                             '--base-revision "$ORION_BASE_REVISION" '
+                            "--baseline-from-taskcluster "
                             '--force-services "$ORION_FORCE_SERVICES")\n'
                             'echo "plan_json=$plan" >> "$GITHUB_OUTPUT"\n'
                             'selected=$(python -c "import json,sys; '
@@ -261,17 +301,182 @@ def render_workflow(services: Services) -> str:
                             "print(json.dumps(json.load(sys.stdin)['selected_docker_jobs']))"
                             '" <<< "$plan")\n'
                             'echo "selected_docker_jobs=$docker_selected" '
-                            '>> "$GITHUB_OUTPUT"'
+                            '>> "$GITHUB_OUTPUT"\n'
+                            'publish=$(python -c "import json,sys; '
+                            "print(str(json.load(sys.stdin)['publish']).lower())"
+                            '" <<< "$plan")\n'
+                            'echo "publish=$publish" >> "$GITHUB_OUTPUT"'
                         ),
                     },
                 ],
             },
             **jobs,
+            "publication-manifest": {
+                "name": "Create Taskcluster publication manifest",
+                "needs": ["plan", "graph-result", "publish-docker"],
+                "if": (
+                    "always() && !cancelled() && "
+                    "needs.graph-result.result == 'success' && "
+                    "(needs.publish-docker.result == 'success' || "
+                    "needs.plan.outputs.selected_docker_jobs == '[]') && "
+                    "fromJSON(needs.plan.outputs.plan_json).publish"
+                ),
+                "runs-on": "ubuntu-24.04",
+                "permissions": {"actions": "read", "contents": "read"},
+                "steps": [
+                    {
+                        "uses": "actions/checkout@v5",
+                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                    },
+                    {
+                        "uses": "actions/setup-python@v6",
+                        "with": {"python-version": "3.13"},
+                    },
+                    {"run": "python -m pip install -e services/orion-decision"},
+                    {
+                        "name": "Write plan and bind exact build artifacts",
+                        "env": {
+                            "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_PLAN_JSON": "${{ needs.plan.outputs.plan_json }}",
+                        },
+                        "run": (
+                            "printf '%s' \"$ORION_PLAN_JSON\" "
+                            '> "$RUNNER_TEMP/plan.json"\n'
+                            "python -m orion_decision.gha_publish manifest "
+                            '--plan-file "$RUNNER_TEMP/plan.json" '
+                            '--output "$RUNNER_TEMP/manifest.json"'
+                        ),
+                    },
+                    {
+                        "uses": "actions/upload-artifact@v5",
+                        "with": {
+                            "name": (
+                                "orion-publication-manifest-${{ github.run_id }}-"
+                                "${{ github.run_attempt }}"
+                            ),
+                            "path": "${{ runner.temp }}/manifest.json",
+                            "if-no-files-found": "error",
+                            "retention-days": 7,
+                        },
+                    },
+                ],
+            },
+            "publication-worker": {
+                "name": "Import Taskcluster publication artifacts",
+                "needs": ["plan", "publication-manifest"],
+                "if": (
+                    "always() && !cancelled() && "
+                    "needs.publication-manifest.result == 'success' && "
+                    "fromJSON(needs.plan.outputs.plan_json).publish"
+                ),
+                "runs-on": "ubuntu-24.04",
+                "permissions": {"actions": "read", "contents": "read"},
+                "env": {
+                    "TASKCLUSTER_ACCESS_TOKEN": (
+                        "${{ secrets.TASKCLUSTER_ACCESS_TOKEN }}"
+                    ),
+                    "TASKCLUSTER_CLIENT_ID": (
+                        "project/fuzzing/worker-orion-gha-publish-gh"
+                    ),
+                    "TASKCLUSTER_ROOT_URL": (
+                        "https://community-tc.services.mozilla.com"
+                    ),
+                    "TC_WORKER_ID": (
+                        "gh-orion-publish-${{ github.run_id }}-"
+                        "${{ github.run_attempt }}"
+                    ),
+                },
+                "steps": [
+                    {
+                        "uses": "actions/checkout@v5",
+                        "with": {"ref": "${{ github.sha }}", "fetch-depth": 0},
+                    },
+                    {
+                        "uses": "actions/setup-python@v6",
+                        "with": {"python-version": "3.13"},
+                    },
+                    {"run": "python -m pip install -e services/orion-decision"},
+                    {
+                        "uses": "actions/download-artifact@v5",
+                        "with": {
+                            "name": (
+                                "orion-publication-manifest-${{ github.run_id }}-"
+                                "${{ github.run_attempt }}"
+                            ),
+                            "path": "${{ runner.temp }}/orion-publication",
+                        },
+                    },
+                    {
+                        "name": "Write protected GitHub token file",
+                        "env": {
+                            "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_GITHUB_TOKEN_FILE": (
+                                "${{ runner.temp }}/orion-github-token"
+                            ),
+                        },
+                        "run": (
+                            "umask 077\n"
+                            "printf '%s' \"$GITHUB_TOKEN\" "
+                            '> "$ORION_GITHUB_TOKEN_FILE"\n'
+                            'chmod 0600 "$ORION_GITHUB_TOKEN_FILE"'
+                        ),
+                    },
+                    {
+                        "name": "Ensure exact import tasks exist",
+                        "env": {
+                            "ORION_RUN_ID": "${{ github.run_id }}",
+                            "ORION_RUN_ATTEMPT": "${{ github.run_attempt }}",
+                        },
+                        "run": (
+                            "# Webhook decisions can run before manifest upload.\n"
+                            "# Deterministic IDs make this idempotent for every run.\n"
+                            "group=$(python -c 'from orion_decision.gha_publish "
+                            "import artifact_task_id; "
+                            "import os; print(artifact_task_id("
+                            'os.environ["ORION_RUN_ID"], '
+                            'os.environ["ORION_RUN_ATTEMPT"], "decision"))\')\n'
+                            "python -m orion_decision.gha_publish schedule "
+                            "--manifest-file "
+                            '"$RUNNER_TEMP/orion-publication/manifest.json" '
+                            '--task-group "$group"'
+                        ),
+                    },
+                    {
+                        "name": "Run worker and require every exact import",
+                        "env": {
+                            "ORION_GITHUB_TOKEN_FILE": (
+                                "${{ runner.temp }}/orion-github-token"
+                            ),
+                        },
+                        "run": (
+                            "set +e\n"
+                            ".github/scripts/start-worker.sh > "
+                            '"$RUNNER_TEMP/generic-worker.log" 2>&1 &\n'
+                            "worker_pid=$!\n"
+                            "python -m orion_decision.gha_publish monitor "
+                            "--manifest-file "
+                            '"$RUNNER_TEMP/orion-publication/manifest.json" '
+                            "--timeout 3600 > "
+                            '"$RUNNER_TEMP/publication-monitor.log" 2>&1 &\n'
+                            "monitor_pid=$!\n"
+                            'wait "$monitor_pid"\n'
+                            "monitor_status=$?\n"
+                            'if kill -0 "$worker_pid" 2>/dev/null; then '
+                            'kill -TERM "$worker_pid"; fi\n'
+                            'wait "$worker_pid"\n'
+                            'cat "$RUNNER_TEMP/generic-worker.log"\n'
+                            'cat "$RUNNER_TEMP/publication-monitor.log"\n'
+                            'exit "$monitor_status"'
+                        ),
+                    },
+                ],
+            },
             "publish-docker": {
                 "name": "Publish Orion Docker manifests",
-                "needs": ["plan", "result"],
+                "needs": ["plan", "graph-result"],
                 "if": (
-                    "always() && !cancelled() && needs.result.result == 'success' && "
+                    "always() && !cancelled() && "
+                    "needs.graph-result.result == 'success' && "
                     "needs.plan.outputs.selected_docker_jobs != '[]' && "
                     "fromJSON(needs.plan.outputs.plan_json).publish && "
                     "vars.ORION_DOCKER_PUBLISH == 'true'"
