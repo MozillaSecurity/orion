@@ -1,0 +1,126 @@
+name: Orion graph operation
+
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+      arch:
+        type: string
+        required: true
+      revision:
+        type: string
+        required: true
+      runner:
+        type: string
+        required: true
+      plan_json:
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: read
+jobs:
+  run:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install decision package
+        run: python -m pip install -e services/orion-decision
+      - name: Write plan and install zstd
+        env:
+          ORION_PLAN_JSON: ${{ inputs.plan_json }}
+        shell: bash
+        run: |
+          printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            sudo apt-get update
+            sudo apt-get install --yes zstd
+          elif [[ "$RUNNER_OS" == macOS ]]; then
+            brew install zstd
+          fi
+      - name: Set up Docker Buildx
+        if: runner.os == 'Linux' && inputs.operation != 'service-test'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+      - name: Prepare graph operation
+        id: prepare
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: >-
+          python -m orion_decision.gha_run prepare
+          --operation "${{ inputs.operation }}"
+          --name "${{ inputs.name }}"
+          --arch "${{ inputs.arch }}"
+          --revision "${{ inputs.revision }}"
+          --plan-file "$RUNNER_TEMP/plan.json"
+      - name: Build recipe test image
+        if: inputs.operation == 'recipe-test'
+        id: recipe
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.prepare.outputs.build_context }}
+          file: ${{ steps.prepare.outputs.build_file }}
+          tags: ${{ steps.prepare.outputs.build_tags }}
+          build-args: ${{ steps.prepare.outputs.build_args }}
+          load: true
+      - name: Run service tests
+        if: inputs.operation == 'service-test'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: >-
+          python -m orion_decision.gha_run run
+          --operation service-test
+          --name "${{ inputs.name }}"
+          --revision "${{ inputs.revision }}"
+          --plan-file "$RUNNER_TEMP/plan.json"
+      - name: Build Docker service
+        if: inputs.operation == 'build' && runner.os == 'Linux'
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.prepare.outputs.build_context }}
+          file: ${{ steps.prepare.outputs.build_file }}
+          tags: ${{ steps.prepare.outputs.build_tags }}
+          load: true
+          platforms: linux/${{ inputs.arch }}
+          provenance: false
+      - name: Finalize Docker archive
+        if: inputs.operation == 'build' && runner.os == 'Linux'
+        run: >-
+          python -m orion_decision.gha_run finalize
+          --name "${{ inputs.name }}"
+          --arch "${{ inputs.arch }}"
+          --image-tar "${{ steps.prepare.outputs.image_tar }}"
+          --digest "${{ steps.build.outputs.digest }}"
+      - name: Upload Docker build artifact
+        if: inputs.operation == 'build' && runner.os == 'Linux'
+        uses: actions/upload-artifact@v5
+        with:
+          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}
+          path: |
+            ${{ runner.temp }}/${{ inputs.name }}-${{ inputs.arch }}.tar.zst
+            ${{ runner.temp }}/build.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload native environment artifact
+        if: inputs.operation == 'build' && runner.os != 'Linux'
+        uses: actions/upload-artifact@v5
+        with:
+          name: orion-build-${{ inputs.name }}-${{ inputs.arch }}
+          path: ${{ steps.prepare.outputs.native_archive }}
+          if-no-files-found: error
+          retention-days: 7

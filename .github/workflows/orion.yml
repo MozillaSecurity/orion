@@ -10,6 +10,7 @@ name: Orion
         required: false
         type: string
 permissions:
+  actions: read
   contents: read
 jobs:
   plan:
@@ -17,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       selected_jobs: ${{ steps.plan.outputs.selected_jobs }}
+      selected_docker_jobs: ${{ steps.plan.outputs.selected_docker_jobs }}
       plan_json: ${{ steps.plan.outputs.plan_json }}
     steps:
     - uses: actions/checkout@v5
@@ -30,16 +32,25 @@ jobs:
     - id: plan
       env:
         ORION_FORCE_SERVICES: ${{ inputs.force_services }}
-      run: 'plan=$(python -m orion_decision.gha_plan --repo . --revision ''${{ github.sha
-        }}'' --event ''${{ github.event_name }}'' --branch ''${{ github.ref_name }}''
-        --base-revision ''${{ vars.ORION_BASE_REVISION }}'' --force-services "$ORION_FORCE_SERVICES")
+        ORION_REVISION: ${{ github.sha }}
+        ORION_EVENT: ${{ github.event_name }}
+        ORION_BRANCH: ${{ github.ref_name }}
+        ORION_BASE_REVISION: ${{ vars.ORION_BASE_REVISION }}
+      run: 'plan=$(python -m orion_decision.gha_plan --repo . --revision "$ORION_REVISION"
+        --event "$ORION_EVENT" --branch "$ORION_BRANCH" --base-revision "$ORION_BASE_REVISION"
+        --force-services "$ORION_FORCE_SERVICES")
 
         echo "plan_json=$plan" >> "$GITHUB_OUTPUT"
 
         selected=$(python -c "import json,sys; print(json.dumps(json.load(sys.stdin)[''selected_jobs''],
         separators=('','', '':'')))" <<< "$plan")
 
-        echo "selected_jobs=$selected" >> "$GITHUB_OUTPUT"'
+        echo "selected_jobs=$selected" >> "$GITHUB_OUTPUT"
+
+        docker_selected=$(python -c "import json,sys; print(json.dumps(json.load(sys.stdin)[''selected_docker_jobs'']))"
+        <<< "$plan")
+
+        echo "selected_docker_jobs=$docker_selected" >> "$GITHUB_OUTPUT"'
   recipe_test_cleanup_sh:
     name: 'recipe_test: cleanup.sh'
     needs:
@@ -51,6 +62,7 @@ jobs:
       operation: recipe-test
       name: cleanup.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_common_sh:
@@ -64,6 +76,7 @@ jobs:
       operation: recipe-test
       name: common.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_dbgsyms_sh:
@@ -79,6 +92,7 @@ jobs:
       operation: recipe-test
       name: dbgsyms.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_ff32_deps_sh:
@@ -99,6 +113,7 @@ jobs:
       operation: recipe-test
       name: ff32_deps.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fluentbit_sh:
@@ -114,6 +129,7 @@ jobs:
       operation: recipe-test
       name: fluentbit.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzfetch_sh:
@@ -129,6 +145,7 @@ jobs:
       operation: recipe-test
       name: fuzzfetch.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzing_tc_sh:
@@ -144,6 +161,7 @@ jobs:
       operation: recipe-test
       name: fuzzing_tc.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fuzzmanager_sh:
@@ -159,6 +177,7 @@ jobs:
       operation: recipe-test
       name: fuzzmanager.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_gcov_9_sh:
@@ -174,6 +193,7 @@ jobs:
       operation: recipe-test
       name: gcov-9.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_grcov_sh:
@@ -192,6 +212,7 @@ jobs:
       operation: recipe-test
       name: grcov.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_gsutil_sh:
@@ -207,6 +228,7 @@ jobs:
       operation: recipe-test
       name: gsutil.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_htop_sh:
@@ -222,6 +244,7 @@ jobs:
       operation: recipe-test
       name: htop.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_js32_deps_sh:
@@ -242,6 +265,7 @@ jobs:
       operation: recipe-test
       name: js32_deps.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_cov_sh:
@@ -260,6 +284,7 @@ jobs:
       operation: recipe-test
       name: llvm-cov.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_symbolizer_sh:
@@ -278,6 +303,7 @@ jobs:
       operation: recipe-test
       name: llvm-symbolizer.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_llvm_sh:
@@ -293,6 +319,7 @@ jobs:
       operation: recipe-test
       name: llvm.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_nodejs_sh:
@@ -308,6 +335,7 @@ jobs:
       operation: recipe-test
       name: nodejs.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_orion_decision_sh:
@@ -323,6 +351,7 @@ jobs:
       operation: recipe-test
       name: orion_decision.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_pernosco_submit_sh:
@@ -338,6 +367,7 @@ jobs:
       operation: recipe-test
       name: pernosco_submit.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_poetry_sh:
@@ -353,6 +383,7 @@ jobs:
       operation: recipe-test
       name: poetry.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_prefpicker_sh:
@@ -368,6 +399,7 @@ jobs:
       operation: recipe-test
       name: prefpicker.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_radamsa_sh:
@@ -383,6 +415,7 @@ jobs:
       operation: recipe-test
       name: radamsa.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_rr_sh:
@@ -401,6 +434,7 @@ jobs:
       operation: recipe-test
       name: rr.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_sentry_sh:
@@ -416,6 +450,7 @@ jobs:
       operation: recipe-test
       name: sentry.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_taskcluster_sh:
@@ -431,6 +466,7 @@ jobs:
       operation: recipe-test
       name: taskcluster.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_taskgraph_m_c_latest_sh:
@@ -446,6 +482,7 @@ jobs:
       operation: recipe-test
       name: taskgraph-m-c-latest.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_uv_sh:
@@ -461,6 +498,7 @@ jobs:
       operation: recipe-test
       name: uv.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_worker_sh:
@@ -476,6 +514,7 @@ jobs:
       operation: recipe-test
       name: worker.sh
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_afl_amd64:
@@ -538,6 +577,7 @@ jobs:
       operation: build
       name: afl
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_bugmon_amd64:
@@ -565,6 +605,7 @@ jobs:
       operation: build
       name: bugmon
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_bugmon_win_amd64:
@@ -578,6 +619,7 @@ jobs:
       operation: build
       name: bugmon-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_java_11_amd64:
@@ -601,6 +643,7 @@ jobs:
       operation: build
       name: ci-java-11
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_18_amd64:
@@ -614,6 +657,7 @@ jobs:
       operation: build
       name: ci-node-18
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_18_win_amd64:
@@ -627,6 +671,7 @@ jobs:
       operation: build
       name: ci-node-18-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_20_amd64:
@@ -640,6 +685,7 @@ jobs:
       operation: build
       name: ci-node-20
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_20_win_amd64:
@@ -653,6 +699,7 @@ jobs:
       operation: build
       name: ci-node-20-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_22_amd64:
@@ -666,6 +713,7 @@ jobs:
       operation: build
       name: ci-node-22
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_node_22_win_amd64:
@@ -679,6 +727,7 @@ jobs:
       operation: build
       name: ci-node-22-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_amd64:
@@ -692,6 +741,7 @@ jobs:
       operation: build
       name: ci-py-310
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_osx_amd64:
@@ -705,6 +755,7 @@ jobs:
       operation: build
       name: ci-py-310-osx
       arch: amd64
+      runner: macos-15-intel
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_310_win_amd64:
@@ -718,6 +769,7 @@ jobs:
       operation: build
       name: ci-py-310-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_amd64:
@@ -731,6 +783,7 @@ jobs:
       operation: build
       name: ci-py-311
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_osx_amd64:
@@ -744,6 +797,7 @@ jobs:
       operation: build
       name: ci-py-311-osx
       arch: amd64
+      runner: macos-15-intel
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_311_win_amd64:
@@ -757,6 +811,7 @@ jobs:
       operation: build
       name: ci-py-311-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_amd64:
@@ -770,6 +825,7 @@ jobs:
       operation: build
       name: ci-py-312
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_osx_amd64:
@@ -783,6 +839,7 @@ jobs:
       operation: build
       name: ci-py-312-osx
       arch: amd64
+      runner: macos-15-intel
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_312_win_amd64:
@@ -796,6 +853,7 @@ jobs:
       operation: build
       name: ci-py-312-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_amd64:
@@ -809,6 +867,7 @@ jobs:
       operation: build
       name: ci-py-313
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_osx_amd64:
@@ -822,6 +881,7 @@ jobs:
       operation: build
       name: ci-py-313-osx
       arch: amd64
+      runner: macos-15-intel
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_ci_py_313_win_amd64:
@@ -835,6 +895,7 @@ jobs:
       operation: build
       name: ci-py-313-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_covdiff_amd64:
@@ -858,6 +919,7 @@ jobs:
       operation: build
       name: covdiff
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_coverage_revision_amd64:
@@ -873,6 +935,7 @@ jobs:
       operation: build
       name: coverage-revision
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_domino_web_tests_amd64:
@@ -896,6 +959,7 @@ jobs:
       operation: build
       name: domino-web-tests
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_funfuzz_amd64:
@@ -944,6 +1008,7 @@ jobs:
       operation: build
       name: funfuzz
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzilli_amd64:
@@ -992,6 +1057,7 @@ jobs:
       operation: build
       name: fuzzilli
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzilli_arm64:
@@ -1040,6 +1106,7 @@ jobs:
       operation: build
       name: fuzzilli
       arch: arm64
+      runner: ubuntu-24.04-arm
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_fuzzing_decision:
@@ -1063,6 +1130,7 @@ jobs:
       operation: service-test
       name: fuzzing-decision
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_fuzzing_decision_amd64:
@@ -1078,6 +1146,7 @@ jobs:
       operation: build
       name: fuzzing-decision
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_amd64:
@@ -1131,6 +1200,7 @@ jobs:
       operation: build
       name: grizzly
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_android_amd64:
@@ -1151,6 +1221,7 @@ jobs:
       operation: build
       name: grizzly-android
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_reduce_monitor_amd64:
@@ -1164,6 +1235,7 @@ jobs:
       operation: build
       name: grizzly-reduce-monitor
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_grizzly_win_amd64:
@@ -1177,6 +1249,7 @@ jobs:
       operation: build
       name: grizzly-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_js_tests_distiller_amd64:
@@ -1202,6 +1275,7 @@ jobs:
       operation: build
       name: js-tests-distiller
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_langfuzz_amd64:
@@ -1247,6 +1321,7 @@ jobs:
       operation: build
       name: langfuzz
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_langfuzz_arm64:
@@ -1292,6 +1367,7 @@ jobs:
       operation: build
       name: langfuzz
       arch: arm64
+      runner: ubuntu-24.04-arm
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_libfuzzer_amd64:
@@ -1347,6 +1423,7 @@ jobs:
       operation: build
       name: libfuzzer
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_neqo_coverage_amd64:
@@ -1390,6 +1467,7 @@ jobs:
       operation: build
       name: neqo-coverage
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nss_corpus_update_amd64:
@@ -1413,6 +1491,7 @@ jobs:
       operation: build
       name: nss-corpus-update
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nss_coverage_amd64:
@@ -1456,6 +1535,7 @@ jobs:
       operation: build
       name: nss-coverage
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_nyx_amd64:
@@ -1503,6 +1583,7 @@ jobs:
       operation: build
       name: nyx
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_nyx_ipc_manager:
@@ -1518,6 +1599,7 @@ jobs:
       operation: service-test
       name: nyx_ipc_manager
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_orion:
@@ -1533,6 +1615,7 @@ jobs:
       operation: service-test
       name: orion
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_orion_builder_amd64:
@@ -1546,6 +1629,7 @@ jobs:
       operation: build
       name: orion-builder
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_orion_builder_arm64:
@@ -1559,6 +1643,7 @@ jobs:
       operation: build
       name: orion-builder
       arch: arm64
+      runner: ubuntu-24.04-arm
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_orion_decision:
@@ -1569,6 +1654,7 @@ jobs:
     - build_ci_py_311_amd64
     - build_ci_py_312_amd64
     - build_ci_py_313_amd64
+    - recipe_test_common_sh
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
       'service_test_orion_decision') && (needs.build_ci_py_310_amd64.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
@@ -1576,27 +1662,33 @@ jobs:
       'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
       && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64'))
+      'build_ci_py_313_amd64')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: service-test
       name: orion-decision
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_orion_decision_amd64:
     name: 'build: orion-decision'
     needs:
     - plan
+    - recipe_test_common_sh
     - service_test_orion_decision
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_decision_amd64') && (needs.service_test_orion_decision.result ==
-      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'service_test_orion_decision'))
+      'build_orion_decision_amd64') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.service_test_orion_decision.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_orion_decision'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
       name: orion-decision
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_prefmonitor_amd64:
@@ -1617,6 +1709,7 @@ jobs:
       operation: build
       name: prefmonitor
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_amd64:
@@ -1642,6 +1735,7 @@ jobs:
       operation: build
       name: site-scout
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_android_amd64:
@@ -1657,6 +1751,7 @@ jobs:
       operation: build
       name: site-scout-android
       arch: amd64
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   build_site_scout_win_amd64:
@@ -1670,6 +1765,7 @@ jobs:
       operation: build
       name: site-scout-win
       arch: amd64
+      runner: windows-2025
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_symbol_filter:
@@ -1693,6 +1789,7 @@ jobs:
       operation: service-test
       name: symbol-filter
       arch: ''
+      runner: ubuntu-24.04
       revision: ${{ github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   result:
@@ -1792,3 +1889,58 @@ jobs:
       env:
         ORION_SELECTED_JOBS: ${{ needs.plan.outputs.selected_jobs }}
         ORION_JOB_RESULTS: ${{ toJSON(needs) }}
+  publish-docker:
+    name: Publish Orion Docker manifests
+    needs:
+    - plan
+    - result
+    if: always() && !cancelled() && needs.result.result == 'success' && needs.plan.outputs.selected_docker_jobs
+      != '[]' && fromJSON(needs.plan.outputs.plan_json).publish && vars.ORION_DOCKER_PUBLISH
+      == 'true'
+    runs-on: ubuntu-24.04
+    environment: dockerhub
+    concurrency:
+      group: orion-docker-latest-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - name: Write plan and install zstd
+      env:
+        ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+      run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+
+        sudo apt-get update && sudo apt-get install --yes zstd'
+    - name: Reject stale branch publication
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_REVISION: ${{ github.sha }}
+        ORION_BRANCH: ${{ github.ref_name }}
+      run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
+        --branch "$ORION_BRANCH" --revision "$ORION_REVISION"
+    - uses: docker/setup-buildx-action@v3
+    - uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Push staging images and publish latest manifests
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: python -m orion_decision.gha_run publish --repo . --plan-file "$RUNNER_TEMP/plan.json"
+    - name: Record published image digests
+      uses: actions/upload-artifact@v5
+      with:
+        name: orion-published-image-digests-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        path: ${{ runner.temp }}/published-images.json
+        if-no-files-found: error
+        retention-days: 90

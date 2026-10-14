@@ -16,7 +16,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 from .git import GitRepo
-from .orion import Services, ServiceTestOnly
+from .orion import ServiceHomebrew, ServiceMsys, Services, ServiceTestOnly
 
 
 class _SnapshotRepo(GitRepo):
@@ -132,6 +132,13 @@ def plan_selection(
         "services": dirty_services,
         "recipes": dirty_recipes,
         "selected_jobs": sorted(selected_job_ids(services)),
+        "selected_docker_jobs": sorted(
+            job_id("build", service.name, arch)
+            for service in services.values()
+            if service.dirty
+            and not isinstance(service, (ServiceTestOnly, ServiceMsys, ServiceHomebrew))
+            for arch in service.archs
+        ),
         "reasons": reasons,
     }
 
