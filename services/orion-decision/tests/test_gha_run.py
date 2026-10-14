@@ -6,7 +6,9 @@
 import io
 import json
 import os
+import signal
 import subprocess
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -16,6 +18,11 @@ from yaml import safe_load
 
 from orion_decision import gha_run
 from orion_decision.gha_plan import job_id
+from orion_decision.gha_workflows import render_workflow
+from orion_decision.git import GitRepo
+from orion_decision.orion import Services
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def git(repo: Path, *args: str) -> str:
@@ -423,10 +430,18 @@ def test_native_preparation_runs_checked_out_setup_without_rewriting_it(
     command_text = "\n".join(" ".join(command) for command, _ in commands)
     assert expected_setup_fragment in command_text
     if kind == "msys":
-        assert sum(command[:2] == ["cmd.exe", "/c"] for command, _ in commands) == 2
         assert any(
-            "bash.exe" in command[0] and any(arg.startswith("-l") for arg in command)
+            command[:2] == ["C:/msys64/usr/bin/bsdtar.exe", "-xf"]
             for command, _ in commands
+        )
+        assert sum(command[:2] == ["cmd.exe", "/c"] for command, _ in commands) == 2
+        bash_commands = [command for command, _ in commands if "bash.exe" in command[0]]
+        assert any(
+            any(arg.startswith("-l") for arg in command) for command in bash_commands
+        )
+        assert any(
+            "-c" in command and expected_setup_fragment in " ".join(command)
+            for command in bash_commands
         )
         envs = [kwargs.get("env", {}) for _, kwargs in commands]
         setup_env = next(env for env in envs if env.get("MSYSTEM") == "MINGW64")
@@ -527,6 +542,7 @@ def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
 
 def test_stale_publication_is_rejected_against_current_branch_head(monkeypatch):
     """Reject publication when the workflow revision is no longer the branch head."""
+    monkeypatch.delenv("GITHUB_RUN_ID", raising=False)
     monkeypatch.setattr(
         gha_run.subprocess,
         "run",
@@ -535,6 +551,187 @@ def test_stale_publication_is_rejected_against_current_branch_head(monkeypatch):
 
     with pytest.raises(RuntimeError, match="Refusing stale publication"):
         gha_run.reject_stale_publication("org/orion", "master", "older-revision")
+
+
+def test_same_sha_older_workflow_run_is_rejected(monkeypatch):
+    """Reject an older workflow run when a newer run targets the same revision."""
+    monkeypatch.setenv("GITHUB_RUN_ID", "100")
+    responses = [
+        SimpleNamespace(stdout="same-revision\n"),
+        SimpleNamespace(
+            stdout=json.dumps(
+                {
+                    "workflow_runs": [
+                        {
+                            "id": 200,
+                            "path": ".github/workflows/orion.yml@refs/heads/master",
+                            "head_branch": "master",
+                            "event": "push",
+                        },
+                        {
+                            "id": 999,
+                            "path": ".github/workflows/orion.yml@refs/pull/1/merge",
+                            "head_branch": "master",
+                            "event": "pull_request",
+                        },
+                    ]
+                }
+            )
+        ),
+        SimpleNamespace(stdout=json.dumps({"workflow_runs": []})),
+        SimpleNamespace(stdout=json.dumps({"workflow_runs": []})),
+    ]
+    calls: list[list[str]] = []
+
+    def run(command, **_kwargs):
+        calls.append(command)
+        return responses.pop(0)
+
+    monkeypatch.setattr(gha_run.subprocess, "run", run)
+    with pytest.raises(RuntimeError, match="Start a new workflow_dispatch run"):
+        gha_run.reject_stale_publication("org/orion", "master", "same-revision")
+    assert len(calls) == 4
+    assert all("actions/workflows/orion.yml/runs" in call[-1] for call in calls[1:])
+
+
+def test_latest_eligible_run_paginates_until_it_finds_exact_workflow(monkeypatch):
+    """Search pages until the latest eligible run matches the exact workflow."""
+    pages = [
+        {"workflow_runs": [{"id": 1, "path": ".github/workflows/other.yml"}] * 100},
+        {
+            "workflow_runs": [
+                {
+                    "id": 250,
+                    "path": ".github/workflows/orion.yml@refs/heads/master",
+                    "head_branch": "master",
+                    "event": "push",
+                },
+                {
+                    "id": 275,
+                    "path": ".github/workflows/orion.yml@refs/heads/master",
+                    "head_branch": "master",
+                    "event": "push",
+                },
+            ]
+        },
+        {"workflow_runs": []},
+        {"workflow_runs": []},
+    ]
+    calls: list[list[str]] = []
+
+    def run(command, **_kwargs):
+        calls.append(command)
+        return SimpleNamespace(stdout=json.dumps(pages.pop(0)))
+
+    monkeypatch.setattr(gha_run.subprocess, "run", run)
+    assert gha_run.latest_eligible_publication_run_id("org/orion", "master") == 275
+    assert "page=2" in calls[1][-1]
+
+
+@pytest.mark.parametrize(
+    ("signal_name", "expected_marker", "expected_exit"),
+    [("USR1", "int", 0), ("TERM", "term", 143)],
+)
+def test_worker_wrapper_forwards_drain_and_cancel_signals(
+    tmp_path, signal_name, expected_marker, expected_exit
+):
+    """Forward drain and cancellation signals to the generic-worker process."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    curl = bin_dir / "curl"
+    curl.write_text(
+        "#!/bin/sh\n"
+        'case " $* " in *" --head "*) echo "location: tag/v1"; exit 0;; esac\n'
+        'while [ "$#" -gt 0 ]; do\n'
+        '  if [ "$1" = "-o" ]; then output="$2"; shift 2; else shift; fi\n'
+        "done\n"
+        'case "$output" in\n'
+        "  *generic-worker) cat > \"$output\" <<'WORKER'\n"
+        "#!/bin/sh\n"
+        'if [ "$1" = "new-ed25519-keypair" ]; then\n'
+        '  while [ "$#" -gt 0 ]; do\n'
+        '    if [ "$1" = "--file" ]; then touch "$2"; break; fi\n'
+        "    shift\n"
+        "  done\n"
+        "  exit 0\n"
+        "fi\n"
+        "exec python3 fake_worker.py\n"
+        "WORKER\n"
+        "    ;;\n"
+        '  *) printf "#!/bin/sh\\nexit 0\\n" > "$output";;\n'
+        "esac\n"
+    )
+    curl.chmod(0o755)
+    (tmp_path / "fake_worker.py").write_text(
+        "import signal\n"
+        "import time\n"
+        "from pathlib import Path\n"
+        "Path('ready').touch()\n"
+        "def drained(_signum, _frame):\n"
+        "    Path('draining').touch()\n"
+        "    time.sleep(1)\n"
+        "    Path('signal').write_text('int')\n"
+        "    raise SystemExit(68)\n"
+        "def cancelled(_signum, _frame):\n"
+        "    Path('signal').write_text('term')\n"
+        "    raise SystemExit(42)\n"
+        "signal.signal(signal.SIGINT, drained)\n"
+        "signal.signal(signal.SIGTERM, cancelled)\n"
+        "while True:\n"
+        "    time.sleep(0.05)\n"
+    )
+    token_file = tmp_path / "github-token"
+    token_file.write_text("test-token")
+    token_file.chmod(0o600)
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}:{os.environ['PATH']}",
+        "TASKCLUSTER_ACCESS_TOKEN": "tc-test-token",
+        "TC_WORKER_ID": "test-worker",
+        "ORION_GITHUB_TOKEN_FILE": str(token_file),
+        "RUNNER_TEMP": str(tmp_path),
+    }
+    wrapper = REPO_ROOT / ".github/scripts/start-worker.sh"
+    process = subprocess.Popen([str(wrapper)], cwd=tmp_path, env=env)
+    try:
+        deadline = time.monotonic() + 10
+        while not (tmp_path / "ready").exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert (tmp_path / "ready").exists()
+        process.send_signal(signal.SIGUSR1)
+        if signal_name == "TERM":
+            deadline = time.monotonic() + 5
+            while not (tmp_path / "draining").exists() and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert (tmp_path / "draining").exists()
+            process.send_signal(signal.SIGTERM)
+        assert process.wait(timeout=15) == expected_exit
+        assert (tmp_path / "signal").read_text().strip() == expected_marker
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+
+
+def test_worker_drainer_guards_native_only_publication_manifest(tmp_path):
+    """Allow native-only publication manifests to drain without Docker image digests."""
+    repo, _revision = make_repo(
+        tmp_path / "repo",
+        {"services/only/service.yaml": "name: only\ntype: test\n"},
+    )
+    workflow = safe_load(
+        render_workflow(Services(GitRepo.from_existing(repo))).split("\n", 3)[3]
+    )
+    steps = workflow["jobs"]["publication-manifest"]["steps"]
+    guard = next(
+        step for step in steps if "Reject stale publication" in step.get("name", "")
+    )
+    manifest_index = next(
+        index
+        for index, step in enumerate(steps)
+        if "gha_publish manifest" in step.get("run", "")
+    )
+    assert steps.index(guard) < manifest_index
 
 
 def test_service_build_uses_load_compatible_with_docker_save_export():

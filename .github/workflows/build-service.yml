@@ -28,6 +28,12 @@ jobs:
   run:
     runs-on: ${{ inputs.runner }}
     steps:
+      - name: Preserve LF line endings in Windows checkout
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.revision }}

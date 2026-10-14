@@ -84,14 +84,52 @@ env -i \
 worker_pid=$!
 # shellcheck disable=SC2329 # Called indirectly by the signal trap.
 stop_worker() {
+  trap '' TERM INT HUP USR1
   kill -TERM "$worker_pid" 2>/dev/null
+  ticks=0
+  while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 10 ]; do
+    sleep 1
+    ticks=$((ticks + 1))
+  done
+  kill -KILL "$worker_pid" 2>/dev/null
   wait "$worker_pid"
   exit 143
 }
+# shellcheck disable=SC2329 # Called indirectly by the USR1 signal trap.
+drain_worker() {
+  trap '' USR1
+  kill -INT "$worker_pid" 2>/dev/null
+  (
+    ticks=0
+    while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 3720 ]; do
+      sleep 1
+      ticks=$((ticks + 1))
+    done
+    if kill -0 "$worker_pid" 2>/dev/null; then
+      kill -TERM "$worker_pid" 2>/dev/null
+      ticks=0
+      while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 10 ]; do
+        sleep 1
+        ticks=$((ticks + 1))
+      done
+      kill -KILL "$worker_pid" 2>/dev/null
+    fi
+  ) &
+  drain_watchdog_pid=$!
+}
 trap stop_worker TERM INT HUP
+trap drain_worker USR1
 wait "$worker_pid"
 status=$?
-trap - TERM INT HUP
+if kill -0 "$worker_pid" 2>/dev/null; then
+  wait "$worker_pid"
+  status=$?
+fi
+trap - TERM INT HUP USR1
+if [ -n "${drain_watchdog_pid:-}" ]; then
+  kill -TERM "$drain_watchdog_pid" 2>/dev/null
+  wait "$drain_watchdog_pid" 2>/dev/null || :
+fi
 set -e
 case "$status" in
   0 | 68) exit 0 ;;

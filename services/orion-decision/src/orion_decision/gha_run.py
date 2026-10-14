@@ -167,7 +167,7 @@ def _native_build(service: ServiceMsys | ServiceHomebrew, repo: Path) -> Path:
             archive.open("wb") as output,
         ):
             shutil.copyfileobj(response, output)
-        _run(["tar", "-xJf", str(archive)], cwd=work)
+        _run(["C:/msys64/usr/bin/bsdtar.exe", "-xf", str(archive)], cwd=work)
         bash = work / "msys64" / "usr" / "bin" / "bash.exe"
         env = {
             **os.environ,
@@ -197,7 +197,7 @@ def _native_build(service: ServiceMsys | ServiceHomebrew, repo: Path) -> Path:
         _run(["cmd.exe", "/c", str(update_script)], cwd=work, env=env)
         _run(["cmd.exe", "/c", str(update_script)], cwd=work, env=env)
         _run(
-            [str(bash), "-lc", f"./orion/{service_path}/setup.sh"],
+            [str(bash), "-c", f"./orion/{service_path}/setup.sh"],
             cwd=work,
             env=env,
         )
@@ -451,6 +451,53 @@ def reject_stale_publication(repository: str, branch: str, revision: str) -> Non
             f"Refusing stale publication for {revision}; branch head is "
             f"{result.stdout.strip()}"
         )
+    current_run_id = os.environ.get("GITHUB_RUN_ID")
+    if not current_run_id:
+        raise RuntimeError("GITHUB_RUN_ID is required to publish Orion artifacts")
+
+    latest_run_id = latest_eligible_publication_run_id(repository, branch)
+    if latest_run_id is not None and int(current_run_id) < latest_run_id:
+        raise RuntimeError(
+            f"Refusing publication run {current_run_id}; newer eligible Orion "
+            f"workflow run {latest_run_id} exists. Start a new workflow_dispatch "
+            "run and select or force the services to publish."
+        )
+
+
+def latest_eligible_publication_run_id(repository: str, branch: str) -> int | None:
+    """Find the newest master publication run, excluding unrelated event types."""
+    latest: int | None = None
+    for event in ("push", "schedule", "workflow_dispatch"):
+        page = 1
+        while True:
+            result = subprocess.run(
+                [
+                    "gh",
+                    "api",
+                    f"repos/{repository}/actions/workflows/orion.yml/runs"
+                    f"?branch={branch}&event={event}&per_page=100&page={page}",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "GH_TOKEN": os.environ.get("GITHUB_TOKEN", "")},
+            )
+            runs = json.loads(result.stdout).get("workflow_runs", [])
+            found_event_run = False
+            for run in runs:
+                path = str(run.get("path", "")).split("@", 1)[0]
+                if (
+                    run.get("head_branch") == branch
+                    and run.get("event") == event
+                    and path == ".github/workflows/orion.yml"
+                ):
+                    run_id = int(run["id"])
+                    latest = run_id if latest is None else max(latest, run_id)
+                    found_event_run = True
+            if found_event_run or len(runs) < 100:
+                break
+            page += 1
+    return latest
 
 
 def main() -> None:
