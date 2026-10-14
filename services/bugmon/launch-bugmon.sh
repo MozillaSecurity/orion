@@ -42,21 +42,16 @@ case "$BUG_ACTION" in
     if [ "$BUG_ACTION" == "monitor" ]; then
       uv run bugmon-monitor "$ARTIFACT_DEST" "${CONFIRM_ARGS[@]}"
     else
-      PERNOSCO_USER="$(get-tc-secret pernosco-user)"
-      PERNOSCO_GROUP="$(get-tc-secret pernosco-group)"
-      PERNOSCO_USER_SECRET_KEY="$(get-tc-secret pernosco-secret)"
-      export PERNOSCO_USER PERNOSCO_GROUP PERNOSCO_USER_SECRET_KEY
-
-      TRACE_ARGS=()
-      if [ -v TRACE_ARTIFACT ]; then
-        TRACE_ARGS+=("--trace-artifact" "$TC_ARTIFACT_ROOT/$TRACE_ARTIFACT")
-      fi
-      uv run bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT" "${TRACE_ARGS[@]}"
+      uv run bugmon-report "$TC_ARTIFACT_ROOT/$PROCESSOR_ARTIFACT"
     fi
     ;;
   process)
     TRACE_ARGS=()
     if [ -v TRACE_ARTIFACT ]; then
+      PERNOSCO_USER="$(get-tc-secret pernosco-user)"
+      PERNOSCO_GROUP="$(get-tc-secret pernosco-group)"
+      PERNOSCO_USER_SECRET_KEY="$(get-tc-secret pernosco-secret)"
+      export PERNOSCO_USER PERNOSCO_GROUP PERNOSCO_USER_SECRET_KEY
       TRACE_ARGS+=("--trace-artifact" "$ARTIFACT_DEST/$TRACE_ARTIFACT")
     fi
 
