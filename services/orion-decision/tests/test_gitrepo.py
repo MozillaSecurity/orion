@@ -67,6 +67,7 @@ def test_existing() -> None:
 
 
 def test_retry(mocker: MockerFixture) -> None:
+    """Verify GitRepo retries failed git commands before raising."""
     sleep = mocker.patch("orion_decision.git.sleep", autospec=True)
     with pytest.raises(CalledProcessError):
         GitRepo(FIXTURES / "git-noexist", "main", "FETCH_HEAD")
@@ -74,6 +75,7 @@ def test_retry(mocker: MockerFixture) -> None:
 
 
 def test_refs() -> None:
+    """Verify GitRepo returns the repository's HEAD and branch refs."""
     repo = GitRepo(FIXTURES / "git03", "main", "FETCH_HEAD")
     try:
         refs = repo.refs()
