@@ -14,8 +14,11 @@ payload:
   command:
     - set HOME=%CD%
     - set ARTIFACTS=%CD%
-    - C:\cygwin\bin\curl.exe -sSL --connect-timeout 25 --fail --retry 5 "${msys_base_url}" -o msys2.tar.xz
-    - C:\cygwin\bin\tar.exe -I /bin/xz -xf msys2.tar.xz
+    - >-
+      "%SystemRoot%\System32\curl.exe" -sSL --connect-timeout 25 --fail --retry 5
+      "${msys_base_url}" -o msys2.tar.xz
+    # Use the worker's preinstalled MSYS2 bsdtar for XZ support.
+    - C:\tools\msys64\usr\bin\bsdtar.exe -xf msys2.tar.xz
     - del msys2.tar.xz
     - set PATH=%CD%\msys64\MINGW64\bin;%PATH%
     - set PATH=%CD%\msys64\usr\bin;%PATH%
