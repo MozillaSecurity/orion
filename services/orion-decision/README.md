@@ -27,17 +27,21 @@ Windows 2025 runners use their preinstalled MSYS2 `bsdtar` only to extract the
 downloaded bootstrap archive; native builds then use that downloaded MSYS2 runtime.
 
 Configure the `dockerhub` GitHub environment with variable `DOCKERHUB_USERNAME` and
-secret `DOCKERHUB_TOKEN`. Configure repository Actions secret
-`TASKCLUSTER_ACCESS_TOKEN` for client `project/fuzzing/worker-orion-gha-publish-gh`.
-The worker client needs `queue:claim-work:proj-fuzzing/orion-gha-publish`,
-`queue:worker-id:proj-fuzzing/gh-orion-publish-*`,
+secret `DOCKERHUB_TOKEN`. Configure the `communitytc` GitHub environment with
+variable `TASKCLUSTER_ROOT_URL` set to
+`https://community-tc.services.mozilla.com`, and secrets
+`TASKCLUSTER_CI_WORKER_ORION_GHA_ACCESS_TOKEN` for worker client
+`project/fuzzing/ci-worker-orion-gha`, which needs
+`assume:worker-id:proj-fuzzing/gh-orion-publish-*` and
+`assume:worker-pool:proj-fuzzing/orion-gha-publish` and
+`TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN` for publisher client
+`project/fuzzing/gh-orion-publisher`, which the GHA job uses to create import
+tasks and needs
 `queue:create-task:highest:proj-fuzzing/orion-gha-publish`,
 `queue:create-task:project:none`, `queue:scheduler-id:taskcluster-github`, and
 `queue:route:index.project.fuzzing.orion.*`. Task resolution and reclaim use the
-claimed task's task credentials. The `.taskcluster.yml` decision role also needs
-`queue:create-task:highest:proj-fuzzing/orion-gha-publish`,
-`queue:create-task:project:none`, `queue:scheduler-id:taskcluster-github`, and
-`queue:route:index.project.fuzzing.orion.*`.
+claimed task's task credentials. The `.taskcluster.yml` decision role needs the
+same task-creation scopes.
 
 The workflow's `GITHUB_TOKEN` has Actions artifact read access and contents read
 access. The worker writes that token to a mode-0600 file for import tasks and strips

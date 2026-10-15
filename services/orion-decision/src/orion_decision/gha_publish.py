@@ -35,7 +35,7 @@ from . import (
 
 QUEUE = "orion-gha-publish"
 WORKER = "orion-gha-publish"
-WORKER_CLIENT = "project/fuzzing/worker-orion-gha-publish-gh"
+WORKER_CLIENT = "project/fuzzing/ci-worker-orion-gha"
 MARKER_ROUTE = "project.fuzzing.orion.gha.master"
 MANIFEST_SCHEMA = 1
 
