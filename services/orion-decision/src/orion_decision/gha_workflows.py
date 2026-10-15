@@ -392,22 +392,8 @@ def render_workflow(services: Services) -> str:
                     "fromJSON(needs.plan.outputs.plan_json).publish"
                 ),
                 "runs-on": "ubuntu-24.04",
+                "environment": "communitytc",
                 "permissions": {"actions": "read", "contents": "read"},
-                "env": {
-                    "TASKCLUSTER_ACCESS_TOKEN": (
-                        "${{ secrets.TASKCLUSTER_ACCESS_TOKEN }}"
-                    ),
-                    "TASKCLUSTER_CLIENT_ID": (
-                        "project/fuzzing/worker-orion-gha-publish-gh"
-                    ),
-                    "TASKCLUSTER_ROOT_URL": (
-                        "https://community-tc.services.mozilla.com"
-                    ),
-                    "TC_WORKER_ID": (
-                        "gh-orion-publish-${{ github.run_id }}-"
-                        "${{ github.run_attempt }}"
-                    ),
-                },
                 "steps": [
                     {
                         "uses": "actions/checkout@v5",
@@ -446,6 +432,13 @@ def render_workflow(services: Services) -> str:
                     {
                         "name": "Ensure exact import tasks exist",
                         "env": {
+                            "TASKCLUSTER_ACCESS_TOKEN": (
+                                "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_"
+                                "ACCESS_TOKEN }}"
+                            ),
+                            "TASKCLUSTER_CLIENT_ID": (
+                                "project/fuzzing/gh-orion-publisher"
+                            ),
                             "ORION_RUN_ID": "${{ github.run_id }}",
                             "ORION_RUN_ATTEMPT": "${{ github.run_attempt }}",
                         },
@@ -466,15 +459,26 @@ def render_workflow(services: Services) -> str:
                     {
                         "name": "Run worker and require every exact import",
                         "env": {
+                            "ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN": (
+                                "${{ secrets.TASKCLUSTER_CI_WORKER_ORION_GHA_"
+                                "ACCESS_TOKEN }}"
+                            ),
+                            "TC_WORKER_ID": (
+                                "gh-orion-publish-${{ github.run_id }}-"
+                                "${{ github.run_attempt }}"
+                            ),
                             "ORION_GITHUB_TOKEN_FILE": (
                                 "${{ runner.temp }}/orion-github-token"
                             ),
                         },
                         "run": (
                             "set +e\n"
+                            'TASKCLUSTER_ACCESS_TOKEN="$ORION_TASKCLUSTER_WORKER_'
+                            'ACCESS_TOKEN" '
                             ".github/scripts/start-worker.sh > "
                             '"$RUNNER_TEMP/generic-worker.log" 2>&1 &\n'
                             "worker_pid=$!\n"
+                            "unset ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN\n"
                             "python -m orion_decision.gha_publish monitor "
                             "--manifest-file "
                             '"$RUNNER_TEMP/orion-publication/manifest.json" '

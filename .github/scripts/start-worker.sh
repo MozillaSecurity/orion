@@ -24,8 +24,7 @@
 TC_PROJECT=fuzzing
 TC_WORKER_TYPE=orion-gha-publish
 TC_IDLE_TIMEOUT=300
-TASKCLUSTER_ROOT_URL="https://community-tc.services.mozilla.com"
-TASKCLUSTER_CLIENT_ID="project/$TC_PROJECT/worker-$TC_WORKER_TYPE-gh"
+TASKCLUSTER_CLIENT_ID="project/fuzzing/ci-worker-orion-gha"
 
 # generic-worker logs its complete process environment. The allowlist leaves it
 # only the token-file path; raw GitHub and Taskcluster credentials never enter it.

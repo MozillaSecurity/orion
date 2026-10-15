@@ -1950,14 +1950,10 @@ jobs:
       && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
       && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
+    environment: communitytc
     permissions:
       actions: read
       contents: read
-    env:
-      TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_ACCESS_TOKEN }}
-      TASKCLUSTER_CLIENT_ID: project/fuzzing/worker-orion-gha-publish-gh
-      TASKCLUSTER_ROOT_URL: https://community-tc.services.mozilla.com
-      TC_WORKER_ID: gh-orion-publish-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
     - uses: actions/checkout@v5
       with:
@@ -1983,6 +1979,9 @@ jobs:
         chmod 0600 "$ORION_GITHUB_TOKEN_FILE"'
     - name: Ensure exact import tasks exist
       env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
         ORION_RUN_ID: ${{ github.run_id }}
         ORION_RUN_ATTEMPT: ${{ github.run_attempt }}
       run: '# Webhook decisions can run before manifest upload.
@@ -1997,12 +1996,19 @@ jobs:
         --task-group "$group"'
     - name: Run worker and require every exact import
       env:
+        ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_CI_WORKER_ORION_GHA_ACCESS_TOKEN
+          }}
+        TC_WORKER_ID: gh-orion-publish-${{ github.run_id }}-${{ github.run_attempt
+          }}
         ORION_GITHUB_TOKEN_FILE: ${{ runner.temp }}/orion-github-token
       run: 'set +e
 
-        .github/scripts/start-worker.sh > "$RUNNER_TEMP/generic-worker.log" 2>&1 &
+        TASKCLUSTER_ACCESS_TOKEN="$ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN" .github/scripts/start-worker.sh
+        > "$RUNNER_TEMP/generic-worker.log" 2>&1 &
 
         worker_pid=$!
+
+        unset ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN
 
         python -m orion_decision.gha_publish monitor --manifest-file "$RUNNER_TEMP/orion-publication/manifest.json"
         --timeout 3600 > "$RUNNER_TEMP/publication-monitor.log" 2>&1 &
