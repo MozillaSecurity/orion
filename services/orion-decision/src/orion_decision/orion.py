@@ -23,17 +23,22 @@ LOG = getLogger(__name__)
 
 
 def file_glob(
-    repo: GitRepo, path: Path, pattern: str = "**/*", relative: bool = False
+    repo: GitRepo,
+    path: Path,
+    pattern: str = "**/*",
+    relative: bool = False,
+    include_tests: bool = False,
 ) -> Iterator[Path]:
     """Run Path.glob for a given pattern, with filters applied.
-    Only files are yielded, not directories. Any file that looks like
-    it is in a test folder hierarchy (`tests`) will be skipped.
+    Only files are yielded, not directories. Files in test folder hierarchies
+    (`tests`) are skipped unless they are needed for dependency tracking.
 
     Arguments:
         repo: Git repository in which to search.
         path: Root for the glob expression.
         pattern: Glob expression.
         relative: Result will be relative to `path`.
+        include_tests: Include files below directories named `tests`.
 
     Yields:
         Result paths.
@@ -49,7 +54,7 @@ def file_glob(
         if not result.is_file() or result not in git_files:
             continue
         relative_result = result.relative_to(path)
-        if "tests" not in relative_result.parts:
+        if include_tests or "tests" not in relative_result.parts:
             if relative:
                 yield relative_result
             else:
@@ -430,10 +435,10 @@ class Services(dict):
         # make a list of all file paths
         file_strs = []
         assert self.root is not None
-        for file in file_glob(repo, self.root, relative=True):
+        for file in file_glob(repo, self.root, relative=True, include_tests=True):
             file_strs.append(str(file))
             # recipes are usually called using only their basename
-            if file.parts[0] == "recipes":
+            if file.parts[0] == "recipes" and "tests" not in file.parts[1:]:
                 file_strs.append(file.name)
                 assert file.name not in self.recipes
                 self.recipes[file.name] = Recipe(self.root / file)
@@ -453,10 +458,10 @@ class Services(dict):
             assert self.root is not None
             path = self.root / match
             part0 = Path(match).parts[0]
-            if (not path.is_file() and match in self.recipes) or part0 == "recipes":
-                assert path.name in self.recipes, (
-                    f"{type(obj).__name__} {obj.name} depends on unknown recipe {match}"
-                )
+            recipe_reference = (not path.is_file() and match in self.recipes) or (
+                part0 == "recipes" and path.name in self.recipes
+            )
+            if recipe_reference:
                 if path.name not in obj.recipe_deps:
                     obj.recipe_deps.add(path.name)
                     LOG.info(
@@ -465,6 +470,19 @@ class Services(dict):
                         obj.name,
                         path.name,
                     )
+            elif (
+                path.exists()
+                and part0 == "recipes"
+                and "tests" in Path(match).parts[1:]
+                and path not in obj.path_deps
+            ):
+                obj.path_deps.add(path)
+                LOG.info(
+                    "%s %s depends on Path %s",
+                    type(obj).__name__,
+                    obj.name,
+                    path.relative_to(self.root),
+                )
             elif path not in obj.path_deps and path.parent != self.root:
                 obj.path_deps.add(path)
                 LOG.info(
@@ -546,7 +564,7 @@ class Services(dict):
                 search_root = service.dockerfile.parent
 
             # scan service for references to files
-            for entry in file_glob(repo, search_root):
+            for entry in file_glob(repo, search_root, include_tests=True):
                 # add a direct dependency on any file in the service folder
                 if entry not in service.path_deps:
                     service.path_deps.add(entry)
@@ -602,32 +620,71 @@ class Services(dict):
                     stk.append(None)  # sentinel
                     stk.append(_adjacent(here))
 
-    def mark_changed_dirty(self, changed_paths: Iterable[Path]) -> None:
+    def mark_changed_dirty(
+        self,
+        changed_paths: Iterable[Path],
+        previous_services: Services | None = None,
+    ) -> None:
         """Find changed services and images that depend on them.
 
         Arguments:
             List of paths changed.
         """
+        changed_paths = list(changed_paths)
         stk = []
+        assert self.root is not None
+        if previous_services is not None:
+            assert previous_services.root is not None
+            previous_paths = [
+                previous_services.root
+                / (path.relative_to(self.root) if path.is_absolute() else path)
+                for path in changed_paths
+            ]
+            previous_services.mark_changed_dirty(previous_paths)
+            for name, old_service in previous_services.items():
+                if old_service.dirty and name in self:
+                    self[name].dirty = True
+                    stk.append(self[name])
+            for name, old_recipe in previous_services.recipes.items():
+                if old_recipe.dirty and name in self.recipes:
+                    self.recipes[name].dirty = True
+                    stk.append(self.recipes[name])
         # find first order dependencies
         for path in changed_paths:
+            absolute_path = path if path.is_absolute() else self.root / path
             for here in chain(self.values(), self.recipes.values()):
                 # shortcut if already marked dirty
                 if here.dirty:
                     continue
                 # check for path dependencies
-                if path in here.path_deps:
-                    assert self.root is not None
+                # A deleted file can no longer appear in path_deps. Match it to
+                # the owning service/recipe directory as a conservative fallback.
+                deleted_from_service = (
+                    isinstance(here, Service)
+                    and not absolute_path.exists()
+                    and here.root in absolute_path.parents
+                )
+                if absolute_path in here.path_deps or deleted_from_service:
                     LOG.warning(
                         "%s %s is dirty because Path %s is changed",
                         type(here).__name__,
                         here.name,
-                        path.relative_to(self.root),
+                        absolute_path.relative_to(self.root),
                     )
                     here.dirty = True
                     stk.append(here)
                     continue
         self.propagate_dirty(stk)
+
+    def force_dirty(self, service_names: Iterable[str]) -> None:
+        """Dirty selected services and propagate through all dependency edges."""
+        selected = []
+        for name in service_names:
+            service = self[name]
+            if not service.dirty:
+                service.dirty = True
+            selected.append(service)
+        self.propagate_dirty(selected)
 
     def propagate_dirty(self, dirty_svcs: Iterable[Service]) -> None:
         stk = list(dirty_svcs)

@@ -24,7 +24,7 @@ Orion is a build environment for containerized services we run in our Fuzzing in
 
 ### How does it operate?
 
-CI and CD are performed autonomously with Taskcluster and the [Orion Decision](https://github.com/MozillaSecurity/orion/tree/master/services/orion-decision) service. A build process gets initiated only if a file of a particular service has been modified, or if a parent image is modified. Each image is either tagged with the latest `revision` or `latest` before being published to the [Docker registry](https://hub.docker.com/u/mozillasecurity/) and as [Taskcluster artifacts](https://community-tc.services.mozilla.com/tasks/index/project.fuzzing.orion). For more information about each service take a look in the corresponding README.md of each service or check out the [Wiki](https://github.com/MozillaSecurity/orion/wiki) pages for FAQs and a Docker cheat sheet.
+GitHub Actions runs the generated Orion service dependency graph for pull requests, pushes to `master`, a weekly expiry check, and manual rebuilds. The graph selects only affected tests and builds. Successful `master` runs publish Docker `:latest` manifests and import service archives into Taskcluster, preserving the existing artifact and index routes used by downstream workers. See [Orion Decision](services/orion-decision/README.md) for repository and Taskcluster configuration. For service details, see each service README or the [Wiki](https://github.com/MozillaSecurity/orion/wiki).
 
 ### Build Instructions and Development
 
@@ -51,4 +51,4 @@ Running the fuzzer locally:
 
 #### Testing
 
-Before a build task is initiated in Taskcluster, each shell script and Dockerfile undergo a linting and testing process which may or may not abort each succeeding task. To ensure your Dockerfile passes, you are encouraged to install the [`pre-commit`](https://pre-commit.com/) hook (`pre-commit install`) prior to commit, and to run any tests defined in the service folder before pushing your commit.
+GitHub Actions runs the selected service tests and builds for each pull request and `master` push. To catch formatting and service definition issues locally, install the [`pre-commit`](https://pre-commit.com/) hooks with `pre-commit install` and run any tests defined in the service folder before pushing your commit.

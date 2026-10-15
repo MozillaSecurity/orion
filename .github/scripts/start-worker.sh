@@ -1,23 +1,40 @@
 #!/bin/sh -e
 
-[ -z "$TASKCLUSTER_ACCESS_TOKEN" ] && echo "Missing TASKCLUSTER_ACCESS_TOKEN" >&2 && exit 2
-[ -z "$TC_WORKER_ID" ] && echo "Missing TC_WORKER_ID" >&2 && exit 2
-
-set -x
+[ -n "$TASKCLUSTER_ACCESS_TOKEN" ] || {
+  echo "Missing TASKCLUSTER_ACCESS_TOKEN" >&2
+  exit 2
+}
+[ -n "$TC_WORKER_ID" ] || {
+  echo "Missing TC_WORKER_ID" >&2
+  exit 2
+}
+[ -n "$ORION_GITHUB_TOKEN_FILE" ] || {
+  echo "Missing ORION_GITHUB_TOKEN_FILE" >&2
+  exit 2
+}
+[ -f "$ORION_GITHUB_TOKEN_FILE" ] || {
+  echo "Missing protected GitHub token file" >&2
+  exit 2
+}
+[ "$(stat -c '%a' "$ORION_GITHUB_TOKEN_FILE")" = 600 ] || {
+  echo "GitHub token file must have mode 0600" >&2
+  exit 2
+}
 
 TC_PROJECT=fuzzing
-TC_WORKER_TYPE=ci-osx
+TC_WORKER_TYPE=orion-gha-publish
 TC_IDLE_TIMEOUT=300
+TASKCLUSTER_CLIENT_ID="project/fuzzing/ci-worker-orion-gha"
 
-TASKCLUSTER_ROOT_URL="https://community-tc.services.mozilla.com"
-TASKCLUSTER_CLIENT_ID="project/$TC_PROJECT/worker-$TC_WORKER_TYPE-gh"
-
+# generic-worker logs its complete process environment. The allowlist leaves it
+# only the token-file path; raw GitHub and Taskcluster credentials never enter it.
 set +x
 cat >worker.config <<EOF
 {
   "accessToken": "$TASKCLUSTER_ACCESS_TOKEN",
   "clientId": "$TASKCLUSTER_CLIENT_ID",
   "disableReboots": true,
+  "headlessTasks": true,
   "ed25519SigningKeyLocation": "worker.key",
   "idleTimeoutSecs": $TC_IDLE_TIMEOUT,
   "livelogExecutable": "$PWD/livelog",
@@ -36,27 +53,84 @@ cat >worker.config <<EOF
   "wstServerURL": "https://community-websocktunnel.services.mozilla.com"
 }
 EOF
-set -x
+chmod 0600 worker.config
 unset TASKCLUSTER_ACCESS_TOKEN
 
 retry_curl() {
   curl --connect-timeout 25 --fail --retry 5 --show-error --silent "$@"
 }
 
-# '|| kill $$' is to emulate 'set -o pipefail'
-TC_VERSION="$({ retry_curl --head "https://github.com/taskcluster/taskcluster/releases/latest" || kill "$$"; } | { grep ^location || kill "$$"; } | { sed 's/.\{1,\}\/tag\/\(.\{1,\}\)[[:space:]]\{1,\}/\1/' || kill "$$"; })"
-retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/generic-worker-insecure-darwin-amd64" -o generic-worker
-retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/livelog-darwin-amd64" -o livelog
-retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/taskcluster-proxy-darwin-amd64" -o taskcluster-proxy
+TC_VERSION="$(retry_curl --head "https://github.com/taskcluster/taskcluster/releases/latest" | sed -n 's#.*tag/\([^[:space:]]*\).*#\1#p' | tr -d '\r')"
+[ -n "$TC_VERSION" ] || {
+  echo "Could not resolve Taskcluster release" >&2
+  exit 2
+}
+retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/generic-worker-insecure-linux-amd64" -o generic-worker
+retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/livelog-linux-amd64" -o livelog
+retry_curl -L "https://github.com/taskcluster/taskcluster/releases/download/$TC_VERSION/taskcluster-proxy-linux-amd64" -o taskcluster-proxy
 chmod 0755 generic-worker livelog taskcluster-proxy
 
 ./generic-worker new-ed25519-keypair --file worker.key
-mkdir tasks
+mkdir -p tasks
 set +e
-./generic-worker run --config worker.config
-case $? in
-  0 | 68) ;;
-  *)
-    exit $?
-    ;;
+env -i \
+  HOME="$HOME" \
+  PATH="$PATH" \
+  TMPDIR="${TMPDIR:-/tmp}" \
+  RUNNER_TEMP="$RUNNER_TEMP" \
+  ORION_GITHUB_TOKEN_FILE="$ORION_GITHUB_TOKEN_FILE" \
+  ./generic-worker run --config worker.config &
+worker_pid=$!
+# shellcheck disable=SC2329 # Called indirectly by the signal trap.
+stop_worker() {
+  trap '' TERM INT HUP USR1
+  kill -TERM "$worker_pid" 2>/dev/null
+  ticks=0
+  while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 10 ]; do
+    sleep 1
+    ticks=$((ticks + 1))
+  done
+  kill -KILL "$worker_pid" 2>/dev/null
+  wait "$worker_pid"
+  exit 143
+}
+# shellcheck disable=SC2329 # Called indirectly by the USR1 signal trap.
+drain_worker() {
+  trap '' USR1
+  kill -INT "$worker_pid" 2>/dev/null
+  (
+    ticks=0
+    while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 3720 ]; do
+      sleep 1
+      ticks=$((ticks + 1))
+    done
+    if kill -0 "$worker_pid" 2>/dev/null; then
+      kill -TERM "$worker_pid" 2>/dev/null
+      ticks=0
+      while kill -0 "$worker_pid" 2>/dev/null && [ "$ticks" -lt 10 ]; do
+        sleep 1
+        ticks=$((ticks + 1))
+      done
+      kill -KILL "$worker_pid" 2>/dev/null
+    fi
+  ) &
+  drain_watchdog_pid=$!
+}
+trap stop_worker TERM INT HUP
+trap drain_worker USR1
+wait "$worker_pid"
+status=$?
+if kill -0 "$worker_pid" 2>/dev/null; then
+  wait "$worker_pid"
+  status=$?
+fi
+trap - TERM INT HUP USR1
+if [ -n "${drain_watchdog_pid:-}" ]; then
+  kill -TERM "$drain_watchdog_pid" 2>/dev/null
+  wait "$drain_watchdog_pid" 2>/dev/null || :
+fi
+set -e
+case "$status" in
+  0 | 68) exit 0 ;;
+  *) exit "$status" ;;
 esac

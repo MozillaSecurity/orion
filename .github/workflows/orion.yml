@@ -1,0 +1,2086 @@
+# GENERATED FILE — DO NOT EDIT.
+# Regenerate with: python -m orion_decision.gha_workflows
+# Sources: tracked service.yaml files, Dockerfiles, service inputs, and recipes.
+name: Orion
+'on':
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+  push:
+    branches:
+    - master
+  schedule:
+  - cron: 0 5 * * 1
+  workflow_dispatch:
+    inputs:
+      force_services:
+        description: Comma-separated service names to rebuild
+        required: false
+        type: string
+permissions:
+  actions: read
+  contents: read
+jobs:
+  plan:
+    name: Plan Orion graph
+    runs-on: ubuntu-latest
+    outputs:
+      selected_jobs: ${{ steps.plan.outputs.selected_jobs }}
+      selected_docker_jobs: ${{ steps.plan.outputs.selected_docker_jobs }}
+      publish: ${{ steps.plan.outputs.publish }}
+      plan_json: ${{ steps.plan.outputs.plan_json }}
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - id: plan
+      env:
+        ORION_FORCE_SERVICES: ${{ inputs.force_services }}
+        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        ORION_EVENT: ${{ github.event_name }}
+        ORION_BRANCH: ${{ github.ref_name }}
+        ORION_BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+      run: 'plan=$(python -m orion_decision.gha_plan --repo . --revision "$ORION_REVISION"
+        --event "$ORION_EVENT" --branch "$ORION_BRANCH" --base-revision "$ORION_BASE_REVISION"
+        --baseline-from-taskcluster --force-services "$ORION_FORCE_SERVICES")
+
+        echo "plan_json=$plan" >> "$GITHUB_OUTPUT"
+
+        selected=$(python -c "import json,sys; print(json.dumps(json.load(sys.stdin)[''selected_jobs''],
+        separators=('','', '':'')))" <<< "$plan")
+
+        echo "selected_jobs=$selected" >> "$GITHUB_OUTPUT"
+
+        docker_selected=$(python -c "import json,sys; print(json.dumps(json.load(sys.stdin)[''selected_docker_jobs'']))"
+        <<< "$plan")
+
+        echo "selected_docker_jobs=$docker_selected" >> "$GITHUB_OUTPUT"
+
+        publish=$(python -c "import json,sys; print(str(json.load(sys.stdin)[''publish'']).lower())"
+        <<< "$plan")
+
+        echo "publish=$publish" >> "$GITHUB_OUTPUT"'
+  recipe_test_cleanup_sh:
+    name: 'recipe_test: cleanup.sh'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: cleanup.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_common_sh:
+    name: 'recipe_test: common.sh'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: common.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_dbgsyms_sh:
+    name: 'recipe_test: dbgsyms.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_dbgsyms_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: dbgsyms.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_ff32_deps_sh:
+    name: 'recipe_test: ff32 deps.sh'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fuzzfetch_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_ff32_deps_sh') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: ff32_deps.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_fluentbit_sh:
+    name: 'recipe_test: fluentbit.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fluentbit_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: fluentbit.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_fuzzfetch_sh:
+    name: 'recipe_test: fuzzfetch.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: fuzzfetch.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_fuzzing_tc_sh:
+    name: 'recipe_test: fuzzing tc.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: fuzzing_tc.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_fuzzmanager_sh:
+    name: 'recipe_test: fuzzmanager.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: fuzzmanager.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_gcov_9_sh:
+    name: 'recipe_test: gcov-9.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_gcov_9_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: gcov-9.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_grcov_sh:
+    name: 'recipe_test: grcov.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: grcov.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_gsutil_sh:
+    name: 'recipe_test: gsutil.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_gsutil_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: gsutil.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_htop_sh:
+    name: 'recipe_test: htop.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_htop_sh') && (needs.recipe_test_common_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: htop.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_js32_deps_sh:
+    name: 'recipe_test: js32 deps.sh'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fuzzfetch_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: js32_deps.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_llvm_cov_sh:
+    name: 'recipe_test: llvm-cov.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    - recipe_test_llvm_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_llvm_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: llvm-cov.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_llvm_symbolizer_sh:
+    name: 'recipe_test: llvm-symbolizer.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_symbolizer_sh') && (needs.recipe_test_common_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: llvm-symbolizer.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_llvm_sh:
+    name: 'recipe_test: llvm.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh') && (needs.recipe_test_common_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: llvm.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_nodejs_sh:
+    name: 'recipe_test: nodejs.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_nodejs_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: nodejs.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_orion_decision_sh:
+    name: 'recipe_test: orion decision.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_orion_decision_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: orion_decision.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_pernosco_submit_sh:
+    name: 'recipe_test: pernosco submit.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_pernosco_submit_sh') && (needs.recipe_test_common_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: pernosco_submit.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_poetry_sh:
+    name: 'recipe_test: poetry.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_poetry_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: poetry.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_prefpicker_sh:
+    name: 'recipe_test: prefpicker.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_prefpicker_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: prefpicker.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_radamsa_sh:
+    name: 'recipe_test: radamsa.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_radamsa_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: radamsa.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_rr_sh:
+    name: 'recipe_test: rr.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    - recipe_test_llvm_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_rr_sh') && (needs.recipe_test_common_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_llvm_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: rr.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_sentry_sh:
+    name: 'recipe_test: sentry.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: sentry.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_taskcluster_sh:
+    name: 'recipe_test: taskcluster.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: taskcluster.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_taskgraph_m_c_latest_sh:
+    name: 'recipe_test: taskgraph-m-c-latest.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh') && (needs.recipe_test_common_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: taskgraph-m-c-latest.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_uv_sh:
+    name: 'recipe_test: uv.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_uv_sh') && (needs.recipe_test_common_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: uv.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  recipe_test_worker_sh:
+    name: 'recipe_test: worker.sh'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: recipe-test
+      name: worker.sh
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_afl_amd64:
+    name: 'build: afl'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_worker_sh
+    - service_test_nyx_ipc_manager
+    - service_test_symbol_filter
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_afl_amd64') && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_fluentbit_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fluentbit_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
+      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_gsutil_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gsutil_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_llvm_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_nodejs_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_nodejs_sh')) && (needs.recipe_test_prefpicker_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_prefpicker_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh')) && (needs.recipe_test_worker_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
+      && (needs.service_test_nyx_ipc_manager.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_nyx_ipc_manager')) && (needs.service_test_symbol_filter.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'service_test_symbol_filter'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: afl
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_bugmon_amd64:
+    name: 'build: bugmon'
+    needs:
+    - plan
+    - build_grizzly_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_pernosco_submit_sh
+    - recipe_test_uv_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_amd64') && (needs.build_grizzly_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64')) && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_js32_deps_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_js32_deps_sh'))
+      && (needs.recipe_test_pernosco_submit_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_pernosco_submit_sh')) && (needs.recipe_test_uv_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_uv_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: bugmon
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_bugmon_win_amd64:
+    name: 'build: bugmon-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: bugmon-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_java_11_amd64:
+    name: 'build: ci-java-11'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_orion_decision_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_java_11_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_orion_decision_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_orion_decision_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-java-11
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_18_amd64:
+    name: 'build: ci-node-18'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-18
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_18_win_amd64:
+    name: 'build: ci-node-18-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-18-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_20_amd64:
+    name: 'build: ci-node-20'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-20
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_20_win_amd64:
+    name: 'build: ci-node-20-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-20-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_22_amd64:
+    name: 'build: ci-node-22'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-22
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_node_22_win_amd64:
+    name: 'build: ci-node-22-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-node-22-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_310_amd64:
+    name: 'build: ci-py-310'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-310
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_310_osx_amd64:
+    name: 'build: ci-py-310-osx'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_osx_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-310-osx
+      arch: amd64
+      runner: macos-15-intel
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_310_win_amd64:
+    name: 'build: ci-py-310-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-310-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_311_amd64:
+    name: 'build: ci-py-311'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-311
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_311_osx_amd64:
+    name: 'build: ci-py-311-osx'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_osx_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-311-osx
+      arch: amd64
+      runner: macos-15-intel
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_311_win_amd64:
+    name: 'build: ci-py-311-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-311-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_312_amd64:
+    name: 'build: ci-py-312'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-312
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_312_osx_amd64:
+    name: 'build: ci-py-312-osx'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_osx_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-312-osx
+      arch: amd64
+      runner: macos-15-intel
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_312_win_amd64:
+    name: 'build: ci-py-312-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-312-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_313_amd64:
+    name: 'build: ci-py-313'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-313
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_313_osx_amd64:
+    name: 'build: ci-py-313-osx'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_osx_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-313-osx
+      arch: amd64
+      runner: macos-15-intel
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_ci_py_313_win_amd64:
+    name: 'build: ci-py-313-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: ci-py-313-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_covdiff_amd64:
+    name: 'build: covdiff'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    - recipe_test_common_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_covdiff_amd64') && (needs.build_ci_py_310_amd64.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fuzzmanager_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: covdiff
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_coverage_revision_amd64:
+    name: 'build: coverage-revision'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_coverage_revision_amd64') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: coverage-revision
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_domino_web_tests_amd64:
+    name: 'build: domino-web-tests'
+    needs:
+    - plan
+    - build_ci_node_22_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_domino_web_tests_amd64') && (needs.build_ci_node_22_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_22_amd64'))
+      && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: domino-web-tests
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_funfuzz_amd64:
+    name: 'build: funfuzz'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_htop_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_funfuzz_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
+      && (needs.recipe_test_gsutil_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_gsutil_sh')) && (needs.recipe_test_htop_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_htop_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_llvm_symbolizer_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_symbolizer_sh')) && (needs.recipe_test_sentry_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: funfuzz
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_fuzzilli_amd64:
+    name: 'build: fuzzilli'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_llvm_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: fuzzilli
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_fuzzilli_arm64:
+    name: 'build: fuzzilli'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_arm64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_llvm_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: fuzzilli
+      arch: arm64
+      runner: ubuntu-24.04-arm
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  service_test_fuzzing_decision:
+    name: 'service_test: fuzzing-decision'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_313_amd64
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_fuzzing_decision') && (needs.build_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
+      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: service-test
+      name: fuzzing-decision
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_fuzzing_decision_amd64:
+    name: 'build: fuzzing-decision'
+    needs:
+    - plan
+    - service_test_fuzzing_decision
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzing_decision_amd64') && (needs.service_test_fuzzing_decision.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'service_test_fuzzing_decision'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: fuzzing-decision
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_grizzly_amd64:
+    name: 'build: grizzly'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_dbgsyms_sh
+    - recipe_test_ff32_deps_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_radamsa_sh
+    - recipe_test_rr_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_dbgsyms_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_dbgsyms_sh'))
+      && (needs.recipe_test_ff32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_ff32_deps_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_nodejs_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_nodejs_sh')) && (needs.recipe_test_radamsa_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_radamsa_sh'))
+      && (needs.recipe_test_rr_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_rr_sh')) && (needs.recipe_test_sentry_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_taskgraph_m_c_latest_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskgraph_m_c_latest_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: grizzly
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_grizzly_android_amd64:
+    name: 'build: grizzly-android'
+    needs:
+    - plan
+    - build_grizzly_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_android_amd64') && (needs.build_grizzly_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64'))
+      && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: grizzly-android
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_grizzly_reduce_monitor_amd64:
+    name: 'build: grizzly-reduce-monitor'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_reduce_monitor_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: grizzly-reduce-monitor
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_grizzly_win_amd64:
+    name: 'build: grizzly-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: grizzly-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_js_tests_distiller_amd64:
+    name: 'build: js-tests-distiller'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_js_tests_distiller_amd64') && (needs.recipe_test_cleanup_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_taskcluster_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: js-tests-distiller
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_langfuzz_amd64:
+    name: 'build: langfuzz'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_gcov_9_sh
+    - recipe_test_grcov_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_gcov_9_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gcov_9_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_js32_deps_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_js32_deps_sh'))
+      && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: langfuzz
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_langfuzz_arm64:
+    name: 'build: langfuzz'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_gcov_9_sh
+    - recipe_test_grcov_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_arm64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_gcov_9_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gcov_9_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_js32_deps_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_js32_deps_sh'))
+      && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: langfuzz
+      arch: arm64
+      runner: ubuntu-24.04-arm
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_libfuzzer_amd64:
+    name: 'build: libfuzzer'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_htop_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_libfuzzer_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
+      && (needs.recipe_test_gsutil_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_gsutil_sh')) && (needs.recipe_test_htop_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_htop_sh'))
+      && (needs.recipe_test_js32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_js32_deps_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
+      && (needs.recipe_test_llvm_symbolizer_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_symbolizer_sh')) && (needs.recipe_test_nodejs_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_nodejs_sh'))
+      && (needs.recipe_test_prefpicker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_prefpicker_sh')) && (needs.recipe_test_sentry_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_worker_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: libfuzzer
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_neqo_coverage_amd64:
+    name: 'build: neqo-coverage'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_neqo_coverage_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_gsutil_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gsutil_sh'))
+      && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_sentry_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_taskgraph_m_c_latest_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskgraph_m_c_latest_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: neqo-coverage
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_nss_corpus_update_amd64:
+    name: 'build: nss-corpus-update'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_corpus_update_amd64') && (needs.recipe_test_cleanup_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_gsutil_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gsutil_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: nss-corpus-update
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_nss_coverage_amd64:
+    name: 'build: nss-coverage'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_coverage_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
+      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_grcov_sh')) && (needs.recipe_test_gsutil_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_gsutil_sh'))
+      && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_sentry_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_taskgraph_m_c_latest_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskgraph_m_c_latest_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: nss-coverage
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_nyx_amd64:
+    name: 'build: nyx'
+    needs:
+    - plan
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_worker_sh
+    - service_test_nyx_ipc_manager
+    - service_test_symbol_filter
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nyx_amd64') && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_fluentbit_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fluentbit_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
+      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
+      && (needs.recipe_test_nodejs_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_nodejs_sh')) && (needs.recipe_test_prefpicker_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_prefpicker_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh')) && (needs.recipe_test_worker_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
+      && (needs.service_test_nyx_ipc_manager.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_nyx_ipc_manager')) && (needs.service_test_symbol_filter.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'service_test_symbol_filter'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: nyx
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  service_test_nyx_ipc_manager:
+    name: 'service_test: nyx ipc manager'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_nyx_ipc_manager') && (needs.build_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: service-test
+      name: nyx_ipc_manager
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  service_test_orion:
+    name: 'service_test: orion'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_orion') && (needs.build_ci_py_310_amd64.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: service-test
+      name: orion
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  service_test_orion_decision:
+    name: 'service_test: orion-decision'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_313_amd64
+    - recipe_test_common_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_orion_decision') && (needs.build_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
+      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: service-test
+      name: orion-decision
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_orion_decision_amd64:
+    name: 'build: orion-decision'
+    needs:
+    - plan
+    - recipe_test_common_sh
+    - service_test_orion_decision
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_orion_decision_amd64') && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.service_test_orion_decision.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_orion_decision'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: orion-decision
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_prefmonitor_amd64:
+    name: 'build: prefmonitor'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    - recipe_test_common_sh
+    - recipe_test_taskcluster_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_prefmonitor_amd64') && (needs.build_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: prefmonitor
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_site_scout_amd64:
+    name: 'build: site-scout'
+    needs:
+    - plan
+    - build_grizzly_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_worker_sh
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_amd64') && (needs.build_grizzly_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64'))
+      && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
+      && (needs.recipe_test_fuzzfetch_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzfetch_sh')) && (needs.recipe_test_worker_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: site-scout
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_site_scout_android_amd64:
+    name: 'build: site-scout-android'
+    needs:
+    - plan
+    - build_site_scout_amd64
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_android_amd64') && (needs.build_site_scout_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: site-scout-android
+      arch: amd64
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  build_site_scout_win_amd64:
+    name: 'build: site-scout-win'
+    needs:
+    - plan
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_win_amd64')
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: build
+      name: site-scout-win
+      arch: amd64
+      runner: windows-2025
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  service_test_symbol_filter:
+    name: 'service_test: symbol-filter'
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_313_amd64
+    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'service_test_symbol_filter') && (needs.build_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
+      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64'))
+    uses: ./.github/workflows/build-service.yml
+    with:
+      operation: service-test
+      name: symbol-filter
+      arch: ''
+      runner: ubuntu-24.04
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+  graph-result:
+    name: Orion graph result
+    needs:
+    - plan
+    - build_afl_amd64
+    - build_bugmon_amd64
+    - build_bugmon_win_amd64
+    - build_ci_java_11_amd64
+    - build_ci_node_18_amd64
+    - build_ci_node_18_win_amd64
+    - build_ci_node_20_amd64
+    - build_ci_node_20_win_amd64
+    - build_ci_node_22_amd64
+    - build_ci_node_22_win_amd64
+    - build_ci_py_310_amd64
+    - build_ci_py_310_osx_amd64
+    - build_ci_py_310_win_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_311_osx_amd64
+    - build_ci_py_311_win_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_312_osx_amd64
+    - build_ci_py_312_win_amd64
+    - build_ci_py_313_amd64
+    - build_ci_py_313_osx_amd64
+    - build_ci_py_313_win_amd64
+    - build_covdiff_amd64
+    - build_coverage_revision_amd64
+    - build_domino_web_tests_amd64
+    - build_funfuzz_amd64
+    - build_fuzzilli_amd64
+    - build_fuzzilli_arm64
+    - build_fuzzing_decision_amd64
+    - build_grizzly_amd64
+    - build_grizzly_android_amd64
+    - build_grizzly_reduce_monitor_amd64
+    - build_grizzly_win_amd64
+    - build_js_tests_distiller_amd64
+    - build_langfuzz_amd64
+    - build_langfuzz_arm64
+    - build_libfuzzer_amd64
+    - build_neqo_coverage_amd64
+    - build_nss_corpus_update_amd64
+    - build_nss_coverage_amd64
+    - build_nyx_amd64
+    - build_orion_decision_amd64
+    - build_prefmonitor_amd64
+    - build_site_scout_amd64
+    - build_site_scout_android_amd64
+    - build_site_scout_win_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_dbgsyms_sh
+    - recipe_test_ff32_deps_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_gcov_9_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_htop_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_orion_decision_sh
+    - recipe_test_pernosco_submit_sh
+    - recipe_test_poetry_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_radamsa_sh
+    - recipe_test_rr_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_uv_sh
+    - recipe_test_worker_sh
+    - service_test_fuzzing_decision
+    - service_test_nyx_ipc_manager
+    - service_test_orion
+    - service_test_orion_decision
+    - service_test_symbol_filter
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check selected jobs
+      run: "python - <<'PY'\nimport json, os, sys\nselected = json.loads(os.environ['ORION_SELECTED_JOBS'])\n\
+        needs = json.loads(os.environ['ORION_JOB_RESULTS'])\nresults = {\n    name:\
+        \ item['result'] for name, item in needs.items()\n}\nfailed = [\n    job for\
+        \ job in selected if results.get(job) != 'success'\n]\nif failed:\n    print('Selected\
+        \ jobs did not succeed:', ', '.join(failed))\n    sys.exit(1)\nPY"
+      env:
+        ORION_SELECTED_JOBS: ${{ needs.plan.outputs.selected_jobs }}
+        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
+  result:
+    name: Orion workflow result
+    needs:
+    - plan
+    - graph-result
+    - publication-manifest
+    - publication-worker
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Require graph and publication success
+      env:
+        ORION_GRAPH_RESULT: ${{ needs.graph-result.result }}
+        ORION_PUBLISH: ${{ needs.plan.outputs.publish }}
+        ORION_MANIFEST_RESULT: ${{ needs.publication-manifest.result }}
+        ORION_WORKER_RESULT: ${{ needs.publication-worker.result }}
+      run: "python - <<'PY'\nimport os, sys\nif os.environ['ORION_GRAPH_RESULT'] !=\
+        \ 'success':\n    sys.exit('Selected Orion graph jobs did not all succeed')\n\
+        if os.environ['ORION_PUBLISH'] == 'true':\n    if os.environ['ORION_MANIFEST_RESULT']\
+        \ != 'success':\n        sys.exit('Taskcluster publication manifest was not\
+        \ created')\n    if os.environ['ORION_WORKER_RESULT'] != 'success':\n    \
+        \    sys.exit('Taskcluster artifact imports did not complete')\nPY"
+  publication-manifest:
+    name: Create Taskcluster publication manifest
+    needs:
+    - plan
+    - graph-result
+    - publish-docker
+    if: always() && !cancelled() && needs.graph-result.result == 'success' && (needs.publish-docker.result
+      == 'success' || needs.plan.outputs.selected_docker_jobs == '[]') && github.event_name
+      != 'pull_request' && github.ref == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - name: Reject stale publication before manifest creation
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        ORION_BRANCH: ${{ github.ref_name }}
+      run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
+        --branch "$ORION_BRANCH" --revision "$ORION_REVISION"
+    - name: Write plan and bind exact build artifacts
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+      run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+
+        python -m orion_decision.gha_publish manifest --plan-file "$RUNNER_TEMP/plan.json"
+        --output "$RUNNER_TEMP/manifest.json"'
+    - uses: actions/upload-artifact@v5
+      with:
+        name: orion-publication-manifest-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        path: ${{ runner.temp }}/manifest.json
+        if-no-files-found: error
+        retention-days: 7
+  publication-worker:
+    name: Import Taskcluster publication artifacts
+    needs:
+    - plan
+    - publication-manifest
+    if: always() && !cancelled() && needs.publication-manifest.result == 'success'
+      && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+      && fromJSON(needs.plan.outputs.plan_json).publish
+    runs-on: ubuntu-24.04
+    environment: communitytc
+    permissions:
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - uses: actions/download-artifact@v5
+      with:
+        name: orion-publication-manifest-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        path: ${{ runner.temp }}/orion-publication
+    - name: Write protected GitHub token file
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_GITHUB_TOKEN_FILE: ${{ runner.temp }}/orion-github-token
+      run: 'umask 077
+
+        printf ''%s'' "$GITHUB_TOKEN" > "$ORION_GITHUB_TOKEN_FILE"
+
+        chmod 0600 "$ORION_GITHUB_TOKEN_FILE"'
+    - name: Ensure exact import tasks exist
+      env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+        ORION_RUN_ID: ${{ github.run_id }}
+        ORION_RUN_ATTEMPT: ${{ github.run_attempt }}
+      run: '# Webhook decisions can run before manifest upload.
+
+        # Deterministic IDs make this idempotent for every run.
+
+        group=$(python -c ''from orion_decision.gha_publish import artifact_task_id;
+        import os; print(artifact_task_id(os.environ["ORION_RUN_ID"], os.environ["ORION_RUN_ATTEMPT"],
+        "decision"))'')
+
+        python -m orion_decision.gha_publish schedule --manifest-file "$RUNNER_TEMP/orion-publication/manifest.json"
+        --task-group "$group"'
+    - name: Run worker and require every exact import
+      env:
+        ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_CI_WORKER_ORION_GHA_ACCESS_TOKEN
+          }}
+        TC_WORKER_ID: gh-orion-publish-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        ORION_GITHUB_TOKEN_FILE: ${{ runner.temp }}/orion-github-token
+      run: 'set +e
+
+        TASKCLUSTER_ACCESS_TOKEN="$ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN" .github/scripts/start-worker.sh
+        > "$RUNNER_TEMP/generic-worker.log" 2>&1 &
+
+        worker_pid=$!
+
+        unset ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN
+
+        python -m orion_decision.gha_publish monitor --manifest-file "$RUNNER_TEMP/orion-publication/manifest.json"
+        --timeout 3600 > "$RUNNER_TEMP/publication-monitor.log" 2>&1 &
+
+        monitor_pid=$!
+
+        wait "$monitor_pid"
+
+        monitor_status=$?
+
+        if kill -0 "$worker_pid" 2>/dev/null; then if [ "$monitor_status" -eq 0 ];
+        then kill -USR1 "$worker_pid"; else kill -TERM "$worker_pid"; fi; fi
+
+        wait "$worker_pid"
+
+        cat "$RUNNER_TEMP/generic-worker.log"
+
+        cat "$RUNNER_TEMP/publication-monitor.log"
+
+        exit "$monitor_status"'
+  publish-docker:
+    name: Publish Orion Docker manifests
+    needs:
+    - plan
+    - graph-result
+    if: always() && !cancelled() && needs.graph-result.result == 'success' && needs.plan.outputs.selected_docker_jobs
+      != '[]' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+      && fromJSON(needs.plan.outputs.plan_json).publish
+    runs-on: ubuntu-24.04
+    environment: dockerhub
+    concurrency:
+      group: orion-docker-latest-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - name: Write plan and install zstd
+      env:
+        ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+      run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+
+        sudo apt-get update && sudo apt-get install --yes zstd'
+    - name: Reject stale branch publication
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        ORION_BRANCH: ${{ github.ref_name }}
+      run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
+        --branch "$ORION_BRANCH" --revision "$ORION_REVISION"
+    - uses: docker/setup-buildx-action@v3
+    - uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Push staging images and publish latest manifests
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: python -m orion_decision.gha_run publish --repo . --plan-file "$RUNNER_TEMP/plan.json"
+    - name: Record published image digests
+      uses: actions/upload-artifact@v5
+      with:
+        name: orion-published-image-digests-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        path: ${{ runner.temp }}/published-images.json
+        if-no-files-found: error
+        retention-days: 90

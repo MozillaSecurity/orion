@@ -1,47 +1,42 @@
 version: 1
-policy:
-  pullRequests: collaborators
 tasks:
-  $if: >
-    (tasks_for == "github-push" && event.ref == "refs/heads/master")
-    || (tasks_for == "github-pull-request" && event.action in ["opened", "reopened", "synchronize"])
-    || (tasks_for == "github-release" && event.action in ["published"])
+  $if: tasks_for == "github-push" && event.ref == "refs/heads/master"
   then:
     - created: {$fromNow: ''}
-      deadline: {$fromNow: '1 hour'}
+      deadline: {$fromNow: '1 day'}
       provisionerId: proj-fuzzing
-      workerType: ci-decision
+      workerType: orion-gha-publish
+      schedulerId: taskcluster-github
       payload:
         features:
           taskclusterProxy: true
         maxRunTime: 3600
         env:
-          DOCKER_HUB_SECRET: project/fuzzing/docker-hub
           GITHUB_EVENT: {$json: {$eval: event}}
           GITHUB_ACTION: ${tasks_for}
-          TASKCLUSTER_NOW: ${now}
+          ORION_REPOSITORY_URL: https://github.com/${event.repository.full_name}.git
+          ORION_REVISION: ${event.after}
         command:
           - - bash
-            - "-exc"
-            - "-o"
-            - "pipefail"
+            - -e
+            - -c
             - >
-              retry () { for _ in {1..9}; do if "$@"; then return; else sleep 30; fi; done; "$@"; };
-              retry podman pull mozillasecurity/orion-decision:latest;
-              podman run --rm -e TASK_ID -e RUN_ID -e TASKCLUSTER_ROOT_URL --add-host=taskcluster:127.0.0.1 --net=host
-              -e TASKCLUSTER_PROXY_URL=http://localhost:80 -e DOCKER_HUB_SECRET -e GITHUB_EVENT -e GITHUB_ACTION -e TASKCLUSTER_NOW
-              mozillasecurity/orion-decision:latest decision -v
+              work="$(mktemp -d .orion-decision.XXXXXX)";
+              trap 'rm -rf "$work"' EXIT;
+              git -C "$work" init -q;
+              git -C "$work" remote add origin "$ORION_REPOSITORY_URL";
+              git -C "$work" fetch -q --depth=1 origin "$ORION_REVISION";
+              git -C "$work" checkout -q FETCH_HEAD;
+              export PYTHONPATH="$work/services/orion-decision/src";
+              python -m orion_decision.gha_publish decision --github-action "$GITHUB_ACTION" --task-group "$TASK_ID"
       scopes:
-        - docker-worker:capability:privileged
-        - index:insert-task:project.fuzzing.orion.*
-        - queue:create-task:highest:proj-fuzzing/ci
-        - queue:create-task:highest:proj-fuzzing/ci-*
+        - queue:create-task:highest:proj-fuzzing/orion-gha-publish
+        - queue:create-task:project:none
         - queue:route:index.project.fuzzing.orion.*
         - queue:scheduler-id:taskcluster-github
-        - secrets:get:project/fuzzing/docker-hub
       metadata:
-        name: Orion decision task
-        description: Schedule Orion build tasks
+        name: Orion GHA publication decision
+        description: Find the exact successful GHA run and schedule artifact imports
         owner: truber@mozilla.com
         source: https://github.com/MozillaSecurity/orion
   else: []

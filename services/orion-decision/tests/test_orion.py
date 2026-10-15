@@ -146,14 +146,13 @@ def test_service_load_test_only() -> None:
 @pytest.mark.parametrize(
     "dirty_paths,expect_services,expect_recipes",
     (
-        # test that if install.sh changes, images that use it are marked dirty,
-        # script.sh is skipped as a test
+        # test that changes to the install script and its recipe test are selected
         (
             [
                 Path("recipes") / "linux" / "tests" / "script.sh",
                 Path("recipes") / "linux" / "install.sh",
             ],
-            {"test1", "test2", "test4"},
+            {"test1", "test2", "test3", "test4"},
             {"install.sh"},
         ),
         # test that change to files in test3 mark test3 dirty
@@ -220,6 +219,7 @@ def test_service_deps(
     assert svcs["test3"].path_deps == {
         root / "test3" / "Dockerfile",
         root / "test3" / "service.yaml",
+        root / "recipes" / "linux" / "tests" / "script.sh",
     }
     assert svcs["test4"].path_deps == {
         root / "test4" / "Dockerfile",
@@ -274,6 +274,7 @@ def test_service_deps(
 
 
 def test_services_force_dirty(mocker: MockerFixture) -> None:
+    """Verify a changed service marks its weakly dependent recipe dirty."""
     root = FIXTURES / "services10"
     repo = mocker.Mock(spec="orion_decision.git.GitRepo")
     repo.path = root
