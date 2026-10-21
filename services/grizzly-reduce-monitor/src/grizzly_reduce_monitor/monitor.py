@@ -56,9 +56,12 @@ DEFAULT_REDUCTION_STRATEGIES = (
     "js-remove-wrappers",
     "js-inline-functions",
     "js-proxy-inline",
+    "js-object-properties",
     "js-unused-vars",
     "lines",
+    "jschars",
     "prettier",
+    "lines",
 )
 SCHEDULER_ID = "fuzzing"
 PROVISIONER_ID = "proj-fuzzing"
