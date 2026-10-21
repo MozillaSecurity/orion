@@ -25,7 +25,8 @@ if ! is-arm64; then
       "${0%/*}/fuzzfetch.sh"
       TMPD="$(mktemp -d -p. js32.test.XXXXXXXXXX)"
       pushd "$TMPD" >/dev/null
-      fuzzfetch --name jsshell --target js --cpu x86
+      fuzzfetch --name jsshell --target js --cpu x86 \
+        --build gecko.v2.mozilla-central.latest.firefox.sm-linux32-fuzzing
       ./jsshell/dist/bin/js --help
       popd >/dev/null
       rm -rf "$TMPD"
