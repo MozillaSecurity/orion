@@ -111,27 +111,6 @@ jobs:
       runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
-  recipe_test_ff32_deps_sh:
-    name: 'recipe_test: ff32 deps.sh'
-    needs:
-    - plan
-    - recipe_test_cleanup_sh
-    - recipe_test_common_sh
-    - recipe_test_fuzzfetch_sh
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_ff32_deps_sh') && (needs.recipe_test_cleanup_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
-      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_common_sh')) && (needs.recipe_test_fuzzfetch_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzfetch_sh'))
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: recipe-test
-      name: ff32_deps.sh
-      arch: ''
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_fluentbit_sh:
     name: 'recipe_test: fluentbit.sh'
     needs:
@@ -1172,7 +1151,6 @@ jobs:
     - recipe_test_cleanup_sh
     - recipe_test_common_sh
     - recipe_test_dbgsyms_sh
-    - recipe_test_ff32_deps_sh
     - recipe_test_fluentbit_sh
     - recipe_test_fuzzing_tc_sh
     - recipe_test_fuzzmanager_sh
@@ -1191,26 +1169,24 @@ jobs:
       && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
       'recipe_test_common_sh')) && (needs.recipe_test_dbgsyms_sh.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_dbgsyms_sh'))
-      && (needs.recipe_test_ff32_deps_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_ff32_deps_sh')) && (needs.recipe_test_fluentbit_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fluentbit_sh'))
-      && (needs.recipe_test_fuzzing_tc_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_fuzzing_tc_sh')) && (needs.recipe_test_fuzzmanager_sh.result ==
-      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
-      && (needs.recipe_test_grcov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_grcov_sh')) && (needs.recipe_test_llvm_cov_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_cov_sh'))
-      && (needs.recipe_test_nodejs_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_nodejs_sh')) && (needs.recipe_test_radamsa_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_radamsa_sh'))
-      && (needs.recipe_test_rr_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_rr_sh')) && (needs.recipe_test_sentry_sh.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
-      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_taskcluster_sh')) && (needs.recipe_test_taskgraph_m_c_latest_sh.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskgraph_m_c_latest_sh'))
-      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_worker_sh'))
+      && (needs.recipe_test_fluentbit_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fluentbit_sh')) && (needs.recipe_test_fuzzing_tc_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzing_tc_sh'))
+      && (needs.recipe_test_fuzzmanager_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
+      && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_nodejs_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_nodejs_sh'))
+      && (needs.recipe_test_radamsa_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_radamsa_sh')) && (needs.recipe_test_rr_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_rr_sh'))
+      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskgraph_m_c_latest_sh')) && (needs.recipe_test_worker_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
@@ -1833,7 +1809,6 @@ jobs:
     - recipe_test_cleanup_sh
     - recipe_test_common_sh
     - recipe_test_dbgsyms_sh
-    - recipe_test_ff32_deps_sh
     - recipe_test_fluentbit_sh
     - recipe_test_fuzzfetch_sh
     - recipe_test_fuzzing_tc_sh
