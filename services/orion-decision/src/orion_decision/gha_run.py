@@ -357,7 +357,15 @@ def publish_images(
     temp = runner_temp or Path(os.environ.get("RUNNER_TEMP", "/tmp"))
     services = Services(GitRepo.from_existing(repo))
     selected = set(plan.get("selected_jobs", []))
-    images: dict[str, dict[str, str]] = {}
+    raw_results = os.environ.get("ORION_JOB_RESULTS")
+    job_results = json.loads(raw_results) if raw_results else {}
+    successful = {
+        job
+        for job in selected
+        if not raw_results or job_results.get(job, {}).get("result") == "success"
+    }
+    images: dict[str, dict[str, Any]] = {}
+    failures: list[str] = []
     for service in services.values():
         if isinstance(service, (ServiceMsys, ServiceHomebrew, ServiceTestOnly)):
             continue
@@ -365,75 +373,96 @@ def publish_images(
             selected_id = job_id("build", service.name, arch)
             if selected_id not in selected:
                 continue
-            artifact = _artifact_name(service.name, arch)
-            artifact_dir = temp / "publish" / artifact
-            _download_artifact(artifact, artifact_dir)
-            archive = artifact_dir / _archive_name(service.name, arch)
-            if not archive.is_file():
-                raise FileNotFoundError(
-                    f"Selected build {selected_id} did not provide {archive}"
+            if selected_id not in successful:
+                continue
+            try:
+                artifact = _artifact_name(service.name, arch)
+                artifact_dir = temp / "publish" / artifact
+                _download_artifact(artifact, artifact_dir)
+                archive = artifact_dir / _archive_name(service.name, arch)
+                if not archive.is_file():
+                    raise FileNotFoundError(
+                        f"Selected build {selected_id} did not provide {archive}"
+                    )
+                tar_path = temp / f"{_safe_name(service.name)}-{arch}.tar"
+                _run(["zstd", "-d", "-f", str(archive), "-o", str(tar_path)])
+                _run(["docker", "load", "--input", str(tar_path)])
+                tar_path.unlink()
+                revision = plan["revision"]
+                run_id = os.environ["GITHUB_RUN_ID"]
+                attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+                staging_tag = (
+                    f"mozillasecurity/{service.name}:gha-"
+                    f"{revision}-{run_id}-{attempt}-{arch}"
                 )
-            tar_path = temp / f"{_safe_name(service.name)}-{arch}.tar"
-            _run(["zstd", "-d", "-f", str(archive), "-o", str(tar_path)])
-            _run(["docker", "load", "--input", str(tar_path)])
-            tar_path.unlink()
-            revision = plan["revision"]
-            run_id = os.environ["GITHUB_RUN_ID"]
-            attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
-            staging_tag = (
-                f"mozillasecurity/{service.name}:gha-"
-                f"{revision}-{run_id}-{attempt}-{arch}"
-            )
-            _run(
-                ["docker", "tag", f"mozillasecurity/{service.name}:latest", staging_tag]
-            )
-            _run(["docker", "push", staging_tag])
-            inspect = subprocess.run(
-                ["docker", "buildx", "imagetools", "inspect", staging_tag],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            match = re.search(
-                r"^Digest:\s+(sha256:[0-9a-f]{64})\s*$", inspect.stdout, re.M
-            )
-            if not match:
-                raise RuntimeError(f"Could not read pushed digest for {staging_tag}")
-            images.setdefault(service.name, {})[arch] = match.group(1)
-            archive.unlink()
-            (artifact_dir / "build.json").unlink(missing_ok=True)
-            artifact_dir.rmdir()
-            _run(
-                [
-                    "docker",
-                    "image",
-                    "rm",
-                    staging_tag,
-                    f"mozillasecurity/{service.name}:latest",
-                ]
-            )
+                _run(
+                    [
+                        "docker",
+                        "tag",
+                        f"mozillasecurity/{service.name}:latest",
+                        staging_tag,
+                    ]
+                )
+                _run(["docker", "push", staging_tag])
+                inspect = subprocess.run(
+                    ["docker", "buildx", "imagetools", "inspect", staging_tag],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                match = re.search(
+                    r"^Digest:\s+(sha256:[0-9a-f]{64})\s*$", inspect.stdout, re.M
+                )
+                if not match:
+                    raise RuntimeError(
+                        f"Could not read pushed digest for {staging_tag}"
+                    )
+                images.setdefault(
+                    service.name, {"architectures": {}, "latest_published": False}
+                )["architectures"][arch] = match.group(1)
+                archive.unlink()
+                (artifact_dir / "build.json").unlink(missing_ok=True)
+                artifact_dir.rmdir()
+                _run(
+                    [
+                        "docker",
+                        "image",
+                        "rm",
+                        staging_tag,
+                        f"mozillasecurity/{service.name}:latest",
+                    ]
+                )
+            except Exception as exc:
+                failures.append(f"{service.name}/{arch}: {exc}")
 
-    for name, arch_digests in sorted(images.items()):
+    for name, publication in sorted(images.items()):
         service = services[name]
+        arch_digests = publication["architectures"]
         if set(service.archs) - arch_digests.keys():
             continue
         sources = [
             f"mozillasecurity/{name}@{arch_digests[arch]}"
             for arch in sorted(service.archs)
         ]
-        _run(
-            [
-                "docker",
-                "buildx",
-                "imagetools",
-                "create",
-                "--tag",
-                f"mozillasecurity/{name}:latest",
-                *sources,
-            ]
-        )
+        try:
+            _run(
+                [
+                    "docker",
+                    "buildx",
+                    "imagetools",
+                    "create",
+                    "--tag",
+                    f"mozillasecurity/{name}:latest",
+                    *sources,
+                ]
+            )
+            publication["latest_published"] = True
+        except Exception as exc:
+            failures.append(f"{name}/latest: {exc}")
     published = temp / "published-images.json"
     published.write_text(json.dumps(images, sort_keys=True, indent=2) + "\n")
+    if failures:
+        raise RuntimeError("Docker publication branches failed: " + "; ".join(failures))
     return published
 
 

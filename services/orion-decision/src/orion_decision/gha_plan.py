@@ -85,6 +85,7 @@ def plan_selection(
     previous_services: Services | None = None,
     force_services: list[str] | None = None,
     expired_services: list[str] | None = None,
+    mark_changes: bool = True,
 ) -> dict[str, Any]:
     """Apply changed, forced, and expiry selections and return plan metadata."""
     changed_paths = changed_paths or []
@@ -94,7 +95,8 @@ def plan_selection(
         for name in expired_services or []
         if name in services and not isinstance(services[name], ServiceTestOnly)
     ]
-    services.mark_changed_dirty(changed_paths, previous_services)
+    if mark_changes:
+        services.mark_changed_dirty(changed_paths, previous_services)
     services.force_dirty(force_services)
     services.force_dirty(expired_services)
     dirty_services = sorted(name for name, service in services.items() if service.dirty)
@@ -143,6 +145,100 @@ def plan_selection(
     }
 
 
+def _mark_published_changes_dirty(
+    services: Services,
+    repo: GitRepo,
+    *,
+    revision: str,
+    baseline_revision: str,
+    service_revisions: dict[str, str],
+    service_runs: dict[str, tuple[int, int]],
+    changed_paths: list[Path],
+    previous_services: Services | None,
+) -> None:
+    """Select changes since each service's own last indexed artifact revision."""
+    assert services.root is not None
+    repo_path = repo.path
+    assert repo_path is not None
+    snapshots: dict[str, tuple[Services, TemporaryDirectory[str]]] = {}
+
+    def snapshot(base: str) -> Services:
+        if base not in snapshots:
+            snapshots[base] = _load_snapshot(repo, base)
+        return snapshots[base][0]
+
+    try:
+        # Recipe tests use the complete-publication baseline. Per-service baselines
+        # below keep already-published services from being rebuilt after a peer fix.
+        if previous_services is not None and previous_services.root is not None:
+            recipe_graph = Services(GitRepo.from_existing(repo_path))
+            recipe_graph.mark_changed_dirty(changed_paths, previous_services)
+            for name, recipe in recipe_graph.recipes.items():
+                if recipe.dirty and name in services.recipes:
+                    services.recipes[name].dirty = True
+
+        dirty_services = []
+        for service in services.values():
+            base = service_revisions.get(service.name, baseline_revision)
+            paths = set(_diff_paths(repo, base, revision, event_is_pull_request=False))
+            old_graph = snapshot(base)
+            old_service = old_graph.get(service.name)
+            baseline_graph = Services(GitRepo.from_existing(repo_path))
+            baseline_graph.mark_changed_dirty(list(paths), old_graph)
+            if baseline_graph[service.name].dirty:
+                service.dirty = True
+                dirty_services.append(service)
+
+            dependency_names = set(service.service_deps | service.weak_deps)
+            if old_service is not None:
+                dependency_names |= old_service.service_deps | old_service.weak_deps
+            recipe_names = set(service.recipe_deps)
+            if old_service is not None:
+                recipe_names |= old_service.recipe_deps
+            pending_recipes = list(recipe_names)
+            while pending_recipes:
+                recipe_name = pending_recipes.pop()
+                current_recipe = services.recipes.get(recipe_name)
+                previous_recipe = old_graph.recipes.get(recipe_name)
+                if current_recipe is not None:
+                    dependency_names |= (
+                        current_recipe.service_deps | current_recipe.weak_deps
+                    )
+                    pending_recipes.extend(current_recipe.recipe_deps - recipe_names)
+                    recipe_names.add(recipe_name)
+                if previous_recipe is not None:
+                    dependency_names |= (
+                        previous_recipe.service_deps | previous_recipe.weak_deps
+                    )
+                    pending_recipes.extend(previous_recipe.recipe_deps - recipe_names)
+                    recipe_names.add(recipe_name)
+            for dependency in dependency_names:
+                dependency_revision = service_revisions.get(dependency)
+                dependency_run = service_runs.get(dependency)
+                service_run = service_runs.get(service.name)
+                revision_is_newer = False
+                if dependency_revision is not None and dependency_revision != base:
+                    merge_base = repo.git(
+                        "merge-base", base, dependency_revision
+                    ).strip()
+                    revision_is_newer = merge_base == base
+                run_is_newer = (
+                    dependency_run is not None
+                    and service_run is not None
+                    and dependency_run > service_run
+                )
+                if revision_is_newer or run_is_newer:
+                    service.dirty = True
+                    if service not in dirty_services:
+                        dirty_services.append(service)
+                    break
+
+        services.propagate_dirty(dirty_services)
+    finally:
+        for _, temporary in snapshots.values():
+            temporary.cleanup()
+
+
 def _diff_paths(
     repo: GitRepo,
     base_revision: str,
@@ -183,13 +279,23 @@ def build_plan(
             f"Requested revision {revision!r} does not match "
             f"checkout {actual_revision!r}"
         )
-    state: dict[str, Any] = {"base_revision": None, "expired_services": []}
+    state: dict[str, Any] = {
+        "base_revision": None,
+        "expired_services": [],
+        "service_revisions": {},
+        "service_runs": {},
+        "incomplete_services": [],
+        "docker_latest_failed": [],
+    }
     if baseline_from_taskcluster and event in {"push", "schedule", "workflow_dispatch"}:
         from .gha_publish import publication_state
 
         state = publication_state()
         base_revision = base_revision or state["base_revision"]
         expired_services = list(expired_services or []) + state["expired_services"]
+    retry_services = state.get("docker_latest_failed", []) + state.get(
+        "incomplete_services", []
+    )
     graph = Services(repo)
     previous_graph = None
     snapshot_temp_dir = None
@@ -243,12 +349,31 @@ def build_plan(
         # No successful publication baseline means recipe coverage is also unknown.
         for recipe in graph.recipes.values():
             recipe.dirty = True
+    per_service_baselines = (
+        baseline_from_taskcluster
+        and event in {"push", "schedule", "workflow_dispatch"}
+        and baseline_usable
+        and bool(state.get("service_revisions"))
+    )
+    if per_service_baselines:
+        assert base_revision is not None
+        _mark_published_changes_dirty(
+            graph,
+            repo,
+            revision=revision,
+            baseline_revision=base_revision,
+            service_revisions=state["service_revisions"],
+            service_runs=state.get("service_runs", {}),
+            changed_paths=changed_paths,
+            previous_services=previous_graph,
+        )
     result = plan_selection(
         graph,
         changed_paths=changed_paths,
-        previous_services=previous_graph,
-        force_services=force_services,
+        previous_services=None if per_service_baselines else previous_graph,
+        force_services=list(force_services or []) + retry_services,
         expired_services=expired_services,
+        mark_changes=not per_service_baselines,
     )
     publish = (
         event in {"push", "schedule", "workflow_dispatch"} and branch == main_branch

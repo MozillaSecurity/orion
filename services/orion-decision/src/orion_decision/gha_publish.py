@@ -37,7 +37,7 @@ QUEUE = "orion-gha-publish"
 WORKER = "orion-gha-publish"
 WORKER_CLIENT = "project/fuzzing/ci-worker-orion-gha"
 MARKER_ROUTE = "project.fuzzing.orion.gha.master"
-MANIFEST_SCHEMA = 1
+MANIFEST_SCHEMA = 2
 
 
 def artifact_task_id(run_id: str, attempt: str | int, key: str) -> str:
@@ -68,6 +68,8 @@ def validate_manifest(
     attempt: str | int | None = None,
 ) -> None:
     """Reject a publication manifest that does not describe the requested run."""
+    from .gha_plan import job_id
+
     expected = {
         "schema": MANIFEST_SCHEMA,
         "repository": repository,
@@ -116,16 +118,33 @@ def validate_manifest(
             raise ValueError(
                 "Publication manifest artifact is missing its SHA-256 digest"
             )
-    expected_gates = {
-        "selected_jobs": "success",
-        "docker_latest": "success"
-        if manifest.get("selected_docker_jobs")
-        else "not-required",
+    selected = set(manifest.get("selected_jobs", []))
+    successful = set(manifest.get("successful_jobs", []))
+    if not successful <= selected:
+        raise ValueError("Publication manifest reports unselected successful jobs")
+    expected_builds = {job for job in successful if job.startswith("build_")}
+    artifact_builds = {
+        job_id("build", artifact["service"], artifact["arch"])
+        for artifact in manifest["artifacts"]
     }
-    if manifest.get("gates") != expected_gates:
+    if artifact_builds != expected_builds:
         raise ValueError(
-            "Publication manifest does not prove the required GHA gates succeeded"
+            "Publication manifest artifacts do not match successful build jobs"
         )
+    gates = manifest.get("gates", {})
+    docker_latest = gates.get("docker_latest")
+    if docker_latest not in {"success", "failure", "skipped", "not-required"}:
+        raise ValueError("Publication manifest has an invalid Docker publication gate")
+    if manifest.get("selected_docker_jobs") and docker_latest == "not-required":
+        raise ValueError("Selected Docker builds require a Docker publication result")
+    if not manifest.get("selected_docker_jobs") and docker_latest != "not-required":
+        raise ValueError("Docker publication gate must be not-required")
+    complete = successful == selected and docker_latest in {"success", "not-required"}
+    if manifest.get("complete") is not complete:
+        raise ValueError("Publication manifest has an inconsistent completion status")
+    expected_selected_gate = "success" if successful == selected else "partial"
+    if gates.get("selected_jobs") != expected_selected_gate:
+        raise ValueError("Publication manifest has an inconsistent selected-jobs gate")
 
 
 def _artifact_indexes(manifest: dict[str, Any], item: dict[str, Any]) -> list[str]:
@@ -221,6 +240,12 @@ def build_import_tasks(
             "artifactKey": item["key"],
             "artifactDigest": item.get("digest"),
         }
+        if item["kind"] == "docker":
+            provenance["dockerLatestPublished"] = bool(
+                manifest.get("published_images", {})
+                .get(item["service"], {})
+                .get("latest_published")
+            )
         task_name = f"Orion import {item['service']} {item.get('arch', '')}".strip()
         task = {
             "taskGroupId": task_group,
@@ -266,78 +291,84 @@ def build_import_tasks(
         }
         tasks[task_id] = task
 
-    marker_id = artifact_task_id(
-        str(manifest["run_id"]), manifest["run_attempt"], "publication-marker"
-    )
-    marker_path = "orion-import/publication.json"
-    marker = {
-        "revision": manifest["revision"],
-        "repository": manifest["repository"],
-        "event": manifest["event"],
-        "branch": manifest["branch"],
-        "run_id": str(manifest["run_id"]),
-        "run_attempt": str(manifest["run_attempt"]),
-        "run_number": int(manifest["run_number"]),
-        "artifact_task_ids": task_ids,
-        "published_images": manifest.get("published_images", {}),
-    }
-    marker_script = (
-        "mkdir -p orion-import && cat > orion-import/publication.json "
-        "<<'ORION_MARKER'\n" + json.dumps(marker, sort_keys=True) + "\nORION_MARKER"
-    )
-    tasks[marker_id] = {
-        "taskGroupId": task_group,
-        "dependencies": task_ids,
-        "created": now.isoformat(),
-        "deadline": deadline,
-        "expires": expires,
-        "provisionerId": PROVISIONER_ID,
-        "workerType": WORKER,
-        "schedulerId": "taskcluster-github",
-        "routes": [f"index.{MARKER_ROUTE}"],
-        "payload": {
-            "maxRunTime": 3600,
-            "command": [["bash", "-e", "-c", marker_script]],
-            "artifacts": [
-                {
-                    "name": "public/orion-publication.json",
-                    "type": "file",
-                    "path": marker_path,
-                    "expires": expires,
-                }
-            ],
-        },
-        "scopes": ["queue:scheduler-id:taskcluster-github"],
-        "metadata": {
-            "name": "Orion successful publication marker",
-            "description": "Marks a fully imported Orion GHA publication baseline",
-            "owner": OWNER_EMAIL,
-            "source": SOURCE_URL,
-        },
-        "extra": {
-            "index": {
-                "rank": publication_rank(manifest["run_id"], manifest["run_attempt"]),
-                "data": marker,
+    if manifest["complete"]:
+        marker_id = artifact_task_id(
+            str(manifest["run_id"]), manifest["run_attempt"], "publication-marker"
+        )
+        marker_path = "orion-import/publication.json"
+        marker = {
+            "revision": manifest["revision"],
+            "repository": manifest["repository"],
+            "event": manifest["event"],
+            "branch": manifest["branch"],
+            "run_id": str(manifest["run_id"]),
+            "run_attempt": str(manifest["run_attempt"]),
+            "run_number": int(manifest["run_number"]),
+            "artifact_task_ids": task_ids,
+            "published_images": manifest.get("published_images", {}),
+        }
+        marker_script = (
+            "mkdir -p orion-import && cat > orion-import/publication.json "
+            "<<'ORION_MARKER'\n" + json.dumps(marker, sort_keys=True) + "\nORION_MARKER"
+        )
+        tasks[marker_id] = {
+            "taskGroupId": task_group,
+            "dependencies": task_ids,
+            "created": now.isoformat(),
+            "deadline": deadline,
+            "expires": expires,
+            "provisionerId": PROVISIONER_ID,
+            "workerType": WORKER,
+            "schedulerId": "taskcluster-github",
+            "routes": [f"index.{MARKER_ROUTE}"],
+            "payload": {
+                "maxRunTime": 3600,
+                "command": [["bash", "-e", "-c", marker_script]],
+                "artifacts": [
+                    {
+                        "name": "public/orion-publication.json",
+                        "type": "file",
+                        "path": marker_path,
+                        "expires": expires,
+                    }
+                ],
             },
-            "orion": marker,
-        },
-    }
+            "scopes": ["queue:scheduler-id:taskcluster-github"],
+            "metadata": {
+                "name": "Orion successful publication marker",
+                "description": "Marks a fully imported Orion GHA publication baseline",
+                "owner": OWNER_EMAIL,
+                "source": SOURCE_URL,
+            },
+            "extra": {
+                "index": {
+                    "rank": publication_rank(
+                        manifest["run_id"], manifest["run_attempt"]
+                    ),
+                    "data": marker,
+                },
+                "orion": marker,
+            },
+        }
     return tasks
 
 
 def expected_import_task_ids(manifest: dict[str, Any]) -> list[str]:
-    """Return IDs for every expected import and the final success marker."""
+    """Return IDs for successful artifact imports and any complete-run marker."""
     ids = [
         artifact_task_id(
             str(manifest["run_id"]), manifest["run_attempt"], str(item["key"])
         )
         for item in manifest["artifacts"]
     ]
-    ids.append(
-        artifact_task_id(
-            str(manifest["run_id"]), manifest["run_attempt"], "publication-marker"
+    if manifest["complete"]:
+        ids.append(
+            artifact_task_id(
+                str(manifest["run_id"]),
+                manifest["run_attempt"],
+                "publication-marker",
+            )
         )
-    )
     return ids
 
 
@@ -369,7 +400,7 @@ def publication_state(
     now: datetime | None = None,
     services: Any | None = None,
 ) -> dict[str, Any]:
-    """Read the last fully imported baseline and identify expiring real archives."""
+    """Read global and per-service publication baselines plus expiring archives."""
     from dateutil.parser import isoparse
 
     from .git import GitRepo
@@ -414,6 +445,10 @@ def publication_state(
 
     next_run = now + timedelta(days=7)
     expired: list[str] = []
+    service_revisions: dict[str, str] = {}
+    service_runs: dict[str, tuple[int, int]] = {}
+    docker_latest_failed: list[str] = []
+    incomplete_services: list[str] = []
     for service in services.values():
         if isinstance(service, ServiceTestOnly):
             continue
@@ -422,15 +457,21 @@ def publication_state(
             if isinstance(service, (ServiceHomebrew, ServiceMsys))
             else service.archs
         )
+        revisions: list[str | None] = []
+        publication_runs: list[tuple[int, int] | None] = []
+        service_expired = False
         for arch in archs:
             route = f"project.fuzzing.orion.{service.name}"
             if arch:
                 route += f".{arch}"
             route += ".master"
             try:
-                task_id = index.findTask(route)["taskId"]
+                indexed = index.findTask(route)
+                task_id = indexed["taskId"]
                 task = queue.task(task_id)
                 task_expires = isoparse(task["expires"])
+                status = queue.status(task_id)
+                status = status.get("status", status)
                 artifact_name = (
                     "public/msys2.tar.bz2"
                     if isinstance(service, ServiceMsys)
@@ -447,14 +488,70 @@ def publication_state(
                     artifact is None
                     or min(task_expires, isoparse(artifact["expires"])) < next_run
                 ):
-                    expired.append(service.name)
-                    break
+                    service_expired = True
+                data = indexed.get("data") or task.get("extra", {}).get(
+                    "index", {}
+                ).get("data", {})
+                completed = (
+                    status.get("state") == "completed"
+                    and status.get("runs", [{}])[-1].get("state") == "completed"
+                    and artifact is not None
+                    and data.get("repository") == "MozillaSecurity/orion"
+                    and isinstance(data.get("revision"), str)
+                    and re.fullmatch(r"[0-9a-f]{40}", data["revision"])
+                )
+                if (
+                    completed
+                    and not isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    and data.get("dockerLatestPublished") is False
+                ):
+                    docker_latest_failed.append(service.name)
+                if completed and (
+                    isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    or data.get("dockerLatestPublished") is True
+                ):
+                    revisions.append(data["revision"])
+                    try:
+                        publication_runs.append(
+                            (int(data["runId"]), int(data.get("runAttempt", 1)))
+                        )
+                    except (KeyError, TypeError, ValueError):
+                        publication_runs.append(None)
+                else:
+                    revisions.append(None)
+                    publication_runs.append(None)
             except Exception as exc:
                 if getattr(exc, "status_code", None) == 404:
-                    expired.append(service.name)
-                    break
+                    service_expired = True
+                    revisions.append(None)
+                    continue
                 raise
-    return {"base_revision": baseline, "expired_services": sorted(set(expired))}
+        if service_expired:
+            expired.append(service.name)
+        if len(revisions) == len(archs) and revisions and None not in revisions:
+            service_revision = revisions[0]
+            if isinstance(service_revision, str) and all(
+                revision == service_revision for revision in revisions
+            ):
+                service_revisions[service.name] = service_revision
+                valid_runs = [run for run in publication_runs if run is not None]
+                if valid_runs and len(valid_runs) == len(publication_runs):
+                    if len(set(valid_runs)) == 1:
+                        service_runs[service.name] = valid_runs[0]
+                    else:
+                        incomplete_services.append(service.name)
+                elif valid_runs:
+                    incomplete_services.append(service.name)
+            else:
+                incomplete_services.append(service.name)
+    return {
+        "base_revision": baseline,
+        "expired_services": sorted(set(expired)),
+        "service_revisions": service_revisions,
+        "service_runs": service_runs,
+        "docker_latest_failed": sorted(set(docker_latest_failed)),
+        "incomplete_services": sorted(set(incomplete_services)),
+    }
 
 
 def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
@@ -472,12 +569,25 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
     artifacts = _actions_artifacts(token, repository, run_id)
     by_name = {item["name"]: item for item in artifacts if not item.get("expired")}
     selected = set(plan.get("selected_jobs", []))
+    try:
+        job_results = json.loads(os.environ["ORION_JOB_RESULTS"])
+    except (KeyError, json.JSONDecodeError) as exc:
+        raise ValueError("GitHub job results are required for publication") from exc
+    successful = {
+        job for job in selected if job_results.get(job, {}).get("result") == "success"
+    }
+    docker_latest = (
+        job_results.get("publish-docker", {}).get("result", "skipped")
+        if plan.get("selected_docker_jobs")
+        else "not-required"
+    )
     entries: list[dict[str, Any]] = []
     for service in sorted(services.values(), key=lambda item: item.name):
         if isinstance(service, ServiceTestOnly):
             continue
         for arch in service.archs:
-            if job_id("build", service.name, arch) not in selected:
+            build_job = job_id("build", service.name, arch)
+            if build_job not in successful:
                 continue
             name = f"orion-build-{service.name}-{arch}-{attempt}"
             artifact = by_name.get(name)
@@ -522,28 +632,27 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
     if plan.get("selected_docker_jobs"):
         digest_name = f"orion-published-image-digests-{run_id}-{attempt}"
         digest_artifact = by_name.get(digest_name)
-        if digest_artifact is None:
-            raise ValueError("Successful Docker publication digest artifact is missing")
-        with TemporaryDirectory(prefix="orion-gha-digests-") as tmp:
-            zip_path = Path(tmp) / "digests.zip"
-            _download_artifact_zip(
-                digest_artifact["id"],
-                repository,
-                zip_path,
-                token=token,
-                digest=_required_artifact_digest(digest_artifact),
-            )
-            with zipfile.ZipFile(zip_path) as archive:
-                names = [
-                    name
-                    for name in archive.namelist()
-                    if Path(name).name == "published-images.json"
-                ]
-                if len(names) != 1:
-                    raise ValueError(
-                        "Docker digest artifact has no unique published-images.json"
-                    )
-                published_images = json.loads(archive.read(names[0]))
+        if digest_artifact is not None:
+            with TemporaryDirectory(prefix="orion-gha-digests-") as tmp:
+                zip_path = Path(tmp) / "digests.zip"
+                _download_artifact_zip(
+                    digest_artifact["id"],
+                    repository,
+                    zip_path,
+                    token=token,
+                    digest=_required_artifact_digest(digest_artifact),
+                )
+                with zipfile.ZipFile(zip_path) as archive:
+                    names = [
+                        name
+                        for name in archive.namelist()
+                        if Path(name).name == "published-images.json"
+                    ]
+                    if len(names) != 1:
+                        raise ValueError(
+                            "Docker digest artifact has no unique published-images.json"
+                        )
+                    published_images = json.loads(archive.read(names[0]))
     return {
         "schema": MANIFEST_SCHEMA,
         "repository": repository,
@@ -556,13 +665,14 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
         "workflow": "orion.yml",
         "selected_jobs": sorted(selected),
         "selected_docker_jobs": sorted(plan.get("selected_docker_jobs", [])),
+        "successful_jobs": sorted(successful),
         "publish": bool(plan.get("publish"))
         and os.environ["GITHUB_REF_NAME"] == "master",
+        "complete": successful == selected
+        and docker_latest in {"success", "not-required"},
         "gates": {
-            "selected_jobs": "success",
-            "docker_latest": "success"
-            if plan.get("selected_docker_jobs")
-            else "not-required",
+            "selected_jobs": "success" if successful == selected else "partial",
+            "docker_latest": docker_latest,
         },
         "artifacts": entries,
         "published_images": published_images,
@@ -591,6 +701,7 @@ def monitor_imports(
     expected = expected_import_task_ids(manifest)
     deadline = time.monotonic() + timeout
     pending = set(expected)
+    failures: dict[str, str] = {}
     while pending and time.monotonic() < deadline:
         for task_id in tuple(pending):
             try:
@@ -602,14 +713,12 @@ def monitor_imports(
                 raise
             state = status.get("state")
             if state in {"failed", "exception", "canceled"}:
-                raise RuntimeError(
-                    f"Taskcluster publication task {task_id} ended {state}"
-                )
+                failures[task_id] = state
+                pending.remove(task_id)
+                continue
             if state == "completed":
                 if status.get("runs", [{}])[-1].get("state") != "completed":
-                    raise RuntimeError(
-                        f"Taskcluster publication task {task_id} did not complete"
-                    )
+                    failures[task_id] = "did not complete"
                 pending.remove(task_id)
         if pending:
             time.sleep(min(poll_interval, max(0, deadline - time.monotonic())))
@@ -617,6 +726,23 @@ def monitor_imports(
         raise TimeoutError(
             "Timed out waiting for Taskcluster publication tasks: "
             + ", ".join(sorted(pending))
+            + (
+                "; failed tasks: "
+                + ", ".join(
+                    f"{task_id} ({state})"
+                    for task_id, state in sorted(failures.items())
+                )
+                if failures
+                else ""
+            )
+        )
+    if failures:
+        raise RuntimeError(
+            "Taskcluster publication tasks failed: "
+            + ", ".join(
+                f"{task_id} ended {state}"
+                for task_id, state in sorted(failures.items())
+            )
         )
 
 
@@ -710,7 +836,7 @@ def find_manifest_for_event(
         artifacts_by_id = {str(item["id"]): item for item in run_artifacts}
         expected_builds = {
             item
-            for item in manifest.get("selected_jobs", [])
+            for item in manifest.get("successful_jobs", [])
             if item.startswith("build_")
         }
         recorded_builds: set[str] = set()
