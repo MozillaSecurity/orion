@@ -32,7 +32,7 @@ from orion_decision.orion import Services
 @pytest.fixture
 def manifest() -> dict[str, Any]:
     return {
-        "schema": 1,
+        "schema": 2,
         "repository": "MozillaSecurity/orion",
         "revision": "a" * 40,
         "run_id": "123456789",
@@ -42,11 +42,13 @@ def manifest() -> dict[str, Any]:
         "branch": "master",
         "workflow": "orion.yml",
         "selected_jobs": ["build_fuzzilli_amd64", "build_fuzzilli_arm64"],
+        "successful_jobs": ["build_fuzzilli_amd64", "build_fuzzilli_arm64"],
         "selected_docker_jobs": [
             "build_fuzzilli_amd64",
             "build_fuzzilli_arm64",
         ],
         "gates": {"selected_jobs": "success", "docker_latest": "success"},
+        "complete": True,
         "publish": True,
         "artifacts": [
             {
@@ -73,8 +75,13 @@ def manifest() -> dict[str, Any]:
             },
         ],
         "published_images": {
-            "fuzzilli-amd64": "sha256:" + "1" * 64,
-            "fuzzilli-arm64": "sha256:" + "2" * 64,
+            "fuzzilli": {
+                "architectures": {
+                    "amd64": "sha256:" + "1" * 64,
+                    "arm64": "sha256:" + "2" * 64,
+                },
+                "latest_published": True,
+            },
         },
     }
 
@@ -421,6 +428,20 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
         "GITHUB_REF_NAME": "master",
     }.items():
         monkeypatch.setenv(key, value)
+    monkeypatch.setenv(
+        "ORION_JOB_RESULTS",
+        json.dumps(
+            {
+                job: {"result": "success"}
+                for job in (
+                    job_id("build", "docker", "amd64"),
+                    job_id("build", "docker", "arm64"),
+                    job_id("build", "windows", "amd64"),
+                    job_id("build", "brew", "amd64"),
+                )
+            }
+        ),
+    )
     uploaded_names = [
         "orion-build-docker-amd64-2",
         "orion-build-docker-arm64-2",
@@ -481,6 +502,10 @@ def test_native_only_manual_and_scheduled_publications_need_no_docker_digest(
         "GITHUB_REF_NAME": "master",
     }.items():
         monkeypatch.setenv(key, value)
+    monkeypatch.setenv(
+        "ORION_JOB_RESULTS",
+        json.dumps({job_id("build", "windows", "amd64"): {"result": "success"}}),
+    )
     uploaded = [
         {
             "id": 901,
@@ -511,6 +536,7 @@ def test_native_only_manual_and_scheduled_publications_need_no_docker_digest(
         "selected_jobs": "success",
         "docker_latest": "not-required",
     }
+    assert manifest["complete"] is True
     gha_publish.validate_manifest(
         manifest,
         repository="MozillaSecurity/orion",
@@ -520,8 +546,91 @@ def test_native_only_manual_and_scheduled_publications_need_no_docker_digest(
     )
 
 
+def test_partial_publication_imports_successful_branches_without_advancing_baseline(
+    tmp_path, monkeypatch
+) -> None:
+    """Index successful branches while failed jobs leave the baseline unchanged."""
+    repo = _publication_repo(tmp_path / "repo")
+    monkeypatch.chdir(repo)
+    for key, value in {
+        "GITHUB_REPOSITORY": "MozillaSecurity/orion",
+        "GITHUB_RUN_ID": "123456789",
+        "GITHUB_RUN_ATTEMPT": "1",
+        "GITHUB_RUN_NUMBER": "419",
+        "GITHUB_EVENT_NAME": "push",
+        "GITHUB_REF_NAME": "master",
+    }.items():
+        monkeypatch.setenv(key, value)
+    docker_amd64 = job_id("build", "docker", "amd64")
+    docker_arm64 = job_id("build", "docker", "arm64")
+    windows = job_id("build", "windows", "amd64")
+    recipe = job_id("recipe_test", "broken")
+    monkeypatch.setenv(
+        "ORION_JOB_RESULTS",
+        json.dumps(
+            {
+                docker_amd64: {"result": "success"},
+                docker_arm64: {"result": "failure"},
+                windows: {"result": "success"},
+                recipe: {"result": "failure"},
+                "publish-docker": {"result": "failure"},
+            }
+        ),
+    )
+    uploaded = [
+        {
+            "id": 901,
+            "name": "orion-build-docker-amd64-1",
+            "digest": "sha256:" + "a" * 64,
+        },
+        {
+            "id": 902,
+            "name": "orion-build-windows-amd64-1",
+            "digest": "sha256:" + "b" * 64,
+        },
+    ]
+    monkeypatch.setattr(
+        gha_publish, "_actions_artifacts", lambda _token, _repo, _run: uploaded
+    )
+
+    manifest = gha_publish.create_manifest(
+        {
+            "revision": "d" * 40,
+            "publish": True,
+            "selected_jobs": [docker_amd64, docker_arm64, windows, recipe],
+            "selected_docker_jobs": [docker_amd64, docker_arm64],
+        },
+        token="worker-token",
+    )
+
+    assert {item["key"] for item in manifest["artifacts"]} == {
+        "docker-amd64",
+        "windows-amd64",
+    }
+    assert manifest["successful_jobs"] == sorted([docker_amd64, windows])
+    assert manifest["complete"] is False
+    assert manifest["published_images"] == {}
+    gha_publish.validate_manifest(
+        manifest,
+        repository="MozillaSecurity/orion",
+        revision="d" * 40,
+        event="push",
+        branch="master",
+    )
+
+    tasks = gha_publish.build_import_tasks(
+        manifest, "d" * 22, datetime(2026, 10, 13, tzinfo=timezone.utc)
+    )
+    assert len(tasks) == 2
+    assert gha_publish.expected_import_task_ids(manifest) == [
+        gha_publish.artifact_task_id("123456789", "1", "docker-amd64"),
+        gha_publish.artifact_task_id("123456789", "1", "windows-amd64"),
+    ]
+
+
 def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
     tmp_path,
+    monkeypatch,
 ) -> None:
     """Compare each architecture with its completed baseline image."""
     repo = _publication_repo(tmp_path / "repo")
@@ -547,7 +656,16 @@ def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
     class Index:
         def findTask(self, route):
             routes.append(route)
-            return {"taskId": index_tasks[route]}
+            result = {"taskId": index_tasks[route]}
+            if route != gha_publish.MARKER_ROUTE:
+                result["data"] = {
+                    "repository": "MozillaSecurity/orion",
+                    "revision": revision,
+                    "dockerLatestPublished": True,
+                    "runId": "123",
+                    "runAttempt": "1",
+                }
+            return result
 
     class Queue:
         marker_state = "completed"
@@ -572,16 +690,102 @@ def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
         index=Index(), queue=queue, now=now, services=services
     )
 
-    assert state == {"base_revision": revision, "expired_services": ["docker"]}
+    assert state == {
+        "base_revision": revision,
+        "expired_services": ["docker"],
+        "docker_latest_failed": [],
+        "incomplete_services": [],
+        "service_revisions": {
+            "docker": revision,
+            "windows": revision,
+            "brew": revision,
+        },
+        "service_runs": {
+            "docker": (123, 1),
+            "windows": (123, 1),
+            "brew": (123, 1),
+        },
+    }
     assert "project.fuzzing.orion.docker.amd64.master" in routes
     assert "project.fuzzing.orion.docker.arm64.master" in routes
     assert "project.fuzzing.orion.virtual.master" not in routes
 
+    def find_task(_self, route):
+        result = {"taskId": index_tasks[route]}
+        if route != gha_publish.MARKER_ROUTE:
+            result["data"] = {
+                "repository": "MozillaSecurity/orion",
+                "revision": revision,
+                "dockerLatestPublished": True,
+                "runId": "123"
+                if route == "project.fuzzing.orion.docker.arm64.master"
+                else "124",
+                "runAttempt": "1",
+            }
+        return result
+
+    monkeypatch.setattr(Index, "findTask", find_task)
+    state = gha_publish.publication_state(
+        index=Index(), queue=queue, now=now, services=services
+    )
+    assert state["service_revisions"]["docker"] == revision
+    assert state["docker_latest_failed"] == []
+    assert state["incomplete_services"] == ["docker"]
+    assert state["service_revisions"]["windows"] == revision
+
+    def failed_latest(_self, route):
+        result = {"taskId": index_tasks[route]}
+        if route != gha_publish.MARKER_ROUTE:
+            result["data"] = {
+                "repository": "MozillaSecurity/orion",
+                "revision": revision,
+                "dockerLatestPublished": not route.startswith(
+                    "project.fuzzing.orion.docker."
+                ),
+                "runId": "125",
+                "runAttempt": "1",
+            }
+        return result
+
+    monkeypatch.setattr(Index, "findTask", failed_latest)
+    state = gha_publish.publication_state(
+        index=Index(), queue=queue, now=now, services=services
+    )
+    assert state["docker_latest_failed"] == ["docker"]
+    assert "docker" not in state["service_revisions"]
     queue.marker_state = "pending"
     state = gha_publish.publication_state(
         index=Index(), queue=queue, now=now, services=services
     )
     assert state["base_revision"] is None
+    assert state["service_revisions"]["windows"] == revision
+
+
+def test_planner_retries_incomplete_service_publication(tmp_path, monkeypatch):
+    """Retry an unchanged service after an incomplete Docker publication."""
+    repo = _publication_repo(tmp_path / "repo")
+    revision = _git(repo, "rev-parse", "HEAD")
+    monkeypatch.setattr(
+        gha_publish,
+        "publication_state",
+        lambda: {
+            "base_revision": revision,
+            "expired_services": [],
+            "service_revisions": {"docker": revision},
+            "incomplete_services": ["docker"],
+        },
+    )
+
+    plan = build_plan(
+        repo,
+        revision=revision,
+        event="push",
+        branch="master",
+        baseline_from_taskcluster=True,
+    )
+
+    assert plan["services"] == ["docker"]
+    assert job_id("build", "docker", "amd64") in plan["selected_jobs"]
 
 
 def test_planner_uses_taskcluster_baseline_and_falls_back_to_full_graph(
@@ -644,6 +848,7 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
     amd64_id = gha_publish.artifact_task_id("123456789", "2", "fuzzilli-amd64")
     amd64 = definitions[amd64_id]
     assert amd64["extra"]["orion"]["artifactDigest"] == "sha256:" + "1" * 64
+    assert amd64["extra"]["orion"]["dockerLatestPublished"] is True
     assert "index.project.fuzzing.orion.fuzzilli.amd64.master" in amd64["routes"]
     assert (
         "index.project.fuzzing.orion.fuzzilli.amd64.rev." + "a" * 40 in amd64["routes"]
@@ -891,18 +1096,31 @@ def test_import_rejects_symlink_zip_member(tmp_path, monkeypatch) -> None:
 
 
 def test_monitor_raises_on_failed_task(manifest) -> None:
-    """Fail publication monitoring when an imported Taskcluster task fails."""
+    """Report a failed Taskcluster import after checking every sibling task."""
     expected = set(gha_publish.expected_import_task_ids(manifest))
     failed_id = next(iter(expected))
+    pending_id = next(task_id for task_id in expected if task_id != failed_id)
+    pending_polls = 0
 
     class Queue:
         def status(self, task_id):
+            nonlocal pending_polls
             if task_id == failed_id:
                 return {"status": {"state": "failed", "runs": [{"state": "failed"}]}}
+            if task_id == pending_id:
+                pending_polls += 1
+                if pending_polls == 1:
+                    return {
+                        "status": {
+                            "state": "running",
+                            "runs": [{"state": "running"}],
+                        }
+                    }
             return {"status": {"state": "completed", "runs": [{"state": "completed"}]}}
 
     with pytest.raises(RuntimeError, match="ended failed"):
         gha_publish.monitor_imports(manifest, queue=Queue(), timeout=1, poll_interval=0)
+    assert pending_polls == 2
 
 
 def test_monitor_does_not_treat_an_idle_worker_as_success(
@@ -961,20 +1179,30 @@ def test_taskcluster_hook_renders_only_master_push_publication_decisions() -> No
 
 
 @pytest.mark.parametrize(
-    ("graph", "publish", "manifest", "worker", "expected_returncode"),
+    (
+        "graph",
+        "publish",
+        "manifest",
+        "worker",
+        "docker_required",
+        "docker",
+        "expected_returncode",
+    ),
     [
-        ("success", "false", "skipped", "skipped", 0),
-        ("success", "true", "skipped", "skipped", 1),
-        ("success", "true", "success", "skipped", 1),
-        ("success", "true", "success", "success", 0),
-        ("failure", "false", "skipped", "skipped", 1),
-        ("failure", "true", "success", "success", 1),
+        ("success", "false", "skipped", "skipped", "true", "skipped", 0),
+        ("success", "true", "skipped", "skipped", "false", "skipped", 1),
+        ("success", "true", "success", "skipped", "false", "skipped", 1),
+        ("success", "true", "success", "success", "false", "skipped", 0),
+        ("success", "true", "success", "success", "true", "failure", 1),
+        ("failure", "false", "skipped", "skipped", "false", "skipped", 1),
+        ("failure", "true", "success", "success", "false", "skipped", 1),
     ],
     ids=[
         "nonpublish-pr-skips-worker",
         "publish-requires-manifest",
         "publish-requires-import-worker",
         "publish-all-gates-pass",
+        "docker-publication-failure",
         "graph-failure-no-green-pr",
         "graph-failure-no-green-publish",
     ],
@@ -985,9 +1213,11 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
     publish,
     manifest,
     worker,
+    docker_required,
+    docker,
     expected_returncode,
 ) -> None:
-    """Require graph and publication success before reporting workflow success."""
+    """Require graph, Docker, and Taskcluster success for a green publish run."""
     repo = _publication_repo(tmp_path / "repo")
     jobs = safe_load(
         render_workflow(Services(GitRepo.from_existing(repo))).split("\n", 3)[3]
@@ -999,6 +1229,8 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
         "ORION_PUBLISH": publish,
         "ORION_MANIFEST_RESULT": manifest,
         "ORION_WORKER_RESULT": worker,
+        "ORION_DOCKER_REQUIRED": docker_required,
+        "ORION_DOCKER_RESULT": docker,
     }
 
     completed = subprocess.run(

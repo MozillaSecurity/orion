@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from orion_decision import gha_publish
 from orion_decision.gha_plan import build_plan, job_id
 
 
@@ -325,3 +326,149 @@ def test_missing_baseline_selects_full_graph_including_recipes(tmp_path: Path) -
     assert plan["recipes"] == ["install.sh"]
     assert job_id("recipe_test", "install.sh") in plan["selected_jobs"]
     assert plan["full_rebuild_reason"] == "baseline-missing"
+
+
+def test_peer_fix_uses_each_services_last_published_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A peer fix rebuilds only the service that failed the earlier publication."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init", "-b", "master")
+    git(repo, "config", "user.name", "Orion tests")
+    git(repo, "config", "user.email", "orion-tests@example.invalid")
+    for name in ("x", "y", "z"):
+        service = repo / "services" / name
+        service.mkdir(parents=True)
+        (service / "service.yaml").write_text(f"name: {name}\ntests: []\n")
+        (service / "Dockerfile").write_text("FROM alpine:3.20\n")
+    base_revision = commit(repo, "initial services")
+
+    for name in ("x", "y", "z"):
+        (repo / "services" / name / "Dockerfile").write_text("FROM alpine:3.21\n")
+    published_revision = commit(repo, "update all services")
+
+    (repo / "services/z/Dockerfile").write_text("FROM alpine:3.22\n")
+    revision = commit(repo, "fix z")
+    monkeypatch.setattr(
+        gha_publish,
+        "publication_state",
+        lambda: {
+            "base_revision": base_revision,
+            "expired_services": [],
+            "service_revisions": {
+                "x": published_revision,
+                "y": published_revision,
+                "z": base_revision,
+            },
+        },
+    )
+
+    plan = build_plan(
+        repo,
+        revision=revision,
+        event="push",
+        branch="master",
+        baseline_from_taskcluster=True,
+    )
+
+    assert plan["services"] == ["z"]
+    assert plan["selected_jobs"] == [job_id("build", "z", "amd64")]
+
+
+def test_per_service_baseline_propagates_nested_recipe_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A nested recipe edit rebuilds outer recipes and each dependent service."""
+    repo = make_repo(tmp_path / "repo")
+    consumer = repo / "services/consumer/Dockerfile"
+    consumer.write_text("FROM mozillasecurity/base:latest\nRUN recipes/outer.sh\n")
+    (repo / "recipes/outer.sh").write_text("#!/bin/sh\nrecipes/inner.sh\n")
+    (repo / "recipes/inner.sh").write_text("#!/bin/sh\necho old\n")
+    baseline = commit(repo, "add nested recipes")
+    (repo / "recipes/inner.sh").write_text("#!/bin/sh\necho fixed\n")
+    revision = commit(repo, "fix nested recipe")
+    monkeypatch.setattr(
+        gha_publish,
+        "publication_state",
+        lambda: {
+            "base_revision": baseline,
+            "expired_services": [],
+            "service_revisions": {"consumer": baseline},
+        },
+    )
+
+    plan = build_plan(
+        repo,
+        revision=revision,
+        event="push",
+        branch="master",
+        baseline_from_taskcluster=True,
+    )
+
+    assert "consumer" in plan["services"]
+    assert {"inner.sh", "outer.sh"} <= set(plan["recipes"])
+    assert job_id("build", "consumer", "amd64") in plan["selected_jobs"]
+
+
+def test_per_service_baseline_selects_new_test_only_service(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A newly added test-only service is selected without an old graph node."""
+    repo = make_repo(tmp_path / "repo")
+    baseline = git(repo, "rev-parse", "HEAD")
+    new_service = repo / "services/new-test"
+    new_service.mkdir()
+    (new_service / "service.yaml").write_text("name: new-test\ntype: test\n")
+    (new_service / "tests").mkdir()
+    (new_service / "tests/test_new.py").write_text("def test_new(): pass\n")
+    revision = commit(repo, "add test-only service")
+    monkeypatch.setattr(
+        gha_publish,
+        "publication_state",
+        lambda: {
+            "base_revision": baseline,
+            "expired_services": [],
+            "service_revisions": {"consumer": baseline},
+        },
+    )
+
+    plan = build_plan(
+        repo,
+        revision=revision,
+        event="push",
+        branch="master",
+        baseline_from_taskcluster=True,
+    )
+
+    assert "new-test" in plan["services"]
+    assert job_id("service_test", "new-test") in plan["selected_jobs"]
+
+
+def test_newer_same_revision_dependency_retries_weak_dependent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed weak dependent retries after its parent refreshes at the same SHA."""
+    repo = make_repo(tmp_path / "repo")
+    baseline = git(repo, "rev-parse", "HEAD")
+    monkeypatch.setattr(
+        gha_publish,
+        "publication_state",
+        lambda: {
+            "base_revision": baseline,
+            "expired_services": [],
+            "service_revisions": {"base": baseline, "weak": baseline},
+            "service_runs": {"base": (20, 1), "weak": (10, 1)},
+        },
+    )
+
+    plan = build_plan(
+        repo,
+        revision=baseline,
+        event="push",
+        branch="master",
+        baseline_from_taskcluster=True,
+    )
+
+    assert "weak" in plan["services"]
+    assert job_id("build", "weak", "amd64") in plan["selected_jobs"]

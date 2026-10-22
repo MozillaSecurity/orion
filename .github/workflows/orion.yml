@@ -1857,6 +1857,7 @@ jobs:
     - graph-result
     - publication-manifest
     - publication-worker
+    - publish-docker
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -1866,9 +1867,14 @@ jobs:
         ORION_PUBLISH: ${{ needs.plan.outputs.publish }}
         ORION_MANIFEST_RESULT: ${{ needs.publication-manifest.result }}
         ORION_WORKER_RESULT: ${{ needs.publication-worker.result }}
+        ORION_DOCKER_RESULT: ${{ needs.publish-docker.result }}
+        ORION_DOCKER_REQUIRED: ${{ needs.plan.outputs.selected_docker_jobs != '[]'
+          }}
       run: "python - <<'PY'\nimport os, sys\nif os.environ['ORION_GRAPH_RESULT'] !=\
         \ 'success':\n    sys.exit('Selected Orion graph jobs did not all succeed')\n\
-        if os.environ['ORION_PUBLISH'] == 'true':\n    if os.environ['ORION_MANIFEST_RESULT']\
+        if os.environ['ORION_PUBLISH'] == 'true':\n    if (os.environ['ORION_DOCKER_REQUIRED']\
+        \ == 'true' and\n            os.environ['ORION_DOCKER_RESULT'] != 'success'):\n\
+        \        sys.exit('Docker image publication did not complete')\n    if os.environ['ORION_MANIFEST_RESULT']\
         \ != 'success':\n        sys.exit('Taskcluster publication manifest was not\
         \ created')\n    if os.environ['ORION_WORKER_RESULT'] != 'success':\n    \
         \    sys.exit('Taskcluster artifact imports did not complete')\nPY"
@@ -1876,11 +1882,87 @@ jobs:
     name: Create Taskcluster publication manifest
     needs:
     - plan
-    - graph-result
+    - build_afl_amd64
+    - build_bugmon_amd64
+    - build_bugmon_win_amd64
+    - build_ci_java_11_amd64
+    - build_ci_node_18_amd64
+    - build_ci_node_18_win_amd64
+    - build_ci_node_20_amd64
+    - build_ci_node_20_win_amd64
+    - build_ci_node_22_amd64
+    - build_ci_node_22_win_amd64
+    - build_ci_py_310_amd64
+    - build_ci_py_310_osx_amd64
+    - build_ci_py_310_win_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_311_osx_amd64
+    - build_ci_py_311_win_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_312_osx_amd64
+    - build_ci_py_312_win_amd64
+    - build_ci_py_313_amd64
+    - build_ci_py_313_osx_amd64
+    - build_ci_py_313_win_amd64
+    - build_covdiff_amd64
+    - build_coverage_revision_amd64
+    - build_domino_web_tests_amd64
+    - build_funfuzz_amd64
+    - build_fuzzilli_amd64
+    - build_fuzzilli_arm64
+    - build_fuzzing_decision_amd64
+    - build_grizzly_amd64
+    - build_grizzly_android_amd64
+    - build_grizzly_reduce_monitor_amd64
+    - build_grizzly_win_amd64
+    - build_js_tests_distiller_amd64
+    - build_langfuzz_amd64
+    - build_langfuzz_arm64
+    - build_libfuzzer_amd64
+    - build_neqo_coverage_amd64
+    - build_nss_corpus_update_amd64
+    - build_nss_coverage_amd64
+    - build_nyx_amd64
+    - build_orion_decision_amd64
+    - build_prefmonitor_amd64
+    - build_site_scout_amd64
+    - build_site_scout_android_amd64
+    - build_site_scout_win_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_dbgsyms_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_gcov_9_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_htop_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_orion_decision_sh
+    - recipe_test_pernosco_submit_sh
+    - recipe_test_poetry_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_radamsa_sh
+    - recipe_test_rr_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_uv_sh
+    - recipe_test_worker_sh
+    - service_test_fuzzing_decision
+    - service_test_nyx_ipc_manager
+    - service_test_orion
+    - service_test_orion_decision
+    - service_test_symbol_filter
     - publish-docker
-    if: always() && !cancelled() && needs.graph-result.result == 'success' && (needs.publish-docker.result
-      == 'success' || needs.plan.outputs.selected_docker_jobs == '[]') && github.event_name
-      != 'pull_request' && github.ref == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -1904,6 +1986,7 @@ jobs:
     - name: Write plan and bind exact build artifacts
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
         ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
       run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
 
@@ -2008,9 +2091,86 @@ jobs:
     name: Publish Orion Docker manifests
     needs:
     - plan
-    - graph-result
-    if: always() && !cancelled() && needs.graph-result.result == 'success' && needs.plan.outputs.selected_docker_jobs
-      != '[]' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    - build_afl_amd64
+    - build_bugmon_amd64
+    - build_bugmon_win_amd64
+    - build_ci_java_11_amd64
+    - build_ci_node_18_amd64
+    - build_ci_node_18_win_amd64
+    - build_ci_node_20_amd64
+    - build_ci_node_20_win_amd64
+    - build_ci_node_22_amd64
+    - build_ci_node_22_win_amd64
+    - build_ci_py_310_amd64
+    - build_ci_py_310_osx_amd64
+    - build_ci_py_310_win_amd64
+    - build_ci_py_311_amd64
+    - build_ci_py_311_osx_amd64
+    - build_ci_py_311_win_amd64
+    - build_ci_py_312_amd64
+    - build_ci_py_312_osx_amd64
+    - build_ci_py_312_win_amd64
+    - build_ci_py_313_amd64
+    - build_ci_py_313_osx_amd64
+    - build_ci_py_313_win_amd64
+    - build_covdiff_amd64
+    - build_coverage_revision_amd64
+    - build_domino_web_tests_amd64
+    - build_funfuzz_amd64
+    - build_fuzzilli_amd64
+    - build_fuzzilli_arm64
+    - build_fuzzing_decision_amd64
+    - build_grizzly_amd64
+    - build_grizzly_android_amd64
+    - build_grizzly_reduce_monitor_amd64
+    - build_grizzly_win_amd64
+    - build_js_tests_distiller_amd64
+    - build_langfuzz_amd64
+    - build_langfuzz_arm64
+    - build_libfuzzer_amd64
+    - build_neqo_coverage_amd64
+    - build_nss_corpus_update_amd64
+    - build_nss_coverage_amd64
+    - build_nyx_amd64
+    - build_orion_decision_amd64
+    - build_prefmonitor_amd64
+    - build_site_scout_amd64
+    - build_site_scout_android_amd64
+    - build_site_scout_win_amd64
+    - recipe_test_cleanup_sh
+    - recipe_test_common_sh
+    - recipe_test_dbgsyms_sh
+    - recipe_test_fluentbit_sh
+    - recipe_test_fuzzfetch_sh
+    - recipe_test_fuzzing_tc_sh
+    - recipe_test_fuzzmanager_sh
+    - recipe_test_gcov_9_sh
+    - recipe_test_grcov_sh
+    - recipe_test_gsutil_sh
+    - recipe_test_htop_sh
+    - recipe_test_js32_deps_sh
+    - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_sh
+    - recipe_test_llvm_symbolizer_sh
+    - recipe_test_nodejs_sh
+    - recipe_test_orion_decision_sh
+    - recipe_test_pernosco_submit_sh
+    - recipe_test_poetry_sh
+    - recipe_test_prefpicker_sh
+    - recipe_test_radamsa_sh
+    - recipe_test_rr_sh
+    - recipe_test_sentry_sh
+    - recipe_test_taskcluster_sh
+    - recipe_test_taskgraph_m_c_latest_sh
+    - recipe_test_uv_sh
+    - recipe_test_worker_sh
+    - service_test_fuzzing_decision
+    - service_test_nyx_ipc_manager
+    - service_test_orion
+    - service_test_orion_decision
+    - service_test_symbol_filter
+    if: always() && !cancelled() && needs.plan.outputs.selected_docker_jobs != '[]'
+      && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
       && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     environment: dockerhub
@@ -2050,8 +2210,10 @@ jobs:
     - name: Push staging images and publish latest manifests
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
       run: python -m orion_decision.gha_run publish --repo . --plan-file "$RUNNER_TEMP/plan.json"
     - name: Record published image digests
+      if: always()
       uses: actions/upload-artifact@v5
       with:
         name: orion-published-image-digests-${{ github.run_id }}-${{ github.run_attempt

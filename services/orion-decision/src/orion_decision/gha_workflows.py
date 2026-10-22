@@ -201,6 +201,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
             "graph-result",
             "publication-manifest",
             "publication-worker",
+            "publish-docker",
         ],
         "if": "always()",
         "runs-on": "ubuntu-latest",
@@ -212,6 +213,10 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "ORION_PUBLISH": "${{ needs.plan.outputs.publish }}",
                     "ORION_MANIFEST_RESULT": "${{ needs.publication-manifest.result }}",
                     "ORION_WORKER_RESULT": "${{ needs.publication-worker.result }}",
+                    "ORION_DOCKER_RESULT": "${{ needs.publish-docker.result }}",
+                    "ORION_DOCKER_REQUIRED": (
+                        "${{ needs.plan.outputs.selected_docker_jobs != '[]' }}"
+                    ),
                 },
                 "run": (
                     "python - <<'PY'\n"
@@ -219,6 +224,9 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "if os.environ['ORION_GRAPH_RESULT'] != 'success':\n"
                     "    sys.exit('Selected Orion graph jobs did not all succeed')\n"
                     "if os.environ['ORION_PUBLISH'] == 'true':\n"
+                    "    if (os.environ['ORION_DOCKER_REQUIRED'] == 'true' and\n"
+                    "            os.environ['ORION_DOCKER_RESULT'] != 'success'):\n"
+                    "        sys.exit('Docker image publication did not complete')\n"
                     "    if os.environ['ORION_MANIFEST_RESULT'] != 'success':\n"
                     "        sys.exit('Taskcluster publication manifest "
                     "was not created')\n"
@@ -236,6 +244,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
 def render_workflow(services: Services) -> str:
     """Render a stable workflow with a fixed job for each graph operation."""
     jobs = _build_jobs(services)
+    graph_job_ids = jobs["graph-result"]["needs"][1:]
     workflow: dict[str, Any] = {
         "name": "Orion",
         "on": {
@@ -317,12 +326,9 @@ def render_workflow(services: Services) -> str:
             **jobs,
             "publication-manifest": {
                 "name": "Create Taskcluster publication manifest",
-                "needs": ["plan", "graph-result", "publish-docker"],
+                "needs": ["plan", *graph_job_ids, "publish-docker"],
                 "if": (
                     "always() && !cancelled() && "
-                    "needs.graph-result.result == 'success' && "
-                    "(needs.publish-docker.result == 'success' || "
-                    "needs.plan.outputs.selected_docker_jobs == '[]') && "
                     "github.event_name != 'pull_request' && "
                     "github.ref == 'refs/heads/master' && "
                     "fromJSON(needs.plan.outputs.plan_json).publish"
@@ -357,6 +363,7 @@ def render_workflow(services: Services) -> str:
                         "name": "Write plan and bind exact build artifacts",
                         "env": {
                             "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_JOB_RESULTS": "${{ toJSON(needs) }}",
                             "ORION_PLAN_JSON": "${{ needs.plan.outputs.plan_json }}",
                         },
                         "run": (
@@ -501,10 +508,9 @@ def render_workflow(services: Services) -> str:
             },
             "publish-docker": {
                 "name": "Publish Orion Docker manifests",
-                "needs": ["plan", "graph-result"],
+                "needs": ["plan", *graph_job_ids],
                 "if": (
                     "always() && !cancelled() && "
-                    "needs.graph-result.result == 'success' && "
                     "needs.plan.outputs.selected_docker_jobs != '[]' && "
                     "github.event_name != 'pull_request' && "
                     "github.ref == 'refs/heads/master' && "
@@ -562,7 +568,10 @@ def render_workflow(services: Services) -> str:
                     },
                     {
                         "name": "Push staging images and publish latest manifests",
-                        "env": {"GITHUB_TOKEN": "${{ github.token }}"},
+                        "env": {
+                            "GITHUB_TOKEN": "${{ github.token }}",
+                            "ORION_JOB_RESULTS": "${{ toJSON(needs) }}",
+                        },
                         "run": (
                             "python -m orion_decision.gha_run publish "
                             '--repo . --plan-file "$RUNNER_TEMP/plan.json"'
@@ -570,6 +579,7 @@ def render_workflow(services: Services) -> str:
                     },
                     {
                         "name": "Record published image digests",
+                        "if": "always()",
                         "uses": "actions/upload-artifact@v5",
                         "with": {
                             "name": (
