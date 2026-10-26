@@ -172,179 +172,18 @@ def test_manifest_must_match_the_exact_github_run(manifest) -> None:
             )
 
 
-def test_push_decision_finds_manifest_from_matching_workflow_run(
-    manifest, monkeypatch
+def test_push_decision_establishes_group_without_waiting_for_builds(
+    tmp_path, monkeypatch
 ) -> None:
-    """Select the manifest belonging to the exact matching push run."""
-    repository = manifest["repository"]
-    revision = manifest["revision"]
-    expected_run = {
-        "id": 123456789,
-        "run_attempt": 2,
-        "run_number": 418,
-        "head_sha": revision,
-        "event": "push",
-        "head_branch": "master",
-        "path": ".github/workflows/orion.yml",
-    }
-    runs = {
-        "workflow_runs": [
-            {**expected_run, "id": 111, "head_sha": "b" * 40},
-            {**expected_run, "id": 112, "path": ".github/workflows/other.yml"},
-            expected_run,
-        ]
-    }
-    api_calls = []
-
-    def github_json(url: str) -> dict[str, Any]:
-        api_calls.append(url)
-        if url.endswith(
-            "/actions/runs?head_sha=" + revision + "&event=push&branch=master"
-        ):
-            return runs
-        assert url.endswith("/actions/runs/123456789/artifacts")
-        return {
-            "artifacts": [
-                {
-                    "id": 900,
-                    "name": "orion-publication-manifest-123456789-2",
-                    "expired": False,
-                    "digest": "sha256:" + "9" * 64,
-                }
-            ]
-        }
-
-    downloaded = []
-
-    def download(
-        artifact_id: int,
-        filename: str,
-        *,
-        repository: str,
-        digest: str | None = None,
-    ) -> dict[str, Any]:
-        assert repository == "MozillaSecurity/orion"
-        assert digest == "sha256:" + "9" * 64
-        downloaded.append((artifact_id, filename))
-        return manifest
-
-    monkeypatch.setattr(gha_publish, "_github_json", github_json)
-    monkeypatch.setattr(gha_publish, "download_artifact_json", download)
-    monkeypatch.setattr(gha_publish, "_token", lambda: "test-worker-token")
-    monkeypatch.setattr(
-        gha_publish,
-        "_actions_artifacts",
-        lambda _token, _repository, _run: [
-            {
-                "id": 801,
-                "name": "orion-build-fuzzilli-amd64-2",
-                "digest": "sha256:" + "1" * 64,
-                "expired": False,
-            },
-            {
-                "id": 802,
-                "name": "orion-build-fuzzilli-arm64-2",
-                "digest": "sha256:" + "2" * 64,
-                "expired": False,
-            },
-        ],
-    )
-    event = {
-        "repository": {"full_name": repository},
-        "after": revision,
-        "ref": "refs/heads/master",
-    }
-
-    assert gha_publish.find_manifest_for_event(event, "github-push") == manifest
-    assert downloaded == [(900, "manifest.json")]
-    assert len(api_calls) == 2
-
-    matching_artifacts = [
-        {
-            "id": 801,
-            "name": "orion-build-fuzzilli-amd64-2",
-            "digest": "sha256:" + "1" * 64,
-            "expired": False,
-        },
-        {
-            "id": 802,
-            "name": "orion-build-fuzzilli-arm64-2",
-            "digest": "sha256:" + "2" * 64,
-            "expired": False,
-        },
-    ]
-    for broken in (
-        [{**matching_artifacts[0], "id": 999}, matching_artifacts[1]],
-        [
-            {**matching_artifacts[0], "digest": "sha256:" + "3" * 64},
-            matching_artifacts[1],
-        ],
-    ):
-        monkeypatch.setattr(
-            gha_publish,
-            "_actions_artifacts",
-            lambda _token, _repository, _run, broken=broken: broken,
-        )
-        with pytest.raises(ValueError, match="outside this run attempt"):
-            gha_publish.find_manifest_for_event(event, "github-push")
-
-    for bad_event, action in (
-        ({**event, "ref": "refs/heads/release"}, "github-push"),
-        (event, "github-pull-request"),
-    ):
-        with pytest.raises(ValueError, match="master push"):
-            gha_publish.find_manifest_for_event(bad_event, action)
-
-
-def test_push_decision_does_not_borrow_prior_run_when_manifest_is_not_ready(
-    manifest, monkeypatch
-) -> None:
-    """Do not reuse an earlier run's manifest when the current run has none ready."""
-    revision = manifest["revision"]
-    requested_urls = []
-
-    def github_json(url: str) -> dict[str, Any]:
-        requested_urls.append(url)
-        if "actions/runs?" in url:
-            return {
-                "workflow_runs": [
-                    {
-                        "id": 100,
-                        "run_attempt": 1,
-                        "run_number": 417,
-                        "head_sha": "b" * 40,
-                        "event": "push",
-                        "head_branch": "master",
-                        "path": ".github/workflows/orion.yml",
-                    },
-                    {
-                        "id": 101,
-                        "run_attempt": 1,
-                        "run_number": 418,
-                        "head_sha": revision,
-                        "event": "push",
-                        "head_branch": "master",
-                        "path": ".github/workflows/orion.yml",
-                    },
-                ]
-            }
-        assert url.endswith("/actions/runs/101/artifacts")
-        return {"artifacts": []}
-
-    monkeypatch.setattr(gha_publish, "_github_json", github_json)
+    """The push root completes before GHA artifacts exist and needs no GitHub token."""
     event = {
         "repository": {"full_name": "MozillaSecurity/orion"},
-        "after": revision,
+        "after": "a" * 40,
         "ref": "refs/heads/master",
     }
-
-    with pytest.raises(RuntimeError, match="No eligible Orion GHA manifest"):
-        gha_publish.find_manifest_for_event(event, "github-push")
-
-    assert requested_urls[-1].endswith("/actions/runs/101/artifacts")
-    assert all("/runs/100/artifacts" not in url for url in requested_urls)
-
+    output = tmp_path / "group.json"
     monkeypatch.setenv("GITHUB_EVENT", json.dumps(event))
+    monkeypatch.delenv("ORION_GITHUB_TOKEN_FILE", raising=False)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -355,31 +194,23 @@ def test_push_decision_does_not_borrow_prior_run_when_manifest_is_not_ready(
             "github-push",
             "--task-group",
             "g" * 22,
+            "--output",
+            str(output),
         ],
     )
-    monkeypatch.setattr(
-        gha_publish,
-        "find_manifest_for_event",
-        lambda *_args: (_ for _ in ()).throw(
-            RuntimeError("No eligible Orion GHA manifest found for revision")
-        ),
-    )
-    monkeypatch.setattr(
-        gha_publish,
-        "create_tasks",
-        lambda *_args: pytest.fail("early decision must not schedule stale tasks"),
-    )
 
-    # An early Taskcluster webhook exits cleanly; the GHA worker later schedules
-    # the exact same run after its manifest and graph gates are ready.
     gha_publish.main()
 
-    monkeypatch.setattr(
-        gha_publish,
-        "find_manifest_for_event",
-        lambda *_args: (_ for _ in ()).throw(RuntimeError("GitHub API unavailable")),
+    assert json.loads(output.read_text()) == {
+        "repository": "MozillaSecurity/orion",
+        "revision": "a" * 40,
+        "task_group": "g" * 22,
+        "root": True,
+    }
+    monkeypatch.setenv(
+        "GITHUB_EVENT", json.dumps({**event, "ref": "refs/heads/feature"})
     )
-    with pytest.raises(RuntimeError, match="GitHub API unavailable"):
+    with pytest.raises(ValueError, match="master push"):
         gha_publish.main()
 
 
@@ -788,6 +619,69 @@ def test_planner_retries_incomplete_service_publication(tmp_path, monkeypatch):
     assert job_id("build", "docker", "amd64") in plan["selected_jobs"]
 
 
+def test_independent_archives_need_their_own_service_completion_receipt(tmp_path):
+    """Index archives immediately but retry until all service outputs complete."""
+    repo = _publication_repo(tmp_path / "repo")
+    service = Services(GitRepo.from_existing(repo))["docker"]
+    revision = "a" * 40
+    data = {
+        "repository": "MozillaSecurity/orion",
+        "revision": revision,
+        "runId": "123",
+        "runAttempt": "2",
+        "independentPublication": True,
+    }
+    receipt = None
+
+    class Missing(Exception):
+        status_code = 404
+
+    class Index:
+        def findTask(self, route):
+            if ".gha.services." in route:
+                if receipt is None:
+                    raise Missing()
+                return {"taskId": "receipt", "data": receipt}
+            if ".docker." in route:
+                return {"taskId": "archive", "data": data}
+            raise Missing()
+
+    class Queue:
+        def task(self, _task_id):
+            return {"expires": "2027-06-01T00:00:00Z"}
+
+        def status(self, _task_id):
+            return {"status": {"state": "completed", "runs": [{"state": "completed"}]}}
+
+        def listLatestArtifacts(self, _task_id):
+            return {
+                "artifacts": [
+                    {"name": "public/docker.tar.zst", "expires": "2027-06-01T00:00:00Z"}
+                ]
+            }
+
+    kwargs = {
+        "index": Index(),
+        "queue": Queue(),
+        "services": {"docker": service},
+        "now": datetime(2026, 10, 22, tzinfo=timezone.utc),
+    }
+    state = gha_publish.publication_state(**kwargs)
+    assert state["base_revision"] is None
+    assert state["service_revisions"] == {}
+    assert state["incomplete_services"] == ["docker"]
+
+    receipt = {**data, "service": "docker"}
+    state = gha_publish.publication_state(**kwargs)
+    assert state["base_revision"] is None
+    assert state["service_revisions"] == {"docker": revision}
+    assert state["incomplete_services"] == []
+
+    receipt = {**receipt, "runId": "122"}
+    state = gha_publish.publication_state(**kwargs)
+    assert state["incomplete_services"] == ["docker"]
+
+
 def test_planner_uses_taskcluster_baseline_and_falls_back_to_full_graph(
     tmp_path, monkeypatch
 ) -> None:
@@ -1179,45 +1073,25 @@ def test_taskcluster_hook_renders_only_master_push_publication_decisions() -> No
 
 
 @pytest.mark.parametrize(
-    (
-        "graph",
-        "publish",
-        "manifest",
-        "worker",
-        "docker_required",
-        "docker",
-        "expected_returncode",
-    ),
+    ("graph", "publish", "submissions", "workers", "expected_returncode"),
     [
-        ("success", "false", "skipped", "skipped", "true", "skipped", 0),
-        ("success", "true", "skipped", "skipped", "false", "skipped", 1),
-        ("success", "true", "success", "skipped", "false", "skipped", 1),
-        ("success", "true", "success", "success", "false", "skipped", 0),
-        ("success", "true", "success", "success", "true", "failure", 1),
-        ("failure", "false", "skipped", "skipped", "false", "skipped", 1),
-        ("failure", "true", "success", "success", "false", "skipped", 1),
-    ],
-    ids=[
-        "nonpublish-pr-skips-worker",
-        "publish-requires-manifest",
-        "publish-requires-import-worker",
-        "publish-all-gates-pass",
-        "docker-publication-failure",
-        "graph-failure-no-green-pr",
-        "graph-failure-no-green-publish",
+        ("success", "false", "skipped", "skipped", 0),
+        ("success", "true", "failure", "success", 1),
+        ("success", "true", "success", "failure", 1),
+        ("success", "true", "success", "success", 0),
+        ("failure", "false", "skipped", "skipped", 1),
+        ("failure", "true", "success", "success", 1),
     ],
 )
 def test_generated_result_step_enforces_graph_and_publication_statuses(
     tmp_path,
     graph,
     publish,
-    manifest,
-    worker,
-    docker_required,
-    docker,
+    submissions,
+    workers,
     expected_returncode,
 ) -> None:
-    """Require graph, Docker, and Taskcluster success for a green publish run."""
+    """A green publication requires successful producers and a drained worker pool."""
     repo = _publication_repo(tmp_path / "repo")
     jobs = safe_load(
         render_workflow(Services(GitRepo.from_existing(repo))).split("\n", 3)[3]
@@ -1227,12 +1101,9 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
         "PATH": os.environ["PATH"],
         "ORION_GRAPH_RESULT": graph,
         "ORION_PUBLISH": publish,
-        "ORION_MANIFEST_RESULT": manifest,
-        "ORION_WORKER_RESULT": worker,
-        "ORION_DOCKER_REQUIRED": docker_required,
-        "ORION_DOCKER_RESULT": docker,
+        "ORION_PUBLICATION_RESULT": submissions,
+        "ORION_WORKERS_RESULT": workers,
     }
-
     completed = subprocess.run(
         ["/bin/bash", "-e", "-c", command],
         env=env,
@@ -1240,5 +1111,4 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
         text=True,
         check=False,
     )
-
     assert completed.returncode == expected_returncode

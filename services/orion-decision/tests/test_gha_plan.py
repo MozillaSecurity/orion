@@ -328,8 +328,11 @@ def test_missing_baseline_selects_full_graph_including_recipes(tmp_path: Path) -
     assert plan["full_rebuild_reason"] == "baseline-missing"
 
 
+@pytest.mark.parametrize("global_baseline", [True, False])
 def test_peer_fix_uses_each_services_last_published_revision(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    global_baseline: bool,
 ) -> None:
     """A peer fix rebuilds only the service that failed the earlier publication."""
     repo = tmp_path / "repo"
@@ -354,12 +357,12 @@ def test_peer_fix_uses_each_services_last_published_revision(
         gha_publish,
         "publication_state",
         lambda: {
-            "base_revision": base_revision,
+            "base_revision": base_revision if global_baseline else None,
             "expired_services": [],
             "service_revisions": {
                 "x": published_revision,
                 "y": published_revision,
-                "z": base_revision,
+                **({"z": base_revision} if global_baseline else {}),
             },
         },
     )

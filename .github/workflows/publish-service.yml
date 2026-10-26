@@ -1,0 +1,106 @@
+name: Publish Orion service
+
+on:
+  workflow_call:
+    inputs:
+      operation:
+        type: string
+        required: true
+      service:
+        type: string
+        required: true
+      arch:
+        type: string
+        required: true
+      revision:
+        type: string
+        required: true
+      plan_json:
+        type: string
+        required: true
+      task_group:
+        type: string
+        required: true
+      job_results:
+        type: string
+        required: true
+permissions:
+  actions: read
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.operation == 'docker' && 'dockerhub' || 'communitytc' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e services/orion-decision
+      - name: Write plan and install zstd
+        env:
+          ORION_PLAN_JSON: ${{ inputs.plan_json }}
+        run: |
+          printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+          if [[ "${{ inputs.operation }}" == docker ]]; then
+            sudo apt-get update
+            sudo apt-get install --yes zstd
+          fi
+      - name: Set up Docker Buildx
+        if: inputs.operation == 'docker'
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to Docker Hub
+        if: inputs.operation == 'docker'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Schedule archive import
+        if: inputs.operation == 'index'
+        env:
+          TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
+          TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+          TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ORION_JOB_RESULTS: ${{ inputs.job_results }}
+          ORION_TASK_GROUP: ${{ inputs.task_group }}
+        run: |
+          python -m orion_decision.gha_publish manifest \
+            --plan-file "$RUNNER_TEMP/plan.json" \
+            --service "${{ inputs.service }}" --arch "${{ inputs.arch }}" \
+            --artifact-only --output "$RUNNER_TEMP/manifest.json"
+          python -m orion_decision.gha_publish schedule \
+            --manifest-file "$RUNNER_TEMP/manifest.json" \
+            --task-group "$ORION_TASK_GROUP"
+      - name: Create publication receipt
+        if: inputs.operation == 'receipt'
+        env:
+          TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
+          TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+          TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ORION_TASK_GROUP: ${{ inputs.task_group }}
+        run: >-
+          python -m orion_decision.gha_publish receipt
+          --plan-file "$RUNNER_TEMP/plan.json"
+          --service "${{ inputs.service }}"
+          --task-group "$ORION_TASK_GROUP"
+      - name: Publish Docker latest image
+        if: inputs.operation == 'docker'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ORION_JOB_RESULTS: ${{ inputs.job_results }}
+        run: >-
+          python -m orion_decision.gha_run publish --repo .
+          --plan-file "$RUNNER_TEMP/plan.json"
+          --service "${{ inputs.service }}"
+      - name: Record published image digests
+        if: always() && inputs.operation == 'docker'
+        uses: actions/upload-artifact@v5
+        with:
+          name: orion-published-image-digests-${{ inputs.service }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/published-images.json
+          if-no-files-found: error
+          retention-days: 90

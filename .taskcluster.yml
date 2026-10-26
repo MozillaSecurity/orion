@@ -4,18 +4,31 @@ tasks:
   then:
     - created: {$fromNow: ''}
       deadline: {$fromNow: '1 day'}
+      expires: {$fromNow: '1 year'}
       provisionerId: proj-fuzzing
       workerType: orion-gha-publish
       schedulerId: taskcluster-github
+      priority: highest
+      routes:
+        - index.project.fuzzing.orion.gha.groups.rev.${event.after}
+      extra:
+        index:
+          data:
+            repository: ${event.repository.full_name}
+            revision: ${event.after}
+            root: true
       payload:
-        features:
-          taskclusterProxy: true
         maxRunTime: 3600
         env:
           GITHUB_EVENT: {$json: {$eval: event}}
           GITHUB_ACTION: ${tasks_for}
           ORION_REPOSITORY_URL: https://github.com/${event.repository.full_name}.git
           ORION_REVISION: ${event.after}
+        artifacts:
+          - name: public/group.json
+            type: file
+            path: group.json
+            expires: {$fromNow: '1 year'}
         command:
           - - bash
             - -e
@@ -29,14 +42,10 @@ tasks:
               git -C "$work" checkout -q FETCH_HEAD;
               export PYTHONPATH="$work/services/orion-decision/src";
               python -m orion_decision.gha_publish decision --github-action "$GITHUB_ACTION" --task-group "$TASK_ID"
-      scopes:
-        - queue:create-task:highest:proj-fuzzing/orion-gha-publish
-        - queue:create-task:project:none
-        - queue:route:index.project.fuzzing.orion.*
-        - queue:scheduler-id:taskcluster-github
+      scopes: []
       metadata:
         name: Orion GHA publication decision
-        description: Find the exact successful GHA run and schedule artifact imports
+        description: Establish the shared Taskcluster group for this Orion push
         owner: truber@mozilla.com
         source: https://github.com/MozillaSecurity/orion
   else: []

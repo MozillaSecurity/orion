@@ -23,7 +23,7 @@
 
 TC_PROJECT=fuzzing
 TC_WORKER_TYPE=orion-gha-publish
-TC_IDLE_TIMEOUT=300
+TC_IDLE_TIMEOUT=21600
 TASKCLUSTER_CLIENT_ID="project/fuzzing/ci-worker-orion-gha"
 
 # generic-worker logs its complete process environment. The allowlist leaves it

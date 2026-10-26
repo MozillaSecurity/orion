@@ -240,7 +240,9 @@ def build_import_tasks(
             "artifactKey": item["key"],
             "artifactDigest": item.get("digest"),
         }
-        if item["kind"] == "docker":
+        if manifest.get("artifact_only"):
+            provenance["independentPublication"] = True
+        elif item["kind"] == "docker":
             provenance["dockerLatestPublished"] = bool(
                 manifest.get("published_images", {})
                 .get(item["service"], {})
@@ -291,7 +293,7 @@ def build_import_tasks(
         }
         tasks[task_id] = task
 
-    if manifest["complete"]:
+    if manifest["complete"] and not manifest.get("artifact_only"):
         marker_id = artifact_task_id(
             str(manifest["run_id"]), manifest["run_attempt"], "publication-marker"
         )
@@ -361,7 +363,7 @@ def expected_import_task_ids(manifest: dict[str, Any]) -> list[str]:
         )
         for item in manifest["artifacts"]
     ]
-    if manifest["complete"]:
+    if manifest["complete"] and not manifest.get("artifact_only"):
         ids.append(
             artifact_task_id(
                 str(manifest["run_id"]),
@@ -460,6 +462,7 @@ def publication_state(
         revisions: list[str | None] = []
         publication_runs: list[tuple[int, int] | None] = []
         service_expired = False
+        independent = False
         for arch in archs:
             route = f"project.fuzzing.orion.{service.name}"
             if arch:
@@ -500,14 +503,17 @@ def publication_state(
                     and isinstance(data.get("revision"), str)
                     and re.fullmatch(r"[0-9a-f]{40}", data["revision"])
                 )
+                independent |= bool(data.get("independentPublication"))
                 if (
                     completed
                     and not isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    and not data.get("independentPublication")
                     and data.get("dockerLatestPublished") is False
                 ):
                     docker_latest_failed.append(service.name)
                 if completed and (
-                    isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    data.get("independentPublication")
+                    or isinstance(service, (ServiceHomebrew, ServiceMsys))
                     or data.get("dockerLatestPublished") is True
                 ):
                     revisions.append(data["revision"])
@@ -528,6 +534,46 @@ def publication_state(
                 raise
         if service_expired:
             expired.append(service.name)
+        if independent:
+            from .gha_pool import SERVICE_ROUTE
+
+            try:
+                record = index.findTask(f"{SERVICE_ROUTE}.{service.name}.master")
+                receipt_task = queue.task(record["taskId"])
+                status = queue.status(record["taskId"])
+                status = status.get("status", status)
+                receipt = record.get("data") or receipt_task.get("extra", {}).get(
+                    "index", {}
+                ).get("data", {})
+                if (
+                    status.get("state") != "completed"
+                    or status.get("runs", [{}])[-1].get("state") != "completed"
+                    or receipt.get("repository") != "MozillaSecurity/orion"
+                    or receipt.get("service") != service.name
+                    or not re.fullmatch(
+                        r"[0-9a-f]{40}", str(receipt.get("revision", ""))
+                    )
+                ):
+                    incomplete_services.append(service.name)
+                    continue
+                receipt_run = (int(receipt["runId"]), int(receipt["runAttempt"]))
+                service_revisions[service.name] = receipt["revision"]
+                service_runs[service.name] = receipt_run
+                if (
+                    len(revisions) != len(archs)
+                    or any(
+                        rev is None or rev != receipt["revision"] for rev in revisions
+                    )
+                    or any(
+                        run is None or run != receipt_run for run in publication_runs
+                    )
+                ):
+                    incomplete_services.append(service.name)
+            except Exception as exc:
+                if getattr(exc, "status_code", None) != 404:
+                    raise
+                incomplete_services.append(service.name)
+            continue
         if len(revisions) == len(archs) and revisions and None not in revisions:
             service_revision = revisions[0]
             if isinstance(service_revision, str) and all(
@@ -554,13 +600,24 @@ def publication_state(
     }
 
 
-def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
+def create_manifest(
+    plan: dict[str, Any],
+    *,
+    token: str,
+    service_name: str | None = None,
+    arch: str | None = None,
+    artifact_only: bool = False,
+) -> dict[str, Any]:
     """Bind selected successful GHA build artifacts to this exact workflow attempt."""
     from .gha_plan import job_id
     from .git import GitRepo
     from .orion import ServiceHomebrew, ServiceMsys, Services, ServiceTestOnly
 
     repo = Path.cwd()
+    if artifact_only:
+        from .gha_pool import require_workers
+
+        require_workers()
     services = Services(GitRepo.from_existing(repo))
     repository = os.environ["GITHUB_REPOSITORY"]
     revision = plan["revision"]
@@ -569,6 +626,12 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
     artifacts = _actions_artifacts(token, repository, run_id)
     by_name = {item["name"]: item for item in artifacts if not item.get("expired")}
     selected = set(plan.get("selected_jobs", []))
+    if artifact_only:
+        if service_name is None or arch is None:
+            raise ValueError("Artifact publication requires a service and architecture")
+        selected &= {job_id("build", service_name, arch)}
+        if not selected:
+            raise ValueError("Artifact build was not selected in this plan")
     try:
         job_results = json.loads(os.environ["ORION_JOB_RESULTS"])
     except (KeyError, json.JSONDecodeError) as exc:
@@ -576,9 +639,11 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
     successful = {
         job for job in selected if job_results.get(job, {}).get("result") == "success"
     }
+    if artifact_only and successful != selected:
+        raise ValueError("Artifact build did not succeed")
     docker_latest = (
         job_results.get("publish-docker", {}).get("result", "skipped")
-        if plan.get("selected_docker_jobs")
+        if plan.get("selected_docker_jobs") and not artifact_only
         else "not-required"
     )
     entries: list[dict[str, Any]] = []
@@ -629,7 +694,7 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
                 }
             )
     published_images: dict[str, Any] = {}
-    if plan.get("selected_docker_jobs"):
+    if plan.get("selected_docker_jobs") and not artifact_only:
         digest_name = f"orion-published-image-digests-{run_id}-{attempt}"
         digest_artifact = by_name.get(digest_name)
         if digest_artifact is not None:
@@ -664,7 +729,9 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
         "branch": os.environ["GITHUB_REF_NAME"],
         "workflow": "orion.yml",
         "selected_jobs": sorted(selected),
-        "selected_docker_jobs": sorted(plan.get("selected_docker_jobs", [])),
+        "selected_docker_jobs": []
+        if artifact_only
+        else sorted(plan.get("selected_docker_jobs", [])),
         "successful_jobs": sorted(successful),
         "publish": bool(plan.get("publish"))
         and os.environ["GITHUB_REF_NAME"] == "master",
@@ -676,13 +743,27 @@ def create_manifest(plan: dict[str, Any], *, token: str) -> dict[str, Any]:
         },
         "artifacts": entries,
         "published_images": published_images,
+        "artifact_only": artifact_only,
     }
 
 
-def _write_manifest(path: Path, plan_path: Path) -> None:
+def _write_manifest(
+    path: Path,
+    plan_path: Path,
+    *,
+    service_name: str | None = None,
+    arch: str | None = None,
+    artifact_only: bool = False,
+) -> None:
     plan = json.loads(plan_path.read_text())
     token = os.environ["GITHUB_TOKEN"]
-    manifest = create_manifest(plan, token=token)
+    manifest = create_manifest(
+        plan,
+        token=token,
+        service_name=service_name,
+        arch=arch,
+        artifact_only=artifact_only,
+    )
     if not manifest["publish"]:
         raise ValueError("GHA manifest generation is only for publication runs")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -768,101 +849,10 @@ def _github_request(url: str, token: str, accept: str = "application/vnd.github+
     return request
 
 
-def _github_json(url: str) -> dict[str, Any]:
-    request = _github_request(url, _token())
+def _github_json(url: str, *, token: str | None = None) -> dict[str, Any]:
+    request = _github_request(url, token or _token())
     with urllib.request.urlopen(request, timeout=60) as response:
         return json.load(response)
-
-
-def find_manifest_for_event(
-    event: dict[str, Any], github_action: str
-) -> dict[str, Any]:
-    """Find the exact eligible GHA run/artifact for a Taskcluster push event."""
-    repository = event.get("repository", {}).get("full_name")
-    revision = event.get("after")
-    branch = str(event.get("ref", "")).removeprefix("refs/heads/")
-    if (
-        repository != "MozillaSecurity/orion"
-        or not revision
-        or branch != "master"
-        or github_action != "github-push"
-    ):
-        raise ValueError(
-            "Taskcluster publication decision requires a master push event"
-        )
-    base = f"https://api.github.com/repos/{repository}"
-    runs = _github_json(
-        f"{base}/actions/runs?head_sha={revision}&event=push&branch=master"
-    )
-    matches = [
-        run
-        for run in runs.get("workflow_runs", [])
-        if run.get("head_sha") == revision
-        and run.get("event") == "push"
-        and run.get("head_branch") == "master"
-        and run.get("path", "").endswith(".github/workflows/orion.yml")
-    ]
-    for run in sorted(matches, key=lambda item: int(item["run_number"]), reverse=True):
-        artifacts = _github_json(f"{base}/actions/runs/{run['id']}/artifacts")
-        manifest_name = f"orion-publication-manifest-{run['id']}-{run['run_attempt']}"
-        artifact = next(
-            (
-                item
-                for item in artifacts.get("artifacts", [])
-                if item.get("name") == manifest_name and not item.get("expired")
-            ),
-            None,
-        )
-        if artifact is None:
-            continue
-        manifest = download_artifact_json(
-            artifact["id"],
-            "manifest.json",
-            repository=repository,
-            digest=_required_artifact_digest(artifact),
-        )
-        validate_manifest(
-            manifest,
-            repository=repository,
-            revision=revision,
-            event="push",
-            branch="master",
-            run_id=run["id"],
-            attempt=run["run_attempt"],
-        )
-        if int(manifest["run_number"]) != int(run["run_number"]):
-            raise ValueError("Publication manifest run number does not match GHA run")
-        run_artifacts = _actions_artifacts(_token(), repository, str(run["id"]))
-        artifacts_by_id = {str(item["id"]): item for item in run_artifacts}
-        expected_builds = {
-            item
-            for item in manifest.get("successful_jobs", [])
-            if item.startswith("build_")
-        }
-        recorded_builds: set[str] = set()
-        from .gha_plan import job_id
-
-        for item in manifest["artifacts"]:
-            name = f"orion-build-{item['service']}-{item['arch']}-{run['run_attempt']}"
-            record = artifacts_by_id.get(str(item["artifact_id"]))
-            if (
-                record is None
-                or record.get("name") != name
-                or item.get("artifact_name") != name
-                or record.get("expired")
-                or item.get("digest") != record.get("digest")
-            ):
-                raise ValueError(
-                    "Publication manifest references an artifact outside "
-                    "this run attempt"
-                )
-            recorded_builds.add(job_id("build", item["service"], item["arch"]))
-        if recorded_builds != expected_builds:
-            raise ValueError(
-                "Publication manifest artifact IDs do not match selected build jobs"
-            )
-        return manifest
-    raise RuntimeError(f"No eligible Orion GHA manifest found for {revision}")
 
 
 def download_artifact_json(
@@ -870,6 +860,7 @@ def download_artifact_json(
     filename: str,
     repository: str | None = None,
     digest: str | None = None,
+    token: str | None = None,
 ) -> dict[str, Any]:
     """Download one exact GitHub artifact ID, then read the named ZIP member."""
     repository = repository or os.environ.get("GITHUB_REPOSITORY")
@@ -877,7 +868,9 @@ def download_artifact_json(
         raise RuntimeError("GITHUB_REPOSITORY is required")
     with TemporaryDirectory(prefix="orion-gha-artifact-") as tmp:
         path = Path(tmp) / "artifact.zip"
-        _download_artifact_zip(artifact_id, repository, path, digest=digest)
+        _download_artifact_zip(
+            artifact_id, repository, path, digest=digest, token=token
+        )
         with zipfile.ZipFile(path) as archive:
             infos = archive.infolist()
             if len(infos) != 1 or infos[0].filename != filename:
@@ -961,9 +954,14 @@ def _required_artifact_digest(artifact: dict[str, Any]) -> str:
 
 def create_tasks(manifest: dict[str, Any], task_group: str) -> list[str]:
     """Insert deterministic tasks, treating an identical retry as idempotent."""
-    queue = Taskcluster.get_service("queue")
     now = datetime.now(timezone.utc)
     tasks = build_import_tasks(manifest, task_group, now)
+    return submit_tasks(tasks)
+
+
+def submit_tasks(tasks: dict[str, dict[str, Any]]) -> list[str]:
+    """Insert tasks idempotently without allowing a retry to change their group."""
+    queue = Taskcluster.get_service("queue")
     for task_id, task in tasks.items():
         try:
             queue.createTask(task_id, task)
@@ -972,7 +970,11 @@ def create_tasks(manifest: dict[str, Any], task_group: str) -> list[str]:
                 raise
             existing = queue.task(task_id)
             provenance = existing.get("extra", {}).get("orion", {})
-            if provenance != task.get("extra", {}).get("orion", {}):
+            if (
+                provenance != task.get("extra", {}).get("orion", {})
+                or existing.get("taskGroupId") != task["taskGroupId"]
+                or existing.get("dependencies", []) != task.get("dependencies", [])
+            ):
                 raise RuntimeError(
                     f"Task {task_id} already exists with different "
                     "publication provenance"
@@ -987,6 +989,7 @@ def main() -> None:
     decision.add_argument("--event-file", type=Path)
     decision.add_argument("--github-action", required=True)
     decision.add_argument("--task-group", required=True)
+    decision.add_argument("--output", type=Path, default=Path("group.json"))
     direct = sub.add_parser("schedule")
     direct.add_argument("--manifest-file", type=Path, required=True)
     direct.add_argument("--task-group", required=True)
@@ -999,11 +1002,49 @@ def main() -> None:
     manifest_parser = sub.add_parser("manifest")
     manifest_parser.add_argument("--plan-file", type=Path, required=True)
     manifest_parser.add_argument("--output", type=Path, required=True)
+    manifest_parser.add_argument("--service")
+    manifest_parser.add_argument("--arch")
+    manifest_parser.add_argument("--artifact-only", action="store_true")
+    for name in ("bootstrap", "receipt", "close", "worker-pool"):
+        command = sub.add_parser(name)
+        command.add_argument("--plan-file", type=Path, required=True)
+        if name in {"receipt", "close"}:
+            command.add_argument("--task-group", required=True)
+        if name == "receipt":
+            command.add_argument("--service", required=True)
+        if name in {"bootstrap", "close"}:
+            command.add_argument("--output", type=Path, required=True)
+        if name == "worker-pool":
+            command.add_argument("--timeout", type=float, default=16200)
     monitor = sub.add_parser("monitor")
     monitor.add_argument("--manifest-file", type=Path, required=True)
     monitor.add_argument("--timeout", type=float, default=3600)
     monitor.add_argument("--poll-interval", type=float, default=10)
     args = parser.parse_args()
+    if args.command in {"bootstrap", "receipt", "close", "worker-pool"}:
+        from .gha_pool import (
+            bootstrap,
+            close_submissions,
+            identity,
+            run_worker_pool,
+            schedule_receipt,
+        )
+
+        plan = json.loads(args.plan_file.read_text())
+        if args.command == "bootstrap":
+            group = bootstrap(plan)
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps({**identity(plan), "task_group": group}) + "\n"
+            )
+            print(group)
+        elif args.command == "receipt":
+            schedule_receipt(plan, args.service, args.task_group)
+        elif args.command == "close":
+            close_submissions(plan, args.task_group, args.output)
+        else:
+            run_worker_pool(plan, args.timeout)
+        return
     if args.command == "import-artifact":
         import_artifact(
             args.artifact_id,
@@ -1014,7 +1055,13 @@ def main() -> None:
         )
         return
     if args.command == "manifest":
-        _write_manifest(args.output, args.plan_file)
+        _write_manifest(
+            args.output,
+            args.plan_file,
+            service_name=args.service,
+            arch=args.arch,
+            artifact_only=args.artifact_only,
+        )
         return
     if args.command == "monitor":
         monitor_imports(
@@ -1029,16 +1076,24 @@ def main() -> None:
             if args.event_file
             else json.loads(os.environ["GITHUB_EVENT"])
         )
-        try:
-            manifest = find_manifest_for_event(event, args.github_action)
-        except RuntimeError as exc:
-            if not str(exc).startswith("No eligible Orion GHA manifest found"):
-                raise
-            # A shared worker can claim the webhook decision while its GHA graph
-            # is still running. The gated GHA publication job always ensures the
-            # same deterministic import tasks after it has a complete manifest.
-            print(f"Publication manifest is not ready; GHA will ensure imports: {exc}")
-            return
+        if (
+            event.get("repository", {}).get("full_name") != "MozillaSecurity/orion"
+            or event.get("ref") != "refs/heads/master"
+            or args.github_action != "github-push"
+        ):
+            raise ValueError("Publication decision requires an Orion master push")
+        args.output.write_text(
+            json.dumps(
+                {
+                    "repository": "MozillaSecurity/orion",
+                    "revision": event["after"],
+                    "task_group": args.task_group,
+                    "root": True,
+                }
+            )
+            + "\n"
+        )
+        return
     else:
         manifest = json.loads(args.manifest_file.read_text())
     expected = {
