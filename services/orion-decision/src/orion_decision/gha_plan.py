@@ -150,7 +150,7 @@ def _mark_published_changes_dirty(
     repo: GitRepo,
     *,
     revision: str,
-    baseline_revision: str,
+    baseline_revision: str | None,
     service_revisions: dict[str, str],
     service_runs: dict[str, tuple[int, int]],
     changed_paths: list[Path],
@@ -180,6 +180,10 @@ def _mark_published_changes_dirty(
         dirty_services = []
         for service in services.values():
             base = service_revisions.get(service.name, baseline_revision)
+            if base is None:
+                service.dirty = True
+                dirty_services.append(service)
+                continue
             paths = set(_diff_paths(repo, base, revision, event_is_pull_request=False))
             old_graph = snapshot(base)
             old_service = old_graph.get(service.name)
@@ -343,7 +347,12 @@ def build_plan(
             f"/force-rebuild of unknown service(s): {sorted(invalid_forced)}"
         )
     force_services = list(force_services or []) + sorted(directive_forced)
-    if force_all or full_rebuild_reason:
+    partial_baseline = (
+        baseline_from_taskcluster
+        and bool(state.get("service_revisions"))
+        and full_rebuild_reason == "baseline-missing"
+    )
+    if force_all or (full_rebuild_reason and not partial_baseline):
         force_services = sorted(set(force_services) | set(graph))
     if full_rebuild_reason:
         # No successful publication baseline means recipe coverage is also unknown.
@@ -352,11 +361,10 @@ def build_plan(
     per_service_baselines = (
         baseline_from_taskcluster
         and event in {"push", "schedule", "workflow_dispatch"}
-        and baseline_usable
+        and (baseline_usable or partial_baseline)
         and bool(state.get("service_revisions"))
     )
     if per_service_baselines:
-        assert base_revision is not None
         _mark_published_changes_dirty(
             graph,
             repo,

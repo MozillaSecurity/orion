@@ -1850,163 +1850,2791 @@ jobs:
       env:
         ORION_SELECTED_JOBS: ${{ needs.plan.outputs.selected_jobs }}
         ORION_JOB_RESULTS: ${{ toJSON(needs) }}
-  result:
-    name: Orion workflow result
+  publication-bootstrap:
+    name: Bootstrap Taskcluster publication group
     needs:
     - plan
-    - graph-result
-    - publication-manifest
-    - publication-worker
-    - publish-docker
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-    - name: Require graph and publication success
-      env:
-        ORION_GRAPH_RESULT: ${{ needs.graph-result.result }}
-        ORION_PUBLISH: ${{ needs.plan.outputs.publish }}
-        ORION_MANIFEST_RESULT: ${{ needs.publication-manifest.result }}
-        ORION_WORKER_RESULT: ${{ needs.publication-worker.result }}
-        ORION_DOCKER_RESULT: ${{ needs.publish-docker.result }}
-        ORION_DOCKER_REQUIRED: ${{ needs.plan.outputs.selected_docker_jobs != '[]'
-          }}
-      run: "python - <<'PY'\nimport os, sys\nif os.environ['ORION_GRAPH_RESULT'] !=\
-        \ 'success':\n    sys.exit('Selected Orion graph jobs did not all succeed')\n\
-        if os.environ['ORION_PUBLISH'] == 'true':\n    if (os.environ['ORION_DOCKER_REQUIRED']\
-        \ == 'true' and\n            os.environ['ORION_DOCKER_RESULT'] != 'success'):\n\
-        \        sys.exit('Docker image publication did not complete')\n    if os.environ['ORION_MANIFEST_RESULT']\
-        \ != 'success':\n        sys.exit('Taskcluster publication manifest was not\
-        \ created')\n    if os.environ['ORION_WORKER_RESULT'] != 'success':\n    \
-        \    sys.exit('Taskcluster artifact imports did not complete')\nPY"
-  publication-manifest:
-    name: Create Taskcluster publication manifest
-    needs:
-    - plan
-    - build_afl_amd64
-    - build_bugmon_amd64
-    - build_bugmon_win_amd64
-    - build_ci_java_11_amd64
-    - build_ci_node_18_amd64
-    - build_ci_node_18_win_amd64
-    - build_ci_node_20_amd64
-    - build_ci_node_20_win_amd64
-    - build_ci_node_22_amd64
-    - build_ci_node_22_win_amd64
-    - build_ci_py_310_amd64
-    - build_ci_py_310_osx_amd64
-    - build_ci_py_310_win_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_311_osx_amd64
-    - build_ci_py_311_win_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_312_osx_amd64
-    - build_ci_py_312_win_amd64
-    - build_ci_py_313_amd64
-    - build_ci_py_313_osx_amd64
-    - build_ci_py_313_win_amd64
-    - build_covdiff_amd64
-    - build_coverage_revision_amd64
-    - build_domino_web_tests_amd64
-    - build_funfuzz_amd64
-    - build_fuzzilli_amd64
-    - build_fuzzilli_arm64
-    - build_fuzzing_decision_amd64
-    - build_grizzly_amd64
-    - build_grizzly_android_amd64
-    - build_grizzly_reduce_monitor_amd64
-    - build_grizzly_win_amd64
-    - build_js_tests_distiller_amd64
-    - build_langfuzz_amd64
-    - build_langfuzz_arm64
-    - build_libfuzzer_amd64
-    - build_neqo_coverage_amd64
-    - build_nss_corpus_update_amd64
-    - build_nss_coverage_amd64
-    - build_nyx_amd64
-    - build_orion_decision_amd64
-    - build_prefmonitor_amd64
-    - build_site_scout_amd64
-    - build_site_scout_android_amd64
-    - build_site_scout_win_amd64
-    - recipe_test_cleanup_sh
-    - recipe_test_common_sh
-    - recipe_test_dbgsyms_sh
-    - recipe_test_fluentbit_sh
-    - recipe_test_fuzzfetch_sh
-    - recipe_test_fuzzing_tc_sh
-    - recipe_test_fuzzmanager_sh
-    - recipe_test_gcov_9_sh
-    - recipe_test_grcov_sh
-    - recipe_test_gsutil_sh
-    - recipe_test_htop_sh
-    - recipe_test_js32_deps_sh
-    - recipe_test_llvm_cov_sh
-    - recipe_test_llvm_sh
-    - recipe_test_llvm_symbolizer_sh
-    - recipe_test_nodejs_sh
-    - recipe_test_orion_decision_sh
-    - recipe_test_pernosco_submit_sh
-    - recipe_test_poetry_sh
-    - recipe_test_prefpicker_sh
-    - recipe_test_radamsa_sh
-    - recipe_test_rr_sh
-    - recipe_test_sentry_sh
-    - recipe_test_taskcluster_sh
-    - recipe_test_taskgraph_m_c_latest_sh
-    - recipe_test_uv_sh
-    - recipe_test_worker_sh
-    - service_test_fuzzing_decision
-    - service_test_nyx_ipc_manager
-    - service_test_orion
-    - service_test_orion_decision
-    - service_test_symbol_filter
-    - publish-docker
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish
+    if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
+    environment: communitytc
     permissions:
       actions: read
       contents: read
+    outputs:
+      task_group: ${{ steps.bootstrap.outputs.task_group }}
     steps:
     - uses: actions/checkout@v5
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
-    - name: Reject stale publication before manifest creation
+    - id: bootstrap
       env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+        TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
         GITHUB_TOKEN: ${{ github.token }}
-        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-        ORION_BRANCH: ${{ github.ref_name }}
-      run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
-        --branch "$ORION_BRANCH" --revision "$ORION_REVISION"
-    - name: Write plan and bind exact build artifacts
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
         ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
       run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
 
-        python -m orion_decision.gha_publish manifest --plan-file "$RUNNER_TEMP/plan.json"
-        --output "$RUNNER_TEMP/manifest.json"'
+        group=$(python -m orion_decision.gha_publish bootstrap --plan-file "$RUNNER_TEMP/plan.json"
+        --output "$RUNNER_TEMP/group.json")
+
+        echo "task_group=$group" >> "$GITHUB_OUTPUT"'
     - uses: actions/upload-artifact@v5
+      if: always()
       with:
-        name: orion-publication-manifest-${{ github.run_id }}-${{ github.run_attempt
+        name: orion-publication-group-${{ github.run_id }}-${{ github.run_attempt
           }}
-        path: ${{ runner.temp }}/manifest.json
-        if-no-files-found: error
+        path: ${{ runner.temp }}/group.json
+        if-no-files-found: ignore
         retention-days: 7
-  publication-worker:
-    name: Import Taskcluster publication artifacts
+  index_afl_amd64:
+    name: Schedule afl amd64 Taskcluster import
     needs:
     - plan
-    - publication-manifest
-    if: always() && !cancelled() && needs.publication-manifest.result == 'success'
-      && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-      && fromJSON(needs.plan.outputs.plan_json).publish
+    - publication-bootstrap
+    - build_afl_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_afl_amd64') && needs.build_afl_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: afl
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_afl:
+    name: Publish afl Docker latest
+    needs:
+    - plan
+    - build_afl_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_afl_amd64') &&
+      needs.build_afl_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-afl-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: afl
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_afl:
+    name: Create afl Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_afl_amd64
+    - publish_docker_afl
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_afl_amd64')) && (needs.index_afl_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_afl_amd64')) && (needs.publish_docker_afl.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_afl_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: afl
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_bugmon_amd64:
+    name: Schedule bugmon amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_bugmon_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_amd64') && needs.build_bugmon_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: bugmon
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_bugmon:
+    name: Publish bugmon Docker latest
+    needs:
+    - plan
+    - build_bugmon_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_amd64')
+      && needs.build_bugmon_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-bugmon-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: bugmon
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_bugmon:
+    name: Create bugmon Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_bugmon_amd64
+    - publish_docker_bugmon
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_amd64')) && (needs.index_bugmon_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_amd64')) && (needs.publish_docker_bugmon.result == 'success' ||
+      (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_bugmon_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: bugmon
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_bugmon_win_amd64:
+    name: Schedule bugmon-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_bugmon_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_win_amd64') && needs.build_bugmon_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: bugmon-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_bugmon_win:
+    name: Create bugmon-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_bugmon_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_win_amd64')) && (needs.index_bugmon_win_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: bugmon-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_java_11_amd64:
+    name: Schedule ci-java-11 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_java_11_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_java_11_amd64') && needs.build_ci_java_11_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-java-11
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_java_11:
+    name: Publish ci-java-11 Docker latest
+    needs:
+    - plan
+    - build_ci_java_11_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_java_11_amd64')
+      && needs.build_ci_java_11_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-java-11-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-java-11
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_java_11:
+    name: Create ci-java-11 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_java_11_amd64
+    - publish_docker_ci_java_11
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_java_11_amd64')) && (needs.index_ci_java_11_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_java_11_amd64'))
+      && (needs.publish_docker_ci_java_11.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_java_11_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-java-11
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_18_amd64:
+    name: Schedule ci-node-18 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_18_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_amd64') && needs.build_ci_node_18_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-18
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_node_18:
+    name: Publish ci-node-18 Docker latest
+    needs:
+    - plan
+    - build_ci_node_18_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_18_amd64')
+      && needs.build_ci_node_18_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-node-18-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-node-18
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_18:
+    name: Create ci-node-18 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_18_amd64
+    - publish_docker_ci_node_18
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_amd64')) && (needs.index_ci_node_18_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_18_amd64'))
+      && (needs.publish_docker_ci_node_18.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_node_18_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-18
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_18_win_amd64:
+    name: Schedule ci-node-18-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_18_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_win_amd64') && needs.build_ci_node_18_win_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-18-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_18_win:
+    name: Create ci-node-18-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_18_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_18_win_amd64')) && (needs.index_ci_node_18_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_18_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-18-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_20_amd64:
+    name: Schedule ci-node-20 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_20_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_amd64') && needs.build_ci_node_20_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-20
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_node_20:
+    name: Publish ci-node-20 Docker latest
+    needs:
+    - plan
+    - build_ci_node_20_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_20_amd64')
+      && needs.build_ci_node_20_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-node-20-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-node-20
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_20:
+    name: Create ci-node-20 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_20_amd64
+    - publish_docker_ci_node_20
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_amd64')) && (needs.index_ci_node_20_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_20_amd64'))
+      && (needs.publish_docker_ci_node_20.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_node_20_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-20
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_20_win_amd64:
+    name: Schedule ci-node-20-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_20_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_win_amd64') && needs.build_ci_node_20_win_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-20-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_20_win:
+    name: Create ci-node-20-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_20_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_20_win_amd64')) && (needs.index_ci_node_20_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_20_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-20-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_22_amd64:
+    name: Schedule ci-node-22 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_22_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_amd64') && needs.build_ci_node_22_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-22
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_node_22:
+    name: Publish ci-node-22 Docker latest
+    needs:
+    - plan
+    - build_ci_node_22_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_22_amd64')
+      && needs.build_ci_node_22_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-node-22-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-node-22
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_22:
+    name: Create ci-node-22 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_22_amd64
+    - publish_docker_ci_node_22
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_amd64')) && (needs.index_ci_node_22_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_22_amd64'))
+      && (needs.publish_docker_ci_node_22.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_node_22_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-22
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_node_22_win_amd64:
+    name: Schedule ci-node-22-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_node_22_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_win_amd64') && needs.build_ci_node_22_win_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-node-22-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_node_22_win:
+    name: Create ci-node-22-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_node_22_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_node_22_win_amd64')) && (needs.index_ci_node_22_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_22_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-node-22-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_310_amd64:
+    name: Schedule ci-py-310 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_310_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_amd64') && needs.build_ci_py_310_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-310
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_py_310:
+    name: Publish ci-py-310 Docker latest
+    needs:
+    - plan
+    - build_ci_py_310_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64')
+      && needs.build_ci_py_310_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-py-310-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-py-310
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_310:
+    name: Create ci-py-310 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_310_amd64
+    - publish_docker_ci_py_310
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_amd64')) && (needs.index_ci_py_310_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      && (needs.publish_docker_ci_py_310.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_py_310_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-310
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_310_osx_amd64:
+    name: Schedule ci-py-310-osx amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_310_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_osx_amd64') && needs.build_ci_py_310_osx_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-310-osx
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_310_osx:
+    name: Create ci-py-310-osx Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_310_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_osx_amd64')) && (needs.index_ci_py_310_osx_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_osx_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-310-osx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_310_win_amd64:
+    name: Schedule ci-py-310-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_310_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_win_amd64') && needs.build_ci_py_310_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-310-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_310_win:
+    name: Create ci-py-310-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_310_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_310_win_amd64')) && (needs.index_ci_py_310_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-310-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_311_amd64:
+    name: Schedule ci-py-311 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_311_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64') && needs.build_ci_py_311_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-311
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_py_311:
+    name: Publish ci-py-311 Docker latest
+    needs:
+    - plan
+    - build_ci_py_311_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_amd64')
+      && needs.build_ci_py_311_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-py-311-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-py-311
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_311:
+    name: Create ci-py-311 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_311_amd64
+    - publish_docker_ci_py_311
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_amd64')) && (needs.index_ci_py_311_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_amd64'))
+      && (needs.publish_docker_ci_py_311.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_py_311_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-311
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_311_osx_amd64:
+    name: Schedule ci-py-311-osx amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_311_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_osx_amd64') && needs.build_ci_py_311_osx_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-311-osx
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_311_osx:
+    name: Create ci-py-311-osx Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_311_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_osx_amd64')) && (needs.index_ci_py_311_osx_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_osx_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-311-osx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_311_win_amd64:
+    name: Schedule ci-py-311-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_311_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_win_amd64') && needs.build_ci_py_311_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-311-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_311_win:
+    name: Create ci-py-311-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_311_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_311_win_amd64')) && (needs.index_ci_py_311_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-311-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_312_amd64:
+    name: Schedule ci-py-312 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_312_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_amd64') && needs.build_ci_py_312_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-312
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_py_312:
+    name: Publish ci-py-312 Docker latest
+    needs:
+    - plan
+    - build_ci_py_312_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64')
+      && needs.build_ci_py_312_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-py-312-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-py-312
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_312:
+    name: Create ci-py-312 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_312_amd64
+    - publish_docker_ci_py_312
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_amd64')) && (needs.index_ci_py_312_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
+      && (needs.publish_docker_ci_py_312.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_py_312_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-312
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_312_osx_amd64:
+    name: Schedule ci-py-312-osx amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_312_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_osx_amd64') && needs.build_ci_py_312_osx_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-312-osx
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_312_osx:
+    name: Create ci-py-312-osx Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_312_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_osx_amd64')) && (needs.index_ci_py_312_osx_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_osx_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-312-osx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_312_win_amd64:
+    name: Schedule ci-py-312-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_312_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_win_amd64') && needs.build_ci_py_312_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-312-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_312_win:
+    name: Create ci-py-312-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_312_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_312_win_amd64')) && (needs.index_ci_py_312_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-312-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_313_amd64:
+    name: Schedule ci-py-313 amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_313_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64') && needs.build_ci_py_313_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-313
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_ci_py_313:
+    name: Publish ci-py-313 Docker latest
+    needs:
+    - plan
+    - build_ci_py_313_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_amd64')
+      && needs.build_ci_py_313_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-ci-py-313-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: ci-py-313
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_313:
+    name: Create ci-py-313 Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_313_amd64
+    - publish_docker_ci_py_313
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_amd64')) && (needs.index_ci_py_313_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_amd64'))
+      && (needs.publish_docker_ci_py_313.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_ci_py_313_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-313
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_313_osx_amd64:
+    name: Schedule ci-py-313-osx amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_313_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_osx_amd64') && needs.build_ci_py_313_osx_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-313-osx
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_313_osx:
+    name: Create ci-py-313-osx Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_313_osx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_osx_amd64')) && (needs.index_ci_py_313_osx_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_osx_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-313-osx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_ci_py_313_win_amd64:
+    name: Schedule ci-py-313-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_ci_py_313_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_win_amd64') && needs.build_ci_py_313_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: ci-py-313-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_ci_py_313_win:
+    name: Create ci-py-313-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_ci_py_313_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_ci_py_313_win_amd64')) && (needs.index_ci_py_313_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: ci-py-313-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_covdiff_amd64:
+    name: Schedule covdiff amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_covdiff_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_covdiff_amd64') && needs.build_covdiff_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: covdiff
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_covdiff:
+    name: Publish covdiff Docker latest
+    needs:
+    - plan
+    - build_covdiff_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64')
+      && needs.build_covdiff_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-covdiff-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: covdiff
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_covdiff:
+    name: Create covdiff Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_covdiff_amd64
+    - publish_docker_covdiff
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_covdiff_amd64')) && (needs.index_covdiff_amd64.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64'))
+      && (needs.publish_docker_covdiff.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_covdiff_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: covdiff
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_coverage_revision_amd64:
+    name: Schedule coverage-revision amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_coverage_revision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_coverage_revision_amd64') && needs.build_coverage_revision_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: coverage-revision
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_coverage_revision:
+    name: Publish coverage-revision Docker latest
+    needs:
+    - plan
+    - build_coverage_revision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64')
+      && needs.build_coverage_revision_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-coverage-revision-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: coverage-revision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_coverage_revision:
+    name: Create coverage-revision Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_coverage_revision_amd64
+    - publish_docker_coverage_revision
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_coverage_revision_amd64')) && (needs.index_coverage_revision_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64'))
+      && (needs.publish_docker_coverage_revision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_coverage_revision_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: coverage-revision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_domino_web_tests_amd64:
+    name: Schedule domino-web-tests amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_domino_web_tests_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_domino_web_tests_amd64') && needs.build_domino_web_tests_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: domino-web-tests
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_domino_web_tests:
+    name: Publish domino-web-tests Docker latest
+    needs:
+    - plan
+    - build_domino_web_tests_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64')
+      && needs.build_domino_web_tests_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-domino-web-tests-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: domino-web-tests
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_domino_web_tests:
+    name: Create domino-web-tests Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_domino_web_tests_amd64
+    - publish_docker_domino_web_tests
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_domino_web_tests_amd64')) && (needs.index_domino_web_tests_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64'))
+      && (needs.publish_docker_domino_web_tests.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_domino_web_tests_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: domino-web-tests
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_funfuzz_amd64:
+    name: Schedule funfuzz amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_funfuzz_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_funfuzz_amd64') && needs.build_funfuzz_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: funfuzz
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_funfuzz:
+    name: Publish funfuzz Docker latest
+    needs:
+    - plan
+    - build_funfuzz_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64')
+      && needs.build_funfuzz_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-funfuzz-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: funfuzz
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_funfuzz:
+    name: Create funfuzz Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_funfuzz_amd64
+    - publish_docker_funfuzz
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_funfuzz_amd64')) && (needs.index_funfuzz_amd64.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64'))
+      && (needs.publish_docker_funfuzz.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_funfuzz_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: funfuzz
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_fuzzilli_amd64:
+    name: Schedule fuzzilli amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_fuzzilli_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_amd64') && needs.build_fuzzilli_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: fuzzilli
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_fuzzilli_arm64:
+    name: Schedule fuzzilli arm64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_fuzzilli_arm64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_arm64') && needs.build_fuzzilli_arm64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: fuzzilli
+      arch: arm64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_fuzzilli:
+    name: Publish fuzzilli Docker latest
+    needs:
+    - plan
+    - build_fuzzilli_amd64
+    - build_fuzzilli_arm64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64')
+      && needs.build_fuzzilli_amd64.result == 'success') && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_arm64') && needs.build_fuzzilli_arm64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-fuzzilli-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: fuzzilli
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_fuzzilli:
+    name: Create fuzzilli Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_fuzzilli_amd64
+    - index_fuzzilli_arm64
+    - publish_docker_fuzzilli
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_amd64') || contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_arm64')) && (needs.index_fuzzilli_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64'))
+      && (needs.index_fuzzilli_arm64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_arm64')) && (needs.publish_docker_fuzzilli.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_fuzzilli_amd64')
+      && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_fuzzilli_arm64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: fuzzilli
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_fuzzing_decision_amd64:
+    name: Schedule fuzzing-decision amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_fuzzing_decision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzing_decision_amd64') && needs.build_fuzzing_decision_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: fuzzing-decision
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_fuzzing_decision:
+    name: Publish fuzzing-decision Docker latest
+    needs:
+    - plan
+    - build_fuzzing_decision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64')
+      && needs.build_fuzzing_decision_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-fuzzing-decision-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: fuzzing-decision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_fuzzing_decision:
+    name: Create fuzzing-decision Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_fuzzing_decision_amd64
+    - publish_docker_fuzzing_decision
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzing_decision_amd64')) && (needs.index_fuzzing_decision_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64'))
+      && (needs.publish_docker_fuzzing_decision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_fuzzing_decision_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: fuzzing-decision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_grizzly_amd64:
+    name: Schedule grizzly amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_grizzly_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64') && needs.build_grizzly_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: grizzly
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_grizzly:
+    name: Publish grizzly Docker latest
+    needs:
+    - plan
+    - build_grizzly_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64')
+      && needs.build_grizzly_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-grizzly-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: grizzly
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_grizzly:
+    name: Create grizzly Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_grizzly_amd64
+    - publish_docker_grizzly
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64')) && (needs.index_grizzly_amd64.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64'))
+      && (needs.publish_docker_grizzly.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_grizzly_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: grizzly
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_grizzly_android_amd64:
+    name: Schedule grizzly-android amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_grizzly_android_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_android_amd64') && needs.build_grizzly_android_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: grizzly-android
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_grizzly_android:
+    name: Publish grizzly-android Docker latest
+    needs:
+    - plan
+    - build_grizzly_android_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64')
+      && needs.build_grizzly_android_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-grizzly-android-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: grizzly-android
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_grizzly_android:
+    name: Create grizzly-android Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_grizzly_android_amd64
+    - publish_docker_grizzly_android
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_android_amd64')) && (needs.index_grizzly_android_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64'))
+      && (needs.publish_docker_grizzly_android.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_grizzly_android_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: grizzly-android
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_grizzly_reduce_monitor_amd64:
+    name: Schedule grizzly-reduce-monitor amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_grizzly_reduce_monitor_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_reduce_monitor_amd64') && needs.build_grizzly_reduce_monitor_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: grizzly-reduce-monitor
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_grizzly_reduce_monitor:
+    name: Publish grizzly-reduce-monitor Docker latest
+    needs:
+    - plan
+    - build_grizzly_reduce_monitor_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64')
+      && needs.build_grizzly_reduce_monitor_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-grizzly-reduce-monitor-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: grizzly-reduce-monitor
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_grizzly_reduce_monitor:
+    name: Create grizzly-reduce-monitor Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_grizzly_reduce_monitor_amd64
+    - publish_docker_grizzly_reduce_monitor
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_reduce_monitor_amd64')) && (needs.index_grizzly_reduce_monitor_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64'))
+      && (needs.publish_docker_grizzly_reduce_monitor.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_grizzly_reduce_monitor_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: grizzly-reduce-monitor
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_grizzly_win_amd64:
+    name: Schedule grizzly-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_grizzly_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_win_amd64') && needs.build_grizzly_win_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: grizzly-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_grizzly_win:
+    name: Create grizzly-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_grizzly_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_win_amd64')) && (needs.index_grizzly_win_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: grizzly-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_js_tests_distiller_amd64:
+    name: Schedule js-tests-distiller amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_js_tests_distiller_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_js_tests_distiller_amd64') && needs.build_js_tests_distiller_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: js-tests-distiller
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_js_tests_distiller:
+    name: Publish js-tests-distiller Docker latest
+    needs:
+    - plan
+    - build_js_tests_distiller_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64')
+      && needs.build_js_tests_distiller_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-js-tests-distiller-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: js-tests-distiller
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_js_tests_distiller:
+    name: Create js-tests-distiller Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_js_tests_distiller_amd64
+    - publish_docker_js_tests_distiller
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_js_tests_distiller_amd64')) && (needs.index_js_tests_distiller_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64'))
+      && (needs.publish_docker_js_tests_distiller.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_js_tests_distiller_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: js-tests-distiller
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_langfuzz_amd64:
+    name: Schedule langfuzz amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_langfuzz_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_amd64') && needs.build_langfuzz_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: langfuzz
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_langfuzz_arm64:
+    name: Schedule langfuzz arm64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_langfuzz_arm64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_arm64') && needs.build_langfuzz_arm64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: langfuzz
+      arch: arm64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_langfuzz:
+    name: Publish langfuzz Docker latest
+    needs:
+    - plan
+    - build_langfuzz_amd64
+    - build_langfuzz_arm64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64')
+      && needs.build_langfuzz_amd64.result == 'success') && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_arm64') && needs.build_langfuzz_arm64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-langfuzz-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: langfuzz
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_langfuzz:
+    name: Create langfuzz Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_langfuzz_amd64
+    - index_langfuzz_arm64
+    - publish_docker_langfuzz
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_amd64') || contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_arm64')) && (needs.index_langfuzz_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64'))
+      && (needs.index_langfuzz_arm64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_arm64')) && (needs.publish_docker_langfuzz.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_langfuzz_amd64')
+      && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_langfuzz_arm64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: langfuzz
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_libfuzzer_amd64:
+    name: Schedule libfuzzer amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_libfuzzer_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_libfuzzer_amd64') && needs.build_libfuzzer_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: libfuzzer
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_libfuzzer:
+    name: Publish libfuzzer Docker latest
+    needs:
+    - plan
+    - build_libfuzzer_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64')
+      && needs.build_libfuzzer_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-libfuzzer-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: libfuzzer
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_libfuzzer:
+    name: Create libfuzzer Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_libfuzzer_amd64
+    - publish_docker_libfuzzer
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_libfuzzer_amd64')) && (needs.index_libfuzzer_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64'))
+      && (needs.publish_docker_libfuzzer.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_libfuzzer_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: libfuzzer
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_neqo_coverage_amd64:
+    name: Schedule neqo-coverage amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_neqo_coverage_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_neqo_coverage_amd64') && needs.build_neqo_coverage_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: neqo-coverage
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_neqo_coverage:
+    name: Publish neqo-coverage Docker latest
+    needs:
+    - plan
+    - build_neqo_coverage_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64')
+      && needs.build_neqo_coverage_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-neqo-coverage-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: neqo-coverage
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_neqo_coverage:
+    name: Create neqo-coverage Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_neqo_coverage_amd64
+    - publish_docker_neqo_coverage
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_neqo_coverage_amd64')) && (needs.index_neqo_coverage_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64'))
+      && (needs.publish_docker_neqo_coverage.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_neqo_coverage_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: neqo-coverage
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_nss_corpus_update_amd64:
+    name: Schedule nss-corpus-update amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_nss_corpus_update_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_corpus_update_amd64') && needs.build_nss_corpus_update_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: nss-corpus-update
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_nss_corpus_update:
+    name: Publish nss-corpus-update Docker latest
+    needs:
+    - plan
+    - build_nss_corpus_update_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64')
+      && needs.build_nss_corpus_update_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-nss-corpus-update-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: nss-corpus-update
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_nss_corpus_update:
+    name: Create nss-corpus-update Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_nss_corpus_update_amd64
+    - publish_docker_nss_corpus_update
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_corpus_update_amd64')) && (needs.index_nss_corpus_update_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64'))
+      && (needs.publish_docker_nss_corpus_update.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_nss_corpus_update_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: nss-corpus-update
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_nss_coverage_amd64:
+    name: Schedule nss-coverage amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_nss_coverage_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_coverage_amd64') && needs.build_nss_coverage_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: nss-coverage
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_nss_coverage:
+    name: Publish nss-coverage Docker latest
+    needs:
+    - plan
+    - build_nss_coverage_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64')
+      && needs.build_nss_coverage_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-nss-coverage-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: nss-coverage
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_nss_coverage:
+    name: Create nss-coverage Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_nss_coverage_amd64
+    - publish_docker_nss_coverage
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_coverage_amd64')) && (needs.index_nss_coverage_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64'))
+      && (needs.publish_docker_nss_coverage.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_nss_coverage_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: nss-coverage
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_nyx_amd64:
+    name: Schedule nyx amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_nyx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nyx_amd64') && needs.build_nyx_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: nyx
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_nyx:
+    name: Publish nyx Docker latest
+    needs:
+    - plan
+    - build_nyx_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nyx_amd64') &&
+      needs.build_nyx_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-nyx-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: nyx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_nyx:
+    name: Create nyx Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_nyx_amd64
+    - publish_docker_nyx
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nyx_amd64')) && (needs.index_nyx_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nyx_amd64')) && (needs.publish_docker_nyx.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_nyx_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: nyx
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_orion_decision_amd64:
+    name: Schedule orion-decision amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_orion_decision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_orion_decision_amd64') && needs.build_orion_decision_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: orion-decision
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_orion_decision:
+    name: Publish orion-decision Docker latest
+    needs:
+    - plan
+    - build_orion_decision_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_orion_decision_amd64')
+      && needs.build_orion_decision_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-orion-decision-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: orion-decision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_orion_decision:
+    name: Create orion-decision Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_orion_decision_amd64
+    - publish_docker_orion_decision
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_orion_decision_amd64')) && (needs.index_orion_decision_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_orion_decision_amd64'))
+      && (needs.publish_docker_orion_decision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_orion_decision_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: orion-decision
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_prefmonitor_amd64:
+    name: Schedule prefmonitor amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_prefmonitor_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_prefmonitor_amd64') && needs.build_prefmonitor_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: prefmonitor
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_prefmonitor:
+    name: Publish prefmonitor Docker latest
+    needs:
+    - plan
+    - build_prefmonitor_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64')
+      && needs.build_prefmonitor_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-prefmonitor-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: prefmonitor
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_prefmonitor:
+    name: Create prefmonitor Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_prefmonitor_amd64
+    - publish_docker_prefmonitor
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_prefmonitor_amd64')) && (needs.index_prefmonitor_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64'))
+      && (needs.publish_docker_prefmonitor.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_prefmonitor_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: prefmonitor
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_site_scout_amd64:
+    name: Schedule site-scout amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_site_scout_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_amd64') && needs.build_site_scout_amd64.result == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: site-scout
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_site_scout:
+    name: Publish site-scout Docker latest
+    needs:
+    - plan
+    - build_site_scout_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64')
+      && needs.build_site_scout_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-site-scout-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: site-scout
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_site_scout:
+    name: Create site-scout Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_site_scout_amd64
+    - publish_docker_site_scout
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_amd64')) && (needs.index_site_scout_amd64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64'))
+      && (needs.publish_docker_site_scout.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_site_scout_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: site-scout
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_site_scout_android_amd64:
+    name: Schedule site-scout-android amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_site_scout_android_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_android_amd64') && needs.build_site_scout_android_amd64.result
+      == 'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: site-scout-android
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publish_docker_site_scout_android:
+    name: Publish site-scout-android Docker latest
+    needs:
+    - plan
+    - build_site_scout_android_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64')
+      && needs.build_site_scout_android_amd64.result == 'success')
+    concurrency:
+      group: orion-docker-latest-site-scout-android-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: docker
+      service: site-scout-android
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ''
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_site_scout_android:
+    name: Create site-scout-android Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_site_scout_android_amd64
+    - publish_docker_site_scout_android
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_android_amd64')) && (needs.index_site_scout_android_amd64.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64'))
+      && (needs.publish_docker_site_scout_android.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_site_scout_android_amd64')))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: site-scout-android
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  index_site_scout_win_amd64:
+    name: Schedule site-scout-win amd64 Taskcluster import
+    needs:
+    - plan
+    - publication-bootstrap
+    - build_site_scout_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_win_amd64') && needs.build_site_scout_win_amd64.result ==
+      'success'
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: index
+      service: site-scout-win
+      arch: amd64
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  receipt_site_scout_win:
+    name: Create site-scout-win Taskcluster publication receipt
+    needs:
+    - plan
+    - publication-bootstrap
+    - index_site_scout_win_amd64
+    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
+      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
+      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_win_amd64')) && (needs.index_site_scout_win_amd64.result ==
+      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_win_amd64'))
+    uses: ./.github/workflows/publish-service.yml
+    with:
+      operation: receipt
+      service: site-scout-win
+      arch: ''
+      revision: ${{ github.event.pull_request.head.sha || github.sha }}
+      plan_json: ${{ needs.plan.outputs.plan_json }}
+      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
+      job_results: ${{ toJSON(needs) }}
+    secrets: inherit
+  publication-done:
+    name: Orion publication submissions complete
+    needs:
+    - plan
+    - publication-bootstrap
+    - graph-result
+    - index_afl_amd64
+    - publish_docker_afl
+    - receipt_afl
+    - index_bugmon_amd64
+    - publish_docker_bugmon
+    - receipt_bugmon
+    - index_bugmon_win_amd64
+    - receipt_bugmon_win
+    - index_ci_java_11_amd64
+    - publish_docker_ci_java_11
+    - receipt_ci_java_11
+    - index_ci_node_18_amd64
+    - publish_docker_ci_node_18
+    - receipt_ci_node_18
+    - index_ci_node_18_win_amd64
+    - receipt_ci_node_18_win
+    - index_ci_node_20_amd64
+    - publish_docker_ci_node_20
+    - receipt_ci_node_20
+    - index_ci_node_20_win_amd64
+    - receipt_ci_node_20_win
+    - index_ci_node_22_amd64
+    - publish_docker_ci_node_22
+    - receipt_ci_node_22
+    - index_ci_node_22_win_amd64
+    - receipt_ci_node_22_win
+    - index_ci_py_310_amd64
+    - publish_docker_ci_py_310
+    - receipt_ci_py_310
+    - index_ci_py_310_osx_amd64
+    - receipt_ci_py_310_osx
+    - index_ci_py_310_win_amd64
+    - receipt_ci_py_310_win
+    - index_ci_py_311_amd64
+    - publish_docker_ci_py_311
+    - receipt_ci_py_311
+    - index_ci_py_311_osx_amd64
+    - receipt_ci_py_311_osx
+    - index_ci_py_311_win_amd64
+    - receipt_ci_py_311_win
+    - index_ci_py_312_amd64
+    - publish_docker_ci_py_312
+    - receipt_ci_py_312
+    - index_ci_py_312_osx_amd64
+    - receipt_ci_py_312_osx
+    - index_ci_py_312_win_amd64
+    - receipt_ci_py_312_win
+    - index_ci_py_313_amd64
+    - publish_docker_ci_py_313
+    - receipt_ci_py_313
+    - index_ci_py_313_osx_amd64
+    - receipt_ci_py_313_osx
+    - index_ci_py_313_win_amd64
+    - receipt_ci_py_313_win
+    - index_covdiff_amd64
+    - publish_docker_covdiff
+    - receipt_covdiff
+    - index_coverage_revision_amd64
+    - publish_docker_coverage_revision
+    - receipt_coverage_revision
+    - index_domino_web_tests_amd64
+    - publish_docker_domino_web_tests
+    - receipt_domino_web_tests
+    - index_funfuzz_amd64
+    - publish_docker_funfuzz
+    - receipt_funfuzz
+    - index_fuzzilli_amd64
+    - index_fuzzilli_arm64
+    - publish_docker_fuzzilli
+    - receipt_fuzzilli
+    - index_fuzzing_decision_amd64
+    - publish_docker_fuzzing_decision
+    - receipt_fuzzing_decision
+    - index_grizzly_amd64
+    - publish_docker_grizzly
+    - receipt_grizzly
+    - index_grizzly_android_amd64
+    - publish_docker_grizzly_android
+    - receipt_grizzly_android
+    - index_grizzly_reduce_monitor_amd64
+    - publish_docker_grizzly_reduce_monitor
+    - receipt_grizzly_reduce_monitor
+    - index_grizzly_win_amd64
+    - receipt_grizzly_win
+    - index_js_tests_distiller_amd64
+    - publish_docker_js_tests_distiller
+    - receipt_js_tests_distiller
+    - index_langfuzz_amd64
+    - index_langfuzz_arm64
+    - publish_docker_langfuzz
+    - receipt_langfuzz
+    - index_libfuzzer_amd64
+    - publish_docker_libfuzzer
+    - receipt_libfuzzer
+    - index_neqo_coverage_amd64
+    - publish_docker_neqo_coverage
+    - receipt_neqo_coverage
+    - index_nss_corpus_update_amd64
+    - publish_docker_nss_corpus_update
+    - receipt_nss_corpus_update
+    - index_nss_coverage_amd64
+    - publish_docker_nss_coverage
+    - receipt_nss_coverage
+    - index_nyx_amd64
+    - publish_docker_nyx
+    - receipt_nyx
+    - index_orion_decision_amd64
+    - publish_docker_orion_decision
+    - receipt_orion_decision
+    - index_prefmonitor_amd64
+    - publish_docker_prefmonitor
+    - receipt_prefmonitor
+    - index_site_scout_amd64
+    - publish_docker_site_scout
+    - receipt_site_scout
+    - index_site_scout_android_amd64
+    - publish_docker_site_scout_android
+    - receipt_site_scout_android
+    - index_site_scout_win_amd64
+    - receipt_site_scout_win
+    if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
     environment: communitytc
     permissions:
@@ -2016,16 +4644,56 @@ jobs:
     - uses: actions/checkout@v5
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 0
     - uses: actions/setup-python@v6
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
-    - uses: actions/download-artifact@v5
-      with:
-        name: orion-publication-manifest-${{ github.run_id }}-${{ github.run_attempt
+    - name: Close publication submissions
+      env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
           }}
-        path: ${{ runner.temp }}/orion-publication
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+        TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+        GITHUB_TOKEN: ${{ github.token }}
+        ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
+        ORION_TASK_GROUP: ${{ needs.publication-bootstrap.outputs.task_group }}
+      run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+
+        python -m orion_decision.gha_publish close --plan-file "$RUNNER_TEMP/plan.json"
+        --task-group "$ORION_TASK_GROUP" --output "$RUNNER_TEMP/publication-control.json"'
+    - uses: actions/upload-artifact@v5
+      if: always()
+      with:
+        name: orion-publication-control-${{ github.run_id }}-${{ github.run_attempt
+          }}
+        path: ${{ runner.temp }}/publication-control.json
+        if-no-files-found: error
+        retention-days: 7
+  publication-workers:
+    name: Taskcluster worker ${{ matrix.worker }}
+    needs:
+    - plan
+    if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
+    runs-on: ubuntu-24.04
+    environment: communitytc
+    strategy:
+      fail-fast: false
+      matrix:
+        worker:
+        - 1
+        - 2
+    permissions:
+      actions: read
+      contents: read
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
     - name: Write protected GitHub token file
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -2035,189 +4703,41 @@ jobs:
         printf ''%s'' "$GITHUB_TOKEN" > "$ORION_GITHUB_TOKEN_FILE"
 
         chmod 0600 "$ORION_GITHUB_TOKEN_FILE"'
-    - name: Ensure exact import tasks exist
+    - name: Run worker pool
       env:
-        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_CI_WORKER_ORION_GHA_ACCESS_TOKEN
           }}
-        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
-        ORION_RUN_ID: ${{ github.run_id }}
-        ORION_RUN_ATTEMPT: ${{ github.run_attempt }}
-      run: '# Webhook decisions can run before manifest upload.
-
-        # Deterministic IDs make this idempotent for every run.
-
-        group=$(python -c ''from orion_decision.gha_publish import artifact_task_id;
-        import os; print(artifact_task_id(os.environ["ORION_RUN_ID"], os.environ["ORION_RUN_ATTEMPT"],
-        "decision"))'')
-
-        python -m orion_decision.gha_publish schedule --manifest-file "$RUNNER_TEMP/orion-publication/manifest.json"
-        --task-group "$group"'
-    - name: Run worker and require every exact import
-      env:
-        ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_CI_WORKER_ORION_GHA_ACCESS_TOKEN
-          }}
-        TC_WORKER_ID: gh-orion-publish-${{ github.run_id }}-${{ github.run_attempt
-          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/ci-worker-orion-gha
+        TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+        GITHUB_TOKEN: ${{ github.token }}
         ORION_GITHUB_TOKEN_FILE: ${{ runner.temp }}/orion-github-token
-      run: 'set +e
-
-        TASKCLUSTER_ACCESS_TOKEN="$ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN" .github/scripts/start-worker.sh
-        > "$RUNNER_TEMP/generic-worker.log" 2>&1 &
-
-        worker_pid=$!
-
-        unset ORION_TASKCLUSTER_WORKER_ACCESS_TOKEN
-
-        python -m orion_decision.gha_publish monitor --manifest-file "$RUNNER_TEMP/orion-publication/manifest.json"
-        --timeout 3600 > "$RUNNER_TEMP/publication-monitor.log" 2>&1 &
-
-        monitor_pid=$!
-
-        wait "$monitor_pid"
-
-        monitor_status=$?
-
-        if kill -0 "$worker_pid" 2>/dev/null; then if [ "$monitor_status" -eq 0 ];
-        then kill -USR1 "$worker_pid"; else kill -TERM "$worker_pid"; fi; fi
-
-        wait "$worker_pid"
-
-        cat "$RUNNER_TEMP/generic-worker.log"
-
-        cat "$RUNNER_TEMP/publication-monitor.log"
-
-        exit "$monitor_status"'
-  publish-docker:
-    name: Publish Orion Docker manifests
-    needs:
-    - plan
-    - build_afl_amd64
-    - build_bugmon_amd64
-    - build_bugmon_win_amd64
-    - build_ci_java_11_amd64
-    - build_ci_node_18_amd64
-    - build_ci_node_18_win_amd64
-    - build_ci_node_20_amd64
-    - build_ci_node_20_win_amd64
-    - build_ci_node_22_amd64
-    - build_ci_node_22_win_amd64
-    - build_ci_py_310_amd64
-    - build_ci_py_310_osx_amd64
-    - build_ci_py_310_win_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_311_osx_amd64
-    - build_ci_py_311_win_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_312_osx_amd64
-    - build_ci_py_312_win_amd64
-    - build_ci_py_313_amd64
-    - build_ci_py_313_osx_amd64
-    - build_ci_py_313_win_amd64
-    - build_covdiff_amd64
-    - build_coverage_revision_amd64
-    - build_domino_web_tests_amd64
-    - build_funfuzz_amd64
-    - build_fuzzilli_amd64
-    - build_fuzzilli_arm64
-    - build_fuzzing_decision_amd64
-    - build_grizzly_amd64
-    - build_grizzly_android_amd64
-    - build_grizzly_reduce_monitor_amd64
-    - build_grizzly_win_amd64
-    - build_js_tests_distiller_amd64
-    - build_langfuzz_amd64
-    - build_langfuzz_arm64
-    - build_libfuzzer_amd64
-    - build_neqo_coverage_amd64
-    - build_nss_corpus_update_amd64
-    - build_nss_coverage_amd64
-    - build_nyx_amd64
-    - build_orion_decision_amd64
-    - build_prefmonitor_amd64
-    - build_site_scout_amd64
-    - build_site_scout_android_amd64
-    - build_site_scout_win_amd64
-    - recipe_test_cleanup_sh
-    - recipe_test_common_sh
-    - recipe_test_dbgsyms_sh
-    - recipe_test_fluentbit_sh
-    - recipe_test_fuzzfetch_sh
-    - recipe_test_fuzzing_tc_sh
-    - recipe_test_fuzzmanager_sh
-    - recipe_test_gcov_9_sh
-    - recipe_test_grcov_sh
-    - recipe_test_gsutil_sh
-    - recipe_test_htop_sh
-    - recipe_test_js32_deps_sh
-    - recipe_test_llvm_cov_sh
-    - recipe_test_llvm_sh
-    - recipe_test_llvm_symbolizer_sh
-    - recipe_test_nodejs_sh
-    - recipe_test_orion_decision_sh
-    - recipe_test_pernosco_submit_sh
-    - recipe_test_poetry_sh
-    - recipe_test_prefpicker_sh
-    - recipe_test_radamsa_sh
-    - recipe_test_rr_sh
-    - recipe_test_sentry_sh
-    - recipe_test_taskcluster_sh
-    - recipe_test_taskgraph_m_c_latest_sh
-    - recipe_test_uv_sh
-    - recipe_test_worker_sh
-    - service_test_fuzzing_decision
-    - service_test_nyx_ipc_manager
-    - service_test_orion
-    - service_test_orion_decision
-    - service_test_symbol_filter
-    if: always() && !cancelled() && needs.plan.outputs.selected_docker_jobs != '[]'
-      && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-      && fromJSON(needs.plan.outputs.plan_json).publish
-    runs-on: ubuntu-24.04
-    environment: dockerhub
-    concurrency:
-      group: orion-docker-latest-${{ github.ref }}
-      cancel-in-progress: false
-    permissions:
-      actions: read
-      contents: read
-    steps:
-    - uses: actions/checkout@v5
-      with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        fetch-depth: 0
-    - uses: actions/setup-python@v6
-      with:
-        python-version: '3.13'
-    - run: python -m pip install -e services/orion-decision
-    - name: Write plan and install zstd
-      env:
         ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}
+        TC_WORKER_ID: gh-orion-publish-${{ github.run_id }}-${{ github.run_attempt
+          }}-${{ matrix.worker }}
       run: 'printf ''%s'' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
 
-        sudo apt-get update && sudo apt-get install --yes zstd'
-    - name: Reject stale branch publication
+        python -m orion_decision.gha_publish worker-pool --plan-file "$RUNNER_TEMP/plan.json"
+        --timeout 16200'
+    timeout-minutes: 360
+  result:
+    name: Orion workflow result
+    needs:
+    - plan
+    - graph-result
+    - publication-done
+    - publication-workers
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Require graph and publication success
       env:
-        GITHUB_TOKEN: ${{ github.token }}
-        ORION_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-        ORION_BRANCH: ${{ github.ref_name }}
-      run: python -m orion_decision.gha_run check-head --repository "$GITHUB_REPOSITORY"
-        --branch "$ORION_BRANCH" --revision "$ORION_REVISION"
-    - uses: docker/setup-buildx-action@v3
-    - uses: docker/login-action@v3
-      with:
-        username: ${{ vars.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Push staging images and publish latest manifests
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        ORION_JOB_RESULTS: ${{ toJSON(needs) }}
-      run: python -m orion_decision.gha_run publish --repo . --plan-file "$RUNNER_TEMP/plan.json"
-    - name: Record published image digests
-      if: always()
-      uses: actions/upload-artifact@v5
-      with:
-        name: orion-published-image-digests-${{ github.run_id }}-${{ github.run_attempt
-          }}
-        path: ${{ runner.temp }}/published-images.json
-        if-no-files-found: error
-        retention-days: 90
+        ORION_GRAPH_RESULT: ${{ needs.graph-result.result }}
+        ORION_PUBLISH: ${{ needs.plan.outputs.publish }}
+        ORION_PUBLICATION_RESULT: ${{ needs.publication-done.result }}
+        ORION_WORKERS_RESULT: ${{ needs.publication-workers.result }}
+      run: "python - <<'PY'\nimport os, sys\nif os.environ['ORION_GRAPH_RESULT'] !=\
+        \ 'success':\n    sys.exit('Selected Orion graph jobs did not all succeed')\n\
+        if os.environ['ORION_PUBLISH'] == 'true':\n    if os.environ['ORION_PUBLICATION_RESULT']\
+        \ != 'success':\n        sys.exit('Publication submissions failed')\n    if\
+        \ os.environ['ORION_WORKERS_RESULT'] != 'success':\n        sys.exit('Workers\
+        \ did not drain')\nPY"

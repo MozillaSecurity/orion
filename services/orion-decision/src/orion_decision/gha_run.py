@@ -346,7 +346,10 @@ def finalize(name: str, arch: str, image_tar: Path, digest: str = "") -> Path:
 
 
 def publish_images(
-    repo: Path, plan: dict[str, Any], runner_temp: Path | None = None
+    repo: Path,
+    plan: dict[str, Any],
+    runner_temp: Path | None = None,
+    service_name: str | None = None,
 ) -> Path:
     """Push run-specific staging tags, then publish latest by immutable digests."""
     actual = GitRepo.from_existing(repo).head()
@@ -356,6 +359,8 @@ def publish_images(
         )
     temp = runner_temp or Path(os.environ.get("RUNNER_TEMP", "/tmp"))
     services = Services(GitRepo.from_existing(repo))
+    if service_name is not None and service_name not in services:
+        raise ValueError(f"Unknown service {service_name!r}")
     selected = set(plan.get("selected_jobs", []))
     raw_results = os.environ.get("ORION_JOB_RESULTS")
     job_results = json.loads(raw_results) if raw_results else {}
@@ -367,6 +372,8 @@ def publish_images(
     images: dict[str, dict[str, Any]] = {}
     failures: list[str] = []
     for service in services.values():
+        if service_name is not None and service.name != service_name:
+            continue
         if isinstance(service, (ServiceMsys, ServiceHomebrew, ServiceTestOnly)):
             continue
         for arch in service.archs:
@@ -445,6 +452,13 @@ def publish_images(
             for arch in sorted(service.archs)
         ]
         try:
+            if service_name is not None and _has_newer_successful_service_publication(
+                service_name
+            ):
+                raise RuntimeError(
+                    f"A newer successful publication for {service_name!r} "
+                    "already exists"
+                )
             _run(
                 [
                     "docker",
@@ -453,6 +467,18 @@ def publish_images(
                     "create",
                     "--tag",
                     f"mozillasecurity/{name}:latest",
+                    *(
+                        [
+                            "--annotation",
+                            "index:org.mozilla.orion.github-run-id="
+                            + os.environ["GITHUB_RUN_ID"],
+                            "--annotation",
+                            "index:org.mozilla.orion.github-run-attempt="
+                            + os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
+                        ]
+                        if service_name is not None
+                        else []
+                    ),
                     *sources,
                 ]
             )
@@ -464,6 +490,59 @@ def publish_images(
     if failures:
         raise RuntimeError("Docker publication branches failed: " + "; ".join(failures))
     return published
+
+
+def _has_newer_successful_service_publication(service_name: str) -> bool:
+    """Read the current Docker index annotations to guard service latest writes."""
+    current_run = os.environ.get("GITHUB_RUN_ID")
+    current_attempt = int(os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
+    if not current_run:
+        raise RuntimeError("GITHUB_RUN_ID is required")
+    current = (int(current_run), current_attempt)
+    inspect = subprocess.run(
+        [
+            "docker",
+            "buildx",
+            "imagetools",
+            "inspect",
+            "--raw",
+            f"mozillasecurity/{service_name}:latest",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if inspect.returncode:
+        missing_reference = re.search(
+            rf"(?:^|\s)(?:docker\.io/)?mozillasecurity/"
+            rf"{re.escape(service_name)}:latest: not found(?:$|\s)",
+            inspect.stderr,
+            re.IGNORECASE,
+        )
+        if missing_reference or re.search(
+            r"manifest unknown|no such manifest",
+            inspect.stderr,
+            re.IGNORECASE,
+        ):
+            return False
+        raise RuntimeError(
+            f"Could not inspect latest manifest for {service_name}: "
+            f"{inspect.stderr.strip()}"
+        )
+    try:
+        annotations = json.loads(inspect.stdout).get("annotations", {})
+        run_id = annotations.get("org.mozilla.orion.github-run-id")
+        attempt = annotations.get("org.mozilla.orion.github-run-attempt")
+        if run_id is None and attempt is None:
+            return False
+        if run_id is None or attempt is None:
+            raise ValueError("run ID and attempt annotations must both be present")
+        latest = (int(run_id), int(attempt))
+    except (json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
+        raise RuntimeError(
+            f"Could not read publication annotations for {service_name}: {exc}"
+        ) from exc
+    return latest > current
 
 
 def reject_stale_publication(repository: str, branch: str, revision: str) -> None:
@@ -548,6 +627,7 @@ def main() -> None:
         elif command == "publish":
             sub.add_argument("--plan-file", type=Path, required=True)
             sub.add_argument("--repo", type=Path, default=Path.cwd())
+            sub.add_argument("--service")
         elif command == "check-head":
             sub.add_argument("--repository", required=True)
             sub.add_argument("--branch", required=True)
@@ -562,7 +642,11 @@ def main() -> None:
         reject_stale_publication(args.repository, args.branch, args.revision)
         return
     if args.command == "publish":
-        publish_images(args.repo, json.loads(args.plan_file.read_text()))
+        publish_images(
+            args.repo,
+            json.loads(args.plan_file.read_text()),
+            service_name=args.service,
+        )
         return
     if args.command == "finalize":
         print(finalize(args.name, args.arch, args.image_tar, args.digest))
