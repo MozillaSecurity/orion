@@ -18,15 +18,14 @@ if ! is-arm64; then
       dpkg --add-architecture i386
       sys-update
       apt-install-auto apt-utils
-      sys-embed libatomic1:i386 libstdc++6:i386 libnspr4:i386
+      sys-embed libatomic1:i386 libstdc++6:i386 libnspr4:i386 zlib1g:i386
       ;;
     test)
       sys-update
       "${0%/*}/fuzzfetch.sh"
       TMPD="$(mktemp -d -p. js32.test.XXXXXXXXXX)"
       pushd "$TMPD" >/dev/null
-      fuzzfetch --name jsshell --target js --cpu x86 \
-        --build gecko.v2.mozilla-central.latest.firefox.sm-linux32-fuzzing
+      fuzzfetch --name jsshell --target js --cpu x86 --fuzzing
       ./jsshell/dist/bin/js --help
       popd >/dev/null
       rm -rf "$TMPD"
