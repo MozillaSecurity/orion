@@ -34,7 +34,6 @@ cat >worker.config <<EOF
   "accessToken": "$TASKCLUSTER_ACCESS_TOKEN",
   "clientId": "$TASKCLUSTER_CLIENT_ID",
   "disableReboots": true,
-  "headlessTasks": true,
   "ed25519SigningKeyLocation": "worker.key",
   "idleTimeoutSecs": $TC_IDLE_TIMEOUT,
   "livelogExecutable": "$PWD/livelog",
