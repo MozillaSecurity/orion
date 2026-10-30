@@ -10,9 +10,21 @@ import pytest
 from grizzly_reduce_monitor import monitor
 
 EXPECTED_DEFAULTS = (
-    "list lines markup-tree-sitter css-merge css-tree-sitter js-control-flow "
-    "js-remove-wrappers js-inline-functions js-proxy-inline js-unused-vars "
-    "lines prettier"
+    "list",
+    "lines",
+    "markup-tree-sitter",
+    "css-merge",
+    "css-tree-sitter",
+    "js-control-flow",
+    "js-remove-wrappers",
+    "js-inline-functions",
+    "js-proxy-inline",
+    "js-object-properties",
+    "js-unused-vars",
+    "lines",
+    "jschars",
+    "prettier",
+    "lines",
 )
 
 
@@ -48,7 +60,7 @@ def test_default_strategies(queue: Mock, os_name: str) -> None:
     instance = monitor.ReductionMonitor(tool_list=["test"])
     instance.queue_reduction_task(os_name, make_crash(os_name), None)
     task = queue.createTask.call_args.args[1]
-    assert task["payload"]["env"]["REDUCE_STRATEGY"] == EXPECTED_DEFAULTS
+    assert task["payload"]["env"]["REDUCE_STRATEGY"] == " ".join(EXPECTED_DEFAULTS)
 
 
 @pytest.mark.parametrize("os_name", ["linux", "android", "windows", "macosx"])
