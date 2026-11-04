@@ -78,7 +78,7 @@ env -i \
   TMPDIR="${TMPDIR:-/tmp}" \
   RUNNER_TEMP="$RUNNER_TEMP" \
   ORION_GITHUB_TOKEN_FILE="$ORION_GITHUB_TOKEN_FILE" \
-  ./generic-worker run --config worker.config &
+  "$PWD/generic-worker" run --config "$PWD/worker.config" &
 worker_pid=$!
 # shellcheck disable=SC2329 # Called indirectly by the signal trap.
 stop_worker() {
