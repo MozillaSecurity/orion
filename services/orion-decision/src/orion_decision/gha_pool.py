@@ -109,7 +109,7 @@ def metadata_task(
         },
         "extra": {
             "index": {
-                "rank": publication_rank(data["runId"], data["runAttempt"]),
+                "rank": publication_rank(data["runNumber"], data["runAttempt"]),
                 "data": data,
             },
             "orion": data,
