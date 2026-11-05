@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM mozillasecurity/ci-py-310:latest
+FROM python:3.10-slim
 
 LABEL maintainer Jason Kratzer <jkratzer@mozilla.com>
 
@@ -13,6 +13,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 USER root
 COPY recipes/linux/ /src/recipes/
 COPY services/covdiff/setup.sh /src/recipes/setup-covdiff.sh
+COPY base/linux/etc/pip.conf /etc/pip.conf
 COPY services/covdiff/ssh_config /home/worker/.ssh/config
 COPY services/covdiff/launch.sh /home/worker
 RUN /src/recipes/setup-covdiff.sh

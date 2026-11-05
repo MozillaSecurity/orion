@@ -12,28 +12,36 @@ source "${0%/*}/common.sh"
 
 #### Bootstrap Packages
 
+export DEBIAN_FRONTEND=noninteractive
+
 sys-update
+
+packages=(
+  ca-certificates
+  curl
+  git
+  jshon
+  libdbus-glib-1-2
+  libgtk-3-0
+  libx11-xcb1
+  libxt6
+  openssh-client
+)
+sys-embed "${packages[@]}"
 
 #### Install recipes
 
 cd "${0%/*}"
 ./taskcluster.sh
+./worker.sh install
 
-#### Install packages
+#### Configure SSH
 
-packages=(
-  libdbus-glib-1-2
-  libgtk-3-0
-  libx11-xcb1
-  libxt6
-)
-sys-embed "${packages[@]}"
+mkdir -p /home/worker/.ssh
+retry ssh-keyscan github.com >/home/worker/.ssh/known_hosts
+chmod 0600 /home/worker/.ssh/config
+chown -R worker:worker /home/worker
 
 #### Clean up
 
 ./cleanup.sh
-
-#### Fix ownership
-
-chmod 0600 /home/worker/.ssh/config
-chown -R worker:worker /home/worker

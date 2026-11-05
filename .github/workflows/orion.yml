@@ -897,18 +897,23 @@ jobs:
     name: 'build: covdiff'
     needs:
     - plan
-    - build_ci_py_310_amd64
+    - recipe_test_cleanup_sh
     - recipe_test_common_sh
     - recipe_test_fuzzmanager_sh
+    - recipe_test_poetry_sh
     - recipe_test_taskcluster_sh
+    - recipe_test_worker_sh
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_covdiff_amd64') && (needs.build_ci_py_310_amd64.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      'build_covdiff_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
       && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
       'recipe_test_common_sh')) && (needs.recipe_test_fuzzmanager_sh.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_fuzzmanager_sh'))
-      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_poetry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_poetry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
@@ -937,18 +942,18 @@ jobs:
     name: 'build: domino-web-tests'
     needs:
     - plan
-    - build_ci_node_22_amd64
     - recipe_test_cleanup_sh
     - recipe_test_common_sh
     - recipe_test_taskcluster_sh
+    - recipe_test_worker_sh
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_domino_web_tests_amd64') && (needs.build_ci_node_22_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_node_22_amd64'))
-      && (needs.recipe_test_cleanup_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_cleanup_sh')) && (needs.recipe_test_common_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
-      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_taskcluster_sh'))
+      'build_domino_web_tests_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
+      && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_common_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
@@ -1659,15 +1664,20 @@ jobs:
     name: 'build: prefmonitor'
     needs:
     - plan
-    - build_ci_py_310_amd64
+    - recipe_test_cleanup_sh
     - recipe_test_common_sh
+    - recipe_test_poetry_sh
     - recipe_test_taskcluster_sh
+    - recipe_test_worker_sh
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_prefmonitor_amd64') && (needs.build_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
+      'build_prefmonitor_amd64') && (needs.recipe_test_cleanup_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_cleanup_sh'))
       && (needs.recipe_test_common_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_common_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
+      'recipe_test_common_sh')) && (needs.recipe_test_poetry_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_poetry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_worker_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
