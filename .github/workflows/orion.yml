@@ -333,22 +333,6 @@ jobs:
       runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
-  recipe_test_orion_decision_sh:
-    name: 'recipe_test: orion decision.sh'
-    needs:
-    - plan
-    - recipe_test_common_sh
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_orion_decision_sh') && (needs.recipe_test_common_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: recipe-test
-      name: orion_decision.sh
-      arch: ''
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
   recipe_test_pernosco_submit_sh:
     name: 'recipe_test: pernosco submit.sh'
     needs:
@@ -1421,25 +1405,6 @@ jobs:
       runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_orion_decision_amd64:
-    name: 'build: orion-decision'
-    needs:
-    - plan
-    - recipe_test_common_sh
-    - service_test_orion_decision
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_decision_amd64') && (needs.recipe_test_common_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
-      && (needs.service_test_orion_decision.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_orion_decision'))
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: orion-decision
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
   build_prefmonitor_amd64:
     name: 'build: prefmonitor'
     needs:
@@ -1576,7 +1541,6 @@ jobs:
     - build_nss_corpus_update_amd64
     - build_nss_coverage_amd64
     - build_nyx_amd64
-    - build_orion_decision_amd64
     - build_prefmonitor_amd64
     - build_site_scout_amd64
     - build_site_scout_android_amd64
@@ -1597,7 +1561,6 @@ jobs:
     - recipe_test_llvm_sh
     - recipe_test_llvm_symbolizer_sh
     - recipe_test_nodejs_sh
-    - recipe_test_orion_decision_sh
     - recipe_test_pernosco_submit_sh
     - recipe_test_poetry_sh
     - recipe_test_prefpicker_sh
@@ -3257,73 +3220,6 @@ jobs:
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
     secrets: inherit
-  index_orion_decision_amd64:
-    name: Schedule orion-decision amd64 Taskcluster import
-    needs:
-    - plan
-    - publication-bootstrap
-    - build_orion_decision_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_decision_amd64') && needs.build_orion_decision_amd64.result ==
-      'success'
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: index
-      service: orion-decision
-      arch: amd64
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  publish_docker_orion_decision:
-    name: Publish orion-decision Docker latest
-    needs:
-    - plan
-    - build_orion_decision_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_orion_decision_amd64')
-      && needs.build_orion_decision_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-orion-decision-${{ github.ref }}
-      cancel-in-progress: false
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: docker
-      service: orion-decision
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ''
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  receipt_orion_decision:
-    name: Create orion-decision Taskcluster publication receipt
-    needs:
-    - plan
-    - publication-bootstrap
-    - index_orion_decision_amd64
-    - publish_docker_orion_decision
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_orion_decision_amd64')) && (needs.index_orion_decision_amd64.result ==
-      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_orion_decision_amd64'))
-      && (needs.publish_docker_orion_decision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_orion_decision_amd64')))
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: receipt
-      service: orion-decision
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
   index_prefmonitor_amd64:
     name: Schedule prefmonitor amd64 Taskcluster import
     needs:
@@ -3643,9 +3539,6 @@ jobs:
     - index_nyx_amd64
     - publish_docker_nyx
     - receipt_nyx
-    - index_orion_decision_amd64
-    - publish_docker_orion_decision
-    - receipt_orion_decision
     - index_prefmonitor_amd64
     - publish_docker_prefmonitor
     - receipt_prefmonitor
