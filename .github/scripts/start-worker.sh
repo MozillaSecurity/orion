@@ -95,6 +95,7 @@ stop_worker() {
 }
 # shellcheck disable=SC2329 # Called indirectly by the USR1 signal trap.
 drain_worker() {
+  drain_requested=1
   trap '' USR1
   kill -INT "$worker_pid" 2>/dev/null
   (
@@ -115,6 +116,7 @@ drain_worker() {
   ) &
   drain_watchdog_pid=$!
 }
+drain_requested=0
 trap stop_worker TERM INT HUP
 trap drain_worker USR1
 wait "$worker_pid"
@@ -131,5 +133,11 @@ fi
 set -e
 case "$status" in
   0 | 68) exit 0 ;;
+  71)
+    if [ "$drain_requested" -eq 1 ]; then
+      exit 0
+    fi
+    exit 71
+    ;;
   *) exit "$status" ;;
 esac
