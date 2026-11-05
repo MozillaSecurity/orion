@@ -601,62 +601,6 @@ jobs:
       runner: windows-2025
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_ci_py_310_amd64:
-    name: 'build: ci-py-310'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_310_amd64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: ci-py-310
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_ci_py_311_amd64:
-    name: 'build: ci-py-311'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: ci-py-311
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_ci_py_312_amd64:
-    name: 'build: ci-py-312'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_312_amd64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: ci-py-312
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-  build_ci_py_313_amd64:
-    name: 'build: ci-py-313'
-    needs:
-    - plan
-    if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64')
-    uses: ./.github/workflows/build-service.yml
-    with:
-      operation: build
-      name: ci-py-313
-      arch: amd64
-      runner: ubuntu-24.04
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
   build_covdiff_amd64:
     name: 'build: covdiff'
     needs:
@@ -874,29 +818,19 @@ jobs:
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_fuzzing_decision:
-    name: 'service_test: fuzzing-decision'
+    name: 'service test: fuzzing-decision'
     needs:
     - plan
-    - build_ci_py_310_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_313_amd64
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_fuzzing_decision') && (needs.build_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
-      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64'))
-    uses: ./.github/workflows/build-service.yml
+      'service_test_fuzzing_decision')
+    uses: ./.github/workflows/test-service.yml
     with:
-      operation: service-test
       name: fuzzing-decision
-      arch: ''
-      runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
+      tests_json: '[{"name":"python 3.10 unittests","python":"3.10","test_index":0},{"name":"python
+        3.11 unittests","python":"3.11","test_index":1},{"name":"python 3.12 unittests","python":"3.12","test_index":2},{"name":"python
+        3.13 unittests","python":"3.13","test_index":3}]'
   build_fuzzing_decision_amd64:
     name: 'build: fuzzing-decision'
     needs:
@@ -1348,63 +1282,45 @@ jobs:
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_nyx_ipc_manager:
-    name: 'service_test: nyx ipc manager'
+    name: 'service test: nyx ipc manager'
     needs:
     - plan
-    - build_ci_py_310_amd64
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_nyx_ipc_manager') && (needs.build_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-    uses: ./.github/workflows/build-service.yml
+      'service_test_nyx_ipc_manager')
+    uses: ./.github/workflows/test-service.yml
     with:
-      operation: service-test
       name: nyx_ipc_manager
-      arch: ''
-      runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
+      tests_json: '[{"name":"lint","python":"3.10","test_index":0}]'
   service_test_orion:
-    name: 'service_test: orion'
+    name: 'service test: orion'
     needs:
     - plan
-    - build_ci_py_310_amd64
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_orion') && (needs.build_ci_py_310_amd64.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-    uses: ./.github/workflows/build-service.yml
+      'service_test_orion')
+    uses: ./.github/workflows/test-service.yml
     with:
-      operation: service-test
       name: orion
-      arch: ''
-      runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
+      tests_json: '[{"name":"lint","python":"3.10","test_index":0}]'
   service_test_orion_decision:
-    name: 'service_test: orion-decision'
+    name: 'service test: orion-decision'
     needs:
     - plan
-    - build_ci_py_310_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_313_amd64
     - recipe_test_common_sh
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_orion_decision') && (needs.build_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
-      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64')) && (needs.recipe_test_common_sh.result == 'success'
+      'service_test_orion_decision') && (needs.recipe_test_common_sh.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_common_sh'))
-    uses: ./.github/workflows/build-service.yml
+    uses: ./.github/workflows/test-service.yml
     with:
-      operation: service-test
       name: orion-decision
-      arch: ''
-      runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
+      tests_json: '[{"name":"python 3.10 unittests","python":"3.10","test_index":0},{"name":"python
+        3.11 unittests","python":"3.11","test_index":1},{"name":"python 3.12 unittests","python":"3.12","test_index":2},{"name":"python
+        3.13 unittests","python":"3.13","test_index":3}]'
   build_prefmonitor_amd64:
     name: 'build: prefmonitor'
     needs:
@@ -1488,29 +1404,19 @@ jobs:
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
   service_test_symbol_filter:
-    name: 'service_test: symbol-filter'
+    name: 'service test: symbol-filter'
     needs:
     - plan
-    - build_ci_py_310_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_313_amd64
     if: always() && !cancelled() && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'service_test_symbol_filter') && (needs.build_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-      && (needs.build_ci_py_311_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64')) && (needs.build_ci_py_312_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
-      && (needs.build_ci_py_313_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64'))
-    uses: ./.github/workflows/build-service.yml
+      'service_test_symbol_filter')
+    uses: ./.github/workflows/test-service.yml
     with:
-      operation: service-test
       name: symbol-filter
-      arch: ''
-      runner: ubuntu-24.04
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
+      tests_json: '[{"name":"python 3.10 unittests","python":"3.10","test_index":0},{"name":"python
+        3.11 unittests","python":"3.11","test_index":1},{"name":"python 3.12 unittests","python":"3.12","test_index":2},{"name":"python
+        3.13 unittests","python":"3.13","test_index":3},{"name":"lint","python":"3.10","test_index":4}]'
   graph-result:
     name: Orion graph result
     needs:
@@ -1518,10 +1424,6 @@ jobs:
     - build_afl_amd64
     - build_bugmon_amd64
     - build_bugmon_win_amd64
-    - build_ci_py_310_amd64
-    - build_ci_py_311_amd64
-    - build_ci_py_312_amd64
-    - build_ci_py_313_amd64
     - build_covdiff_amd64
     - build_coverage_revision_amd64
     - build_domino_web_tests_amd64
@@ -1795,270 +1697,6 @@ jobs:
     with:
       operation: receipt
       service: bugmon-win
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  index_ci_py_310_amd64:
-    name: Schedule ci-py-310 amd64 Taskcluster import
-    needs:
-    - plan
-    - publication-bootstrap
-    - build_ci_py_310_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_310_amd64') && needs.build_ci_py_310_amd64.result == 'success'
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: index
-      service: ci-py-310
-      arch: amd64
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  publish_docker_ci_py_310:
-    name: Publish ci-py-310 Docker latest
-    needs:
-    - plan
-    - build_ci_py_310_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64')
-      && needs.build_ci_py_310_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-ci-py-310-${{ github.ref }}
-      cancel-in-progress: false
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: docker
-      service: ci-py-310
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ''
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  receipt_ci_py_310:
-    name: Create ci-py-310 Taskcluster publication receipt
-    needs:
-    - plan
-    - publication-bootstrap
-    - index_ci_py_310_amd64
-    - publish_docker_ci_py_310
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_310_amd64')) && (needs.index_ci_py_310_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_310_amd64'))
-      && (needs.publish_docker_ci_py_310.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_ci_py_310_amd64')))
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: receipt
-      service: ci-py-310
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  index_ci_py_311_amd64:
-    name: Schedule ci-py-311 amd64 Taskcluster import
-    needs:
-    - plan
-    - publication-bootstrap
-    - build_ci_py_311_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64') && needs.build_ci_py_311_amd64.result == 'success'
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: index
-      service: ci-py-311
-      arch: amd64
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  publish_docker_ci_py_311:
-    name: Publish ci-py-311 Docker latest
-    needs:
-    - plan
-    - build_ci_py_311_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_amd64')
-      && needs.build_ci_py_311_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-ci-py-311-${{ github.ref }}
-      cancel-in-progress: false
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: docker
-      service: ci-py-311
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ''
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  receipt_ci_py_311:
-    name: Create ci-py-311 Taskcluster publication receipt
-    needs:
-    - plan
-    - publication-bootstrap
-    - index_ci_py_311_amd64
-    - publish_docker_ci_py_311
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_311_amd64')) && (needs.index_ci_py_311_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_311_amd64'))
-      && (needs.publish_docker_ci_py_311.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_ci_py_311_amd64')))
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: receipt
-      service: ci-py-311
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  index_ci_py_312_amd64:
-    name: Schedule ci-py-312 amd64 Taskcluster import
-    needs:
-    - plan
-    - publication-bootstrap
-    - build_ci_py_312_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_312_amd64') && needs.build_ci_py_312_amd64.result == 'success'
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: index
-      service: ci-py-312
-      arch: amd64
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  publish_docker_ci_py_312:
-    name: Publish ci-py-312 Docker latest
-    needs:
-    - plan
-    - build_ci_py_312_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64')
-      && needs.build_ci_py_312_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-ci-py-312-${{ github.ref }}
-      cancel-in-progress: false
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: docker
-      service: ci-py-312
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ''
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  receipt_ci_py_312:
-    name: Create ci-py-312 Taskcluster publication receipt
-    needs:
-    - plan
-    - publication-bootstrap
-    - index_ci_py_312_amd64
-    - publish_docker_ci_py_312
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_312_amd64')) && (needs.index_ci_py_312_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_312_amd64'))
-      && (needs.publish_docker_ci_py_312.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_ci_py_312_amd64')))
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: receipt
-      service: ci-py-312
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  index_ci_py_313_amd64:
-    name: Schedule ci-py-313 amd64 Taskcluster import
-    needs:
-    - plan
-    - publication-bootstrap
-    - build_ci_py_313_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64') && needs.build_ci_py_313_amd64.result == 'success'
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: index
-      service: ci-py-313
-      arch: amd64
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  publish_docker_ci_py_313:
-    name: Publish ci-py-313 Docker latest
-    needs:
-    - plan
-    - build_ci_py_313_amd64
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_amd64')
-      && needs.build_ci_py_313_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-ci-py-313-${{ github.ref }}
-      cancel-in-progress: false
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: docker
-      service: ci-py-313
-      arch: ''
-      revision: ${{ github.event.pull_request.head.sha || github.sha }}
-      plan_json: ${{ needs.plan.outputs.plan_json }}
-      task_group: ''
-      job_results: ${{ toJSON(needs) }}
-    secrets: inherit
-  receipt_ci_py_313:
-    name: Create ci-py-313 Taskcluster publication receipt
-    needs:
-    - plan
-    - publication-bootstrap
-    - index_ci_py_313_amd64
-    - publish_docker_ci_py_313
-    if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_ci_py_313_amd64')) && (needs.index_ci_py_313_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_ci_py_313_amd64'))
-      && (needs.publish_docker_ci_py_313.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_ci_py_313_amd64')))
-    uses: ./.github/workflows/publish-service.yml
-    with:
-      operation: receipt
-      service: ci-py-313
       arch: ''
       revision: ${{ github.event.pull_request.head.sha || github.sha }}
       plan_json: ${{ needs.plan.outputs.plan_json }}
@@ -3475,18 +3113,6 @@ jobs:
     - receipt_bugmon
     - index_bugmon_win_amd64
     - receipt_bugmon_win
-    - index_ci_py_310_amd64
-    - publish_docker_ci_py_310
-    - receipt_ci_py_310
-    - index_ci_py_311_amd64
-    - publish_docker_ci_py_311
-    - receipt_ci_py_311
-    - index_ci_py_312_amd64
-    - publish_docker_ci_py_312
-    - receipt_ci_py_312
-    - index_ci_py_313_amd64
-    - publish_docker_ci_py_313
-    - receipt_ci_py_313
     - index_covdiff_amd64
     - publish_docker_covdiff
     - receipt_covdiff

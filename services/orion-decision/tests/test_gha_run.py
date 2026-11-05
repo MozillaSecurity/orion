@@ -315,6 +315,160 @@ def test_service_tox_tests_use_each_service_root_and_environment(tmp_path, monke
     assert len(commands) == 2
 
 
+def test_native_tox_test_runs_from_service_directory_with_ci_environment(
+    tmp_path, monkeypatch
+):
+    """Run a host Python check from the service directory with CI enabled."""
+    repo, revision = make_repo(
+        tmp_path / "repo",
+        {
+            "services/alpha/service.yaml": (
+                "name: alpha\ntests:\n  - name: py310\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: py310\n"
+            ),
+            "services/alpha/tox.ini": "[tox]\n",
+            "services/alpha/Dockerfile": "FROM alpine:3.20\n",
+        },
+    )
+    monkeypatch.setattr(gha_run.sys, "version_info", SimpleNamespace(major=3, minor=10))
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+    monkeypatch.setattr(
+        gha_run, "_run", lambda command, **kwargs: calls.append((command, kwargs))
+    )
+
+    gha_run.run_tests(
+        repo,
+        "alpha",
+        revision,
+        plan(revision, job_id("service_test", "alpha")),
+        test_index=0,
+    )
+
+    assert calls == [
+        (
+            ["tox", "-e", "py310"],
+            {
+                "cwd": repo / "services/alpha",
+                "env": {**os.environ, "CI": "true"},
+            },
+        )
+    ]
+
+
+def test_native_tox_test_rejects_unavailable_python_version(tmp_path, monkeypatch):
+    """Stop when the active interpreter cannot satisfy the selected check."""
+    repo, revision = make_repo(
+        tmp_path / "repo",
+        {
+            "services/alpha/service.yaml": (
+                "name: alpha\ntests:\n  - name: py310\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: py310\n"
+            ),
+            "services/alpha/Dockerfile": "FROM alpine:3.20\n",
+        },
+    )
+    monkeypatch.setattr(gha_run.sys, "version_info", SimpleNamespace(major=3, minor=11))
+    monkeypatch.setattr(
+        gha_run, "_run", lambda *_args, **_kwargs: pytest.fail("wrong Python ran tox")
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"requires Python 3\.10.*current runtime is Python 3\.11",
+    ):
+        gha_run.run_tests(
+            repo,
+            "alpha",
+            revision,
+            plan(revision, job_id("service_test", "alpha")),
+            test_index=0,
+        )
+
+
+def test_service_test_index_must_select_an_existing_tox_test(tmp_path, monkeypatch):
+    """Reject test selectors that cannot identify a configured tox check."""
+    repo, revision = make_repo(
+        tmp_path / "repo",
+        {
+            "services/alpha/service.yaml": (
+                "name: alpha\ntests:\n  - name: py310\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: py310\n"
+            ),
+            "services/alpha/Dockerfile": "FROM alpine:3.20\n",
+        },
+    )
+    selected_plan = plan(revision, job_id("service_test", "alpha"))
+
+    for index in (-1, 1):
+        with pytest.raises(ValueError, match="Test index"):
+            gha_run.run_tests(repo, "alpha", revision, selected_plan, test_index=index)
+
+
+def test_native_checks_for_multiple_python_versions_need_a_selector(
+    tmp_path, monkeypatch
+):
+    """Require an explicit matrix row when service checks use different interpreters."""
+    repo, revision = make_repo(
+        tmp_path / "repo",
+        {
+            "services/alpha/service.yaml": (
+                "name: alpha\ntests:\n  - name: py310\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: py310\n"
+                "  - name: py311\n    type: tox\n"
+                "    python: '3.11'\n    toxenv: py311\n"
+            ),
+            "services/alpha/Dockerfile": "FROM alpine:3.20\n",
+        },
+    )
+    monkeypatch.setattr(
+        gha_run, "_run", lambda *_args, **_kwargs: pytest.fail("unselected check ran")
+    )
+
+    with pytest.raises(ValueError, match=r"multiple Python versions.*--test-index"):
+        gha_run.run_tests(
+            repo, "alpha", revision, plan(revision, job_id("service_test", "alpha"))
+        )
+
+
+def test_native_test_index_runs_only_the_selected_entry(tmp_path, monkeypatch):
+    """Run only the matrix row identified by its position in service metadata."""
+    repo, revision = make_repo(
+        tmp_path / "repo",
+        {
+            "services/alpha/service.yaml": (
+                "name: alpha\ntests:\n  - name: lint\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: lint\n"
+                "  - name: unit\n    type: tox\n"
+                "    python: '3.10'\n    toxenv: unit\n"
+            ),
+            "services/alpha/Dockerfile": "FROM alpine:3.20\n",
+        },
+    )
+    monkeypatch.setattr(gha_run.sys, "version_info", SimpleNamespace(major=3, minor=10))
+    monkeypatch.delenv("CI", raising=False)
+    commands: list[tuple[list[str], dict[str, Any]]] = []
+    monkeypatch.setattr(
+        gha_run, "_run", lambda command, **kwargs: commands.append((command, kwargs))
+    )
+
+    gha_run.run_tests(
+        repo,
+        "alpha",
+        revision,
+        plan(revision, job_id("service_test", "alpha")),
+        test_index=1,
+    )
+
+    assert commands == [
+        (
+            ["tox", "-e", "unit"],
+            {"cwd": repo / "services/alpha", "env": {**os.environ, "CI": "true"}},
+        )
+    ]
+
+
 def test_finalize_keeps_architecture_archive_name_and_build_metadata(
     tmp_path, monkeypatch
 ):
