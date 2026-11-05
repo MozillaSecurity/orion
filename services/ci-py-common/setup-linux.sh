@@ -55,7 +55,6 @@ chmod +x /usr/local/bin/codecov
 
 #### Install recipes
 
-SRCDIR=/src/orion-decision EDIT=1 "${0%/*}/orion_decision.sh"
 "${0%/*}/worker.sh"
 "${0%/*}/cleanup.sh"
 
