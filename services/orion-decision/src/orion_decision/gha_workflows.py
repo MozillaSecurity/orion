@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,35 @@ HEADER = """# GENERATED FILE — DO NOT EDIT.
 
 def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
     jobs: dict[str, dict[str, Any]] = {}
+
+    def native_test_rows(service: Service) -> list[dict[str, Any]] | None:
+        """Return a native Python matrix, or None for legacy image tests."""
+        native = [
+            getattr(test, "python_version", None) is not None for test in service.tests
+        ]
+        if not any(native):
+            return None
+        if not all(native):
+            raise ValueError(
+                f"Service {service.name!r} mixes native Python and image-based tests"
+            )
+        rows: list[dict[str, Any]] = []
+        for index, test in enumerate(service.tests):
+            version = getattr(test, "python_version", None)
+            image = getattr(test, "image", None)
+            if not isinstance(version, str) or not version or image is not None:
+                raise ValueError(
+                    f"Native Python test {test.name!r} on service {service.name!r} "
+                    "must have a python_version and no image"
+                )
+            rows.append({"name": test.name, "python": version, "test_index": index})
+        return rows
+
+    native_tests = {
+        service.name: native_test_rows(service)
+        for service in services.values()
+        if service.tests
+    }
 
     def add(
         job: str,
@@ -126,19 +156,58 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
             # dependency edges continue to avoid the bootstrap cycle.
             needed = set()
             for test in service.tests:
-                if isinstance(test, ToxServiceTest) and test.image in services:
+                if (
+                    native_tests.get(service.name) is None
+                    and isinstance(test, ToxServiceTest)
+                    and test.image is not None
+                    and test.image in services
+                ):
                     needed.update(image_job_ids(test.image))
             # The repository lint service spans the full graph; making it depend on
             # every recipe would create a global build gate and duplicate its result
             # gating role. Other test-only services retain their declared edges.
             if service.name != "orion":
                 needed.update(dependency_job_ids(service, "amd64"))
-            add(
-                job_id("service_test", service.name),
-                needed,
-                "service_test",
-                object_name=service.name,
-            )
+            if native_tests.get(service.name) is not None:
+                job = job_id("service_test", service.name)
+                if job in jobs:
+                    raise ValueError(f"Generated workflow job id collision: {job}")
+                test_condition = " && ".join(
+                    [
+                        "always()",
+                        "!cancelled()",
+                        "contains(fromJSON(needs.plan.outputs.selected_jobs), "
+                        f"'{job}')",
+                        *(
+                            "("
+                            f"needs.{dependency}.result == 'success' || "
+                            "!contains(fromJSON(needs.plan.outputs.selected_jobs), "
+                            f"'{dependency}'))"
+                            for dependency in sorted(needed)
+                        ),
+                    ]
+                )
+                jobs[job] = {
+                    "name": f"service test: {service.name.replace('_', ' ')}",
+                    "needs": ["plan", *sorted(needed)],
+                    "if": test_condition,
+                    "uses": "./.github/workflows/test-service.yml",
+                    "with": {
+                        "name": service.name,
+                        "revision": HEAD_SHA,
+                        "plan_json": "${{ needs.plan.outputs.plan_json }}",
+                        "tests_json": json.dumps(
+                            native_tests[service.name], separators=(",", ":")
+                        ),
+                    },
+                }
+            else:
+                add(
+                    job_id("service_test", service.name),
+                    needed,
+                    "service_test",
+                    object_name=service.name,
+                )
         if isinstance(service, ServiceTestOnly):
             continue
         for arch in sorted(service.archs):

@@ -80,6 +80,60 @@ def test_service_load_tests() -> None:
     assert "/path/to/test" in task["payload"]["command"][-1]
 
 
+def test_tox_service_test_python_metadata() -> None:
+    """Native Python metadata records the version and leaves image unset."""
+    test = ServiceTest.from_defn(
+        {"name": "python-test", "type": "tox", "python": "3.10", "toxenv": "py310"}
+    )
+    assert isinstance(test, ToxServiceTest)
+    assert test.image is None
+    assert test.python_version == "3.10"
+    assert test.toxenv == "py310"
+
+
+@pytest.mark.parametrize(
+    "defn, error",
+    (
+        (
+            {"name": "test", "type": "tox", "toxenv": "py310"},
+            "Missing test fields",
+        ),
+        (
+            {
+                "name": "test",
+                "type": "tox",
+                "image": "python:3.10",
+                "python": "3.10",
+                "toxenv": "py310",
+            },
+            "Exactly one of 'image' or 'python'",
+        ),
+    ),
+)
+def test_tox_service_test_requires_exactly_one_runtime(
+    defn: dict[str, Any], error: str
+) -> None:
+    """Tox metadata must choose either an image or a native Python version."""
+    with pytest.raises(RuntimeError, match=error):
+        ServiceTest.from_defn(defn)
+
+
+@pytest.mark.parametrize("version", ("", "3", "3.10.1", 3.10, None))
+def test_tox_service_test_python_version_must_be_major_minor(version: Any) -> None:
+    """Python versions must be explicit major.minor strings."""
+    with pytest.raises(RuntimeError, match=r"major\.minor string"):
+        ServiceTest.from_defn(
+            {"name": "test", "type": "tox", "python": version, "toxenv": "py310"}
+        )
+
+
+def test_tox_service_test_positional_legacy_constructor() -> None:
+    """The original positional constructor remains compatible with callers."""
+    test = ToxServiceTest("legacy", "python:3.10", "py310")
+    assert test.image == "python:3.10"
+    assert test.python_version is None
+
+
 @pytest.mark.parametrize(
     "defn", yaml_load((FIXTURES / "services05" / "service.yaml").read_text())["tests"]
 )

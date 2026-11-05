@@ -127,7 +127,12 @@ class ServiceTest(ABC):
         ServiceTest.check_fields(defn, check_unknown=False)
         if defn["type"] == "tox":
             ToxServiceTest.check_fields(defn)
-            return ToxServiceTest(defn["name"], defn["image"], defn["toxenv"])
+            return ToxServiceTest(
+                defn["name"],
+                defn.get("image"),
+                defn["toxenv"],
+                python_version=defn.get("python"),
+            )
         raise RuntimeError(f"Unrecognized test 'type': {defn['type']!r}")
 
 
@@ -138,25 +143,62 @@ class ToxServiceTest(ServiceTest):
 
     Attributes:
         name: Test name
-        image: Docker image to use for test execution. This can be either a
+        image: Optional Docker image to use for test execution. This can be either a
                registry name (eg. `python:3.8`) or a service name defined in Orion
                (eg. `ci-py-38`). For services, either the task built in this
                decision tree, or the latest indexed-image will be used.
+        python_version: Optional Python major.minor version for native CI execution.
         toxenv: tox env to run
     """
 
-    FIELDS = frozenset({"image", "toxenv"} | ServiceTest.FIELDS)
+    FIELDS = frozenset({"image", "python", "toxenv"} | ServiceTest.FIELDS)
 
-    def __init__(self, name: str, image: str, toxenv: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        image: str | None,
+        toxenv: str,
+        *,
+        python_version: str | None = None,
+    ) -> None:
         """
         Arguments:
             name: Test name
             image: Docker image to use for test execution (see class doc)
             toxenv: tox env to run
+            python_version: Python major.minor version for native CI execution
         """
         super().__init__(name)
         self.image = image
         self.toxenv = toxenv
+        self.python_version = python_version
+
+    @classmethod
+    def check_fields(cls, defn: dict[str, Any], check_unknown: bool = True) -> None:
+        """Validate legacy image or native Python tox test metadata."""
+        required = ServiceTest.FIELDS | {"toxenv"}
+        missing = list(required - frozenset(defn))
+        if missing:
+            raise RuntimeError(f"Missing test fields: '{missing!r}'")
+
+        options = {"image", "python"}
+        if check_unknown:
+            unknown = list(frozenset(defn) - required - options)
+            if unknown:
+                raise RuntimeError(f"Unknown test fields: '{unknown!r}'")
+
+        present_options = options & frozenset(defn)
+        if not present_options:
+            raise RuntimeError("Missing test fields: ['image or python']")
+        if len(present_options) > 1:
+            raise RuntimeError("Exactly one of 'image' or 'python' must be specified")
+
+        if "python" in defn:
+            version = defn["python"]
+            if not isinstance(version, str) or not re.fullmatch(
+                r"[0-9]+\.[0-9]+", version
+            ):
+                raise RuntimeError("'python' must be a nonempty major.minor string")
 
     def update_task(
         self,
@@ -594,7 +636,7 @@ class Services(dict):
                 for test in obj.tests:
                     if hasattr(test, "image"):
                         assert isinstance(test, ToxServiceTest)
-                        if test.image in self:
+                        if test.image is not None and test.image in self:
                             yield self[test.image]
 
         # check that there are no cycles in the dependency graph

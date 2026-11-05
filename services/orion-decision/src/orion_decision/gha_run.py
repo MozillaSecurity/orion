@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -281,15 +282,50 @@ def prepare(
     }
 
 
-def run_tests(repo: Path, name: str, revision: str, plan: dict[str, Any]) -> None:
-    """Run configured tox tests against the planned image in the checked-out tree."""
+def run_tests(
+    repo: Path,
+    name: str,
+    revision: str,
+    plan: dict[str, Any],
+    *,
+    test_index: int | None = None,
+) -> None:
+    """Run selected service tox checks in the checkout or their configured image."""
     services = Services(GitRepo.from_existing(repo))
     _verify(repo, revision, plan, job_id("service_test", name))
     service = services[name]
-    tests = [test for test in service.tests if isinstance(test, ToxServiceTest)]
+    if test_index is not None:
+        if test_index < 0 or test_index >= len(service.tests):
+            raise ValueError(
+                f"Test index {test_index} is outside the tests for service {name!r}"
+            )
+        selected = service.tests[test_index]
+        if not isinstance(selected, ToxServiceTest):
+            raise ValueError(f"Test index {test_index} is not a tox test")
+        tests = [selected]
+    else:
+        tests = [test for test in service.tests if isinstance(test, ToxServiceTest)]
+        native_versions = {test.python_version for test in tests if test.python_version}
+        if len(native_versions) > 1:
+            raise ValueError(
+                "This service has native tests for multiple Python versions; "
+                "select one with --test-index"
+            )
     if not tests:
         return
     for test in tests:
+        if test.python_version is not None:
+            runtime_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+            if runtime_version != test.python_version:
+                raise RuntimeError(
+                    f"Test {test.name!r} requires Python {test.python_version}, "
+                    f"but the current runtime is Python {runtime_version}"
+                )
+            env = os.environ.copy()
+            env.setdefault("CI", "true")
+            _run(["tox", "-e", test.toxenv], cwd=service.root, env=env)
+            continue
+        assert test.image is not None, f"Test {test.name!r} needs an image"
         image = (
             f"mozillasecurity/{test.image}:latest"
             if test.image in services
@@ -624,6 +660,8 @@ def main() -> None:
             sub.add_argument("--revision", required=True)
             sub.add_argument("--plan-file", type=Path, required=True)
             sub.add_argument("--repo", type=Path, default=Path.cwd())
+            if command == "run":
+                sub.add_argument("--test-index", type=int)
         elif command == "publish":
             sub.add_argument("--plan-file", type=Path, required=True)
             sub.add_argument("--repo", type=Path, default=Path.cwd())
@@ -653,7 +691,13 @@ def main() -> None:
         return
     plan = json.loads(args.plan_file.read_text())
     if args.command == "run":
-        run_tests(args.repo, args.name, args.revision, plan)
+        run_tests(
+            args.repo,
+            args.name,
+            args.revision,
+            plan,
+            test_index=args.test_index,
+        )
         return
     outputs = prepare(
         args.repo, args.operation, args.name, args.arch, args.revision, plan
