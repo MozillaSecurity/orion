@@ -7,22 +7,40 @@ set -e
 set -x
 set -o pipefail
 
-mkdir -p /home/worker/.local/bin
+mkdir -p /home/worker/.ssh
 
 # shellcheck source=recipes/linux/common.sh
 source "${0%/*}/common.sh"
 
-cp "${0%/*}/common.sh" /home/worker/.local/bin/common.sh
-printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
-
 #### Bootstrap Packages
 
 sys-update
+sys-embed \
+  ca-certificates \
+  curl \
+  git \
+  jshon \
+  openssh-client
+
+# Keep pipx applications on the Python 3.10 interpreter from the base image.
+PIPX_DEFAULT_PYTHON="$(command -v python3)"
+export PIPX_DEFAULT_PYTHON
 
 #### Install recipes
 
 cd "${0%/*}"
+./worker.sh
+mkdir -p /home/worker/.local/bin
+cp common.sh /home/worker/.local/bin/common.sh
+touch /home/worker/.bashrc
+printf "source ~/.local/bin/common.sh\n" >>/home/worker/.bashrc
+./poetry.sh
 ./taskcluster.sh
+
+retry ssh-keyscan github.com >/home/worker/.ssh/known_hosts
+chmod 600 /home/worker/.ssh/config
+
+./cleanup.sh
 
 # Create logfile
 touch /live.log
