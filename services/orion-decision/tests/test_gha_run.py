@@ -949,13 +949,18 @@ def test_latest_eligible_run_paginates_until_it_finds_exact_workflow(monkeypatch
 
 
 @pytest.mark.parametrize(
-    ("signal_name", "expected_marker", "expected_exit"),
-    [("USR1", "int", 0), ("TERM", "term", 143)],
+    ("signal_name", "worker_exit", "expected_marker", "expected_exit"),
+    [
+        ("USR1", 71, "int", 0),
+        ("USR1", 68, "int", 0),
+        ("TERM", 71, "term", 143),
+        (None, 71, None, 71),
+    ],
 )
 def test_worker_wrapper_forwards_drain_and_cancel_signals(
-    tmp_path, signal_name, expected_marker, expected_exit
+    tmp_path, signal_name, worker_exit, expected_marker, expected_exit
 ):
-    """Forward drain and cancellation signals to the generic-worker process."""
+    """Accept drained worker exits, preserve cancellation, and reject stray 71."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     curl = bin_dir / "curl"
@@ -986,17 +991,20 @@ def test_worker_wrapper_forwards_drain_and_cancel_signals(
         "import signal\n"
         "import time\n"
         "from pathlib import Path\n"
-        "Path('ready').touch()\n"
         "def drained(_signum, _frame):\n"
         "    Path('draining').touch()\n"
         "    time.sleep(1)\n"
         "    Path('signal').write_text('int')\n"
-        "    raise SystemExit(68)\n"
+        f"    raise SystemExit({worker_exit})\n"
         "def cancelled(_signum, _frame):\n"
         "    Path('signal').write_text('term')\n"
         "    raise SystemExit(42)\n"
         "signal.signal(signal.SIGINT, drained)\n"
         "signal.signal(signal.SIGTERM, cancelled)\n"
+        "Path('ready').touch()\n"
+        f"exit_without_signal = {worker_exit if signal_name is None else 0}\n"
+        "if exit_without_signal:\n"
+        "    raise SystemExit(exit_without_signal)\n"
         "while True:\n"
         "    time.sleep(0.05)\n"
     )
@@ -1018,15 +1026,20 @@ def test_worker_wrapper_forwards_drain_and_cancel_signals(
         while not (tmp_path / "ready").exists() and time.monotonic() < deadline:
             time.sleep(0.02)
         assert (tmp_path / "ready").exists()
-        process.send_signal(signal.SIGUSR1)
+        if signal_name is None:
+            assert process.wait(timeout=15) == expected_exit
+        else:
+            process.send_signal(signal.SIGUSR1)
         if signal_name == "TERM":
             deadline = time.monotonic() + 5
             while not (tmp_path / "draining").exists() and time.monotonic() < deadline:
                 time.sleep(0.02)
             assert (tmp_path / "draining").exists()
             process.send_signal(signal.SIGTERM)
-        assert process.wait(timeout=15) == expected_exit
-        assert (tmp_path / "signal").read_text().strip() == expected_marker
+        if signal_name is not None:
+            assert process.wait(timeout=15) == expected_exit
+        if expected_marker is not None:
+            assert (tmp_path / "signal").read_text().strip() == expected_marker
     finally:
         if process.poll() is None:
             process.kill()
