@@ -763,7 +763,7 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
     marker_id = gha_publish.artifact_task_id("123456789", "2", "publication-marker")
     marker = definitions[marker_id]
     assert set(marker["dependencies"]) == {amd64_id, arm64_id}
-    assert marker["extra"]["index"]["rank"] == 12345678902
+    assert marker["extra"]["index"]["rank"] == 41802
     assert marker["expires"].startswith("2027-04-13")
 
 

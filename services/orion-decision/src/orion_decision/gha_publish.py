@@ -49,12 +49,12 @@ def artifact_task_id(run_id: str, attempt: str | int, key: str) -> str:
     return base64.urlsafe_b64encode(tc_uuid.bytes).decode().rstrip("=")
 
 
-def publication_rank(run_id: str | int, attempt: str | int) -> int:
-    """Give later GHA run IDs and retries a strictly higher Taskcluster rank."""
+def publication_rank(run_number: str | int, attempt: str | int) -> int:
+    """Give later GHA runs and retries a strictly higher Taskcluster rank."""
     attempt_number = int(attempt)
     if not 1 <= attempt_number <= 99:
         raise ValueError("GitHub Actions run attempt must be between 1 and 99")
-    return int(run_id) * 100 + attempt_number
+    return int(run_number) * 100 + attempt_number
 
 
 def validate_manifest(
@@ -229,7 +229,7 @@ def build_import_tasks(
         )
         task_ids.append(task_id)
         output_name = Path(item["archive_path"]).name
-        rank = publication_rank(manifest["run_id"], manifest["run_attempt"])
+        rank = publication_rank(manifest["run_number"], manifest["run_attempt"])
         provenance = {
             "revision": manifest["revision"],
             "repository": manifest["repository"],
@@ -345,7 +345,7 @@ def build_import_tasks(
             "extra": {
                 "index": {
                     "rank": publication_rank(
-                        manifest["run_id"], manifest["run_attempt"]
+                        manifest["run_number"], manifest["run_attempt"]
                     ),
                     "data": marker,
                 },
