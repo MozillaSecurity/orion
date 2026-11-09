@@ -11,16 +11,16 @@ tox -e gha-workflow
 ```
 
 The pre-commit hook rewrites the generated workflow. CI checks that the committed
-workflow matches the service graph. Protect `master` with the required status check
+workflow matches the service graph. Protect `main` with the required status check
 **Orion workflow result**.
 
-GitHub Actions runs pull requests, pushes to `master`, a Monday 05:00 UTC expiry
+GitHub Actions runs pull requests, pushes to `main`, a Monday 05:00 UTC expiry
 check, and manual runs. Manual runs accept comma-separated service names in
 `force_services`. Pull requests build and test the head commit without publication
-credentials. Successful `master` runs push architecture images and a combined Docker
+credentials. Successful `main` runs push architecture images and a combined Docker
 `latest` manifest, then import per-architecture Docker archives and native archives
 into FXCI's Taskcluster artifact and index routes. An older run cannot be rerun
-for publication after a newer eligible `master` run; start a new manual run and select
+for publication after a newer eligible `main` run; start a new manual run and select
 or force the services that still need publication.
 
 Windows 2025 runners use their preinstalled MSYS2 `bsdtar` only to extract the

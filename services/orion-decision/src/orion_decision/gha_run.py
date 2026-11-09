@@ -85,7 +85,7 @@ def _download_indexed_image(name: str, arch: str, destination: Path) -> Path:
     """Download an unchanged Orion image through its stable Taskcluster index."""
     index = Taskcluster.get_service("index")
     queue = Taskcluster.get_service("queue")
-    route = f"project.fuzzing.orion.{name}.{arch}.master"
+    route = f"project.fuzzing.orion.{name}.{arch}.main"
     task_id = index.findTask(route)["taskId"]
     url = (
         f"{TASKCLUSTER_ROOT_URL}/api/queue/v1/task/{task_id}/artifacts/"
@@ -609,7 +609,7 @@ def reject_stale_publication(repository: str, branch: str, revision: str) -> Non
 
 
 def latest_eligible_publication_run_id(repository: str, branch: str) -> int | None:
-    """Find the newest master publication run, excluding unrelated event types."""
+    """Find the newest main publication run, excluding unrelated event types."""
     latest: int | None = None
     for event in ("push", "schedule", "workflow_dispatch"):
         page = 1

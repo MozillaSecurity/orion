@@ -272,7 +272,7 @@ def build_plan(
     base_revision: str | None = None,
     force_services: list[str] | None = None,
     expired_services: list[str] | None = None,
-    main_branch: str = "master",
+    main_branch: str = "main",
     baseline_from_taskcluster: bool = False,
 ) -> dict[str, Any]:
     """Build a plan for the checked-out revision without mutating git state."""

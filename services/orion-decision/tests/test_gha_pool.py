@@ -35,7 +35,7 @@ def pool_plan(monkeypatch):
             for number in (1, 2)
         ],
     )
-    return {"publish": True, "event": "push", "branch": "master", "revision": "a" * 40}
+    return {"publish": True, "event": "push", "branch": "main", "revision": "a" * 40}
 
 
 def _task(task_id, state, *, attempt="2"):
@@ -225,7 +225,7 @@ def test_bootstrap_submits_same_run_root_for_every_event(pool_plan, monkeypatch,
         "repository": "MozillaSecurity/orion",
         "revision": "a" * 40,
         "event": event,
-        "branch": "master",
+        "branch": "main",
         "runId": "123",
         "runAttempt": "1",
         "runNumber": 8,

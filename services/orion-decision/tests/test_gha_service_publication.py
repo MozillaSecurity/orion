@@ -25,7 +25,7 @@ def _git(repo: Path, *args: str) -> str:
 
 def _repo(root: Path) -> Path:
     root.mkdir()
-    _git(root, "init", "-b", "master")
+    _git(root, "init", "-b", "main")
     _git(root, "config", "user.name", "Orion tests")
     _git(root, "config", "user.email", "orion-tests@example.invalid")
     files = {
@@ -62,7 +62,7 @@ def _environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "GITHUB_RUN_ATTEMPT": "2",
         "GITHUB_RUN_NUMBER": "418",
         "GITHUB_EVENT_NAME": "push",
-        "GITHUB_REF_NAME": "master",
+        "GITHUB_REF_NAME": "main",
         "GITHUB_TOKEN": "test-token",
     }
     for key, value in values.items():
@@ -81,7 +81,7 @@ def _plan(revision: str, selected_jobs: list[str]) -> dict[str, Any]:
     return {
         "revision": revision,
         "publish": True,
-        "branch": "master",
+        "branch": "main",
         "event": "push",
         "selected_jobs": selected_jobs,
     }

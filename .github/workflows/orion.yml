@@ -10,7 +10,7 @@ name: Orion
     - reopened
   push:
     branches:
-    - master
+    - main
   schedule:
   - cron: 0 5 * * 1
   workflow_dispatch:
@@ -1540,9 +1540,9 @@ jobs:
     - publication-bootstrap
     - build_afl_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_afl_amd64') && needs.build_afl_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_afl_amd64')
+      && needs.build_afl_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1559,9 +1559,8 @@ jobs:
     - plan
     - build_afl_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_afl_amd64') &&
-      needs.build_afl_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_afl_amd64') && needs.build_afl_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-afl-${{ github.ref }}
       cancel-in-progress: false
@@ -1583,9 +1582,9 @@ jobs:
     - index_afl_amd64
     - publish_docker_afl
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_afl_amd64')) && (needs.index_afl_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_afl_amd64'))
+      && (needs.index_afl_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_afl_amd64')) && (needs.publish_docker_afl.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_afl_amd64')))
     uses: ./.github/workflows/publish-service.yml
@@ -1605,9 +1604,9 @@ jobs:
     - publication-bootstrap
     - build_bugmon_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_bugmon_amd64') && needs.build_bugmon_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_amd64')
+      && needs.build_bugmon_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1624,9 +1623,8 @@ jobs:
     - plan
     - build_bugmon_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_amd64')
-      && needs.build_bugmon_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_amd64') && needs.build_bugmon_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-bugmon-${{ github.ref }}
       cancel-in-progress: false
@@ -1648,9 +1646,9 @@ jobs:
     - index_bugmon_amd64
     - publish_docker_bugmon
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_bugmon_amd64')) && (needs.index_bugmon_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_amd64'))
+      && (needs.index_bugmon_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_bugmon_amd64')) && (needs.publish_docker_bugmon.result == 'success' ||
       (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_bugmon_amd64')))
     uses: ./.github/workflows/publish-service.yml
@@ -1670,9 +1668,9 @@ jobs:
     - publication-bootstrap
     - build_bugmon_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_bugmon_win_amd64') && needs.build_bugmon_win_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_win_amd64')
+      && needs.build_bugmon_win_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1690,10 +1688,10 @@ jobs:
     - publication-bootstrap
     - index_bugmon_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_bugmon_win_amd64')) && (needs.index_bugmon_win_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_win_amd64'))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_bugmon_win_amd64'))
+      && (needs.index_bugmon_win_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_bugmon_win_amd64'))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -1711,9 +1709,9 @@ jobs:
     - publication-bootstrap
     - build_covdiff_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_covdiff_amd64') && needs.build_covdiff_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64')
+      && needs.build_covdiff_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1730,9 +1728,8 @@ jobs:
     - plan
     - build_covdiff_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64')
-      && needs.build_covdiff_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_covdiff_amd64') && needs.build_covdiff_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-covdiff-${{ github.ref }}
       cancel-in-progress: false
@@ -1754,12 +1751,11 @@ jobs:
     - index_covdiff_amd64
     - publish_docker_covdiff
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_covdiff_amd64')) && (needs.index_covdiff_amd64.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64'))
-      && (needs.publish_docker_covdiff.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_covdiff_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_covdiff_amd64'))
+      && (needs.index_covdiff_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_covdiff_amd64')) && (needs.publish_docker_covdiff.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_covdiff_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -1777,10 +1773,9 @@ jobs:
     - publication-bootstrap
     - build_coverage_revision_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_coverage_revision_amd64') && needs.build_coverage_revision_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64')
+      && needs.build_coverage_revision_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1797,9 +1792,9 @@ jobs:
     - plan
     - build_coverage_revision_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64')
-      && needs.build_coverage_revision_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_coverage_revision_amd64') && needs.build_coverage_revision_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-coverage-revision-${{ github.ref }}
       cancel-in-progress: false
@@ -1821,11 +1816,11 @@ jobs:
     - index_coverage_revision_amd64
     - publish_docker_coverage_revision
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_coverage_revision_amd64')) && (needs.index_coverage_revision_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64'))
-      && (needs.publish_docker_coverage_revision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_coverage_revision_amd64'))
+      && (needs.index_coverage_revision_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_coverage_revision_amd64')) && (needs.publish_docker_coverage_revision.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_coverage_revision_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -1844,10 +1839,9 @@ jobs:
     - publication-bootstrap
     - build_domino_web_tests_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_domino_web_tests_amd64') && needs.build_domino_web_tests_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64')
+      && needs.build_domino_web_tests_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1864,9 +1858,9 @@ jobs:
     - plan
     - build_domino_web_tests_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64')
-      && needs.build_domino_web_tests_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_domino_web_tests_amd64') && needs.build_domino_web_tests_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-domino-web-tests-${{ github.ref }}
       cancel-in-progress: false
@@ -1888,11 +1882,11 @@ jobs:
     - index_domino_web_tests_amd64
     - publish_docker_domino_web_tests
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_domino_web_tests_amd64')) && (needs.index_domino_web_tests_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64'))
-      && (needs.publish_docker_domino_web_tests.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_domino_web_tests_amd64'))
+      && (needs.index_domino_web_tests_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_domino_web_tests_amd64')) && (needs.publish_docker_domino_web_tests.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_domino_web_tests_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -1911,9 +1905,9 @@ jobs:
     - publication-bootstrap
     - build_funfuzz_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_funfuzz_amd64') && needs.build_funfuzz_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64')
+      && needs.build_funfuzz_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1930,9 +1924,8 @@ jobs:
     - plan
     - build_funfuzz_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64')
-      && needs.build_funfuzz_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_funfuzz_amd64') && needs.build_funfuzz_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-funfuzz-${{ github.ref }}
       cancel-in-progress: false
@@ -1954,12 +1947,11 @@ jobs:
     - index_funfuzz_amd64
     - publish_docker_funfuzz
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_funfuzz_amd64')) && (needs.index_funfuzz_amd64.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64'))
-      && (needs.publish_docker_funfuzz.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_funfuzz_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_funfuzz_amd64'))
+      && (needs.index_funfuzz_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_funfuzz_amd64')) && (needs.publish_docker_funfuzz.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_funfuzz_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -1977,9 +1969,9 @@ jobs:
     - publication-bootstrap
     - build_fuzzilli_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_amd64') && needs.build_fuzzilli_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64')
+      && needs.build_fuzzilli_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -1997,9 +1989,9 @@ jobs:
     - publication-bootstrap
     - build_fuzzilli_arm64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_arm64') && needs.build_fuzzilli_arm64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_arm64')
+      && needs.build_fuzzilli_arm64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2017,10 +2009,10 @@ jobs:
     - build_fuzzilli_amd64
     - build_fuzzilli_arm64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64')
-      && needs.build_fuzzilli_amd64.result == 'success') && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_arm64') && needs.build_fuzzilli_arm64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_amd64') && needs.build_fuzzilli_amd64.result == 'success') &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_arm64')
+      && needs.build_fuzzilli_arm64.result == 'success')
     concurrency:
       group: orion-docker-latest-fuzzilli-${{ github.ref }}
       cancel-in-progress: false
@@ -2043,15 +2035,15 @@ jobs:
     - index_fuzzilli_arm64
     - publish_docker_fuzzilli
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_amd64') || contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_arm64')) && (needs.index_fuzzilli_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64'))
-      && (needs.index_fuzzilli_arm64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzilli_arm64')) && (needs.publish_docker_fuzzilli.result == 'success'
-      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_fuzzilli_amd64')
-      && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_fuzzilli_arm64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_amd64')
+      || contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_arm64'))
+      && (needs.index_fuzzilli_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzilli_amd64')) && (needs.index_fuzzilli_arm64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_arm64'))
+      && (needs.publish_docker_fuzzilli.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_fuzzilli_amd64') && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_fuzzilli_arm64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2069,10 +2061,9 @@ jobs:
     - publication-bootstrap
     - build_fuzzing_decision_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzing_decision_amd64') && needs.build_fuzzing_decision_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64')
+      && needs.build_fuzzing_decision_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2089,9 +2080,9 @@ jobs:
     - plan
     - build_fuzzing_decision_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64')
-      && needs.build_fuzzing_decision_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzing_decision_amd64') && needs.build_fuzzing_decision_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-fuzzing-decision-${{ github.ref }}
       cancel-in-progress: false
@@ -2113,11 +2104,11 @@ jobs:
     - index_fuzzing_decision_amd64
     - publish_docker_fuzzing_decision
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_fuzzing_decision_amd64')) && (needs.index_fuzzing_decision_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64'))
-      && (needs.publish_docker_fuzzing_decision.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzing_decision_amd64'))
+      && (needs.index_fuzzing_decision_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_fuzzing_decision_amd64')) && (needs.publish_docker_fuzzing_decision.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_fuzzing_decision_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2136,9 +2127,9 @@ jobs:
     - publication-bootstrap
     - build_grizzly_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_amd64') && needs.build_grizzly_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64')
+      && needs.build_grizzly_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2155,9 +2146,8 @@ jobs:
     - plan
     - build_grizzly_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64')
-      && needs.build_grizzly_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64') && needs.build_grizzly_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-grizzly-${{ github.ref }}
       cancel-in-progress: false
@@ -2179,12 +2169,11 @@ jobs:
     - index_grizzly_amd64
     - publish_docker_grizzly
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_amd64')) && (needs.index_grizzly_amd64.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64'))
-      && (needs.publish_docker_grizzly.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_grizzly_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_amd64'))
+      && (needs.index_grizzly_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_amd64')) && (needs.publish_docker_grizzly.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_grizzly_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2202,10 +2191,9 @@ jobs:
     - publication-bootstrap
     - build_grizzly_android_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_android_amd64') && needs.build_grizzly_android_amd64.result ==
-      'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64')
+      && needs.build_grizzly_android_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2222,9 +2210,9 @@ jobs:
     - plan
     - build_grizzly_android_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64')
-      && needs.build_grizzly_android_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_android_amd64') && needs.build_grizzly_android_amd64.result ==
+      'success')
     concurrency:
       group: orion-docker-latest-grizzly-android-${{ github.ref }}
       cancel-in-progress: false
@@ -2246,11 +2234,11 @@ jobs:
     - index_grizzly_android_amd64
     - publish_docker_grizzly_android
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_android_amd64')) && (needs.index_grizzly_android_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64'))
-      && (needs.publish_docker_grizzly_android.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_android_amd64'))
+      && (needs.index_grizzly_android_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_android_amd64')) && (needs.publish_docker_grizzly_android.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_grizzly_android_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2269,10 +2257,9 @@ jobs:
     - publication-bootstrap
     - build_grizzly_reduce_monitor_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_reduce_monitor_amd64') && needs.build_grizzly_reduce_monitor_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64')
+      && needs.build_grizzly_reduce_monitor_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2289,9 +2276,9 @@ jobs:
     - plan
     - build_grizzly_reduce_monitor_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64')
-      && needs.build_grizzly_reduce_monitor_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_reduce_monitor_amd64') && needs.build_grizzly_reduce_monitor_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-grizzly-reduce-monitor-${{ github.ref }}
       cancel-in-progress: false
@@ -2313,11 +2300,11 @@ jobs:
     - index_grizzly_reduce_monitor_amd64
     - publish_docker_grizzly_reduce_monitor
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_reduce_monitor_amd64')) && (needs.index_grizzly_reduce_monitor_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64'))
-      && (needs.publish_docker_grizzly_reduce_monitor.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_reduce_monitor_amd64'))
+      && (needs.index_grizzly_reduce_monitor_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_reduce_monitor_amd64')) && (needs.publish_docker_grizzly_reduce_monitor.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_grizzly_reduce_monitor_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2336,9 +2323,9 @@ jobs:
     - publication-bootstrap
     - build_grizzly_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_win_amd64') && needs.build_grizzly_win_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_win_amd64')
+      && needs.build_grizzly_win_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2356,10 +2343,10 @@ jobs:
     - publication-bootstrap
     - index_grizzly_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_grizzly_win_amd64')) && (needs.index_grizzly_win_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_win_amd64'))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_grizzly_win_amd64'))
+      && (needs.index_grizzly_win_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_grizzly_win_amd64'))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2377,10 +2364,9 @@ jobs:
     - publication-bootstrap
     - build_js_tests_distiller_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_js_tests_distiller_amd64') && needs.build_js_tests_distiller_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64')
+      && needs.build_js_tests_distiller_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2397,9 +2383,9 @@ jobs:
     - plan
     - build_js_tests_distiller_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64')
-      && needs.build_js_tests_distiller_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_js_tests_distiller_amd64') && needs.build_js_tests_distiller_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-js-tests-distiller-${{ github.ref }}
       cancel-in-progress: false
@@ -2421,11 +2407,11 @@ jobs:
     - index_js_tests_distiller_amd64
     - publish_docker_js_tests_distiller
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_js_tests_distiller_amd64')) && (needs.index_js_tests_distiller_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64'))
-      && (needs.publish_docker_js_tests_distiller.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_js_tests_distiller_amd64'))
+      && (needs.index_js_tests_distiller_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_js_tests_distiller_amd64')) && (needs.publish_docker_js_tests_distiller.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_js_tests_distiller_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2444,9 +2430,9 @@ jobs:
     - publication-bootstrap
     - build_langfuzz_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_amd64') && needs.build_langfuzz_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64')
+      && needs.build_langfuzz_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2464,9 +2450,9 @@ jobs:
     - publication-bootstrap
     - build_langfuzz_arm64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_arm64') && needs.build_langfuzz_arm64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_arm64')
+      && needs.build_langfuzz_arm64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2484,10 +2470,10 @@ jobs:
     - build_langfuzz_amd64
     - build_langfuzz_arm64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64')
-      && needs.build_langfuzz_amd64.result == 'success') && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_arm64') && needs.build_langfuzz_arm64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_amd64') && needs.build_langfuzz_amd64.result == 'success') &&
+      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_arm64')
+      && needs.build_langfuzz_arm64.result == 'success')
     concurrency:
       group: orion-docker-latest-langfuzz-${{ github.ref }}
       cancel-in-progress: false
@@ -2510,15 +2496,15 @@ jobs:
     - index_langfuzz_arm64
     - publish_docker_langfuzz
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_amd64') || contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_arm64')) && (needs.index_langfuzz_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64'))
-      && (needs.index_langfuzz_arm64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_langfuzz_arm64')) && (needs.publish_docker_langfuzz.result == 'success'
-      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_langfuzz_amd64')
-      && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_langfuzz_arm64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_amd64')
+      || contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_arm64'))
+      && (needs.index_langfuzz_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_langfuzz_amd64')) && (needs.index_langfuzz_arm64.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_arm64'))
+      && (needs.publish_docker_langfuzz.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_langfuzz_amd64') && !contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      'build_langfuzz_arm64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2536,9 +2522,9 @@ jobs:
     - publication-bootstrap
     - build_libfuzzer_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_libfuzzer_amd64') && needs.build_libfuzzer_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64')
+      && needs.build_libfuzzer_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2555,9 +2541,8 @@ jobs:
     - plan
     - build_libfuzzer_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64')
-      && needs.build_libfuzzer_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_libfuzzer_amd64') && needs.build_libfuzzer_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-libfuzzer-${{ github.ref }}
       cancel-in-progress: false
@@ -2579,12 +2564,11 @@ jobs:
     - index_libfuzzer_amd64
     - publish_docker_libfuzzer
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_libfuzzer_amd64')) && (needs.index_libfuzzer_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64'))
-      && (needs.publish_docker_libfuzzer.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_libfuzzer_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_libfuzzer_amd64'))
+      && (needs.index_libfuzzer_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_libfuzzer_amd64')) && (needs.publish_docker_libfuzzer.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_libfuzzer_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2602,9 +2586,9 @@ jobs:
     - publication-bootstrap
     - build_neqo_coverage_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_neqo_coverage_amd64') && needs.build_neqo_coverage_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64')
+      && needs.build_neqo_coverage_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2621,9 +2605,8 @@ jobs:
     - plan
     - build_neqo_coverage_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64')
-      && needs.build_neqo_coverage_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_neqo_coverage_amd64') && needs.build_neqo_coverage_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-neqo-coverage-${{ github.ref }}
       cancel-in-progress: false
@@ -2645,11 +2628,11 @@ jobs:
     - index_neqo_coverage_amd64
     - publish_docker_neqo_coverage
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_neqo_coverage_amd64')) && (needs.index_neqo_coverage_amd64.result ==
-      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64'))
-      && (needs.publish_docker_neqo_coverage.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_neqo_coverage_amd64'))
+      && (needs.index_neqo_coverage_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_neqo_coverage_amd64')) && (needs.publish_docker_neqo_coverage.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_neqo_coverage_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2668,10 +2651,9 @@ jobs:
     - publication-bootstrap
     - build_nss_corpus_update_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nss_corpus_update_amd64') && needs.build_nss_corpus_update_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64')
+      && needs.build_nss_corpus_update_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2688,9 +2670,9 @@ jobs:
     - plan
     - build_nss_corpus_update_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64')
-      && needs.build_nss_corpus_update_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_corpus_update_amd64') && needs.build_nss_corpus_update_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-nss-corpus-update-${{ github.ref }}
       cancel-in-progress: false
@@ -2712,11 +2694,11 @@ jobs:
     - index_nss_corpus_update_amd64
     - publish_docker_nss_corpus_update
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nss_corpus_update_amd64')) && (needs.index_nss_corpus_update_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64'))
-      && (needs.publish_docker_nss_corpus_update.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_corpus_update_amd64'))
+      && (needs.index_nss_corpus_update_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_corpus_update_amd64')) && (needs.publish_docker_nss_corpus_update.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_nss_corpus_update_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -2735,9 +2717,9 @@ jobs:
     - publication-bootstrap
     - build_nss_coverage_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nss_coverage_amd64') && needs.build_nss_coverage_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64')
+      && needs.build_nss_coverage_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2754,9 +2736,8 @@ jobs:
     - plan
     - build_nss_coverage_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64')
-      && needs.build_nss_coverage_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_coverage_amd64') && needs.build_nss_coverage_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-nss-coverage-${{ github.ref }}
       cancel-in-progress: false
@@ -2778,12 +2759,11 @@ jobs:
     - index_nss_coverage_amd64
     - publish_docker_nss_coverage
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nss_coverage_amd64')) && (needs.index_nss_coverage_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64'))
-      && (needs.publish_docker_nss_coverage.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_nss_coverage_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nss_coverage_amd64'))
+      && (needs.index_nss_coverage_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nss_coverage_amd64')) && (needs.publish_docker_nss_coverage.result ==
+      'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_nss_coverage_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2801,9 +2781,9 @@ jobs:
     - publication-bootstrap
     - build_nyx_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nyx_amd64') && needs.build_nyx_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nyx_amd64')
+      && needs.build_nyx_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2820,9 +2800,8 @@ jobs:
     - plan
     - build_nyx_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nyx_amd64') &&
-      needs.build_nyx_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_nyx_amd64') && needs.build_nyx_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-nyx-${{ github.ref }}
       cancel-in-progress: false
@@ -2844,9 +2823,9 @@ jobs:
     - index_nyx_amd64
     - publish_docker_nyx
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_nyx_amd64')) && (needs.index_nyx_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_nyx_amd64'))
+      && (needs.index_nyx_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_nyx_amd64')) && (needs.publish_docker_nyx.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_nyx_amd64')))
     uses: ./.github/workflows/publish-service.yml
@@ -2866,9 +2845,9 @@ jobs:
     - publication-bootstrap
     - build_prefmonitor_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_prefmonitor_amd64') && needs.build_prefmonitor_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64')
+      && needs.build_prefmonitor_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2885,9 +2864,8 @@ jobs:
     - plan
     - build_prefmonitor_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64')
-      && needs.build_prefmonitor_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_prefmonitor_amd64') && needs.build_prefmonitor_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-prefmonitor-${{ github.ref }}
       cancel-in-progress: false
@@ -2909,12 +2887,11 @@ jobs:
     - index_prefmonitor_amd64
     - publish_docker_prefmonitor
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_prefmonitor_amd64')) && (needs.index_prefmonitor_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64'))
-      && (needs.publish_docker_prefmonitor.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_prefmonitor_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_prefmonitor_amd64'))
+      && (needs.index_prefmonitor_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_prefmonitor_amd64')) && (needs.publish_docker_prefmonitor.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_prefmonitor_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2932,9 +2909,9 @@ jobs:
     - publication-bootstrap
     - build_site_scout_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_amd64') && needs.build_site_scout_amd64.result == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64')
+      && needs.build_site_scout_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -2951,9 +2928,8 @@ jobs:
     - plan
     - build_site_scout_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64')
-      && needs.build_site_scout_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_amd64') && needs.build_site_scout_amd64.result == 'success')
     concurrency:
       group: orion-docker-latest-site-scout-${{ github.ref }}
       cancel-in-progress: false
@@ -2975,12 +2951,11 @@ jobs:
     - index_site_scout_amd64
     - publish_docker_site_scout
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_amd64')) && (needs.index_site_scout_amd64.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64'))
-      && (needs.publish_docker_site_scout.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
-      'build_site_scout_amd64')))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_amd64'))
+      && (needs.index_site_scout_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_amd64')) && (needs.publish_docker_site_scout.result == 'success'
+      || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs), 'build_site_scout_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
@@ -2998,10 +2973,9 @@ jobs:
     - publication-bootstrap
     - build_site_scout_android_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_android_amd64') && needs.build_site_scout_android_amd64.result
-      == 'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64')
+      && needs.build_site_scout_android_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -3018,9 +2992,9 @@ jobs:
     - plan
     - build_site_scout_android_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64')
-      && needs.build_site_scout_android_amd64.result == 'success')
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_android_amd64') && needs.build_site_scout_android_amd64.result
+      == 'success')
     concurrency:
       group: orion-docker-latest-site-scout-android-${{ github.ref }}
       cancel-in-progress: false
@@ -3042,11 +3016,11 @@ jobs:
     - index_site_scout_android_amd64
     - publish_docker_site_scout_android
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_android_amd64')) && (needs.index_site_scout_android_amd64.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64'))
-      && (needs.publish_docker_site_scout_android.result == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_android_amd64'))
+      && (needs.index_site_scout_android_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_android_amd64')) && (needs.publish_docker_site_scout_android.result
+      == 'success' || (!contains(fromJSON(needs.plan.outputs.selected_docker_jobs),
       'build_site_scout_android_amd64')))
     uses: ./.github/workflows/publish-service.yml
     with:
@@ -3065,10 +3039,9 @@ jobs:
     - publication-bootstrap
     - build_site_scout_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_win_amd64') && needs.build_site_scout_win_amd64.result ==
-      'success'
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_win_amd64')
+      && needs.build_site_scout_win_amd64.result == 'success'
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: index
@@ -3086,10 +3059,10 @@ jobs:
     - publication-bootstrap
     - index_site_scout_win_amd64
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
-      == 'refs/heads/master' && fromJSON(needs.plan.outputs.plan_json).publish &&
-      needs.publication-bootstrap.result == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'build_site_scout_win_amd64')) && (needs.index_site_scout_win_amd64.result ==
-      'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_win_amd64'))
+      == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && needs.publication-bootstrap.result
+      == 'success' && (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_site_scout_win_amd64'))
+      && (needs.index_site_scout_win_amd64.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'build_site_scout_win_amd64'))
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: receipt
