@@ -17,7 +17,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from . import ARTIFACTS_EXPIRE, DEADLINE, OWNER_EMAIL, PROVISIONER_ID, SOURCE_URL
+from . import (
+    ARTIFACTS_EXPIRE,
+    DEADLINE,
+    OWNER_EMAIL,
+    PROVISIONER_ID,
+    SCHEDULER_ID,
+    SOURCE_URL,
+)
 from .gha_publish import (
     MARKER_ROUTE,
     WORKER,
@@ -76,7 +83,7 @@ def metadata_task(
         "expires": expires,
         "provisionerId": PROVISIONER_ID,
         "workerType": WORKER,
-        "schedulerId": "taskcluster-github",
+        "schedulerId": SCHEDULER_ID,
         "priority": "highest" if data.get("root") else "lowest",
         "routes": [f"index.{route}"],
         "payload": {
@@ -100,7 +107,7 @@ def metadata_task(
                 }
             ],
         },
-        "scopes": ["queue:scheduler-id:taskcluster-github"],
+        "scopes": [],
         "metadata": {
             "name": name,
             "description": "Orion publication provenance",
@@ -117,44 +124,23 @@ def metadata_task(
     }
 
 
-def bootstrap(plan: dict[str, Any], *, timeout: float = 4500) -> str:
-    """Reuse the push decision group, or create a root for non-push runs."""
+def bootstrap(plan: dict[str, Any]) -> str:
+    """Submit the deterministic publication root for any eligible workflow run."""
     data = identity(plan)
     require_workers()
-    if plan["event"] != "push":
-        group = artifact_task_id(data["runId"], 1, "decision")
-        root_data = {**data, "runAttempt": "1", "root": True}
-        submit_tasks(
-            {
-                group: metadata_task(
-                    root_data,
-                    group,
-                    "Orion publication decision",
-                    f"{GROUP_ROUTE}.run.{data['runId']}",
-                )
-            }
-        )
-        return group
-    index = Taskcluster.get_service("index")
-    queue = Taskcluster.get_service("queue")
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            record = index.findTask(f"{GROUP_ROUTE}.rev.{plan['revision']}")
-            task = queue.task(record["taskId"])
-            root_data = task.get("extra", {}).get("index", {}).get("data", {})
-            if (
-                root_data.get("repository") != data["repository"]
-                or root_data.get("revision") != data["revision"]
-                or not root_data.get("root")
-            ):
-                raise ValueError("Publication group does not match this push")
-            return record["taskId"]
-        except Exception as exc:
-            if getattr(exc, "status_code", None) != 404:
-                raise
-        time.sleep(5)
-    raise TimeoutError("Taskcluster push decision did not establish its group")
+    group = artifact_task_id(data["runId"], 1, "decision")
+    root_data = {**data, "runAttempt": "1", "root": True}
+    submit_tasks(
+        {
+            group: metadata_task(
+                root_data,
+                group,
+                "Orion publication decision",
+                f"{GROUP_ROUTE}.run.{data['runId']}",
+            )
+        }
+    )
+    return group
 
 
 def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str:
@@ -226,13 +212,14 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
 
 def group_tasks(group: str, run_id: str, attempt: str, queue: Any) -> list[dict]:
     """Enumerate actual submitted tasks, including partially failed submissions."""
+    root_id = artifact_task_id(run_id, 1, "decision")
     tasks = []
     options: dict[str, str] = {}
     while True:
         page = queue.listTaskGroup(group, query=options)
         for item in page.get("tasks", []):
             data = item["task"].get("extra", {}).get("orion", {})
-            if (
+            if item.get("status", {}).get("taskId") == root_id or (
                 str(data.get("runId")) == run_id
                 and str(data.get("runAttempt")) == attempt
             ):
@@ -472,19 +459,7 @@ def monitor_pool(
                         control_error = str(exc)
         if closed:
             if not group:
-                route = (
-                    f"{GROUP_ROUTE}.rev.{data['revision']}"
-                    if plan["event"] == "push"
-                    else f"{GROUP_ROUTE}.run.{data['runId']}"
-                )
-                try:
-                    group = Taskcluster.get_service("index").findTask(route)["taskId"]
-                except Exception as exc:
-                    if getattr(exc, "status_code", None) != 404:
-                        raise
-                    raise RuntimeError(
-                        control_error or "Publication group was not created"
-                    ) from exc
+                group = artifact_task_id(data["runId"], 1, "decision")
             tasks = group_tasks(group, data["runId"], data["runAttempt"], queue)
             found = {item["status"]["taskId"] for item in tasks}
             for task_id in expected - found:
@@ -503,6 +478,11 @@ def monitor_pool(
                     item["status"]["taskId"]
                     for item in tasks
                     if item["status"]["state"] != "completed"
+                    and not (
+                        item["status"]["taskId"]
+                        == artifact_task_id(data["runId"], 1, "decision")
+                        and data["runAttempt"] != "1"
+                    )
                 ]
                 if control_error or failed:
                     raise RuntimeError(

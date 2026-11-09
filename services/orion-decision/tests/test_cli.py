@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 """Tests for the retained service graph check command and CLI entrypoints."""
 
+import json
 import os
 import subprocess
 import sys
@@ -86,6 +87,33 @@ def test_orion_check_help_entrypoint() -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert "Orion repo root" in completed.stdout
+
+
+@pytest.mark.parametrize("publication_root", [None, "https://publisher.invalid"])
+def test_orion_root_configures_clients_without_changing_recipe_environment(
+    monkeypatch: pytest.MonkeyPatch, publication_root: str | None
+) -> None:
+    """Public reads use Orion's endpoint while explicit publication settings win."""
+    public_root = "https://public-index.invalid"
+    monkeypatch.setenv("ORION_TASKCLUSTER_ROOT_URL", public_root)
+    monkeypatch.delenv("TASKCLUSTER_ROOT_URL", raising=False)
+    if publication_root is not None:
+        monkeypatch.setenv("TASKCLUSTER_ROOT_URL", publication_root)
+    completed = _run_python(
+        "-c",
+        "import json, os; from orion_decision import Taskcluster; "
+        "print(json.dumps({"
+        "'index': Taskcluster.get_service('index').options['rootUrl'], "
+        "'queue': Taskcluster.get_service('queue').options['rootUrl'], "
+        "'ambient': os.environ.get('TASKCLUSTER_ROOT_URL')}))",
+    )
+    assert completed.returncode == 0, completed.stderr
+    expected = publication_root or public_root
+    assert json.loads(completed.stdout) == {
+        "index": expected,
+        "queue": expected,
+        "ambient": publication_root,
+    }
 
 
 @pytest.mark.parametrize(

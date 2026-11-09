@@ -47,6 +47,7 @@ jobs:
         ORION_EVENT: ${{ github.event_name }}
         ORION_BRANCH: ${{ github.ref_name }}
         ORION_BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+        ORION_TASKCLUSTER_ROOT_URL: ${{ vars.ORION_TASKCLUSTER_ROOT_URL }}
       run: 'plan=$(python -m orion_decision.gha_plan --repo . --revision "$ORION_REVISION"
         --event "$ORION_EVENT" --branch "$ORION_BRANCH" --base-revision "$ORION_BASE_REVISION"
         --baseline-from-taskcluster --force-services "$ORION_FORCE_SERVICES")
@@ -1496,7 +1497,7 @@ jobs:
     - plan
     if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
-    environment: communitytc
+    environment: fxci
     permissions:
       actions: read
       contents: read
@@ -3178,7 +3179,7 @@ jobs:
     - receipt_site_scout_win
     if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
-    environment: communitytc
+    environment: fxci
     permissions:
       actions: read
       contents: read
@@ -3218,7 +3219,7 @@ jobs:
     - plan
     if: always() && !cancelled() && fromJSON(needs.plan.outputs.plan_json).publish
     runs-on: ubuntu-24.04
-    environment: communitytc
+    environment: fxci
     strategy:
       fail-fast: false
       matrix:
@@ -3251,6 +3252,8 @@ jobs:
           }}
         TASKCLUSTER_CLIENT_ID: project/fuzzing/ci-worker-orion-gha
         TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+        TASKCLUSTER_WST_AUDIENCE: ${{ vars.TASKCLUSTER_WST_AUDIENCE }}
+        TASKCLUSTER_WST_SERVER_URL: ${{ vars.TASKCLUSTER_WST_SERVER_URL }}
         GITHUB_TOKEN: ${{ github.token }}
         ORION_GITHUB_TOKEN_FILE: ${{ runner.temp }}/orion-github-token
         ORION_PLAN_JSON: ${{ needs.plan.outputs.plan_json }}

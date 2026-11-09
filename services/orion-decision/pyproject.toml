@@ -45,7 +45,6 @@ omit = [
 module = [
     "dockerfile_parse",
     "freezegun",
-    "jsone",
     "setuptools",
     "taskcluster.*",
 ]

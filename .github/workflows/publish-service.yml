@@ -30,7 +30,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-24.04
-    environment: ${{ inputs.operation == 'docker' && 'dockerhub' || 'communitytc' }}
+    environment: ${{ inputs.operation == 'docker' && 'dockerhub' || 'fxci' }}
     steps:
       - uses: actions/checkout@v5
         with:

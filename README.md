@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/orion.png" alt="Orion logo" title="Orion"></p>
 
 <p align="center">
-<a href="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/latest"><img src="https://community-tc.services.mozilla.com/api/github/v1/repository/MozillaSecurity/orion/master/badge.svg" alt="Task Status"></a>
+<a href="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml"><img src="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml/badge.svg?branch=master" alt="Orion CI"></a>
 <a href="https://riot.im/app/#/room/#fuzzing:mozilla.org"> <img src="https://img.shields.io/badge/dynamic/json?color=green&label=chat&query=%24.chunk[%3F(%40.canonical_alias%3D%3D%22%23fuzzing%3Amozilla.org%22)].num_joined_members&suffix=%20users&url=https%3A%2F%2Fmozilla.modular.im%2F_matrix%2Fclient%2Fr0%2FpublicRooms&style=flat&logo=matrix" alt="Matrix"></a>
 </p>
 

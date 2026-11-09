@@ -11,6 +11,7 @@ from email.message import Message
 from types import SimpleNamespace
 
 import pytest
+from taskcluster.exceptions import TaskclusterFailure
 
 from orion_decision import gha_pool
 
@@ -201,33 +202,146 @@ def test_monitor_failure_drains_worker_claiming_another_runs_task(
     assert signals == [signal.SIGUSR1]
 
 
-def test_push_bootstrap_uses_actual_webhook_decision_group(pool_plan, monkeypatch):
-    """All branch publishers reuse the real push root instead of synthetic groups."""
-    root = "r" * 22
-    index = SimpleNamespace(findTask=lambda route: {"taskId": root})
-    queue = SimpleNamespace(
-        task=lambda _task_id: {
-            "extra": {
-                "index": {
-                    "data": {
-                        "repository": "MozillaSecurity/orion",
-                        "revision": pool_plan["revision"],
-                        "root": True,
-                    }
-                }
-            }
-        }
-    )
+@pytest.mark.parametrize("event", ["push", "schedule", "workflow_dispatch"])
+def test_bootstrap_submits_same_run_root_for_every_event(pool_plan, monkeypatch, event):
+    """Every publication event creates its group directly under a stable run root."""
+    submitted = {}
+    monkeypatch.setattr(gha_pool, "submit_tasks", lambda tasks: submitted.update(tasks))
     monkeypatch.setattr(
         gha_pool.Taskcluster,
         "get_service",
-        lambda name: {
-            "index": index,
-            "queue": queue,
-        }[name],
+        lambda name: pytest.fail(f"bootstrap must not call Taskcluster {name} API"),
     )
+    plan = {**pool_plan, "event": event}
 
-    assert gha_pool.bootstrap(pool_plan) == root
+    root_id = gha_pool.bootstrap(plan)
+
+    expected_id = gha_pool.artifact_task_id("123", 1, "decision")
+    root = submitted[expected_id]
+    assert root_id == expected_id
+    assert root["taskGroupId"] == expected_id
+    assert root["routes"] == [f"index.{gha_pool.GROUP_ROUTE}.run.123"]
+    assert root["extra"]["orion"] == {
+        "repository": "MozillaSecurity/orion",
+        "revision": "a" * 40,
+        "event": event,
+        "branch": "master",
+        "runId": "123",
+        "runAttempt": "1",
+        "runNumber": 8,
+        "root": True,
+    }
+
+
+def test_bootstrap_reuses_retry_root_and_rejects_changed_provenance(
+    pool_plan, monkeypatch
+):
+    """Stable root IDs make exact retries safe and reject a changed revision."""
+
+    class AlreadyExists(TaskclusterFailure):
+        status_code = 409
+
+    class Queue:
+        def __init__(self):
+            self.tasks = {}
+
+        def createTask(self, task_id, task):
+            if task_id in self.tasks:
+                raise AlreadyExists("duplicate")
+            self.tasks[task_id] = task
+
+        def task(self, task_id):
+            return self.tasks[task_id]
+
+    queue = Queue()
+    monkeypatch.setattr(gha_pool.Taskcluster, "get_service", lambda _name: queue)
+    first_id = gha_pool.bootstrap(pool_plan)
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "3")
+    retry_id = gha_pool.bootstrap(pool_plan)
+
+    assert retry_id == first_id
+    assert len(queue.tasks) == 1
+    changed = {**pool_plan, "revision": "b" * 40}
+    with pytest.raises(RuntimeError, match="different publication provenance"):
+        gha_pool.bootstrap(changed)
+
+
+@pytest.mark.parametrize("final_root_state", ["completed", "failed"])
+def test_retry_waits_for_queued_shared_root_after_imports_complete(
+    pool_plan, monkeypatch, final_root_state
+):
+    """A retry waits for its queued root but ignores a prior root's final result."""
+    root_id = gha_pool.artifact_task_id("123", 1, "decision")
+    _artifacts(monkeypatch, pool_plan)
+
+    def download(_artifact, filename, *_args, **_kwargs):
+        record = {**gha_pool.identity(pool_plan), "task_group": root_id}
+        if filename == "publication-control.json":
+            record["task_ids"] = []
+        return record
+
+    monkeypatch.setattr(gha_pool, "download_artifact_json", download)
+    monkeypatch.setattr(
+        gha_pool,
+        "_attempt_jobs",
+        lambda *_args: [{"name": gha_pool.CLOSE_JOB, "status": "completed"}],
+    )
+    calls = 0
+
+    class Queue:
+        def listTaskGroup(self, group, **_kwargs):
+            nonlocal calls
+            calls += 1
+            assert group == root_id
+            root_state = "pending" if calls == 1 else final_root_state
+            return {
+                "tasks": [
+                    _task(root_id, root_state, attempt="1"),
+                    _task("attempt-2-import", "completed"),
+                ]
+            }
+
+    monkeypatch.setattr(
+        gha_pool.Taskcluster,
+        "get_service",
+        lambda name: (_ for _ in ()).throw(AssertionError(name))
+        if name == "index"
+        else None,
+    )
+    gha_pool.monitor_pool(pool_plan, queue=Queue(), poll_interval=0)
+
+    assert calls == 2
+
+
+def test_missing_group_metadata_drains_deterministic_run_root(pool_plan, monkeypatch):
+    """Missing Actions metadata still drains current submissions through the root."""
+    monkeypatch.setattr(gha_pool, "_token", lambda: "worker-job-token")
+    monkeypatch.setattr(gha_pool, "_actions_artifacts", lambda *_args: [])
+    monkeypatch.setattr(
+        gha_pool,
+        "_attempt_jobs",
+        lambda *_args: [{"name": gha_pool.CLOSE_JOB, "status": "completed"}],
+    )
+    root_id = gha_pool.artifact_task_id("123", 1, "decision")
+    calls = 0
+
+    class Queue:
+        def listTaskGroup(self, group, **_kwargs):
+            nonlocal calls
+            calls += 1
+            assert group == root_id
+            state = "running" if calls == 1 else "completed"
+            return {"tasks": [_task("attempt-2-import", state)]}
+
+    monkeypatch.setattr(
+        gha_pool.Taskcluster,
+        "get_service",
+        lambda name: pytest.fail(f"monitor must not call Taskcluster {name} API"),
+    )
+    with pytest.raises(RuntimeError, match="control artifact is missing"):
+        gha_pool.monitor_pool(pool_plan, queue=Queue(), poll_interval=0)
+
+    assert calls == 2
 
 
 @pytest.mark.parametrize("problem", ["wrong-attempt", "wrong-group", "missing-task"])

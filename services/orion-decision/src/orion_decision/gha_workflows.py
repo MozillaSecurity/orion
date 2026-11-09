@@ -269,7 +269,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "if": "always() && !cancelled() && "
         "fromJSON(needs.plan.outputs.plan_json).publish",
         "runs-on": "ubuntu-24.04",
-        "environment": "communitytc",
+        "environment": "fxci",
         "permissions": {"actions": "read", "contents": "read"},
         "outputs": {"task_group": "${{ steps.bootstrap.outputs.task_group }}"},
         "steps": [
@@ -449,7 +449,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "if": "always() && !cancelled() && "
         "fromJSON(needs.plan.outputs.plan_json).publish",
         "runs-on": "ubuntu-24.04",
-        "environment": "communitytc",
+        "environment": "fxci",
         "permissions": {"actions": "read", "contents": "read"},
         "steps": [
             {"uses": "actions/checkout@v5", "with": {"ref": HEAD_SHA}},
@@ -499,7 +499,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "if": "always() && !cancelled() && "
         "fromJSON(needs.plan.outputs.plan_json).publish",
         "runs-on": "ubuntu-24.04",
-        "environment": "communitytc",
+        "environment": "fxci",
         "strategy": {"fail-fast": False, "matrix": {"worker": [1, 2]}},
         "permissions": {"actions": "read", "contents": "read"},
         "steps": [
@@ -526,6 +526,10 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     ),
                     "TASKCLUSTER_CLIENT_ID": "project/fuzzing/ci-worker-orion-gha",
                     "TASKCLUSTER_ROOT_URL": "${{ vars.TASKCLUSTER_ROOT_URL }}",
+                    "TASKCLUSTER_WST_AUDIENCE": "${{ vars.TASKCLUSTER_WST_AUDIENCE }}",
+                    "TASKCLUSTER_WST_SERVER_URL": (
+                        "${{ vars.TASKCLUSTER_WST_SERVER_URL }}"
+                    ),
                     "GITHUB_TOKEN": "${{ github.token }}",
                     "ORION_GITHUB_TOKEN_FILE": "${{ runner.temp }}/orion-github-token",
                     "ORION_PLAN_JSON": "${{ needs.plan.outputs.plan_json }}",
@@ -635,6 +639,9 @@ def render_workflow(services: Services) -> str:
                             "ORION_BRANCH": "${{ github.ref_name }}",
                             "ORION_BASE_REVISION": (
                                 "${{ github.event.pull_request.base.sha }}"
+                            ),
+                            "ORION_TASKCLUSTER_ROOT_URL": (
+                                "${{ vars.ORION_TASKCLUSTER_ROOT_URL }}"
                             ),
                         },
                         "run": (
