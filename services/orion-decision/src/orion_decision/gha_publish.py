@@ -37,7 +37,7 @@ from . import (
 QUEUE = "orion-gha-publish"
 WORKER = "orion-gha-publish"
 WORKER_CLIENT = "project/fuzzing/ci-worker-orion-gha"
-MARKER_ROUTE = "project.fuzzing.orion.gha.master"
+MARKER_ROUTE = "project.fuzzing.orion.gha.main"
 MANIFEST_SCHEMA = 2
 
 
@@ -468,7 +468,7 @@ def publication_state(
             route = f"project.fuzzing.orion.{service.name}"
             if arch:
                 route += f".{arch}"
-            route += ".master"
+            route += ".main"
             try:
                 indexed = index.findTask(route)
                 task_id = indexed["taskId"]
@@ -539,7 +539,7 @@ def publication_state(
             from .gha_pool import SERVICE_ROUTE
 
             try:
-                record = index.findTask(f"{SERVICE_ROUTE}.{service.name}.master")
+                record = index.findTask(f"{SERVICE_ROUTE}.{service.name}.main")
                 receipt_task = queue.task(record["taskId"])
                 status = queue.status(record["taskId"])
                 status = status.get("status", status)
@@ -735,7 +735,7 @@ def create_manifest(
         else sorted(plan.get("selected_docker_jobs", [])),
         "successful_jobs": sorted(successful),
         "publish": bool(plan.get("publish"))
-        and os.environ["GITHUB_REF_NAME"] == "master",
+        and os.environ["GITHUB_REF_NAME"] == "main",
         "complete": successful == selected
         and docker_latest in {"success", "not-required"},
         "gates": {

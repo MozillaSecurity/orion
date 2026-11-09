@@ -313,7 +313,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
 
     publish_condition = (
         "always() && !cancelled() && github.event_name != 'pull_request' && "
-        "github.ref == 'refs/heads/master' && "
+        "github.ref == 'refs/heads/main' && "
         "fromJSON(needs.plan.outputs.plan_json).publish"
     )
     publication_jobs: list[str] = []
@@ -593,7 +593,7 @@ def render_workflow(services: Services) -> str:
         "name": "Orion",
         "on": {
             "pull_request": {"types": ["opened", "synchronize", "reopened"]},
-            "push": {"branches": ["master"]},
+            "push": {"branches": ["main"]},
             "schedule": [{"cron": "0 5 * * 1"}],
             "workflow_dispatch": {
                 "inputs": {

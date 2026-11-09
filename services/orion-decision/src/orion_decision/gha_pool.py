@@ -49,10 +49,10 @@ def identity(plan: dict[str, Any]) -> dict[str, Any]:
     """Bind publication metadata to one eligible workflow attempt."""
     if (
         not plan.get("publish")
-        or plan.get("branch") != "master"
+        or plan.get("branch") != "main"
         or os.environ["GITHUB_REPOSITORY"] != "MozillaSecurity/orion"
     ):
-        raise ValueError("Only Orion master publication runs may submit tasks")
+        raise ValueError("Only Orion main publication runs may submit tasks")
     return {
         "repository": os.environ["GITHUB_REPOSITORY"],
         "revision": plan["revision"],
@@ -202,7 +202,7 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
                 data,
                 group,
                 f"Orion publication {service_name}",
-                f"{SERVICE_ROUTE}.{service_name}.master",
+                f"{SERVICE_ROUTE}.{service_name}.main",
                 dependencies=dependencies,
             )
         }

@@ -1,7 +1,7 @@
 <p align="center"><img src="docs/assets/orion.png" alt="Orion logo" title="Orion"></p>
 
 <p align="center">
-<a href="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml"><img src="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml/badge.svg?branch=master" alt="Orion CI"></a>
+<a href="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml"><img src="https://github.com/MozillaSecurity/orion/actions/workflows/orion.yml/badge.svg?branch=main" alt="Orion CI"></a>
 <a href="https://riot.im/app/#/room/#fuzzing:mozilla.org"> <img src="https://img.shields.io/badge/dynamic/json?color=green&label=chat&query=%24.chunk[%3F(%40.canonical_alias%3D%3D%22%23fuzzing%3Amozilla.org%22)].num_joined_members&suffix=%20users&url=https%3A%2F%2Fmozilla.modular.im%2F_matrix%2Fclient%2Fr0%2FpublicRooms&style=flat&logo=matrix" alt="Matrix"></a>
 </p>
 
@@ -18,13 +18,13 @@ Monorepo for building and publishing multiple Docker containers as microservices
 
 ### What is Orion?
 
-Orion is a build environment for containerized services we run in our Fuzzing infrastructure (eg. [libFuzzer](https://github.com/MozillaSecurity/orion/tree/master/services/libfuzzer)).
+Orion is a build environment for containerized services we run in our Fuzzing infrastructure (eg. [libFuzzer](https://github.com/MozillaSecurity/orion/tree/main/services/libfuzzer)).
 
 > For spawning a cluster of Docker containers at EC2 or other cloud providers, see the parent project [Laniakea](https://github.com/MozillaSecurity/laniakea/).
 
 ### How does it operate?
 
-GitHub Actions runs the generated Orion service dependency graph for pull requests, pushes to `master`, a weekly expiry check, and manual rebuilds. The graph selects only affected tests and builds. Successful `master` runs publish Docker `:latest` manifests and import service archives into Taskcluster, preserving the existing artifact and index routes used by downstream workers. See [Orion Decision](services/orion-decision/README.md) for repository and Taskcluster configuration. For service details, see each service README or the [Wiki](https://github.com/MozillaSecurity/orion/wiki).
+GitHub Actions runs the generated Orion service dependency graph for pull requests, pushes to `main`, a weekly expiry check, and manual rebuilds. The graph selects only affected tests and builds. Successful `main` runs publish Docker `:latest` manifests and import service archives into Taskcluster. Artifact paths and revision indexes remain stable; branch indexes use the `main` suffix. See [Orion Decision](services/orion-decision/README.md) for repository and Taskcluster configuration. For service details, see each service README or the [Wiki](https://github.com/MozillaSecurity/orion/wiki).
 
 ### Build Instructions and Development
 
@@ -51,4 +51,4 @@ Running the fuzzer locally:
 
 #### Testing
 
-GitHub Actions runs the selected service tests and builds for each pull request and `master` push. To catch formatting and service definition issues locally, install the [`pre-commit`](https://pre-commit.com/) hooks with `pre-commit install` and run any tests defined in the service folder before pushing your commit.
+GitHub Actions runs the selected service tests and builds for each pull request and `main` push. To catch formatting and service definition issues locally, install the [`pre-commit`](https://pre-commit.com/) hooks with `pre-commit install` and run any tests defined in the service folder before pushing your commit.

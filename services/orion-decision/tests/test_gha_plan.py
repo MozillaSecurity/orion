@@ -29,7 +29,7 @@ def commit(repo: Path, message: str) -> str:
 def make_repo(root: Path) -> Path:
     """Create a small tracked graph with hard, weak, recipe and test-image edges."""
     root.mkdir()
-    git(root, "init", "-b", "master")
+    git(root, "init", "-b", "main")
     git(root, "config", "user.name", "Orion tests")
     git(root, "config", "user.email", "orion-tests@example.invalid")
     files = {
@@ -210,7 +210,7 @@ def test_commit_directive_is_read_from_entire_range(tmp_path: Path) -> None:
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         base_revision=baseline,
     )
 
@@ -222,7 +222,7 @@ def test_pull_request_and_push_use_their_expected_diff_ranges(tmp_path: Path) ->
     """Pull requests and pushes compare changes against their expected ranges."""
     repo = make_repo(tmp_path / "repo")
     common = git(repo, "rev-parse", "HEAD")
-    git(repo, "checkout", "-b", "master-next")
+    git(repo, "checkout", "-b", "main-next")
     alpha = repo / "services/base/Dockerfile"
     alpha.write_text("FROM alpine:3.21\n")
     base_revision = commit(repo, "change only base")
@@ -262,7 +262,7 @@ def test_requested_revision_must_match_checked_out_head(tmp_path: Path) -> None:
             repo,
             revision="0" * 40,
             event="push",
-            branch="master",
+            branch="main",
             base_revision=revision,
         )
 
@@ -271,8 +271,9 @@ def test_requested_revision_must_match_checked_out_head(tmp_path: Path) -> None:
     ("event", "branch", "expected"),
     [
         ("push", "feature", False),
-        ("pull_request", "master", False),
-        ("push", "master", True),
+        ("push", "master", False),
+        ("pull_request", "main", False),
+        ("push", "main", True),
     ],
 )
 def test_publication_is_limited_to_main_pushes(
@@ -302,7 +303,7 @@ def test_main_schedule_expiry_ignores_virtual_services(tmp_path: Path) -> None:
         repo,
         revision=revision,
         event="schedule",
-        branch="master",
+        branch="main",
         base_revision=revision,
         expired_services=["base", "virtual"],
     )
@@ -319,7 +320,7 @@ def test_missing_baseline_selects_full_graph_including_recipes(tmp_path: Path) -
     revision = git(repo, "rev-parse", "HEAD")
 
     plan = build_plan(
-        repo, revision=revision, event="push", branch="master", base_revision=None
+        repo, revision=revision, event="push", branch="main", base_revision=None
     )
 
     assert set(plan["services"]) == {"base", "consumer", "virtual", "weak"}
@@ -337,7 +338,7 @@ def test_peer_fix_uses_each_services_last_published_revision(
     """A peer fix rebuilds only the service that failed the earlier publication."""
     repo = tmp_path / "repo"
     repo.mkdir()
-    git(repo, "init", "-b", "master")
+    git(repo, "init", "-b", "main")
     git(repo, "config", "user.name", "Orion tests")
     git(repo, "config", "user.email", "orion-tests@example.invalid")
     for name in ("x", "y", "z"):
@@ -371,7 +372,7 @@ def test_peer_fix_uses_each_services_last_published_revision(
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -405,7 +406,7 @@ def test_per_service_baseline_propagates_nested_recipe_changes(
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -440,7 +441,7 @@ def test_per_service_baseline_selects_new_test_only_service(
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -469,7 +470,7 @@ def test_newer_same_revision_dependency_retries_weak_dependent(
         repo,
         revision=baseline,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 

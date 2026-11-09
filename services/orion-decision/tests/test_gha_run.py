@@ -30,7 +30,7 @@ def git(repo: Path, *args: str) -> str:
 
 def make_repo(root: Path, files: dict[str, str]) -> tuple[Path, str]:
     root.mkdir()
-    git(root, "init", "-b", "master")
+    git(root, "init", "-b", "main")
     git(root, "config", "user.name", "Orion tests")
     git(root, "config", "user.email", "orion-tests@example.invalid")
     for name, contents in files.items():
@@ -1024,7 +1024,7 @@ def test_stale_publication_is_rejected_against_current_branch_head(monkeypatch):
     )
 
     with pytest.raises(RuntimeError, match="Refusing stale publication"):
-        gha_run.reject_stale_publication("org/orion", "master", "older-revision")
+        gha_run.reject_stale_publication("org/orion", "main", "older-revision")
 
 
 def test_same_sha_older_workflow_run_is_rejected(monkeypatch):
@@ -1038,14 +1038,14 @@ def test_same_sha_older_workflow_run_is_rejected(monkeypatch):
                     "workflow_runs": [
                         {
                             "id": 200,
-                            "path": ".github/workflows/orion.yml@refs/heads/master",
-                            "head_branch": "master",
+                            "path": ".github/workflows/orion.yml@refs/heads/main",
+                            "head_branch": "main",
                             "event": "push",
                         },
                         {
                             "id": 999,
                             "path": ".github/workflows/orion.yml@refs/pull/1/merge",
-                            "head_branch": "master",
+                            "head_branch": "main",
                             "event": "pull_request",
                         },
                     ]
@@ -1063,7 +1063,7 @@ def test_same_sha_older_workflow_run_is_rejected(monkeypatch):
 
     monkeypatch.setattr(gha_run.subprocess, "run", run)
     with pytest.raises(RuntimeError, match="Start a new workflow_dispatch run"):
-        gha_run.reject_stale_publication("org/orion", "master", "same-revision")
+        gha_run.reject_stale_publication("org/orion", "main", "same-revision")
     assert len(calls) == 4
     assert all("actions/workflows/orion.yml/runs" in call[-1] for call in calls[1:])
 
@@ -1076,14 +1076,14 @@ def test_latest_eligible_run_paginates_until_it_finds_exact_workflow(monkeypatch
             "workflow_runs": [
                 {
                     "id": 250,
-                    "path": ".github/workflows/orion.yml@refs/heads/master",
-                    "head_branch": "master",
+                    "path": ".github/workflows/orion.yml@refs/heads/main",
+                    "head_branch": "main",
                     "event": "push",
                 },
                 {
                     "id": 275,
-                    "path": ".github/workflows/orion.yml@refs/heads/master",
-                    "head_branch": "master",
+                    "path": ".github/workflows/orion.yml@refs/heads/main",
+                    "head_branch": "main",
                     "event": "push",
                 },
             ]
@@ -1098,7 +1098,7 @@ def test_latest_eligible_run_paginates_until_it_finds_exact_workflow(monkeypatch
         return SimpleNamespace(stdout=json.dumps(pages.pop(0)))
 
     monkeypatch.setattr(gha_run.subprocess, "run", run)
-    assert gha_run.latest_eligible_publication_run_id("org/orion", "master") == 275
+    assert gha_run.latest_eligible_publication_run_id("org/orion", "main") == 275
     assert "page=2" in calls[1][-1]
 
 

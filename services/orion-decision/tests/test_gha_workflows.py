@@ -28,7 +28,7 @@ def git(repo: Path, *args: str) -> str:
 
 def workflow_repo(root: Path, *, native: bool = False) -> Path:
     root.mkdir()
-    git(root, "init", "-b", "master")
+    git(root, "init", "-b", "main")
     git(root, "config", "user.name", "Orion tests")
     git(root, "config", "user.email", "orion-tests@example.invalid")
     files = {
@@ -264,7 +264,7 @@ def test_duplicate_sanitized_job_ids_are_rejected(tmp_path: Path) -> None:
     """Names that sanitize to the same generated job ID are rejected."""
     repo = tmp_path / "repo"
     repo.mkdir()
-    git(repo, "init", "-b", "master")
+    git(repo, "init", "-b", "main")
     git(repo, "config", "user.name", "Orion tests")
     git(repo, "config", "user.email", "orion-tests@example.invalid")
     for name in ("foo-bar", "foo_bar"):

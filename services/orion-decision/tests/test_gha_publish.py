@@ -37,7 +37,7 @@ def manifest() -> dict[str, Any]:
         "run_attempt": "2",
         "run_number": "418",
         "event": "push",
-        "branch": "master",
+        "branch": "main",
         "workflow": "orion.yml",
         "selected_jobs": ["build_fuzzilli_amd64", "build_fuzzilli_arm64"],
         "successful_jobs": ["build_fuzzilli_amd64", "build_fuzzilli_arm64"],
@@ -92,7 +92,7 @@ def _git(repo: Path, *args: str) -> str:
 
 def _publication_repo(root: Path) -> Path:
     root.mkdir()
-    _git(root, "init", "-b", "master")
+    _git(root, "init", "-b", "main")
     _git(root, "config", "user.name", "Orion tests")
     _git(root, "config", "user.email", "orion-tests@example.invalid")
     files = {
@@ -143,7 +143,7 @@ def test_manifest_must_match_the_exact_github_run(manifest) -> None:
         repository="MozillaSecurity/orion",
         revision="a" * 40,
         event="push",
-        branch="master",
+        branch="main",
         run_id="123456789",
         attempt="2",
     )
@@ -164,7 +164,7 @@ def test_manifest_must_match_the_exact_github_run(manifest) -> None:
                 repository="MozillaSecurity/orion",
                 revision="a" * 40,
                 event="push",
-                branch="master",
+                branch="main",
                 run_id="123456789",
                 attempt="2",
             )
@@ -212,7 +212,7 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
         "GITHUB_RUN_ATTEMPT": "2",
         "GITHUB_RUN_NUMBER": "418",
         "GITHUB_EVENT_NAME": "push",
-        "GITHUB_REF_NAME": "master",
+        "GITHUB_REF_NAME": "main",
     }.items():
         monkeypatch.setenv(key, value)
     monkeypatch.setenv(
@@ -286,7 +286,7 @@ def test_native_only_manual_and_scheduled_publications_need_no_docker_digest(
         "GITHUB_RUN_ATTEMPT": "1",
         "GITHUB_RUN_NUMBER": "419",
         "GITHUB_EVENT_NAME": event,
-        "GITHUB_REF_NAME": "master",
+        "GITHUB_REF_NAME": "main",
     }.items():
         monkeypatch.setenv(key, value)
     monkeypatch.setenv(
@@ -329,7 +329,7 @@ def test_native_only_manual_and_scheduled_publications_need_no_docker_digest(
         repository="MozillaSecurity/orion",
         revision="d" * 40,
         event=event,
-        branch="master",
+        branch="main",
     )
 
 
@@ -345,7 +345,7 @@ def test_partial_publication_imports_successful_branches_without_advancing_basel
         "GITHUB_RUN_ATTEMPT": "1",
         "GITHUB_RUN_NUMBER": "419",
         "GITHUB_EVENT_NAME": "push",
-        "GITHUB_REF_NAME": "master",
+        "GITHUB_REF_NAME": "main",
     }.items():
         monkeypatch.setenv(key, value)
     docker_amd64 = job_id("build", "docker", "amd64")
@@ -402,7 +402,7 @@ def test_partial_publication_imports_successful_branches_without_advancing_basel
         repository="MozillaSecurity/orion",
         revision="d" * 40,
         event="push",
-        branch="master",
+        branch="main",
     )
 
     tasks = gha_publish.build_import_tasks(
@@ -427,10 +427,10 @@ def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
     routes: list[str] = []
     index_tasks = {
         gha_publish.MARKER_ROUTE: "marker",
-        "project.fuzzing.orion.docker.amd64.master": "docker-amd64",
-        "project.fuzzing.orion.docker.arm64.master": "docker-arm64",
-        "project.fuzzing.orion.windows.master": "windows",
-        "project.fuzzing.orion.brew.master": "brew",
+        "project.fuzzing.orion.docker.amd64.main": "docker-amd64",
+        "project.fuzzing.orion.docker.arm64.main": "docker-arm64",
+        "project.fuzzing.orion.windows.main": "windows",
+        "project.fuzzing.orion.brew.main": "brew",
     }
     artifacts = {
         "marker": ("public/orion-publication.json", "2027-01-01T00:00:00Z"),
@@ -493,9 +493,9 @@ def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
             "brew": (123, 1),
         },
     }
-    assert "project.fuzzing.orion.docker.amd64.master" in routes
-    assert "project.fuzzing.orion.docker.arm64.master" in routes
-    assert "project.fuzzing.orion.virtual.master" not in routes
+    assert "project.fuzzing.orion.docker.amd64.main" in routes
+    assert "project.fuzzing.orion.docker.arm64.main" in routes
+    assert "project.fuzzing.orion.virtual.main" not in routes
 
     def find_task(_self, route):
         result = {"taskId": index_tasks[route]}
@@ -505,7 +505,7 @@ def test_publication_state_uses_only_completed_baseline_and_checks_each_arch(
                 "revision": revision,
                 "dockerLatestPublished": True,
                 "runId": "123"
-                if route == "project.fuzzing.orion.docker.arm64.master"
+                if route == "project.fuzzing.orion.docker.arm64.main"
                 else "124",
                 "runAttempt": "1",
             }
@@ -567,7 +567,7 @@ def test_planner_retries_incomplete_service_publication(tmp_path, monkeypatch):
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -658,7 +658,7 @@ def test_planner_uses_taskcluster_baseline_and_falls_back_to_full_graph(
         repo,
         revision=revision,
         event="push",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -674,7 +674,7 @@ def test_planner_uses_taskcluster_baseline_and_falls_back_to_full_graph(
         repo,
         revision=revision,
         event="workflow_dispatch",
-        branch="master",
+        branch="main",
         baseline_from_taskcluster=True,
     )
 
@@ -701,12 +701,12 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
     assert amd64["scopes"] == []
     assert amd64["extra"]["orion"]["artifactDigest"] == "sha256:" + "1" * 64
     assert amd64["extra"]["orion"]["dockerLatestPublished"] is True
-    assert "index.project.fuzzing.orion.fuzzilli.amd64.master" in amd64["routes"]
+    assert "index.project.fuzzing.orion.fuzzilli.amd64.main" in amd64["routes"]
     assert (
         "index.project.fuzzing.orion.fuzzilli.amd64.rev." + "a" * 40 in amd64["routes"]
     )
-    assert "index.project.fuzzing.orion.fuzzilli.master" in amd64["routes"]
-    assert "index.project.fuzzing.orion.fuzzilli.arm64.master" not in amd64["routes"]
+    assert "index.project.fuzzing.orion.fuzzilli.main" in amd64["routes"]
+    assert "index.project.fuzzing.orion.fuzzilli.arm64.main" not in amd64["routes"]
     assert isinstance(amd64["payload"]["artifacts"], list)
     assert amd64["payload"]["artifacts"][0]["name"] == "public/fuzzilli.tar.zst"
     assert amd64["payload"]["command"][0][:3] == ["bash", "-e", "-c"]
@@ -715,8 +715,8 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
 
     arm64_id = gha_publish.artifact_task_id("123456789", "2", "fuzzilli-arm64")
     arm64 = definitions[arm64_id]
-    assert "index.project.fuzzing.orion.fuzzilli.arm64.master" in arm64["routes"]
-    assert "index.project.fuzzing.orion.fuzzilli.master" not in arm64["routes"]
+    assert "index.project.fuzzing.orion.fuzzilli.arm64.main" in arm64["routes"]
+    assert "index.project.fuzzing.orion.fuzzilli.main" not in arm64["routes"]
 
     marker_id = gha_publish.artifact_task_id("123456789", "2", "publication-marker")
     marker = definitions[marker_id]
