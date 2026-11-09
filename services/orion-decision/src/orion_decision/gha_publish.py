@@ -29,6 +29,7 @@ from . import (
     DEADLINE,
     OWNER_EMAIL,
     PROVISIONER_ID,
+    SCHEDULER_ID,
     SOURCE_URL,
     Taskcluster,
 )
@@ -257,7 +258,7 @@ def build_import_tasks(
             "expires": expires,
             "provisionerId": PROVISIONER_ID,
             "workerType": WORKER,
-            "schedulerId": "taskcluster-github",
+            "schedulerId": SCHEDULER_ID,
             "routes": _artifact_indexes(manifest, item),
             "payload": {
                 "maxRunTime": 3600,
@@ -276,7 +277,7 @@ def build_import_tasks(
                     }
                 ],
             },
-            "scopes": ["queue:scheduler-id:taskcluster-github"],
+            "scopes": [],
             "metadata": {
                 "name": task_name,
                 "description": (
@@ -321,7 +322,7 @@ def build_import_tasks(
             "expires": expires,
             "provisionerId": PROVISIONER_ID,
             "workerType": WORKER,
-            "schedulerId": "taskcluster-github",
+            "schedulerId": SCHEDULER_ID,
             "routes": [f"index.{MARKER_ROUTE}"],
             "payload": {
                 "maxRunTime": 3600,
@@ -335,7 +336,7 @@ def build_import_tasks(
                     }
                 ],
             },
-            "scopes": ["queue:scheduler-id:taskcluster-github"],
+            "scopes": [],
             "metadata": {
                 "name": "Orion successful publication marker",
                 "description": "Marks a fully imported Orion GHA publication baseline",
@@ -985,11 +986,6 @@ def submit_tasks(tasks: dict[str, dict[str, Any]]) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m orion_decision.gha_publish")
     sub = parser.add_subparsers(dest="command", required=True)
-    decision = sub.add_parser("decision")
-    decision.add_argument("--event-file", type=Path)
-    decision.add_argument("--github-action", required=True)
-    decision.add_argument("--task-group", required=True)
-    decision.add_argument("--output", type=Path, default=Path("group.json"))
     direct = sub.add_parser("schedule")
     direct.add_argument("--manifest-file", type=Path, required=True)
     direct.add_argument("--task-group", required=True)
@@ -1070,32 +1066,7 @@ def main() -> None:
             poll_interval=args.poll_interval,
         )
         return
-    if args.command == "decision":
-        event = (
-            json.loads(args.event_file.read_text())
-            if args.event_file
-            else json.loads(os.environ["GITHUB_EVENT"])
-        )
-        if (
-            event.get("repository", {}).get("full_name") != "MozillaSecurity/orion"
-            or event.get("ref") != "refs/heads/master"
-            or args.github_action != "github-push"
-        ):
-            raise ValueError("Publication decision requires an Orion master push")
-        args.output.write_text(
-            json.dumps(
-                {
-                    "repository": "MozillaSecurity/orion",
-                    "revision": event["after"],
-                    "task_group": args.task_group,
-                    "root": True,
-                }
-            )
-            + "\n"
-        )
-        return
-    else:
-        manifest = json.loads(args.manifest_file.read_text())
+    manifest = json.loads(args.manifest_file.read_text())
     expected = {
         "repository": manifest["repository"],
         "revision": manifest["revision"],

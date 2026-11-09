@@ -11,7 +11,6 @@ import os
 import re
 import stat
 import subprocess
-import sys
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
@@ -19,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from jsone import render as jsone_render
 from yaml import safe_load
 
 from orion_decision import gha_publish
@@ -170,48 +168,6 @@ def test_manifest_must_match_the_exact_github_run(manifest) -> None:
                 run_id="123456789",
                 attempt="2",
             )
-
-
-def test_push_decision_establishes_group_without_waiting_for_builds(
-    tmp_path, monkeypatch
-) -> None:
-    """The push root completes before GHA artifacts exist and needs no GitHub token."""
-    event = {
-        "repository": {"full_name": "MozillaSecurity/orion"},
-        "after": "a" * 40,
-        "ref": "refs/heads/master",
-    }
-    output = tmp_path / "group.json"
-    monkeypatch.setenv("GITHUB_EVENT", json.dumps(event))
-    monkeypatch.delenv("ORION_GITHUB_TOKEN_FILE", raising=False)
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "gha_publish",
-            "decision",
-            "--github-action",
-            "github-push",
-            "--task-group",
-            "g" * 22,
-            "--output",
-            str(output),
-        ],
-    )
-
-    gha_publish.main()
-
-    assert json.loads(output.read_text()) == {
-        "repository": "MozillaSecurity/orion",
-        "revision": "a" * 40,
-        "task_group": "g" * 22,
-        "root": True,
-    }
-    monkeypatch.setenv(
-        "GITHUB_EVENT", json.dumps({**event, "ref": "refs/heads/feature"})
-    )
-    with pytest.raises(ValueError, match="master push"):
-        gha_publish.main()
 
 
 def test_action_artifact_listing_paginates_without_repeating_a_page(
@@ -741,6 +697,8 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
 
     amd64_id = gha_publish.artifact_task_id("123456789", "2", "fuzzilli-amd64")
     amd64 = definitions[amd64_id]
+    assert amd64["schedulerId"] == "fuzzing"
+    assert amd64["scopes"] == []
     assert amd64["extra"]["orion"]["artifactDigest"] == "sha256:" + "1" * 64
     assert amd64["extra"]["orion"]["dockerLatestPublished"] is True
     assert "index.project.fuzzing.orion.fuzzilli.amd64.master" in amd64["routes"]
@@ -763,6 +721,8 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
     marker_id = gha_publish.artifact_task_id("123456789", "2", "publication-marker")
     marker = definitions[marker_id]
     assert set(marker["dependencies"]) == {amd64_id, arm64_id}
+    assert marker["schedulerId"] == "fuzzing"
+    assert marker["scopes"] == []
     assert marker["extra"]["index"]["rank"] == 41802
     assert marker["expires"].startswith("2027-04-13")
 
@@ -1037,39 +997,6 @@ def test_monitor_does_not_treat_an_idle_worker_as_success(
 
     with pytest.raises(TimeoutError, match="publication tasks"):
         gha_publish.monitor_imports(manifest, queue=Queue(), timeout=1, poll_interval=0)
-
-
-def test_taskcluster_hook_renders_only_master_push_publication_decisions() -> None:
-    """Restrict the Taskcluster hook to publication decisions for master pushes."""
-    config = safe_load((Path(__file__).parents[3] / ".taskcluster.yml").read_text())
-
-    def tasks(tasks_for: str, event: dict[str, Any]) -> list[dict[str, Any]]:
-        rendered = jsone_render(
-            config,
-            context={
-                "taskcluster_root_url": "https://community-tc.services.mozilla.com",
-                "tasks_for": tasks_for,
-                "as_slugid": lambda: "a" * 22,
-                "event": event,
-                "now": "2026-10-13T00:00:00.000Z",
-            },
-        )
-        return rendered.get("tasks", [])
-
-    master_push = tasks(
-        "github-push",
-        {
-            "repository": {"full_name": "MozillaSecurity/orion"},
-            "ref": "refs/heads/master",
-            "after": "a" * 40,
-        },
-    )
-    assert len(master_push) == 1
-    assert master_push[0]["workerType"] == "orion-gha-publish"
-
-    assert tasks("github-push", {"ref": "refs/heads/feature", "after": "b" * 40}) == []
-    assert tasks("github-pull-request", {"action": "opened", "number": 12}) == []
-    assert tasks("github-release", {"action": "published"}) == []
 
 
 @pytest.mark.parametrize(

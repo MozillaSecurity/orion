@@ -48,8 +48,8 @@ cat >worker.config <<EOF
   "workerGroup": "proj-$TC_PROJECT",
   "workerId": "$TC_WORKER_ID",
   "workerType": "$TC_WORKER_TYPE",
-  "wstAudience": "communitytc",
-  "wstServerURL": "https://community-websocktunnel.services.mozilla.com"
+  "wstAudience": "${TASKCLUSTER_WST_AUDIENCE:-}",
+  "wstServerURL": "${TASKCLUSTER_WST_SERVER_URL:-}"
 }
 EOF
 chmod 0600 worker.config

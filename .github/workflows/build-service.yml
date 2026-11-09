@@ -64,6 +64,7 @@ jobs:
         id: prepare
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          ORION_TASKCLUSTER_ROOT_URL: ${{ vars.ORION_TASKCLUSTER_ROOT_URL }}
         shell: bash
         run: >-
           python -m orion_decision.gha_run prepare

@@ -9,8 +9,10 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from taskcluster.helper import TaskclusterConfig
 
-TASKCLUSTER_ROOT_URL = os.getenv(
-    "TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com"
+TASKCLUSTER_ROOT_URL = (
+    os.getenv("TASKCLUSTER_ROOT_URL")
+    or os.getenv("ORION_TASKCLUSTER_ROOT_URL")
+    or "https://community-tc.services.mozilla.com"
 )
 Taskcluster = TaskclusterConfig(TASKCLUSTER_ROOT_URL)
 
@@ -18,5 +20,6 @@ ARTIFACTS_EXPIRE = relativedelta(months=6)  # timedelta doesn't support months
 DEADLINE = timedelta(days=1)
 OWNER_EMAIL = "truber@mozilla.com"
 PROVISIONER_ID = "proj-fuzzing"
+SCHEDULER_ID = "fuzzing"
 SOURCE_URL = "https://github.com/MozillaSecurity/orion"
 del os, relativedelta, timedelta, TaskclusterConfig
