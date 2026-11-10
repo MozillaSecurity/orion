@@ -1,0 +1,17 @@
+---
+# Fake fxci-config worker-pools.yml: only the worker defaults fuzzing-decision reads
+worker-defaults:
+  worker-config:
+    by-implementation:
+      generic-worker/linux-tceng:
+        genericWorker:
+          config:
+            d2gConfig:
+              enableD2G: true
+            ed25519SigningKeyLocation: /etc/generic-worker/ed25519_key
+            enableInteractive: true
+            idleTimeoutSecs: 300
+            livelogExecutable: /usr/local/bin/livelog
+            shutdownMachineOnIdle: true
+            shutdownMachineOnInternalError: true
+            taskclusterProxyExecutable: /usr/local/bin/taskcluster-proxy
