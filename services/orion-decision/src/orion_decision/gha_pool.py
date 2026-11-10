@@ -36,6 +36,7 @@ CLOSE_JOB = "Orion publication submissions complete"
 SERVICE_ROUTE = "project.fuzzing.orion.gha.services"
 GROUP_ROUTE = "project.fuzzing.orion.gha.groups"
 TERMINAL = {"completed", "failed", "exception", "canceled"}
+REQUIRE_WORKERS_RETRY_TIMEOUT = 300
 
 
 def identity(plan: dict[str, Any]) -> dict[str, Any]:
@@ -340,23 +341,26 @@ def _attempt_jobs(
     while True:
         response = _github_json(
             f"https://api.github.com/repos/{repository}/actions/runs/{run_id}"
-            f"/attempts/{attempt}/jobs?per_page=100&page={page}",
+            f"/attempts/{attempt}/jobs?per_page=20&page={page}",
             token=token,
         )
         batch = response.get("jobs", [])
         jobs.extend(batch)
-        if len(batch) < 100:
+        if len(batch) < 20:
             return jobs
         page += 1
 
 
 def require_workers() -> None:
     """Reject partial reruns that would submit work without this attempt's pool."""
-    jobs = _attempt_jobs(
-        os.environ["GITHUB_REPOSITORY"],
-        os.environ["GITHUB_RUN_ID"],
-        os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
-        token=os.environ["GITHUB_TOKEN"],
+    jobs = _github_retry(
+        lambda: _attempt_jobs(
+            os.environ["GITHUB_REPOSITORY"],
+            os.environ["GITHUB_RUN_ID"],
+            os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
+            token=os.environ["GITHUB_TOKEN"],
+        ),
+        time.monotonic() + REQUIRE_WORKERS_RETRY_TIMEOUT,
     )
     names = {"Taskcluster worker 1", "Taskcluster worker 2"}
     workers = [job for job in jobs if job["name"] in names]
@@ -367,8 +371,10 @@ def require_workers() -> None:
 
 
 def _github_retry(operation: Callable[[], Any], deadline: float) -> Any:
-    """Keep workers serving TC during transient GitHub API outages."""
+    """Retry transient GitHub API outages until the caller's deadline."""
     while True:
+        if time.monotonic() >= deadline:
+            raise TimeoutError("GitHub API unavailable before retry deadline")
         try:
             return operation()
         except urllib.error.HTTPError as exc:
@@ -383,7 +389,7 @@ def _github_retry(operation: Callable[[], Any], deadline: float) -> Any:
             pass
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise TimeoutError("GitHub API unavailable until worker-pool deadline")
+            raise TimeoutError("GitHub API unavailable before retry deadline")
         time.sleep(min(60, remaining))
 
 
