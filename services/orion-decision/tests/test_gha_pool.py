@@ -451,3 +451,154 @@ def test_submissions_require_this_attempts_worker_pool(
         with pytest.raises(RuntimeError, match="re-run all jobs"):
             gha_pool.require_workers()
     assert requests == [("MozillaSecurity/orion", "123", "2", "automatic-job-token")]
+
+
+def test_attempt_jobs_uses_small_pages_and_collects_all_jobs(monkeypatch):
+    """Fetch all attempt jobs in smaller GitHub pages that avoid large responses."""
+    requests = []
+
+    def github_json(url, *, token):
+        requests.append((url, token))
+        page = int(url.rsplit("page=", 1)[1])
+        if page == 1:
+            return {"jobs": [{"id": number} for number in range(20)]}
+        return {"jobs": [{"id": 20}]}
+
+    monkeypatch.setattr(gha_pool, "_github_json", github_json)
+
+    jobs = gha_pool._attempt_jobs("MozillaSecurity/orion", "123", "2", token="t")
+
+    assert [job["id"] for job in jobs] == list(range(21))
+    assert requests == [
+        (
+            "https://api.github.com/repos/MozillaSecurity/orion/actions/runs/123"
+            "/attempts/2/jobs?per_page=20&page=1",
+            "t",
+        ),
+        (
+            "https://api.github.com/repos/MozillaSecurity/orion/actions/runs/123"
+            "/attempts/2/jobs?per_page=20&page=2",
+            "t",
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        urllib.error.HTTPError("https://api.github.com", 502, "busy", Message(), None),
+        urllib.error.HTTPError("https://api.github.com", 503, "busy", Message(), None),
+        urllib.error.HTTPError("https://api.github.com", 429, "busy", Message(), None),
+        urllib.error.URLError("connection reset"),
+        TimeoutError("socket read timed out"),
+    ],
+)
+def test_worker_pool_check_retries_transient_github_errors(
+    pool_plan, monkeypatch, error
+):
+    """Transient API failures during submission validation recover before failing."""
+    calls = 0
+
+    def jobs(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise error
+        return [
+            {"name": f"Taskcluster worker {number}", "status": "in_progress"}
+            for number in (1, 2)
+        ]
+
+    monkeypatch.setattr(gha_pool, "_attempt_jobs", jobs)
+    monkeypatch.setattr(gha_pool.time, "sleep", lambda _seconds: None)
+
+    gha_pool.require_workers()
+
+    assert calls == 2
+
+
+@pytest.mark.parametrize(
+    "header, value",
+    [("Retry-After", "1"), ("X-RateLimit-Remaining", "0")],
+)
+def test_worker_pool_check_retries_rate_limited_forbidden_response(
+    pool_plan, monkeypatch, header, value
+):
+    """A rate-limited GitHub 403 is temporary even though ordinary 403s are not."""
+    calls = 0
+    headers = Message()
+    headers[header] = value
+
+    def jobs(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise urllib.error.HTTPError(
+                "https://api.github.com", 403, "rate limited", headers, None
+            )
+        return [
+            {"name": f"Taskcluster worker {number}", "status": "in_progress"}
+            for number in (1, 2)
+        ]
+
+    monkeypatch.setattr(gha_pool, "_attempt_jobs", jobs)
+    monkeypatch.setattr(gha_pool.time, "sleep", lambda _seconds: None)
+
+    gha_pool.require_workers()
+
+    assert calls == 2
+
+
+def test_worker_pool_check_bounds_transient_github_retries(pool_plan, monkeypatch):
+    """Persistent GitHub errors eventually stop submission validation attempts."""
+    now = 0
+    calls = 0
+
+    def monotonic():
+        return now
+
+    def sleep(seconds):
+        nonlocal now
+        now += seconds
+
+    def jobs(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        raise urllib.error.HTTPError(
+            "https://api.github.com", 502, "busy", Message(), None
+        )
+
+    monkeypatch.setattr(gha_pool, "_attempt_jobs", jobs)
+    monkeypatch.setattr(gha_pool.time, "monotonic", monotonic)
+    monkeypatch.setattr(gha_pool.time, "sleep", sleep)
+
+    with pytest.raises(TimeoutError, match="GitHub API unavailable"):
+        gha_pool.require_workers()
+
+    assert calls == 5
+    assert now == gha_pool.REQUIRE_WORKERS_RETRY_TIMEOUT
+
+
+@pytest.mark.parametrize("status", [401, 403])
+def test_worker_pool_check_does_not_retry_permanent_github_errors(
+    pool_plan, monkeypatch, status
+):
+    """Authentication and other permanent API failures fail without waiting."""
+    calls = 0
+
+    def jobs(*_args, **_kwargs):
+        nonlocal calls
+        calls += 1
+        raise urllib.error.HTTPError(
+            "https://api.github.com", status, "forbidden", Message(), None
+        )
+
+    monkeypatch.setattr(gha_pool, "_attempt_jobs", jobs)
+    monkeypatch.setattr(
+        gha_pool.time, "sleep", lambda _seconds: pytest.fail("unexpected retry wait")
+    )
+
+    with pytest.raises(urllib.error.HTTPError):
+        gha_pool.require_workers()
+
+    assert calls == 1
