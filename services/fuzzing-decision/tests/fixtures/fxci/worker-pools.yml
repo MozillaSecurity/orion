@@ -1,5 +1,5 @@
 ---
-# Fake fxci-config worker-pools.yml: only the worker defaults fuzzing-decision reads
+# Fake fxci-config worker-pools.yml: worker defaults and representative pool configs
 worker-defaults:
   worker-config:
     by-implementation:
@@ -15,3 +15,40 @@ worker-defaults:
             shutdownMachineOnIdle: true
             shutdownMachineOnInternalError: true
             taskclusterProxyExecutable: /usr/local/bin/taskcluster-proxy
+
+# Representative Azure2 pools used to derive the fuzzing location set.
+pools:
+  - pool_id: proj-fuzzing/managed-image-test
+    provider_id: azure2
+    config:
+      locations: [west-europe]
+  - pool_id: proj-fuzzing/keyed-location-test{suffix}
+    provider_id: azure2
+    variants:
+      - kind: gpu
+        suffix: ''
+      - kind: ngpu
+        suffix: -ngpu
+    config:
+      worker-purpose: proj-fuzzing
+      locations:
+        by-kind:
+          gpu: [east-us, east-us-2, south-central-us, west-us-2]
+          ngpu: [central-us, east-us]
+          default: [west-us]
+  - pool_id: proj-fuzzing/disabled-variant-test
+    provider_id: azure2
+    variants: []
+    config:
+      worker-purpose: proj-fuzzing
+      locations: [france-central]
+  - pool_id: proj-fuzzing/non-fuzzing-purpose
+    provider_id: azure2
+    config:
+      worker-purpose: ci
+      locations: [north-europe]
+  - pool_id: proj-fuzzing/not-azure2
+    provider_id: fxci-level1-gcp
+    config:
+      worker-purpose: proj-fuzzing
+      locations: [north-central-us]

@@ -12,6 +12,5 @@ PROVIDER_IDS = {
     "gcp": "fxci-level1-gcp",
     "azure": "azure2",
 }
-GCP_REGIONS = ("us-central1", "us-west1")
 DECISION_TASK_SECRET = "project/fuzzing/decision"
 CANCEL_TASK_DAYS = 2

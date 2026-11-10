@@ -18,6 +18,7 @@ fuzzing-win2022:
     resource_group: rg-packer-worker-images
     central-us: gw-win2022-central
     east-us: gw-win2022-east
+    west-europe: gw-win2022-west-europe
 fuzzing-win2022-gpu:
   worker-type-metadata:
     machine-setup:

@@ -164,14 +164,17 @@ def test_gcp_resources(
     data = pool.to_json()
     assert data["providerId"] == "fxci-level1-gcp"
     launch_configs = data["config"]["launchConfigs"]
-    assert len(launch_configs) == 5
+    assert len(launch_configs) == 7
     assert {config["region"] for config in launch_configs} == {
         "us-central1",
         "us-west1",
+        "europe-west4",
     }
     assert sorted(
         (config["zone"], config["machineType"]) for config in launch_configs
     ) == [
+        ("europe-west4-a", "zones/europe-west4-a/machineTypes/2-cpus"),
+        ("europe-west4-a", "zones/europe-west4-a/machineTypes/gcp1"),
         ("us-central1-a", "zones/us-central1-a/machineTypes/2-cpus"),
         ("us-central1-a", "zones/us-central1-a/machineTypes/gcp1"),
         ("us-west1-a", "zones/us-west1-a/machineTypes/2-cpus"),
