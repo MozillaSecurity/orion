@@ -23,7 +23,7 @@ RUN retry () { i=0; while [ $i -lt 9 ]; do if "$@"; then return; else sleep 30; 
         python3-dev \
     && find /usr/lib/python3.* -type f -name EXTERNALLY-MANAGED -delete \
     && pip freeze > /src/os_constraints.txt \
-    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off tc-admin \
+    && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off 'tc-admin>=6.0.1' \
     && retry pip install --constraint /src/os_constraints.txt --disable-pip-version-check --no-cache-dir --progress-bar off -e "/src/fuzzing-decision[decision]" \
     && find /usr/lib/python*/site-packages -name "*.so" -exec strip "{}" + \
     && apk del build-base py3-pip py3-wheel python3-dev \
