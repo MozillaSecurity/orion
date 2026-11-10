@@ -87,7 +87,7 @@ def _pool(cloud, cpu, machine, worker, imageset) -> FuzzingPoolConfig:
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("worker_type", ["generic", "d2g"])
 def test_fxci_gcp_pool(monkeypatch, mock_machines, worker_type):
-    """FXCI GCP pools combine FXCI defaults with fuzzing settings and metadata."""
+    """FXCI GCP pools use configured regions and combine defaults with pool settings."""
     # A different endpoint must not switch provider IDs or configuration layouts.
     monkeypatch.setenv(
         "TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com"
@@ -100,9 +100,10 @@ def test_fxci_gcp_pool(monkeypatch, mock_machines, worker_type):
     assert data["providerId"] == "fxci-level1-gcp"
 
     launch_configs = data["config"]["launchConfigs"]
-    # us-west1-b is zone-blacklisted (machines.yml); europe-west4 is not a fuzzing
-    # gcp_region -> only us-central1-a and us-west1-a remain.
+    # us-west1-b is zone-blacklisted (machines.yml); the other configured zones
+    # remain available, including the additional europe-west4 fixture region.
     assert sorted(lc["zone"] for lc in launch_configs) == [
+        "europe-west4-a",
         "us-central1-a",
         "us-west1-a",
     ]
@@ -193,12 +194,13 @@ def test_fxci_aws_remains_unsupported(mock_machines):
         list(build_resources([conf], clouds, mock_machines, env=None))
 
 
-def test_fxci_azure2_regions_images_and_worker_config():
+@pytest.mark.parametrize("blacklist_region", ["east-us-2", "eastus2"])
+def test_fxci_azure2_regions_images_and_worker_config(blacklist_region):
     """Azure2 configs use regional images, fuzzing networks, and WST defaults."""
     provider = Azure(FXCI_DIR)
     launch_configs = provider.build_launch_configs(
         "fuzzing-win2022-gpu",
-        [("Standard_F16s_v2", frozenset({"east-us-2"}))],
+        [("Standard_F16s_v2", frozenset({blacklist_region}))],
         disk_size=120,
         platform="windows",
         demand=True,
@@ -285,7 +287,55 @@ def test_fxci_azure2_filters_images_by_configured_regions():
         worker_type="generic",
     )
 
-    assert [config["location"] for config in configs] == ["centralus"]
+    assert [config["location"] for config in configs] == ["centralus", "westeurope"]
+
+
+def test_azure2_pool_locations_resolve_keyed_by_variants():
+    """Azure pool locations follow exact and regex selectors for declared variants."""
+    pool = {
+        "variants": [{"kind": "gpu"}, {"kind": "ngpu"}],
+        "config": {
+            "locations": {
+                "by-kind": {
+                    "gpu": ["east-us"],
+                    "g.*": ["central-us"],
+                    "n.*": ["west-us"],
+                    "default": ["central-us"],
+                }
+            }
+        },
+    }
+
+    assert Azure._pool_locations(pool) == {"east-us", "west-us"}
+    assert Azure._pool_locations(
+        {
+            "variants": [{}],
+            "config": {"locations": {"by-kind": {"default": ["central-us"]}}},
+        }
+    ) == {"central-us"}
+
+    hyphenated_attribute = {
+        "attributes": {"pool-group": "gecko-t"},
+        "variants": [{"kind": "gpu"}],
+        "config": {
+            "locations": {
+                "by-pool-group": {
+                    "gecko-.*": {"by-kind": {"gpu": ["east-us"]}},
+                    "default": ["west-us"],
+                }
+            }
+        },
+    }
+    assert Azure._pool_locations(hyphenated_attribute) == {"east-us"}
+
+    ambiguous = {
+        "variants": [{"kind": "gpu-v"}],
+        "config": {
+            "locations": {"by-kind": {"gpu-.*": ["east-us"], ".*-v": ["west-us"]}}
+        },
+    }
+    with pytest.raises(ValueError, match="Ambiguous Azure locations selectors"):
+        Azure._pool_locations(ambiguous)
 
 
 @pytest.mark.parametrize("demand", [True, False])
@@ -334,6 +384,7 @@ def test_fxci_azure2_gallery_images_use_fxci_gallery_resource_ids():
         "eastus",
         "eastus2",
         "southcentralus",
+        "westeurope",
         "westus2",
     ]
     assert all(

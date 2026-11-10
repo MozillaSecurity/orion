@@ -1,5 +1,5 @@
 ---
-# FXCI environments config fixture, including an unused region for filtering.
+# FXCI environments config fixture with regions configured for the test pools.
 firefoxci:
   azure_config:
     untrusted_subscription: 108d46d5-fe9b-4850-9a7d-8c914aa6c1f0
@@ -7,6 +7,7 @@ firefoxci:
       - centralus
       - eastus
       - eastus2
+      - francecentral
       - northcentralus
       - northeurope
       - southcentralus
@@ -22,5 +23,5 @@ firefoxci:
       by-region:
         us-central1: [us-central1-a]
         us-west1: [us-west1-a, us-west1-b]
-        # Outside the fuzzing region allowlist; the provider must ignore it.
+        # Configured GCP regions are all available to fuzzing pools.
         europe-west4: [europe-west4-a]

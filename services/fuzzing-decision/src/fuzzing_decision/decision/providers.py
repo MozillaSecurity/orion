@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import copy
 import logging
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 import yaml
 
 from ..common.util import parse_time
-from . import GCP_REGIONS, PROVIDER_IDS
+from . import PROVIDER_IDS
 
 LOG = logging.getLogger(__name__)
 
@@ -129,17 +130,103 @@ class Azure(Provider):
     """Azure2 worker-manager launch configs backed by FXCI configuration."""
 
     cloud = "Azure"
-    # Only these regions have the proj-fuzzing VNets/subnets managed by relops.
-    locations: ClassVar[dict[str, str]] = {
-        "central-us": "centralus",
-        "east-us": "eastus",
-        "east-us-2": "eastus2",
-        "south-central-us": "southcentralus",
-        "west-us-2": "westus2",
-    }
+
+    @staticmethod
+    def _pool_locations(pool: dict[str, Any]) -> set[str]:
+        """Resolve configured locations across the variants of an Azure pool."""
+        config = pool.get("config", {})
+        locations = config.get("locations", [])
+        variants = pool.get("variants", [{}])
+        if variants is None:
+            variants = [{}]
+        attributes = pool.get("attributes", {})
+
+        def resolve(value: Any, variant: dict[str, Any]) -> set[str]:
+            if isinstance(value, list):
+                return {item for item in value if isinstance(item, str)}
+            if not isinstance(value, dict):
+                return set()
+
+            # FXCI keyed-by values resolve against pool variant attributes. Walk
+            # nested keyed-by structures as well, such as by-pool-group/by-suffix.
+            keyed_keys = [key for key in value if key.startswith("by-")]
+            if len(keyed_keys) > 1:
+                raise ValueError(f"Ambiguous Azure locations keyed-by mapping: {value}")
+            keyed_by = keyed_keys[0] if keyed_keys else None
+            if keyed_by is not None:
+                attribute = keyed_by[3:]
+                choices = value[keyed_by]
+                if not isinstance(choices, dict):
+                    raise ValueError(
+                        f"Azure locations {keyed_by} mapping must be a mapping"
+                    )
+                variant_value = variant.get(attribute)
+                selected = None
+                if variant_value is not None:
+                    exact = choices.get(str(variant_value))
+                    if exact is not None:
+                        selected = exact
+                    else:
+                        try:
+                            matching = [
+                                (selector, branch)
+                                for selector, branch in choices.items()
+                                if selector != "default"
+                                and re.fullmatch(selector, str(variant_value))
+                            ]
+                        except re.error as exc:
+                            raise ValueError(
+                                f"Invalid Azure locations selector in {keyed_by}: {exc}"
+                            ) from exc
+                        if len(matching) > 1:
+                            raise ValueError(
+                                f"Ambiguous Azure locations selectors for "
+                                f"{keyed_by}={variant_value!r}: "
+                                f"{[selector for selector, _ in matching]}"
+                            )
+                        if matching:
+                            selected = matching[0][1]
+                if selected is None:
+                    selected = choices.get("default")
+                if selected is None:
+                    raise ValueError(
+                        f"No Azure locations branch for {keyed_by}={variant_value!r} "
+                        "and no default branch"
+                    )
+                return resolve(selected, variant)
+
+            raise ValueError(f"Unsupported Azure locations mapping: {value}")
+
+        return set().union(
+            *(
+                resolve(
+                    locations,
+                    {**attributes, "environment": "firefoxci", **variant},
+                )
+                for variant in variants
+            )
+        )
 
     def __init__(self, base_dir: Path) -> None:
         self.images = yaml.safe_load((base_dir / "worker-images.yml").read_text())
+        pools = yaml.safe_load((base_dir / "worker-pools.yml").read_text())
+        azure_locations: set[str] = set()
+        for pool in pools.get("pools", []):
+            if pool.get("provider_id") != "azure2":
+                continue
+            config = pool.get("config", {})
+            purpose = config.get("worker-purpose")
+            if purpose is None:
+                purpose = (
+                    "proj-fuzzing"
+                    if pool.get("pool_id", "").startswith("proj-fuzzing/")
+                    else None
+                )
+            if purpose != "proj-fuzzing":
+                continue
+            azure_locations.update(self._pool_locations(pool))
+        # Only project-fuzzing Azure2 pools provision the VNets/subnets used here.
+        self.locations = sorted(azure_locations)
         env = yaml.safe_load((base_dir / "environments.yml").read_text())
         self.config = env["firefoxci"]["azure_config"]
         self.allowed_locations = set(self.config["location"])
@@ -232,7 +319,7 @@ class Azure(Provider):
         result = []
         for machine, region_blacklist in machines:
             for location in image_locations:
-                azure_location = self.locations[location]
+                azure_location = location.replace("-", "")
                 if azure_location not in self.allowed_locations:
                     continue
                 if location in region_blacklist or azure_location in region_blacklist:
@@ -294,10 +381,7 @@ class GCP(Provider):
         ]["generic-worker/linux-tceng"]
         env = yaml.safe_load((base_dir / "environments.yml").read_text())
         self.config = env["firefoxci"]["google_config"]
-        regions = self.config["zones"]["by-region"]
-        self.regions = {
-            region: regions[region] for region in GCP_REGIONS if region in regions
-        }
+        self.regions = self.config["zones"]["by-region"]
         LOG.info("Loaded FXCI GCP configuration")
 
     def _base_worker_config(self, imageset: str) -> dict[str, Any]:
