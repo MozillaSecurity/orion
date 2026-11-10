@@ -240,6 +240,7 @@ def build_import_tasks(
             "artifactId": str(item["artifact_id"]),
             "artifactKey": item["key"],
             "artifactDigest": item.get("digest"),
+            "publicationKind": "import",
         }
         if manifest.get("artifact_only"):
             provenance["independentPublication"] = True
@@ -394,6 +395,40 @@ def _actions_artifacts(
         if len(batch) < 100:
             return result
         page += 1
+
+
+def select_build_artifact(
+    artifacts: list[dict[str, Any]],
+    service: str,
+    arch: str,
+    attempt: str | int,
+) -> dict[str, Any] | None:
+    """Choose the newest live exact service/architecture artifact up to attempt."""
+    prefix = f"orion-build-{service}-{arch}-"
+    return select_attempt_artifact(artifacts, prefix, attempt)
+
+
+def select_attempt_artifact(
+    artifacts: list[dict[str, Any]], prefix: str, attempt: str | int
+) -> dict[str, Any] | None:
+    """Choose the newest live artifact with an exact numeric attempt suffix."""
+    current = int(attempt)
+    if current < 1:
+        raise ValueError("GitHub Actions run attempt must be positive")
+    candidates: list[tuple[int, dict[str, Any]]] = []
+    for artifact in artifacts:
+        name = artifact.get("name")
+        if not isinstance(name, str) or not name.startswith(prefix):
+            continue
+        suffix = name.removeprefix(prefix)
+        if not re.fullmatch(r"[1-9][0-9]*", suffix):
+            continue
+        producer_attempt = int(suffix)
+        if producer_attempt <= current and not artifact.get("expired"):
+            candidates.append((producer_attempt, artifact))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda candidate: candidate[0])[1]
 
 
 def publication_state(
@@ -625,7 +660,6 @@ def create_manifest(
     run_id = str(os.environ["GITHUB_RUN_ID"])
     attempt = str(os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
     artifacts = _actions_artifacts(token, repository, run_id)
-    by_name = {item["name"]: item for item in artifacts if not item.get("expired")}
     selected = set(plan.get("selected_jobs", []))
     if artifact_only:
         if service_name is None or arch is None:
@@ -655,13 +689,13 @@ def create_manifest(
             build_job = job_id("build", service.name, arch)
             if build_job not in successful:
                 continue
-            name = f"orion-build-{service.name}-{arch}-{attempt}"
-            artifact = by_name.get(name)
+            artifact = select_build_artifact(artifacts, service.name, arch, attempt)
             if artifact is None:
                 raise ValueError(
-                    f"Selected build artifact {name!r} is missing; rerun all jobs "
-                    "so this workflow attempt has a complete artifact set"
+                    f"No live build artifact for {service.name}/{arch} exists "
+                    f"from this run at or before attempt {attempt}"
                 )
+            name = artifact["name"]
             native = isinstance(service, (ServiceMsys, ServiceHomebrew))
             entries.append(
                 {
@@ -696,8 +730,9 @@ def create_manifest(
             )
     published_images: dict[str, Any] = {}
     if plan.get("selected_docker_jobs") and not artifact_only:
-        digest_name = f"orion-published-image-digests-{run_id}-{attempt}"
-        digest_artifact = by_name.get(digest_name)
+        digest_artifact = select_attempt_artifact(
+            artifacts, f"orion-published-image-digests-{run_id}-", attempt
+        )
         if digest_artifact is not None:
             with TemporaryDirectory(prefix="orion-gha-digests-") as tmp:
                 zip_path = Path(tmp) / "digests.zip"

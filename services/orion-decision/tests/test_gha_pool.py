@@ -14,6 +14,7 @@ import pytest
 from taskcluster.exceptions import TaskclusterFailure
 
 from orion_decision import gha_pool
+from orion_decision.gha_plan import job_id
 
 
 @pytest.fixture
@@ -42,6 +43,296 @@ def _task(task_id, state, *, attempt="2"):
     return {
         "task": {"extra": {"orion": {"runId": "123", "runAttempt": attempt}}},
         "status": {"taskId": task_id, "state": state},
+    }
+
+
+def test_group_publication_mapping_finds_actual_prior_attempt_tasks(pool_plan):
+    """Resolve inherited import and receipt submissions by their stored identity."""
+    group = gha_pool.artifact_task_id("123", 1, "decision")
+    data = {
+        "runId": "123",
+        "revision": "a" * 40,
+        "repository": "MozillaSecurity/orion",
+    }
+    import_id = gha_pool.artifact_task_id("123", 2, "langfuzz-amd64")
+    receipt_id = gha_pool.artifact_task_id("123", 1, "receipt-langfuzz")
+    records = [
+        {
+            "task": {
+                "taskGroupId": group,
+                "extra": {
+                    "orion": {
+                        **data,
+                        "runAttempt": "2",
+                        "artifactKey": "langfuzz-amd64",
+                        "publicationKind": "import",
+                    }
+                },
+            },
+            "status": {"taskId": import_id, "state": "running"},
+        },
+        {
+            "task": {
+                "taskGroupId": group,
+                "extra": {
+                    "orion": {
+                        **data,
+                        "runAttempt": "1",
+                        "service": "langfuzz",
+                    }
+                },
+            },
+            "status": {"taskId": receipt_id, "state": "completed"},
+        },
+        {
+            "task": {
+                "taskGroupId": group,
+                "extra": {
+                    "orion": {
+                        **data,
+                        "runAttempt": "4",
+                        "artifactKey": "langfuzz-arm64",
+                        "publicationKind": "import",
+                    }
+                },
+            },
+            "status": {"taskId": gha_pool.artifact_task_id("123", 4, "langfuzz-arm64")},
+        },
+    ]
+
+    class Queue:
+        def listTaskGroup(self, _group, query=None):
+            if query:
+                return {"tasks": []}
+            return {"tasks": records}
+
+    mapping = gha_pool._group_publication_tasks(group, data, "3", Queue())
+
+    assert mapping[("import", "langfuzz-amd64")] == (2, import_id)
+    assert mapping[("receipt", "langfuzz")] == (1, receipt_id)
+    assert ("import", "langfuzz-arm64") not in mapping
+
+
+def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
+    """Schedule a current receipt against imports inherited from an earlier attempt."""
+    from orion_decision import orion
+
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "3")
+    group = gha_pool.artifact_task_id("123", 1, "decision")
+    plan = {
+        "publish": True,
+        "branch": "main",
+        "event": "push",
+        "revision": "a" * 40,
+        "selected_jobs": [
+            job_id("build", "fuzzilli", "amd64"),
+            job_id("build", "fuzzilli", "arm64"),
+        ],
+    }
+    imports = []
+    for arch in ("amd64", "arm64"):
+        key = f"fuzzilli-{arch}"
+        imports.append(
+            {
+                "task": {
+                    "taskGroupId": group,
+                    "extra": {
+                        "orion": {
+                            "runId": "123",
+                            "runAttempt": "2",
+                            "revision": "a" * 40,
+                            "repository": "MozillaSecurity/orion",
+                            "artifactKey": key,
+                            "publicationKind": "import",
+                        }
+                    },
+                },
+                "status": {
+                    "taskId": gha_pool.artifact_task_id("123", 2, key),
+                    "state": "running",
+                },
+            }
+        )
+
+    class FakeQueue:
+        def listTaskGroup(self, _group, query=None):
+            return {"tasks": imports}
+
+    queue = FakeQueue()
+    monkeypatch.setattr(gha_pool.Taskcluster, "get_service", lambda _name: queue)
+    monkeypatch.setattr(gha_pool, "require_workers", lambda: None)
+    monkeypatch.setattr(
+        gha_pool,
+        "_actions_artifacts",
+        lambda *_args: [
+            {
+                "id": 22,
+                "name": "orion-published-image-digests-fuzzilli-123-1",
+                "digest": "sha256:" + "a" * 64,
+            }
+        ],
+    )
+    downloaded_artifacts = []
+
+    def download_artifact(artifact_id, *_args, **_kwargs):
+        downloaded_artifacts.append(artifact_id)
+        return {
+            "fuzzilli": {
+                "latest_published": True,
+                "architectures": {
+                    "amd64": "sha256:" + "b" * 64,
+                    "arm64": "sha256:" + "c" * 64,
+                },
+            }
+        }
+
+    monkeypatch.setattr(
+        gha_pool,
+        "download_artifact_json",
+        download_artifact,
+    )
+    submitted = {}
+    monkeypatch.setattr(gha_pool, "submit_tasks", lambda tasks: submitted.update(tasks))
+
+    class FakeService:
+        name = "fuzzilli"
+        archs = ("amd64", "arm64")
+
+    class TestOnly:
+        pass
+
+    monkeypatch.setattr(orion, "Services", lambda _repo: {"fuzzilli": FakeService()})
+    monkeypatch.setattr(orion, "ServiceHomebrew", type("Homebrew", (), {}))
+    monkeypatch.setattr(orion, "ServiceMsys", type("Msys", (), {}))
+    monkeypatch.setattr(orion, "ServiceTestOnly", TestOnly)
+    monkeypatch.setattr(
+        "orion_decision.git.GitRepo.from_existing", lambda _path: object()
+    )
+
+    receipt_id = gha_pool.schedule_receipt(plan, "fuzzilli", group)
+    receipt = submitted[receipt_id]
+
+    assert receipt_id == gha_pool.artifact_task_id("123", 3, "receipt-fuzzilli")
+    assert receipt["dependencies"] == [
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-amd64"),
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-arm64"),
+    ]
+    assert receipt["extra"]["orion"]["runAttempt"] == "3"
+    assert (
+        receipt["extra"]["orion"]["published_images"]["fuzzilli"]["latest_published"]
+        is True
+    )
+    assert downloaded_artifacts == [22]
+    assert receipt["extra"]["index"]["rank"] == 803
+
+
+def test_close_submissions_records_inherited_task_ids(tmp_path, pool_plan, monkeypatch):
+    """Keep inherited imports and receipts in the current monitor control record."""
+    import json
+
+    from orion_decision import orion
+
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "3")
+    group = gha_pool.artifact_task_id("123", 1, "decision")
+    plan = {
+        "publish": True,
+        "branch": "main",
+        "event": "push",
+        "revision": "a" * 40,
+        "selected_jobs": [
+            job_id("build", "fuzzilli", "amd64"),
+            job_id("build", "fuzzilli", "arm64"),
+        ],
+    }
+    results = {
+        name: {"result": "success"}
+        for name in (
+            "plan",
+            "publication-bootstrap",
+            "graph-result",
+            job_id("index", "fuzzilli", "amd64"),
+            job_id("index", "fuzzilli", "arm64"),
+            job_id("receipt", "fuzzilli"),
+        )
+    }
+    monkeypatch.setenv("ORION_JOB_RESULTS", json.dumps(results))
+    imports = []
+    for arch in ("amd64", "arm64"):
+        key = f"fuzzilli-{arch}"
+        imports.append(
+            {
+                "task": {
+                    "taskGroupId": group,
+                    "extra": {
+                        "orion": {
+                            "runId": "123",
+                            "runAttempt": "2",
+                            "revision": "a" * 40,
+                            "repository": "MozillaSecurity/orion",
+                            "artifactKey": key,
+                            "publicationKind": "import",
+                        }
+                    },
+                },
+                "status": {
+                    "taskId": gha_pool.artifact_task_id("123", 2, key),
+                    "state": "running",
+                },
+            }
+        )
+    receipt_id = gha_pool.artifact_task_id("123", 1, "receipt-fuzzilli")
+    imports.append(
+        {
+            "task": {
+                "taskGroupId": group,
+                "extra": {
+                    "orion": {
+                        "runId": "123",
+                        "runAttempt": "1",
+                        "revision": "a" * 40,
+                        "repository": "MozillaSecurity/orion",
+                        "service": "fuzzilli",
+                    }
+                },
+            },
+            "status": {"taskId": receipt_id, "state": "running"},
+        }
+    )
+
+    class FakeQueue:
+        def listTaskGroup(self, _group, query=None):
+            return {"tasks": imports}
+
+    monkeypatch.setattr(gha_pool.Taskcluster, "get_service", lambda _name: FakeQueue())
+    monkeypatch.setattr(gha_pool, "require_workers", lambda: None)
+    submitted = {}
+    monkeypatch.setattr(gha_pool, "submit_tasks", lambda tasks: submitted.update(tasks))
+
+    class FakeService:
+        name = "fuzzilli"
+        archs = ("amd64", "arm64")
+
+    monkeypatch.setattr(orion, "Services", lambda _repo: {"fuzzilli": FakeService()})
+    monkeypatch.setattr(orion, "ServiceTestOnly", type("TestOnly", (), {}))
+    monkeypatch.setattr(
+        "orion_decision.git.GitRepo.from_existing", lambda _path: object()
+    )
+    output = tmp_path / "control.json"
+
+    gha_pool.close_submissions(plan, group, output)
+    record = json.loads(output.read_text())
+    marker = submitted[gha_pool.artifact_task_id("123", 3, "publication-marker")]
+
+    assert set(record["task_ids"]) == {
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-amd64"),
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-arm64"),
+        receipt_id,
+        gha_pool.artifact_task_id("123", 3, "publication-marker"),
+    }
+    assert set(marker["dependencies"]) == {
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-amd64"),
+        gha_pool.artifact_task_id("123", 2, "fuzzilli-arm64"),
+        receipt_id,
     }
 
 
@@ -103,6 +394,58 @@ def test_empty_queue_does_not_stop_pool_before_submissions_close(
 
     assert producer_polls == 3
     assert group_polls == 1
+
+
+def test_monitor_waits_for_inherited_task_ids_from_close_control(
+    pool_plan, monkeypatch
+):
+    """Wait for a pending prior-attempt task listed in this attempt's control."""
+    _artifacts(monkeypatch, pool_plan)
+    task_id = gha_pool.artifact_task_id("123", 1, "langfuzz-amd64")
+    identity = gha_pool.identity(pool_plan)
+
+    def download(_artifact, filename, *_args, **_kwargs):
+        record = {**identity, "task_group": "g" * 22}
+        if filename == "publication-control.json":
+            record.update({"failed_jobs": [], "task_ids": [task_id]})
+        return record
+
+    monkeypatch.setattr(gha_pool, "download_artifact_json", download)
+    monkeypatch.setattr(
+        gha_pool,
+        "_attempt_jobs",
+        lambda *_args: [{"name": gha_pool.CLOSE_JOB, "status": "completed"}],
+    )
+    polls = 0
+
+    class Queue:
+        def listTaskGroup(self, _group, **_kwargs):
+            unrelated_failure = gha_pool.artifact_task_id("123", 1, "unrelated-import")
+            return {
+                "tasks": [
+                    {
+                        "task": {
+                            "taskGroupId": "g" * 22,
+                            "extra": {"orion": {"runId": "123", "runAttempt": "1"}},
+                        },
+                        "status": {
+                            "taskId": unrelated_failure,
+                            "state": "failed",
+                        },
+                    }
+                ]
+            }
+
+        def status(self, requested):
+            nonlocal polls
+            assert requested == task_id
+            polls += 1
+            state = "pending" if polls == 1 else "completed"
+            return {"status": {"taskId": task_id, "state": state}}
+
+    gha_pool.monitor_pool(pool_plan, queue=Queue(), poll_interval=0)
+
+    assert polls == 2
 
 
 def test_failed_import_does_not_stop_successful_peer(pool_plan, monkeypatch):

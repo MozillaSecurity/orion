@@ -36,6 +36,7 @@ from .gha_publish import (
     artifact_task_id,
     download_artifact_json,
     publication_rank,
+    select_attempt_artifact,
     submit_tasks,
 )
 
@@ -160,20 +161,13 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
         raise ValueError("A service receipt requires all architecture builds")
     images = {}
     if not isinstance(service, (ServiceHomebrew, ServiceMsys)):
-        name = (
-            f"orion-published-image-digests-{service_name}-"
-            f"{data['runId']}-{data['runAttempt']}"
-        )
         artifacts = _actions_artifacts(
             os.environ["GITHUB_TOKEN"], data["repository"], data["runId"]
         )
-        artifact = next(
-            (
-                item
-                for item in artifacts
-                if item["name"] == name and not item.get("expired")
-            ),
-            None,
+        artifact = select_attempt_artifact(
+            artifacts,
+            f"orion-published-image-digests-{service_name}-{data['runId']}-",
+            data["runAttempt"],
         )
         if artifact is None:
             raise ValueError(f"Docker publication metadata missing for {service_name}")
@@ -189,14 +183,22 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
             publication.get("architectures", {})
         ) != set(service.archs):
             raise ValueError(f"Docker publication incomplete for {service_name}")
+    queue = Taskcluster.get_service("queue")
+    task_map = _group_publication_tasks(group, data, data["runAttempt"], queue)
     dependencies = [
-        artifact_task_id(data["runId"], data["runAttempt"], f"{service_name}-{arch}")
+        _mapped_task_id(task_map, f"{service_name}-{arch}", kind="import", group=group)
         for arch in sorted(service.archs)
     ]
     receipt_id = artifact_task_id(
         data["runId"], data["runAttempt"], f"receipt-{service_name}"
     )
-    data.update({"service": service_name, "published_images": images})
+    data.update(
+        {
+            "service": service_name,
+            "published_images": images,
+            "publicationKind": "receipt",
+        }
+    )
     submit_tasks(
         {
             receipt_id: metadata_task(
@@ -209,6 +211,76 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
         }
     )
     return receipt_id
+
+
+def _mapped_task_id(
+    mapping: dict[tuple[str, str], tuple[int, str]],
+    key: str,
+    *,
+    kind: str,
+    group: str,
+) -> str:
+    """Return a mapped producer ID or explain which dependency is missing."""
+    map_key = key.removeprefix("receipt-") if kind == "receipt" else key
+    try:
+        return mapping[(kind, map_key)][1]
+    except KeyError:
+        raise RuntimeError(
+            f"No Taskcluster {kind} task exists for {key} in {group}"
+        ) from None
+
+
+def _group_publication_tasks(
+    group: str,
+    data: dict[str, Any],
+    current_attempt: str,
+    queue: Any,
+) -> dict[tuple[str, str], tuple[int, str]]:
+    """Map this run's actual imports and receipts with one paginated group scan."""
+    found: dict[tuple[str, str], tuple[int, str]] = {}
+    options: dict[str, str] = {}
+    while True:
+        page = queue.listTaskGroup(group, query=options)
+        for item in page.get("tasks", []):
+            task_id = item.get("status", {}).get("taskId")
+            task_definition = item.get("task", {})
+            provenance = task_definition.get("extra", {}).get("orion", {})
+            if not task_id:
+                continue
+            if (
+                task_definition.get("taskGroupId") != group
+                or str(provenance.get("runId")) != str(data["runId"])
+                or str(provenance.get("revision")) != str(data["revision"])
+                or str(provenance.get("repository")) != str(data["repository"])
+            ):
+                continue
+            try:
+                attempt = int(provenance["runAttempt"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if not 1 <= attempt <= int(current_attempt):
+                continue
+            kind = provenance.get("publicationKind")
+            key = provenance.get("artifactKey")
+            if kind is None and key is not None:
+                kind = "import"
+            elif kind is None and provenance.get("service"):
+                kind = "receipt"
+            if kind == "receipt":
+                key = provenance.get("service")
+            if kind not in {"import", "receipt"} or not isinstance(key, str):
+                continue
+            expected_task_key = f"receipt-{key}" if kind == "receipt" else key
+            if task_id != artifact_task_id(data["runId"], attempt, expected_task_key):
+                continue
+            candidate = (attempt, task_id)
+            previous = found.get((kind, key))
+            if previous is None or attempt > previous[0]:
+                found[(kind, key)] = candidate
+        token = page.get("continuationToken")
+        if not token:
+            return found
+        options = {"continuationToken": token}
 
 
 def group_tasks(group: str, run_id: str, attempt: str, queue: Any) -> list[dict]:
@@ -258,30 +330,43 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
     failed += sorted(
         name for name in required if results.get(name, {}).get("result") != "success"
     )
-    expected = [
-        artifact_task_id(data["runId"], data["runAttempt"], f"{service.name}-{arch}")
-        for service in services.values()
-        for arch in service.archs
-        if results.get(job_id("index", service.name, arch), {}).get("result")
-        == "success"
-    ]
-    expected += [
-        artifact_task_id(data["runId"], data["runAttempt"], f"receipt-{service.name}")
-        for service in services.values()
-        if results.get(job_id("receipt", service.name), {}).get("result") == "success"
-    ]
+    queue = Taskcluster.get_service("queue")
+    expected: list[str] = []
     try:
+        task_map = (
+            _group_publication_tasks(group, data, data["runAttempt"], queue)
+            if group
+            else {}
+        )
+        for service in services.values():
+            for arch in service.archs:
+                if (
+                    results.get(job_id("index", service.name, arch), {}).get("result")
+                    != "success"
+                ):
+                    continue
+                try:
+                    task_id = task_map[("import", f"{service.name}-{arch}")][1]
+                    expected.append(task_id)
+                except KeyError:
+                    failed.append(
+                        f"No Taskcluster import task exists for "
+                        f"{service.name}-{arch} in {group}"
+                    )
+            if (
+                results.get(job_id("receipt", service.name), {}).get("result")
+                == "success"
+            ):
+                try:
+                    receipt = task_map[("receipt", service.name)][1]
+                    expected.append(receipt)
+                except KeyError:
+                    failed.append(
+                        f"No Taskcluster receipt exists for {service.name} in {group}"
+                    )
         if not failed and group:
             require_workers()
-            dependencies = [
-                artifact_task_id(data["runId"], data["runAttempt"], f"receipt-{s.name}")
-                for s in services.values()
-                if not isinstance(s, ServiceTestOnly)
-                and any(
-                    job_id("build", s.name, arch) in plan["selected_jobs"]
-                    for arch in s.archs
-                )
-            ]
+            dependencies = expected.copy()
             marker = artifact_task_id(
                 data["runId"], data["runAttempt"], "publication-marker"
             )

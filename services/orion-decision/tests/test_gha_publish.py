@@ -200,6 +200,45 @@ def test_action_artifact_listing_paginates_without_repeating_a_page(
     assert result[-1]["id"] == 100
 
 
+def test_select_build_artifact_uses_latest_exact_live_attempt() -> None:
+    """Select the newest exact service artifact while excluding invalid attempts."""
+    artifacts = [
+        {"id": 10, "name": "orion-build-langfuzz-amd64-1"},
+        {"id": 11, "name": "orion-build-langfuzz-amd64-2", "expired": True},
+        {"id": 12, "name": "orion-build-langfuzz-amd64-3"},
+        {"id": 13, "name": "orion-build-langfuzz-amd64-03"},
+        {"id": 14, "name": "orion-build-langfuzz-amd64-4"},
+        {"id": 15, "name": "orion-build-langfuzz-arm64-2"},
+        {"id": 16, "name": "orion-build-langfuzzx-amd64-2"},
+    ]
+
+    selected = gha_publish.select_build_artifact(artifacts, "langfuzz", "amd64", 3)
+    assert selected is not None and selected["id"] == 12
+    arm = gha_publish.select_build_artifact(artifacts, "langfuzz", "arm64", 3)
+    assert arm is not None and arm["id"] == 15
+    fallback = gha_publish.select_build_artifact(
+        [
+            {"id": 20, "name": "orion-build-langfuzz-amd64-1"},
+            {"id": 21, "name": "orion-build-langfuzz-amd64-2", "expired": True},
+            {"id": 22, "name": "orion-build-langfuzz-amd64-02"},
+            {"id": 23, "name": "orion-build-langfuzz-amd64-4"},
+        ],
+        "langfuzz",
+        "amd64",
+        3,
+    )
+    assert fallback is not None and fallback["id"] == 20
+    assert (
+        gha_publish.select_build_artifact(
+            [{"id": 24, "name": "orion-build-langfuzz-amd64-1", "expired": True}],
+            "langfuzz",
+            "amd64",
+            3,
+        )
+        is None
+    )
+
+
 def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
     tmp_path, monkeypatch
 ) -> None:
@@ -209,7 +248,7 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
     for key, value in {
         "GITHUB_REPOSITORY": "MozillaSecurity/orion",
         "GITHUB_RUN_ID": "123456789",
-        "GITHUB_RUN_ATTEMPT": "2",
+        "GITHUB_RUN_ATTEMPT": "3",
         "GITHUB_RUN_NUMBER": "418",
         "GITHUB_EVENT_NAME": "push",
         "GITHUB_REF_NAME": "main",
@@ -230,10 +269,10 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
         ),
     )
     uploaded_names = [
-        "orion-build-docker-amd64-2",
+        "orion-build-docker-amd64-1",
         "orion-build-docker-arm64-2",
-        "orion-build-windows-amd64-2",
-        "orion-build-brew-amd64-2",
+        "orion-build-windows-amd64-3",
+        "orion-build-brew-amd64-3",
     ]
     uploaded = [
         {
@@ -264,6 +303,7 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
     assert entries["docker-amd64"]["source_filename"] == "docker-amd64.tar.zst"
     assert entries["docker-amd64"]["archive_path"] == "public/docker.tar.zst"
     assert entries["docker-amd64"]["artifact_id"] == "800"
+    assert entries["docker-amd64"]["artifact_name"] == "orion-build-docker-amd64-1"
     assert entries["docker-amd64"]["digest"] == "sha256:" + f"{1:064x}"
     assert entries["docker-arm64"]["source_filename"] == "docker-arm64.tar.zst"
     assert entries["windows-amd64"]["source_filename"] == "msys2.tar.bz2"
@@ -271,6 +311,13 @@ def test_generated_manifest_maps_uploaded_member_to_canonical_tc_artifact(
     assert entries["brew-amd64"]["source_filename"] == "homebrew.tar.bz2"
     assert entries["brew-amd64"]["archive_path"] == "public/homebrew.tar.bz2"
     assert "virtual-amd64" not in entries
+    tasks = gha_publish.build_import_tasks(
+        manifest, "d" * 22, datetime(2026, 10, 13, tzinfo=timezone.utc)
+    )
+    amd64 = tasks[gha_publish.artifact_task_id("123456789", "3", "docker-amd64")]
+    assert amd64["extra"]["orion"]["artifactId"] == "800"
+    assert amd64["extra"]["orion"]["artifactDigest"] == "sha256:" + f"{1:064x}"
+    assert amd64["extra"]["index"]["rank"] == 41803
 
 
 @pytest.mark.parametrize("event", ["schedule", "workflow_dispatch"])

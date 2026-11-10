@@ -19,9 +19,15 @@ check, and manual runs. Manual runs accept comma-separated service names in
 `force_services`. Pull requests build and test the head commit without publication
 credentials. Successful `main` runs push architecture images and a combined Docker
 `latest` manifest, then import per-architecture Docker archives and native archives
-into FXCI's Taskcluster artifact and index routes. An older run cannot be rerun
-for publication after a newer eligible `main` run; start a new manual run and select
-or force the services that still need publication.
+into FXCI's Taskcluster artifact and index routes. A failed-job-only rerun can reuse
+the newest live build artifact for each exact service and architecture from an earlier
+attempt of the same run. New Taskcluster tasks keep the current attempt's publication
+rank and provenance. Import tasks retain the source artifact ID and digest; receipts and
+monitor control reference the actual producer task IDs. Expired or missing artifacts
+still require rerunning the relevant build job. Re-running all jobs is required when
+the current attempt has no active Taskcluster worker pool. An older run cannot publish
+after a newer eligible `main` run; start a new manual run and select or force the
+services that still need publication.
 
 Windows 2025 runners use their preinstalled MSYS2 `bsdtar` only to extract the
 downloaded bootstrap archive; native builds then use that downloaded MSYS2 runtime.
@@ -79,10 +85,8 @@ both unset to disable the tunnel; normal task log artifacts are still uploaded.
 
 The workflow's `GITHUB_TOKEN` has Actions artifact read access and contents read
 access. The worker writes that token to a mode-0600 file for import tasks and strips
-the raw credential from generic-worker's environment and logs. Import task IDs bind
-the repository, revision, workflow run, attempt, and exact artifact. A failed-job-only
-workflow rerun without a full set of attempt artifacts stops with instructions to
-rerun all jobs.
+the raw credential from generic-worker's environment and logs. Import task metadata
+binds the repository, revision, workflow run, current attempt, and exact source artifact.
 
 Disable the old external Taskcluster Orion expiry cron hook when enabling this
 workflow; otherwise both schedulers may rebuild expiring environments. The legacy
