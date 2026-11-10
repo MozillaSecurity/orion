@@ -54,6 +54,46 @@ class FakeQueue:
     def createTask(self, task_id: str, task: dict[str, Any]) -> None:
         self.tasks[task_id] = task
 
+    def listTaskGroup(self, group: str, query: dict | None = None) -> dict[str, Any]:
+        return {
+            "tasks": [
+                {
+                    "task": task,
+                    "status": {"taskId": task_id, "state": "pending"},
+                }
+                for task_id, task in self.tasks.items()
+                if task.get("taskGroupId") == group
+            ]
+        }
+
+
+def _seed_imports(
+    queue: FakeQueue,
+    group: str,
+    service: str,
+    archs: tuple[str, ...],
+    revision: str,
+    *,
+    attempt: str = "2",
+) -> None:
+    """Represent import tasks already submitted by successful index jobs."""
+    for arch in archs:
+        key = f"{service}-{arch}"
+        task_id = gha_publish.artifact_task_id("123456789", attempt, key)
+        queue.tasks[task_id] = {
+            "taskGroupId": group,
+            "extra": {
+                "orion": {
+                    "runId": "123456789",
+                    "runAttempt": attempt,
+                    "revision": revision,
+                    "repository": "MozillaSecurity/orion",
+                    "artifactKey": key,
+                    "publicationKind": "import",
+                }
+            },
+        }
+
 
 def _environment(monkeypatch: pytest.MonkeyPatch) -> None:
     values = {
@@ -183,6 +223,7 @@ def test_docker_receipt_requires_full_success_and_uses_only_own_imports(
     )
     queue = _install_queue(monkeypatch)
     group = gha_publish.artifact_task_id("123456789", "1", "decision")
+    _seed_imports(queue, group, "docker", ("amd64", "arm64"), revision)
 
     receipt = gha_pool.schedule_receipt(plan, "docker", group)
 
@@ -243,7 +284,6 @@ def test_docker_receipt_rejects_failed_or_incomplete_latest_metadata(
         lambda *_args, **_kwargs: {"docker": publication},
     )
     queue = _install_queue(monkeypatch)
-
     with pytest.raises(ValueError, match="Docker publication incomplete"):
         gha_pool.schedule_receipt(
             plan,
@@ -269,6 +309,13 @@ def test_native_receipt_needs_no_github_docker_artifact(
         lambda *_args: pytest.fail("native receipts do not query Docker metadata"),
     )
     queue = _install_queue(monkeypatch)
+    _seed_imports(
+        queue,
+        gha_publish.artifact_task_id("123456789", "1", "decision"),
+        "native",
+        ("amd64",),
+        revision,
+    )
 
     receipt = gha_pool.schedule_receipt(
         plan, "native", gha_publish.artifact_task_id("123456789", "1", "decision")
@@ -331,13 +378,28 @@ def test_successful_close_marker_depends_only_on_submitted_service_receipts(
     }
     monkeypatch.setenv("ORION_JOB_RESULTS", json.dumps(results))
     queue = _install_queue(monkeypatch)
+    group = gha_publish.artifact_task_id("123456789", "1", "decision")
+    receipt_id = gha_publish.artifact_task_id("123456789", "2", "receipt-docker")
+    queue.tasks[receipt_id] = {
+        "taskGroupId": group,
+        "extra": {
+            "orion": {
+                "runId": "123456789",
+                "runAttempt": "2",
+                "revision": revision,
+                "repository": "MozillaSecurity/orion",
+                "service": "docker",
+                "publicationKind": "receipt",
+            }
+        },
+    }
     output = tmp_path / "control" / "close.json"
 
-    gha_pool.close_submissions(plan, "canonical-group", output)
+    gha_pool.close_submissions(plan, group, output)
 
     marker_id = gha_publish.artifact_task_id("123456789", "2", "publication-marker")
     assert marker_id in queue.tasks
-    assert queue.tasks[marker_id]["taskGroupId"] == "canonical-group"
+    assert queue.tasks[marker_id]["taskGroupId"] == group
     assert queue.tasks[marker_id]["dependencies"] == [
         gha_publish.artifact_task_id("123456789", "2", "receipt-docker")
     ]
