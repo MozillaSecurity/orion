@@ -3,6 +3,7 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+import copy
 import re
 from pathlib import Path
 
@@ -86,7 +87,7 @@ def _pool(cloud, cpu, machine, worker, imageset) -> FuzzingPoolConfig:
 @pytest.mark.usefixtures("appconfig")
 @pytest.mark.parametrize("worker_type", ["generic", "d2g"])
 def test_fxci_gcp_pool(monkeypatch, mock_machines, worker_type):
-    """FXCI GCP pools use FXCI images, supported regions, and websocktunnel."""
+    """FXCI GCP pools combine FXCI defaults with fuzzing settings and metadata."""
     # A different endpoint must not switch provider IDs or configuration layouts.
     monkeypatch.setenv(
         "TASKCLUSTER_ROOT_URL", "https://community-tc.services.mozilla.com"
@@ -115,10 +116,68 @@ def test_fxci_gcp_pool(monkeypatch, mock_machines, worker_type):
         assert gw["numberOfTasksToRun"] == 0
         assert gw["wstAudience"] == "firefoxci-gcp"
         assert gw["wstServerURL"] == ("https://gcp-websocktunnel.services.mozilla.com/")
-        if worker_type == "d2g":
-            assert gw["d2gConfig"]["enableD2G"] is True
-        else:
-            assert "d2gConfig" not in gw
+        # The linux-tceng profile enables D2G by default for both worker modes.
+        assert gw["d2gConfig"]["enableD2G"] is True
+        assert gw["livelogExecutable"] == "/usr/local/bin/livelog"
+        assert gw["ed25519SigningKeyLocation"] == "/etc/generic-worker/ed25519_key"
+        assert gw["enableInteractive"] is True
+        assert gw["shutdownMachineOnIdle"] is True
+        assert gw["shutdownMachineOnInternalError"] is True
+        assert gw["taskclusterProxyExecutable"] == ("/usr/local/bin/taskcluster-proxy")
+        assert gw["workerTypeMetadata"] == {
+            "machine-setup": {"script": "https://example.com/bootstrap.sh"}
+        }
+
+
+def test_fxci_gcp_worker_configs_are_isolated():
+    """Each GCP pool gets isolated worker settings, defaults, and image metadata."""
+    provider = GCP(FXCI_DIR)
+    defaults_before = copy.deepcopy(provider._worker_defaults)
+    images_before = copy.deepcopy(provider.images)
+    args = (
+        "fuzzing-gw-ubuntu-24-04",
+        [("gcp1", frozenset())],
+        120,
+        "linux",
+        True,
+        False,
+        False,
+    )
+    first_pool = provider.build_launch_configs(*args, 1, "generic")
+    second_pool = provider.build_launch_configs(*args, 5, "generic")
+    first = first_pool[0]["workerConfig"]["genericWorker"]["config"]
+    second = second_pool[0]["workerConfig"]["genericWorker"]["config"]
+    assert first["numberOfTasksToRun"] == 1
+    assert second["numberOfTasksToRun"] == 5
+
+    first["workerTypeMetadata"]["machine-setup"]["script"] = "changed"
+    first["livelogExecutable"] = "changed"
+    first["d2gConfig"]["enableD2G"] = False
+    assert second["workerTypeMetadata"]["machine-setup"]["script"].endswith(
+        "bootstrap.sh"
+    )
+    assert second["livelogExecutable"] == "/usr/local/bin/livelog"
+    assert second["d2gConfig"]["enableD2G"] is True
+    assert provider._worker_defaults == defaults_before
+    assert provider.images == images_before
+
+
+@pytest.mark.usefixtures("appconfig")
+def test_fxci_gcp_docker_config_does_not_include_generic_worker_defaults(mock_machines):
+    """Docker GCP pools clear generic-worker defaults from the launch config."""
+    conf = _pool("gcp", "x64", "gcp1", "docker", "fuzzing-gw-ubuntu-24-04")
+    pool, _hook, _role = build_resources(
+        [conf], {"gcp": GCP(FXCI_DIR), "static": Static()}, mock_machines, env=None
+    )
+    launch_configs = pool.to_json()["config"]["launchConfigs"]
+    for launch_config in launch_configs:
+        worker_config = launch_config["workerConfig"]
+        assert "genericWorker" not in worker_config
+        assert worker_config["dockerConfig"] == {
+            "allowPrivileged": True,
+            "allowDisableSeccomp": True,
+        }
+        assert worker_config["shutdown"]["afterIdleSeconds"] == parse_time("3m")
 
 
 @pytest.mark.usefixtures("appconfig")

@@ -1,6 +1,9 @@
 ---
 # Fake fxci worker images (keyed by image name -> provider -> image path)
 fuzzing-gw-ubuntu-24-04:
+  worker-type-metadata:
+    machine-setup:
+      script: https://example.com/bootstrap.sh
   fxci-level1-gcp: projects/fake/global/images/fuzzing-gw-ubuntu-24-04
 docker-worker:
   fxci-level1-gcp: projects/fake/global/images/docker-worker

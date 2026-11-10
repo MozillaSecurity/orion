@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
@@ -40,7 +41,7 @@ class Provider(ABC):
         wst_server_url: str,
     ) -> dict[str, Any]:
         worker_impl = "docker-worker" if worker_type == "docker" else "generic-worker"
-        out: dict[str, Any] = {}
+        out = copy.deepcopy(self._base_worker_config(worker))
         if worker_impl == "docker-worker":
             out.setdefault("dockerConfig", {})
             out.update(
@@ -89,6 +90,10 @@ class Provider(ABC):
             out.pop("shutdown", None)
 
         return out
+
+    def _base_worker_config(self, imageset: str) -> dict[str, Any]:
+        """Return provider-specific worker defaults for one image set."""
+        return {}
 
 
 class _UnsupportedCloud(Provider):
@@ -283,6 +288,10 @@ class GCP(Provider):
 
     def __init__(self, base_dir: Path) -> None:
         self.images = yaml.safe_load((base_dir / "worker-images.yml").read_text())
+        pools = yaml.safe_load((base_dir / "worker-pools.yml").read_text())
+        self._worker_defaults = pools["worker-defaults"]["worker-config"][
+            "by-implementation"
+        ]["generic-worker/linux-tceng"]
         env = yaml.safe_load((base_dir / "environments.yml").read_text())
         self.config = env["firefoxci"]["google_config"]
         regions = self.config["zones"]["by-region"]
@@ -290,6 +299,17 @@ class GCP(Provider):
             region: regions[region] for region in GCP_REGIONS if region in regions
         }
         LOG.info("Loaded FXCI GCP configuration")
+
+    def _base_worker_config(self, imageset: str) -> dict[str, Any]:
+        """Copy FXCI generic-worker defaults and image metadata for this pool."""
+        config = copy.deepcopy(self._worker_defaults)
+        metadata = self.images[imageset].get("worker-type-metadata")
+        if metadata:
+            generic_worker = config.setdefault("genericWorker", {}).setdefault(
+                "config", {}
+            )
+            generic_worker["workerTypeMetadata"] = copy.deepcopy(metadata)
+        return config
 
     def _gcp_source_image(self, imageset: str) -> str:
         assert imageset in self.images, f"Missing image {imageset}"
@@ -338,7 +358,7 @@ class GCP(Provider):
                     }
                 ],
                 "networkInterfaces": [{"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}],
-                "workerConfig": worker_config,
+                "workerConfig": copy.deepcopy(worker_config),
             }
             for instance, zone_blacklist in machines
             for region, zones in self.regions.items()
