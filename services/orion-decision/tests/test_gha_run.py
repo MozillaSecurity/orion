@@ -16,10 +16,23 @@ from typing import Any
 import pytest
 from yaml import safe_load
 
-from orion_decision import gha_run
+from orion_decision import gha_publish, gha_run
 from orion_decision.gha_plan import job_id
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_resolve_artifact_name = gha_run._artifact_name
+
+
+@pytest.fixture(autouse=True)
+def default_artifact_name(monkeypatch):
+    """Keep unrelated operation tests independent of the Actions API boundary."""
+    monkeypatch.setattr(
+        gha_run,
+        "_artifact_name",
+        lambda name, arch: (
+            f"orion-build-{name}-{arch}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
+        ),
+    )
 
 
 def git(repo: Path, *args: str) -> str:
@@ -77,8 +90,10 @@ def patch_archive_io(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gha_run, "_download_indexed_image", download_indexed)
 
 
-def test_selected_dependency_uses_current_run_archive(tmp_path, monkeypatch) -> None:
-    """Use this workflow's artifact for a dependency selected in the current run."""
+def test_selected_dependency_uses_latest_earlier_attempt_archive(
+    tmp_path, monkeypatch
+) -> None:
+    """Reuse the latest live earlier attempt artifact for a selected dependency."""
     repo, revision = docker_repo(tmp_path / "repo")
     patch_archive_io(monkeypatch)
     current_run: list[tuple[str, Path]] = []
@@ -90,6 +105,24 @@ def test_selected_dependency_uses_current_run_archive(tmp_path, monkeypatch) -> 
         (destination / "base-amd64.tar.zst").touch()
 
     monkeypatch.setattr(gha_run, "_download_artifact", download_artifact)
+    for key, value in {
+        "GITHUB_RUN_ID": "77",
+        "GITHUB_REPOSITORY": "MozillaSecurity/orion",
+        "GITHUB_TOKEN": "token",
+        "GITHUB_RUN_ATTEMPT": "3",
+    }.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(
+        gha_publish,
+        "_actions_artifacts",
+        lambda *_args: [
+            {"name": "orion-build-base-amd64-1", "id": 1},
+            {"name": "orion-build-base-amd64-2", "id": 2, "expired": True},
+            {"name": "orion-build-base-amd64-4", "id": 4},
+            {"name": "orion-build-base-arm64-1", "id": 5},
+        ],
+    )
+    monkeypatch.setattr(gha_run, "_artifact_name", _resolve_artifact_name)
     monkeypatch.setattr(
         gha_run,
         "_download_indexed_image",
@@ -624,7 +657,7 @@ def test_native_preparation_runs_checked_out_setup_without_rewriting_it(
 def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
     tmp_path, monkeypatch
 ):
-    """Publish images under unique tags and build the manifest from their digests."""
+    """Publish mixed-attempt build archives under current-attempt staging tags."""
     repo, revision = make_repo(
         tmp_path / "repo",
         {
@@ -634,10 +667,29 @@ def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
     )
     monkeypatch.setenv("GITHUB_RUN_ID", "12345")
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "MozillaSecurity/orion")
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setattr(
+        gha_publish,
+        "_actions_artifacts",
+        lambda *_args: [
+            {"id": 1, "name": "orion-build-multi-amd64-1"},
+            {
+                "id": 2,
+                "name": "orion-build-multi-amd64-2",
+                "expired": True,
+            },
+            {"id": 3, "name": "orion-build-multi-arm64-2"},
+            {"id": 4, "name": "orion-build-multi-arm64-3"},
+        ],
+    )
+    monkeypatch.setattr(gha_run, "_artifact_name", _resolve_artifact_name)
     commands: list[list[str]] = []
     digests = iter(("a" * 64, "b" * 64))
+    downloaded: list[str] = []
 
     def download_artifact(name: str, destination: Path) -> None:
+        downloaded.append(name)
         destination.mkdir(parents=True)
         (destination / f"multi-{name.rsplit('-', 2)[-2]}.tar.zst").touch()
 
@@ -670,6 +722,10 @@ def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
     )
 
     pushed = [command[-1] for command in commands if command[:2] == ["docker", "push"]]
+    assert downloaded == [
+        "orion-build-multi-amd64-1",
+        "orion-build-multi-arm64-2",
+    ]
     assert pushed == [
         f"mozillasecurity/multi:gha-{revision}-12345-2-amd64",
         f"mozillasecurity/multi:gha-{revision}-12345-2-arm64",
