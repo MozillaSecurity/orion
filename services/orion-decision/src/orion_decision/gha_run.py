@@ -41,9 +41,24 @@ def _archive_name(name: str, arch: str) -> str:
 
 
 def _artifact_name(name: str, arch: str) -> str:
-    """Match the reusable workflow's exact upload-artifact name."""
-    attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
-    return f"orion-build-{name}-{arch}-{attempt}"
+    """Resolve the newest live artifact for this service and architecture."""
+    from .gha_publish import _actions_artifacts, select_build_artifact
+
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    repository = os.environ.get("GITHUB_REPOSITORY")
+    token = os.environ.get("GITHUB_TOKEN")
+    if not run_id or not repository or not token:
+        raise RuntimeError("GitHub run identity and token are required for artifacts")
+    artifacts = _actions_artifacts(token, repository, run_id)
+    selected = select_build_artifact(
+        artifacts, name, arch, os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+    )
+    if selected is None:
+        raise FileNotFoundError(
+            f"No live build artifact for {name}/{arch} exists in this run "
+            "at or before the current attempt"
+        )
+    return str(selected["name"])
 
 
 def _verify(repo: Path, revision: str, plan: dict[str, Any], selected_id: str) -> None:
