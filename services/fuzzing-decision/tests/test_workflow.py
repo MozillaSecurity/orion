@@ -38,12 +38,12 @@ def test_patterns(tmp_path):
     patterns = workflow.build_resources_patterns()
     assert patterns == [
         "Hook=project-fuzzing/.*",
-        "WorkerPool=proj-fuzzing/(?!(ci|pool-A)$)",
-        "Role=hook-id:project-fuzzing/(?!(B)$)",
+        "WorkerPool=proj-fuzzing/(?!(ci|pool-A)$).*",
+        "Role=hook-id:project-fuzzing/(?!(B)$).*",
     ]
 
     def _match(test):
-        return any([re.match(pattern, test) for pattern in patterns])
+        return any([re.fullmatch(pattern, test) for pattern in patterns])
 
     # Check all fuzzing hooks are managed
     assert not _match("Hook=project-another/something")
