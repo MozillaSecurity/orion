@@ -3,12 +3,13 @@
 # v. 2.0. If a copy of the MPL was not distributed with this file, You can
 # obtain one at http://mozilla.org/MPL/2.0/.
 
+import asyncio
 import copy
-import re
 from pathlib import Path
 
 import dateutil.parser
 import pytest
+from tcadmin.resources import Resources
 
 from fuzzing_decision.common.pool import FuzzingPoolConfig
 from fuzzing_decision.common.util import parse_time
@@ -457,27 +458,17 @@ def test_fxci_generate_manages_exact_ids(tmp_path):
     workflow.fxci_config_dir = FXCI_DIR
     workflow.fuzzing_config_dir = tmp_path
 
-    managed = []
-    updated = []
-
-    class FakeResources:
-        def manage(self, pattern):
-            managed.append(pattern)
-
-        def update(self, resources):
-            updated.extend(resources)
-
-    workflow.generate(FakeResources(), {"fuzzing_config": {"path": "x"}})
+    resources = Resources()
+    workflow.generate(resources, {"fuzzing_config": {"path": "x"}})
 
     intended_ids = {
         "WorkerPool=proj-fuzzing/linux-pool1",
         "Hook=project-fuzzing/linux-pool1",
         "Role=hook-id:project-fuzzing/linux-pool1",
     }
-    assert {resource.id for resource in updated} == intended_ids
-    # Check management behavior instead of depending on one regex spelling.
-    # Anchors matter: near matches and fxci-config-managed resources must remain
-    # outside the managed set.
+    assert {resource.id for resource in resources} == intended_ids
+    # Exercise tc-admin's MatchList semantics: matches are rooted at the start,
+    # while the pattern's $ must reject IDs with extra suffixes.
     canary_ids = {
         "unmanaged:WorkerPool=proj-fuzzing/linux-pool1",
         "WorkerPool=proj-fuzzing/linux-pool1-extra",
@@ -489,15 +480,110 @@ def test_fxci_generate_manages_exact_ids(tmp_path):
         "Role=hook-id:project-fuzzing/linux-pool1-extra",
         "Role=hook-id:project-fuzzing/other",
     }
-    assert len(managed) == len(intended_ids)
-    matched_ids = set()
-    for pattern in managed:
-        matches = {
-            resource_id
-            for resource_id in intended_ids
-            if re.search(pattern, resource_id)
+    assert all(resources.is_managed(resource_id) for resource_id in intended_ids)
+    assert not any(resources.is_managed(resource_id) for resource_id in canary_ids)
+
+
+@pytest.mark.usefixtures("appconfig")
+def test_static_replacement_fetches_and_deletes_only_its_old_worker_pool(
+    tmp_path, monkeypatch
+):
+    """A static replacement retires its old pool while preserving fxci infra pools."""
+    (tmp_path / "machines.yml").write_text(MACHINES_YAML)
+    (tmp_path / "pool1.yml").write_text(
+        POOL_YAML.replace("cloud: gcp", "cloud: static")
+    )
+    (tmp_path / "workers.yml").write_text(
+        """\
+- cloud: static
+  imageset: static-workers
+  machine_types: [gcp1]
+  max_capacity: 1
+  name: static-worker
+  owner: fuzzing@example.org
+"""
+    )
+
+    workflow = Workflow()
+    workflow.fxci_config_dir = FXCI_DIR
+    workflow.fuzzing_config_dir = tmp_path
+    desired = Resources()
+    workflow.generate(desired, {"fuzzing_config": {"path": "x"}})
+
+    retired_id = "WorkerPool=proj-fuzzing/linux-pool1"
+    retired_extra_id = "WorkerPool=proj-fuzzing/static-worker"
+    infra_canary_id = "WorkerPool=proj-fuzzing/ci"
+    assert desired.is_managed(retired_id)
+    assert desired.is_managed(retired_extra_id)
+    assert not any(
+        resource.id in {retired_id, retired_extra_id} for resource in desired
+    )
+    assert not desired.is_managed(infra_canary_id)
+    assert not desired.is_managed(f"{retired_id}-extra")
+    assert not desired.is_managed(f"{retired_extra_id}-extra")
+
+    api_pools = [
+        {
+            "workerPoolId": "proj-fuzzing/static-worker",
+            "description": "old static worker pool",
+            "owner": "fuzzing@example.org",
+            "config": {},
+            "emailOnError": False,
+            "providerId": "fxci-level1-gcp",
+        },
+        {
+            "workerPoolId": "proj-fuzzing/linux-pool1",
+            "description": "old managed pool",
+            "owner": "fuzzing@example.org",
+            "config": {},
+            "emailOnError": False,
+            "providerId": "fxci-level1-gcp",
+        },
+        {
+            "workerPoolId": "proj-fuzzing/ci",
+            "description": "fxci infrastructure pool",
+            "owner": "fxci@example.org",
+            "config": {},
+            "emailOnError": False,
+            "providerId": "fxci-level1-gcp",
+        },
+    ]
+    deleted = []
+
+    class MockWorkerManager:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def listWorkerPools(self, query):
+            return {"workerPools": api_pools}
+
+        async def deleteWorkerPool(self, worker_pool_id):
+            deleted.append(worker_pool_id)
+
+    async def client_options():
+        return {}
+
+    from tcadmin import current
+    from tcadmin.current import worker_pools as current_worker_pools
+    from tcadmin.update import Updater
+
+    monkeypatch.setattr(
+        current, "fetch_fns", {"WorkerPool": current_worker_pools.fetch_worker_pools}
+    )
+    monkeypatch.setattr(current_worker_pools, "WorkerManager", MockWorkerManager)
+    monkeypatch.setattr(current_worker_pools, "tcClientOptions", client_options)
+    monkeypatch.setattr(current_worker_pools, "aiohttp_session", lambda: None)
+    monkeypatch.setattr("tcadmin.update.WorkerManager", MockWorkerManager)
+
+    updater = Updater({"rootUrl": "https://taskcluster.invalid"}, None)
+
+    async def fetch_and_apply():
+        current_resources = await current.resources(desired.managed)
+        assert {resource.id for resource in current_resources} == {
+            retired_id,
+            retired_extra_id,
         }
-        assert len(matches) == 1
-        assert not any(re.search(pattern, resource_id) for resource_id in canary_ids)
-        matched_ids.update(matches)
-    assert matched_ids == intended_ids
+        await updater.update(Resources([], desired.managed), current_resources)
+
+    asyncio.run(fetch_and_apply())
+    assert set(deleted) == {"proj-fuzzing/linux-pool1", "proj-fuzzing/static-worker"}
