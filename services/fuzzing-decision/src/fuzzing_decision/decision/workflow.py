@@ -19,6 +19,7 @@ from ..common import taskcluster
 from ..common.pool import FuzzingPoolConfig, MachineTypes
 from ..common.util import onerror
 from ..common.workflow import Workflow as CommonWorkflow
+from . import WORKER_POOL_PREFIX
 from .pool import WorkerPool, build_resources, build_tasks, cancel_tasks
 from .providers import AWS, GCP, Azure, Provider, Static
 
@@ -101,22 +102,41 @@ class Workflow(CommonWorkflow):
             env["FUZZING_GIT_REVISION"] = config["fuzzing_config"]["revision"]
 
         generated: list[Any] = []
+        retired_worker_pool_ids: set[str] = set()
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_configs = list(FuzzingPoolConfig.from_file(config_file))
+            if pool_configs[0].cloud == "static":
+                # build_resources() represents an apply_to group with one pool,
+                # keyed by the first entry's hook ID.
+                retired_worker_pool_ids.add(
+                    f"{WORKER_POOL_PREFIX}/{pool_configs[0].hook_id}"
+                )
             generated.extend(build_resources(pool_configs, clouds, machines, env))
 
         extra_pools_path = self.fuzzing_config_dir / "workers.yml"
         if extra_pools_path.is_file():
-            for pool in WorkerPool.from_file_iter(extra_pools_path):
+            worker_pools = list(WorkerPool.from_file_iter(extra_pools_path))
+            retired_worker_pool_ids.update(
+                f"{WORKER_POOL_PREFIX}/{pool.name}"
+                for pool in worker_pools
+                if pool.cloud == "static"
+            )
+            for pool in worker_pools:
                 generated.extend(pool.build_resources(clouds, machines))
 
         # fxci-config manages its own infrastructure resources. Manage only the
-        # exact IDs generated here so unrelated resources cannot be removed. Removed
-        # pools are not automatically cleaned up.
+        # exact IDs generated here, plus prior worker-pool IDs whose configured
+        # static replacements no longer need Taskcluster-managed capacity. tc-admin
+        # dispatches current-resource fetches from the leading kind=, and MatchList
+        # already roots regex matching at the start of each ID.
         for resource in generated:
-            resources.manage(f"^{re.escape(resource.id)}$")
+            resources.manage(f"{re.escape(resource.id)}$")
+
+        for worker_pool_id in retired_worker_pool_ids:
+            resources.manage(f"{re.escape(f'WorkerPool={worker_pool_id}')}$")
 
         resources.update(generated)
+        # Pools removed from configuration are still cleaned up manually.
 
     def build_tasks(
         self,
