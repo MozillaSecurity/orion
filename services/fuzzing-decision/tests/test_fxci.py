@@ -5,10 +5,12 @@
 
 import asyncio
 import copy
+import shutil
 from pathlib import Path
 
 import dateutil.parser
 import pytest
+import yaml
 from tcadmin.resources import Resources
 
 from fuzzing_decision.common.pool import FuzzingPoolConfig
@@ -162,6 +164,127 @@ def test_fxci_gcp_worker_configs_are_isolated():
     assert second["d2gConfig"]["enableD2G"] is True
     assert provider._worker_defaults == defaults_before
     assert provider.images == images_before
+
+
+def test_fxci_gcp_invalid_instances_filter_zones_with_private_blacklist():
+    """FXCI zone restrictions and machine-specific blacklists both filter zones."""
+    provider = GCP(FXCI_DIR)
+    provider.regions = {
+        "us-east1": ["us-east1-b", "us-east1-c", "us-east1-d"],
+        "us-west1": ["us-west1-a", "us-west1-c"],
+    }
+    assert provider.invalid_instances == [
+        {"zones": ["us-east1-b", "us-east1-d", "us-west1-c"], "families": ["n1"]}
+    ]
+
+    launch_configs = provider.build_launch_configs(
+        "fuzzing-gw-ubuntu-24-04",
+        [("n1-standard-4", frozenset({"us-east1-c"}))],
+        120,
+        "linux",
+        True,
+        False,
+        False,
+        1,
+        "generic",
+    )
+
+    # FXCI removes b, d, and west1-c for n1; the private blacklist then removes
+    # the otherwise valid east1-c, leaving a valid neighboring zone.
+    assert [(config["region"], config["zone"]) for config in launch_configs] == [
+        ("us-west1", "us-west1-a")
+    ]
+
+
+def test_fxci_gcp_missing_invalid_instances_defaults_to_empty(tmp_path):
+    """FXCI configs without invalid-instance rules retain legacy machine names."""
+    config_dir = tmp_path / "fxci"
+    shutil.copytree(FXCI_DIR, config_dir)
+    environments_path = config_dir / "environments.yml"
+    environments = yaml.safe_load(environments_path.read_text())
+    del environments["firefoxci"]["google_config"]["invalid-instances"]
+    environments_path.write_text(yaml.safe_dump(environments, sort_keys=False))
+
+    provider = GCP(config_dir)
+    launch_configs = provider.build_launch_configs(
+        "fuzzing-gw-ubuntu-24-04",
+        [("gcp1", frozenset()), ("2-cpus", frozenset())],
+        120,
+        "linux",
+        True,
+        False,
+        False,
+        1,
+        "generic",
+    )
+
+    assert provider.invalid_instances == []
+    assert len(launch_configs) == 8
+
+
+def test_fxci_gcp_invalid_instances_match_profile_and_full_suffix():
+    """Profile and suffix constraints stay specific while empty lists wildcard."""
+    provider = GCP(FXCI_DIR)
+    provider.regions = {
+        "us-central1": ["us-central1-a"],
+        "us-west1": ["us-west1-a", "us-west1-b", "us-west1-c"],
+    }
+    provider.invalid_instances = [
+        {
+            "zones": ["us-central1-a"],
+            "families": ["c4d"],
+            "profiles": ["highcpu"],
+            "suffixes": ["lssd-metal"],
+        },
+        {
+            "zones": ["us-west1-a"],
+            "families": ["c3d"],
+            "profiles": [],
+            "suffixes": [],
+        },
+        {
+            "zones": ["us-west1-b"],
+            "families": ["c4d"],
+            "suffixes": ["lssd"],
+        },
+    ]
+
+    machines = [
+        ("c4d-highcpu-8-lssd-metal", frozenset()),
+        ("c4d-standard-8-lssd-metal", frozenset()),
+        ("c4d-highcpu-8-lssd", frozenset()),
+        ("c3d-standard-8-lssd", frozenset()),
+    ]
+    launch_configs = provider.build_launch_configs(
+        "fuzzing-gw-ubuntu-24-04",
+        machines,
+        120,
+        "linux",
+        True,
+        False,
+        False,
+        1,
+        "generic",
+    )
+
+    assert sorted(
+        (config["zone"], config["machineType"].rsplit("/", 1)[-1])
+        for config in launch_configs
+    ) == [
+        ("us-central1-a", "c3d-standard-8-lssd"),
+        ("us-central1-a", "c4d-highcpu-8-lssd"),
+        ("us-central1-a", "c4d-standard-8-lssd-metal"),
+        ("us-west1-a", "c4d-highcpu-8-lssd"),
+        ("us-west1-a", "c4d-highcpu-8-lssd-metal"),
+        ("us-west1-a", "c4d-standard-8-lssd-metal"),
+        ("us-west1-b", "c3d-standard-8-lssd"),
+        ("us-west1-b", "c4d-highcpu-8-lssd-metal"),
+        ("us-west1-b", "c4d-standard-8-lssd-metal"),
+        ("us-west1-c", "c3d-standard-8-lssd"),
+        ("us-west1-c", "c4d-highcpu-8-lssd"),
+        ("us-west1-c", "c4d-highcpu-8-lssd-metal"),
+        ("us-west1-c", "c4d-standard-8-lssd-metal"),
+    ]
 
 
 @pytest.mark.usefixtures("appconfig")

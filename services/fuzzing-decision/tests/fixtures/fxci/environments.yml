@@ -25,3 +25,6 @@ firefoxci:
         us-west1: [us-west1-a, us-west1-b]
         # Configured GCP regions are all available to fuzzing pools.
         europe-west4: [europe-west4-a]
+    invalid-instances:
+      - zones: [us-east1-b, us-east1-d, us-west1-c]
+        families: [n1]
