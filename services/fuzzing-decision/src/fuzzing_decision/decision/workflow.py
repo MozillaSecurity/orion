@@ -134,7 +134,7 @@ class Workflow(CommonWorkflow):
                     key, ", ".join(existing)
                 )
             )
-            return "(?!({})$)".format("|".join(existing))
+            return "(?!({})$).*".format("|".join(existing))
 
         hook_suffix = _suffix(community["fuzzing"], "hooks")
         pool_suffix = _suffix(community["fuzzing"], "workerPools")
