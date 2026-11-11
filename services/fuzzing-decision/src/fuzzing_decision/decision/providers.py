@@ -16,6 +16,37 @@ from . import PROVIDER_IDS
 LOG = logging.getLogger(__name__)
 
 
+def _gcp_instance_is_invalid(
+    invalid_instances: list[dict[str, Any]], zone: str, machine_type: str
+) -> bool:
+    """Match FXCI GCP restrictions by zone, family, profile, and suffix.
+
+    Zone and family always constrain a rule. Missing or empty profile/suffix
+    lists are wildcards, matching FXCI's `invalid-instances` configuration.
+    Machine names use `<family>-<profile>[-<cpus>[-<suffix>]]`.
+    """
+    family = machine_type.split("-", 1)[0]
+    applicable = [
+        entry
+        for entry in invalid_instances
+        if zone in entry["zones"] and family in entry["families"]
+    ]
+    # Machine names outside a rule's zone/family do not need to be parsed.
+    if not applicable:
+        return False
+
+    parts = machine_type.split("-")
+    if len(parts) < 2:
+        return False
+    profile = parts[1]
+    suffix = "-".join(parts[3:]) if len(parts) > 3 else None
+    return any(
+        (not entry.get("profiles") or profile in entry["profiles"])
+        and (not entry.get("suffixes") or suffix in entry["suffixes"])
+        for entry in applicable
+    )
+
+
 class Provider(ABC):
     @abstractmethod
     def build_launch_configs(
@@ -382,6 +413,7 @@ class GCP(Provider):
         env = yaml.safe_load((base_dir / "environments.yml").read_text())
         self.config = env["firefoxci"]["google_config"]
         self.regions = self.config["zones"]["by-region"]
+        self.invalid_instances = self.config.get("invalid-instances", [])
         LOG.info("Loaded FXCI GCP configuration")
 
     def _base_worker_config(self, imageset: str) -> dict[str, Any]:
@@ -448,6 +480,7 @@ class GCP(Provider):
             for region, zones in self.regions.items()
             for zone in zones
             if zone not in zone_blacklist
+            and not _gcp_instance_is_invalid(self.invalid_instances, zone, instance)
         ]
         if not demand:
             for config in result:
