@@ -399,10 +399,17 @@ function install-apt-key() {
 
   mkdir -p /etc/apt/keyrings ~/.gnupg
   TMPD="$(mktemp -d -p. aptkey.XXXXXXXXXX)"
-  retry-curl "$keyurl" -o "$TMPD/aptkey.key"
-  gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --import "$TMPD/aptkey.key"
-  gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --export --output "$output"
+  # callers run this in $(...), where set -e doesn't apply, so check each step
+  local status=0
+  retry-curl "$keyurl" -o "$TMPD/aptkey.key" &&
+    gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --import "$TMPD/aptkey.key" &&
+    gpg --no-default-keyring --trustdb-name "$TMPD/trustdb.gpg" --keyring "$TMPD/tmp.gpg" --export --output "$output" ||
+    status=$?
   rm -rf "$TMPD"
+  if [[ $status -ne 0 ]]; then
+    echo "error: failed to install apt key from $keyurl" >&2
+    return "$status"
+  fi
   echo "$output"
 }
 
