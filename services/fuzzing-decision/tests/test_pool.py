@@ -480,34 +480,6 @@ def test_gcp_resources(
                             "type": "PERSISTENT",
                         }
                     ],
-                    "machineType": "zones/us-west1-b/machineTypes/2-cpus",
-                    "networkInterfaces": [
-                        {"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}
-                    ],
-                    "region": "us-west1",
-                    "scheduling": {"onHostMaintenance": "terminate"},
-                    "workerConfig": {
-                        "dockerConfig": {
-                            "allowDisableSeccomp": True,
-                            "allowPrivileged": True,
-                        },
-                        "shutdown": {"afterIdleSeconds": 180, "enabled": True},
-                    },
-                    "zone": "us-west1-b",
-                },
-                {
-                    "capacityPerInstance": 1,
-                    "disks": [
-                        {
-                            "autoDelete": True,
-                            "boot": True,
-                            "initializeParams": {
-                                "diskSizeGb": 120,
-                                "sourceImage": "path/to/image",
-                            },
-                            "type": "PERSISTENT",
-                        }
-                    ],
                     "machineType": "zones/us-west1-a/machineTypes/gcp1",
                     "networkInterfaces": [
                         {"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}
@@ -522,6 +494,34 @@ def test_gcp_resources(
                         "shutdown": {"afterIdleSeconds": 180, "enabled": True},
                     },
                     "zone": "us-west1-a",
+                },
+                {
+                    "capacityPerInstance": 1,
+                    "disks": [
+                        {
+                            "autoDelete": True,
+                            "boot": True,
+                            "initializeParams": {
+                                "diskSizeGb": 120,
+                                "sourceImage": "path/to/image",
+                            },
+                            "type": "PERSISTENT",
+                        }
+                    ],
+                    "machineType": "zones/us-west1-b/machineTypes/2-cpus",
+                    "networkInterfaces": [
+                        {"accessConfigs": [{"type": "ONE_TO_ONE_NAT"}]}
+                    ],
+                    "region": "us-west1",
+                    "scheduling": {"onHostMaintenance": "terminate"},
+                    "workerConfig": {
+                        "dockerConfig": {
+                            "allowDisableSeccomp": True,
+                            "allowPrivileged": True,
+                        },
+                        "shutdown": {"afterIdleSeconds": 180, "enabled": True},
+                    },
+                    "zone": "us-west1-b",
                 },
             ],
             "lifecycle": {
