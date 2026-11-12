@@ -63,7 +63,7 @@ community_config:
 # Repository with private fuzzing configuration
 fuzzing_config:
   url: 'git@github.com:project/repo.git'
-  revision: master
+  revision: main
 
 # This private key is used to clone private repositories
 private_key: |
@@ -124,7 +124,7 @@ community_config:
 fuzzing_config:
   path: /path/to/mozilla/private-fuzzing-config
   url: git@github.com:mozilla/private-fuzzing-config.git
-  revision: refs/heads/master
+  revision: refs/heads/main
 ```
 
 To use that file, specify the following arguments:

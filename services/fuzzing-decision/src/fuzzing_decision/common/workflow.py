@@ -116,7 +116,7 @@ class Workflow:
 
             # Clone the configuration repository
             if revision is None:
-                revision = "master"
+                revision = "main"
             LOG.info(f"Cloning {url} @ {revision}")
             cmd = ["git", "init", str(path)]
             subprocess.check_output(cmd)
