@@ -9,7 +9,7 @@ Building locally:
 
 Testing locally:
 
-    eval $(TASKCLUSTER_ROOT_URL=https://community-tc.services.mozilla.com taskcluster signin)
+    eval $(TASKCLUSTER_ROOT_URL=https://firefox-ci-tc.services.mozilla.com taskcluster signin)
     OUT="js-tests-$(date +%Y%m%d%H%M%S)"
     mkdir -p "$OUT"
     docker run --rm -e TASKCLUSTER_ROOT_URL -e TASKCLUSTER_CLIENT_ID -e TASKCLUSTER_ACCESS_TOKEN -it -v "$(pwd)/$OUT":/home/ubuntu/output mozillasecurity/js-tests-distiller:$TAG 2>&1 | tee "$OUT/live.log"
