@@ -105,6 +105,9 @@ class Workflow(CommonWorkflow):
         # Browse the files in the repo
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_configs = list(FuzzingPoolConfig.from_file(config_file))
+            if not pool_configs:
+                # An apply_to group whose pools are all disabled.
+                continue
             resources.update(build_resources(pool_configs, clouds, machines, env))
 
         extra_pools_path = self.fuzzing_config_dir / "workers.yml"
