@@ -105,6 +105,9 @@ class Workflow(CommonWorkflow):
         retired_worker_pool_ids: set[str] = set()
         for config_file in self.fuzzing_config_dir.glob("pool*.yml"):
             pool_configs = list(FuzzingPoolConfig.from_file(config_file))
+            if not pool_configs:
+                # an apply_to group whose pools are all disabled
+                continue
             if pool_configs[0].cloud == "static":
                 # build_resources() represents an apply_to group with one pool,
                 # keyed by the first entry's hook ID.
