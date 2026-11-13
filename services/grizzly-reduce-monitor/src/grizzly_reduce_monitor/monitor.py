@@ -49,6 +49,7 @@ REDUCTION_EXPIRES = timedelta(weeks=4)
 DEFAULT_REDUCTION_STRATEGIES = (
     "list",
     "lines",
+    "js-document-all",
     "markup-tree-sitter",
     "css-merge",
     "css-tree-sitter",
