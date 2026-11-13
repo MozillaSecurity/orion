@@ -608,6 +608,27 @@ def test_fxci_generate_manages_exact_ids(tmp_path):
 
 
 @pytest.mark.usefixtures("appconfig")
+def test_fxci_generate_skips_apply_to_with_all_pools_disabled(tmp_path):
+    """An apply_to group whose pools are all disabled generates nothing."""
+    (tmp_path / "machines.yml").write_text(MACHINES_YAML)
+    (tmp_path / "pool1.yml").write_text(POOL_YAML.replace("tasks: 1", "tasks: 0"))
+    (tmp_path / "pool2.yml").write_text("name: coverage\ntasks: 1\napply_to: [pool1]\n")
+
+    workflow = Workflow()
+    workflow.fxci_config_dir = FXCI_DIR
+    workflow.fuzzing_config_dir = tmp_path
+
+    resources = Resources()
+    workflow.generate(resources, {"fuzzing_config": {"path": "x"}})
+
+    assert {resource.id for resource in resources} == {
+        "WorkerPool=proj-fuzzing/linux-pool1",
+        "Hook=project-fuzzing/linux-pool1",
+        "Role=hook-id:project-fuzzing/linux-pool1",
+    }
+
+
+@pytest.mark.usefixtures("appconfig")
 def test_static_replacement_fetches_and_deletes_only_its_old_worker_pool(
     tmp_path, monkeypatch
 ):
