@@ -482,6 +482,17 @@ class GCP(Provider):
             if zone not in zone_blacklist
             and not _gcp_instance_is_invalid(self.invalid_instances, zone, instance)
         ]
+        for config in result:
+            machine = config["machineType"].rsplit("/", 1)[-1]
+            family = machine.split("-", 1)[0]
+            if family in {"c4", "c4a", "c4d"} or (
+                family == "c3" and machine.endswith("-metal")
+            ):
+                disk = config["disks"][0]
+                disk["interface"] = "NVME"
+                disk["initializeParams"]["diskType"] = (
+                    f"zones/{config['zone']}/diskTypes/hyperdisk-balanced"
+                )
         if not demand:
             for config in result:
                 config["scheduling"].update(

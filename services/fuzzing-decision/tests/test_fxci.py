@@ -133,6 +133,47 @@ def test_fxci_gcp_pool(monkeypatch, mock_machines, worker_type):
         }
 
 
+@pytest.mark.parametrize(
+    "machine",
+    [
+        "c4-standard-4",
+        "c4a-standard-4",
+        "c4d-standard-4",
+        "c3-highcpu-192-metal",
+        "n2-standard-4",
+    ],
+)
+def test_fxci_gcp_boot_disk_matches_machine_requirements(machine):
+    """C4 and C3 bare-metal boot disks use NVMe Hyperdisk; N2 retains defaults."""
+    provider = GCP(FXCI_DIR)
+    provider.regions = {"us-east1": ["us-east1-b", "us-east1-c"]}
+    configs = provider.build_launch_configs(
+        "fuzzing-gw-ubuntu-24-04",
+        [(machine, frozenset())],
+        120,
+        "linux",
+        True,
+        False,
+        False,
+        1,
+        "generic",
+    )
+    assert len(configs) == 2
+    for config in configs:
+        disk = config["disks"][0]
+        assert disk["boot"] is True
+        assert disk["autoDelete"] is True
+        assert disk["initializeParams"]["diskSizeGb"] == 120
+        if machine == "n2-standard-4":
+            assert "interface" not in disk
+            assert "diskType" not in disk["initializeParams"]
+        else:
+            assert disk["interface"] == "NVME"
+            assert disk["initializeParams"]["diskType"] == (
+                f"zones/{config['zone']}/diskTypes/hyperdisk-balanced"
+            )
+
+
 def test_fxci_gcp_worker_configs_are_isolated():
     """Each GCP pool gets isolated worker settings, defaults, and image metadata."""
     provider = GCP(FXCI_DIR)
