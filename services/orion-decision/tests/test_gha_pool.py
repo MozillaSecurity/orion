@@ -396,6 +396,54 @@ def test_empty_queue_does_not_stop_pool_before_submissions_close(
     assert group_polls == 1
 
 
+@pytest.mark.parametrize(
+    "conclusion, failed_jobs, message",
+    [
+        ("failure", [], "closed with conclusion failure"),
+        ("success", ["index_funfuzz_amd64"], "Publication producers failed"),
+    ],
+)
+def test_workers_drain_tasks_before_reporting_submission_failure(
+    pool_plan, monkeypatch, conclusion, failed_jobs, message
+):
+    """Workers drain healthy tasks before reporting closure or producer failures."""
+    _artifacts(monkeypatch, pool_plan)
+    identity = gha_pool.identity(pool_plan)
+    task_id = gha_pool.artifact_task_id("123", 2, "funfuzz-amd64")
+
+    def download(_artifact, filename, *_args, **_kwargs):
+        record = {**identity, "task_group": "g" * 22}
+        if filename == "publication-control.json":
+            record["failed_jobs"] = failed_jobs
+            record["task_ids"] = [task_id]
+        return record
+
+    monkeypatch.setattr(gha_pool, "download_artifact_json", download)
+    monkeypatch.setattr(
+        gha_pool,
+        "_attempt_jobs",
+        lambda *_args: [
+            {
+                "name": gha_pool.CLOSE_JOB,
+                "status": "completed",
+                "conclusion": conclusion,
+            }
+        ],
+    )
+    polls = 0
+
+    class Queue:
+        def listTaskGroup(self, _group, **_kwargs):
+            nonlocal polls
+            polls += 1
+            return {"tasks": [_task(task_id, "pending" if polls == 1 else "completed")]}
+
+    with pytest.raises(RuntimeError, match=message):
+        gha_pool.monitor_pool(pool_plan, queue=Queue(), poll_interval=0)
+
+    assert polls == 2
+
+
 def test_monitor_waits_for_inherited_task_ids_from_close_control(
     pool_plan, monkeypatch
 ):

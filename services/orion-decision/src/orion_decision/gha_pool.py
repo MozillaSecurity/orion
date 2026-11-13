@@ -473,14 +473,16 @@ def monitor_pool(
     poll_interval: float = 60,
     worker: Any | None = None,
 ) -> None:
-    """Keep serving until producers close and every submitted TC task settles."""
+    """Drain all submitted tasks before reporting producer or closure failures."""
     data = identity(plan)
     queue = queue or Taskcluster.get_service("queue")
     deadline = time.monotonic() + timeout
     group = None
     closed = False
+    closure_error = None
     control_error = None
     expected: set[str] = set()
+    failed_producers: set[str] = set()
     while time.monotonic() < deadline:
         if worker is not None and worker.poll() is not None:
             raise RuntimeError(f"Generic-worker exited early ({worker.returncode})")
@@ -493,6 +495,14 @@ def monitor_pool(
             )
             close_job = next((job for job in jobs if job["name"] == CLOSE_JOB), None)
             closed = close_job is not None and close_job["status"] == "completed"
+            if (
+                closed
+                and close_job is not None
+                and close_job.get("conclusion") not in (None, "success")
+            ):
+                closure_error = "Publication submissions closed with conclusion " + str(
+                    close_job["conclusion"]
+                )
             if group is None or closed:
                 artifacts = _github_retry(
                     lambda: _actions_artifacts(
@@ -546,6 +556,7 @@ def monitor_pool(
                             group = candidate
                         if prefix == "control":
                             expected.update(record.get("task_ids", []))
+                            failed_producers.update(record.get("failed_jobs", []))
                     except (ValueError, KeyError, json.JSONDecodeError) as exc:
                         control_error = str(exc)
         if closed:
@@ -575,10 +586,17 @@ def monitor_pool(
                         and data["runAttempt"] != "1"
                     )
                 ]
-                if control_error or failed:
+                if control_error:
+                    raise RuntimeError(control_error)
+                if failed_producers:
                     raise RuntimeError(
-                        control_error or "TC imports failed: " + ", ".join(failed)
+                        "Publication producers failed: "
+                        + ", ".join(sorted(failed_producers))
                     )
+                if closure_error:
+                    raise RuntimeError(closure_error)
+                if failed:
+                    raise RuntimeError("TC imports failed: " + ", ".join(failed))
                 return
         time.sleep(min(poll_interval, max(0, deadline - time.monotonic())))
     raise TimeoutError("Timed out draining Taskcluster publication graph")
