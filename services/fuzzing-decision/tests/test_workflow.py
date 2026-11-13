@@ -5,6 +5,7 @@
 
 import re
 from pathlib import Path
+from shutil import copytree
 
 import pytest
 import yaml
@@ -56,6 +57,35 @@ def test_patterns(tmp_path):
     assert not _match("WorkerPool=proj-fuzzing/pool-A")
     assert _match("WorkerPool=proj-fuzzing/pool-B")
     assert _match("WorkerPool=proj-fuzzing/ci-bis")
+
+
+@pytest.mark.usefixtures("appconfig")
+def test_generate_skips_apply_to_with_all_pools_disabled(tmp_path):
+    fixtures = Path(__file__).parent / "fixtures"
+    community = tmp_path / "community"
+    copytree(fixtures / "community", community)
+    community_config = community / "config" / "projects" / "fuzzing.yml"
+    community_config.parent.mkdir()
+    community_config.write_text("fuzzing: {}\n")
+    (tmp_path / "machines.yml").write_text((fixtures / "machines.yml").read_text())
+    pool = yaml.safe_load((fixtures / "pools" / "pool1.yml").read_text())
+    pool["tasks"] = 0
+    (tmp_path / "pool1.yml").write_text(yaml.safe_dump(pool))
+    (tmp_path / "pool2.yml").write_text("name: coverage\ntasks: 1\napply_to: [pool1]\n")
+
+    from tcadmin.resources import Resources
+
+    workflow = Workflow()
+    workflow.community_config_dir = community
+    workflow.fuzzing_config_dir = tmp_path
+    resources = Resources()
+    workflow.generate(resources, {"fuzzing_config": {"path": "x"}})
+
+    assert {resource.id for resource in resources} == {
+        "WorkerPool=proj-fuzzing/linux-pool1",
+        "Hook=project-fuzzing/linux-pool1",
+        "Role=hook-id:project-fuzzing/linux-pool1",
+    }
 
 
 def test_configure_local(tmp_path):
