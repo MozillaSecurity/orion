@@ -20,7 +20,7 @@ get-tc-secret deploy-nss-fuzzing-corpus .ssh/nss_fuzzing_corpus_deploy
 # Clone github nss fuzzing corpus repo
 git-clone git@nss:MozillaSecurity/nss-fuzzing-corpus.git
 
-export EMAIL=nobody@community-tc.services.mozilla.com
+export EMAIL=nobody@firefox-ci-tc.services.mozilla.com
 export GIT_AUTHOR_NAME="Taskcluster Automation"
 export GIT_COMMITTER_NAME="Taskcluster Automation"
 

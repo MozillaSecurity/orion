@@ -88,7 +88,7 @@ UBSAN_OPTIONS=strip_path_prefix=/builds/worker/workspace/build/src/:symbolize=0:
 UBSAN_OPTIONS=${UBSAN_OPTIONS//:/ }
 
 if [[ $COVERAGE == 1 ]]; then
-  export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
+  export ARTIFACT_ROOT="https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
   SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
   export SOURCE_URL
   REVISION="$(retry-curl --compressed "$ARTIFACT_ROOT/coverage-revision.txt")"

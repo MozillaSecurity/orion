@@ -12,7 +12,7 @@ from taskcluster.helper import TaskclusterConfig
 TASKCLUSTER_ROOT_URL = (
     os.getenv("TASKCLUSTER_ROOT_URL")
     or os.getenv("ORION_TASKCLUSTER_ROOT_URL")
-    or "https://community-tc.services.mozilla.com"
+    or "https://firefox-ci-tc.services.mozilla.com"
 )
 Taskcluster = TaskclusterConfig(TASKCLUSTER_ROOT_URL)
 
