@@ -12,7 +12,7 @@ export GITHUB_TOKEN
 set -x
 
 export CI=1
-export EMAIL=nobody@community-tc.services.mozilla.com
+export EMAIL=nobody@firefox-ci-tc.services.mozilla.com
 export GIT_AUTHOR_NAME="Taskcluster Automation"
 export GIT_COMMITTER_NAME="Taskcluster Automation"
 

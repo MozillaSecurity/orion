@@ -20,7 +20,7 @@ PATH="$PATH:$HOME/.local/bin"
 # Setup required coverage environment variables.
 export COVERAGE=1
 
-export ARTIFACT_ROOT="https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
+export ARTIFACT_ROOT="https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public"
 SOURCE_URL="$(resolve-url "$ARTIFACT_ROOT/source.zip")"
 export SOURCE_URL
 

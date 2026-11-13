@@ -54,7 +54,7 @@ update-status "setup: installing cargo-fuzz"
 cargo install cargo-fuzz
 
 # Clone nss/nspr
-HG_REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+HG_REVISION="$(retry-curl --compressed https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 GIT_REVISION="$(retry-curl --compressed "https://lando.moz.tools/api/hg2git/firefox/$HG_REVISION" | jshon -e "git_hash" -u)"
 
 update-status "setup: cloning nss/nspr"

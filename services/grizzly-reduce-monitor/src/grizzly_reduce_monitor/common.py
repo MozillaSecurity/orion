@@ -22,7 +22,7 @@ from Reporter.Reporter import Reporter
 from taskcluster.helper import TaskclusterConfig
 
 # Shared taskcluster configuration
-Taskcluster = TaskclusterConfig("https://community-tc.services.mozilla.com")
+Taskcluster = TaskclusterConfig("https://firefox-ci-tc.services.mozilla.com")
 LOG = getLogger(__name__)
 
 

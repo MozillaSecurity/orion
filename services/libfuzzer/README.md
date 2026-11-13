@@ -13,7 +13,7 @@ Building locally:
 
 Testing locally:
 
-    eval $(TASKCLUSTER_ROOT_URL=https://community-tc.services.mozilla.com taskcluster signin)
+    eval $(TASKCLUSTER_ROOT_URL=https://firefox-ci-tc.services.mozilla.com taskcluster signin)
     LOGS="logs-$(date +%Y%m%d%H%M%S)"
     mkdir -p "$LOGS"
     docker run --rm -it \
@@ -28,7 +28,7 @@ Testing locally:
 ### Example: LibFuzzer Coverage Run
 
 ```bash
-REVISION="$(curl --compressed -sSL https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+REVISION="$(curl --compressed -sSL https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 fuzzfetch --build "$REVISION" --asan --fuzzing --coverage --gtest -n firefox
 
 docker run \

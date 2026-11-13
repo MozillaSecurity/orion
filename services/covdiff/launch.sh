@@ -9,12 +9,12 @@ source "$HOME/.local/bin/common.sh"
 set -x
 
 export CI=1
-export EMAIL=nobody@community-tc.services.mozilla.com
+export EMAIL=nobody@firefox-ci-tc.services.mozilla.com
 
 get-tc-secret moz-ci-coverage-key "$HOME/moz-ci-coverage-key.json" raw
 get-tc-secret fuzzmanagerconf "$HOME/.fuzzmanagerconf"
 
-REVISION="$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+REVISION="$(retry-curl --compressed https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
 
 TEST_SUITE=(
   mochitest-plain

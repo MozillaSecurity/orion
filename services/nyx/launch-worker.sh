@@ -136,7 +136,7 @@ if [[ ! -d firefox ]]; then
     default_args+=(--coverage)
     if [[ -z $REVISION ]]; then
       default_args+=(
-        --build "$(retry-curl --compressed https://community-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
+        --build "$(retry-curl --compressed https://firefox-ci-tc.services.mozilla.com/api/index/v1/task/project.fuzzing.coverage-revision.latest/artifacts/public/coverage-revision.txt)"
       )
     fi
   fi

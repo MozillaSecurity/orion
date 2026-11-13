@@ -1,6 +1,6 @@
 #### Example: Domino
 ```bash
-eval $(TASKCLUSTER_ROOT_URL=https://community-tc.services.mozilla.com taskcluster signin)
+eval $(TASKCLUSTER_ROOT_URL=https://firefox-ci-tc.services.mozilla.com taskcluster signin)
 docker run \
 -e DOMINO_ROOT=domino \
 -e ADAPTER=dominode \
