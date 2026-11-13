@@ -12,6 +12,7 @@ from grizzly_reduce_monitor import monitor
 EXPECTED_DEFAULTS = (
     "list",
     "lines",
+    "js-document-all",
     "markup-tree-sitter",
     "css-merge",
     "css-tree-sitter",
