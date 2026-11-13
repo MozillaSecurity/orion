@@ -78,7 +78,7 @@ function resolve-url() {
 
 # wrap curl with sane defaults
 function retry-curl() {
-  curl --connect-timeout 25 --fail --location --retry 5 --retry-all-errors --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
+  curl --connect-timeout 25 --fail --location --retry 9 --retry-max-time 600 --retry-all-errors --show-error --silent --write-out "%{stderr}[downloaded %{url_effective}]\n" "$@"
 }
 
 function get-deadline() {
