@@ -20,6 +20,7 @@ from . import TASKCLUSTER_ROOT_URL, Taskcluster
 from .gha_plan import job_id
 from .git import GitRepo
 from .orion import (
+    Service,
     ServiceHomebrew,
     ServiceMsys,
     Services,
@@ -396,160 +397,75 @@ def finalize(name: str, arch: str, image_tar: Path, digest: str = "") -> Path:
     return archive
 
 
-def publish_images(
-    repo: Path,
-    plan: dict[str, Any],
-    runner_temp: Path | None = None,
-    service_name: str | None = None,
-) -> Path:
-    """Push run-specific staging tags, then publish latest by immutable digests."""
-    actual = GitRepo.from_existing(repo).head()
-    if plan.get("revision") != actual or not plan.get("publish"):
+def _docker_service(repo: GitRepo, plan: dict[str, Any], name: str) -> Service:
+    if plan.get("revision") != repo.head() or not plan.get("publish"):
         raise ValueError(
             "Docker publication requires the exact planned publish revision"
         )
-    temp = runner_temp or Path(os.environ.get("RUNNER_TEMP", "/tmp"))
-    services = Services(GitRepo.from_existing(repo))
-    if service_name is not None and service_name not in services:
-        raise ValueError(f"Unknown service {service_name!r}")
-    selected = set(plan.get("selected_jobs", []))
-    raw_results = os.environ.get("ORION_JOB_RESULTS")
-    job_results = json.loads(raw_results) if raw_results else {}
-    successful = {
-        job
-        for job in selected
-        if not raw_results or job_results.get(job, {}).get("result") == "success"
-    }
-    images: dict[str, dict[str, Any]] = {}
-    failures: list[str] = []
-    for service in services.values():
-        if service_name is not None and service.name != service_name:
-            continue
-        if isinstance(service, (ServiceMsys, ServiceHomebrew, ServiceTestOnly)):
-            continue
-        for arch in service.archs:
-            selected_id = job_id("build", service.name, arch)
-            if selected_id not in selected:
-                continue
-            if selected_id not in successful:
-                continue
-            try:
-                artifact = _artifact_name(service.name, arch)
-                artifact_dir = temp / "publish" / artifact
-                _download_artifact(artifact, artifact_dir)
-                archive = artifact_dir / _archive_name(service.name, arch)
-                if not archive.is_file():
-                    raise FileNotFoundError(
-                        f"Selected build {selected_id} did not provide {archive}"
-                    )
-                tar_path = temp / f"{_safe_name(service.name)}-{arch}.tar"
-                _run(["zstd", "-d", "-f", str(archive), "-o", str(tar_path)])
-                _run(["docker", "load", "--input", str(tar_path)])
-                tar_path.unlink()
-                revision = plan["revision"]
-                run_id = os.environ["GITHUB_RUN_ID"]
-                attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
-                staging_tag = (
-                    f"mozillasecurity/{service.name}:gha-"
-                    f"{revision}-{run_id}-{attempt}-{arch}"
-                )
-                _run(
-                    [
-                        "docker",
-                        "tag",
-                        f"mozillasecurity/{service.name}:latest",
-                        staging_tag,
-                    ]
-                )
-                _run(["docker", "push", staging_tag])
-                inspect = subprocess.run(
-                    ["docker", "buildx", "imagetools", "inspect", staging_tag],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-                match = re.search(
-                    r"^Digest:\s+(sha256:[0-9a-f]{64})\s*$", inspect.stdout, re.M
-                )
-                if not match:
-                    raise RuntimeError(
-                        f"Could not read pushed digest for {staging_tag}"
-                    )
-                images.setdefault(
-                    service.name, {"architectures": {}, "latest_published": False}
-                )["architectures"][arch] = match.group(1)
-                archive.unlink()
-                (artifact_dir / "build.json").unlink(missing_ok=True)
-                artifact_dir.rmdir()
-                _run(
-                    [
-                        "docker",
-                        "image",
-                        "rm",
-                        staging_tag,
-                        f"mozillasecurity/{service.name}:latest",
-                    ]
-                )
-            except Exception as exc:
-                failures.append(f"{service.name}/{arch}: {exc}")
+    service = Services(repo)[name]
+    if isinstance(service, (ServiceMsys, ServiceHomebrew, ServiceTestOnly)):
+        raise ValueError(f"{name!r} does not publish Docker images")
+    return service
 
-    for name, publication in sorted(images.items()):
-        service = services[name]
-        arch_digests = publication["architectures"]
-        if set(service.archs) - arch_digests.keys():
-            continue
-        sources = [
-            f"mozillasecurity/{name}@{arch_digests[arch]}"
-            for arch in sorted(service.archs)
-        ]
-        try:
-            if service_name is not None and _has_newer_successful_service_publication(
-                service_name
-            ):
-                raise RuntimeError(
-                    f"A newer successful publication for {service_name!r} "
-                    "already exists"
-                )
-            _run(
-                [
-                    "docker",
-                    "buildx",
-                    "imagetools",
-                    "create",
-                    "--tag",
-                    f"mozillasecurity/{name}:latest",
-                    *(
-                        [
-                            "--annotation",
-                            "index:org.mozilla.orion.github-run-id="
-                            + os.environ["GITHUB_RUN_ID"],
-                            "--annotation",
-                            "index:org.mozilla.orion.github-run-attempt="
-                            + os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
-                        ]
-                        if service_name is not None
-                        else []
-                    ),
-                    *sources,
-                ]
+
+def stage_images(
+    repo: Path,
+    plan: dict[str, Any],
+    name: str,
+    runner_temp: Path,
+) -> dict[str, str]:
+    """Push unique staging tags and return immutable digests for every architecture."""
+    service = _docker_service(GitRepo.from_existing(repo), plan, name)
+    selected = set(plan["selected_jobs"])
+    results = json.loads(os.environ["ORION_JOB_RESULTS"])
+    digests: dict[str, str] = {}
+    for arch in sorted(service.archs):
+        build = job_id("build", name, arch)
+        if build not in selected or results.get(build, {}).get("result") != "success":
+            raise ValueError(
+                f"Cannot stage Docker image without successful build {build}"
             )
-            publication["latest_published"] = True
-        except Exception as exc:
-            failures.append(f"{name}/latest: {exc}")
-    published = temp / "published-images.json"
-    published.write_text(json.dumps(images, sort_keys=True, indent=2) + "\n")
-    if failures:
-        raise RuntimeError("Docker publication branches failed: " + "; ".join(failures))
-    return published
+
+        artifact = _artifact_name(name, arch)
+        artifact_dir = runner_temp / "publish" / artifact
+        _download_artifact(artifact, artifact_dir)
+        archive = artifact_dir / _archive_name(name, arch)
+        if not archive.is_file():
+            raise FileNotFoundError(f"Selected build {build} did not provide {archive}")
+        tar_path = archive.with_suffix("")
+        _run(["zstd", "-d", "-f", str(archive), "-o", str(tar_path)])
+
+        staging_tag = (
+            f"mozillasecurity/{name}:gha-{plan['revision']}-"
+            f"{os.environ['GITHUB_RUN_ID']}-{os.environ['GITHUB_RUN_ATTEMPT']}-{arch}"
+        )
+        # Buildx requires OCI manifests to create an index with annotations.
+        digest_file = artifact_dir / "pushed-digest"
+        _run(
+            [
+                "skopeo",
+                "copy",
+                "--format",
+                "oci",
+                "--digestfile",
+                str(digest_file),
+                f"docker-archive:{tar_path}",
+                f"docker://{staging_tag}",
+            ]
+        )
+        digest = digest_file.read_text().strip()
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+            raise RuntimeError(f"Could not read pushed digest for {staging_tag}")
+        digests[arch] = digest
+        shutil.rmtree(artifact_dir)
+    return digests
 
 
-def _has_newer_successful_service_publication(service_name: str) -> bool:
-    """Read the current Docker index annotations to guard service latest writes."""
-    current_run = os.environ.get("GITHUB_RUN_ID")
-    current_attempt = int(os.environ.get("GITHUB_RUN_ATTEMPT", "1"))
-    if not current_run:
-        raise RuntimeError("GITHUB_RUN_ID is required")
-    current = (int(current_run), current_attempt)
+_DOCKER_ANNOTATION = "org.mozilla.orion."
+
+
+def _latest_image_annotations(name: str) -> dict[str, str]:
+    """Read the current Docker index while holding the service promotion lock."""
     inspect = subprocess.run(
         [
             "docker",
@@ -557,7 +473,7 @@ def _has_newer_successful_service_publication(service_name: str) -> bool:
             "imagetools",
             "inspect",
             "--raw",
-            f"mozillasecurity/{service_name}:latest",
+            f"mozillasecurity/{name}:latest",
         ],
         check=False,
         capture_output=True,
@@ -566,103 +482,131 @@ def _has_newer_successful_service_publication(service_name: str) -> bool:
     if inspect.returncode:
         missing_reference = re.search(
             rf"(?:^|\s)(?:docker\.io/)?mozillasecurity/"
-            rf"{re.escape(service_name)}:latest: not found(?:$|\s)",
+            rf"{re.escape(name)}:latest: not found(?:$|\s)",
             inspect.stderr,
             re.IGNORECASE,
         )
         if missing_reference or re.search(
-            r"manifest unknown|no such manifest",
-            inspect.stderr,
-            re.IGNORECASE,
+            r"manifest unknown|no such manifest", inspect.stderr, re.IGNORECASE
         ):
-            return False
+            return {}
         raise RuntimeError(
-            f"Could not inspect latest manifest for {service_name}: "
-            f"{inspect.stderr.strip()}"
+            f"Could not inspect latest manifest for {name}: {inspect.stderr.strip()}"
         )
-    try:
-        annotations = json.loads(inspect.stdout).get("annotations", {})
-        run_id = annotations.get("org.mozilla.orion.github-run-id")
-        attempt = annotations.get("org.mozilla.orion.github-run-attempt")
-        if run_id is None and attempt is None:
-            return False
-        if run_id is None or attempt is None:
-            raise ValueError("run ID and attempt annotations must both be present")
-        latest = (int(run_id), int(attempt))
-    except (json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
-        raise RuntimeError(
-            f"Could not read publication annotations for {service_name}: {exc}"
-        ) from exc
-    return latest > current
+    return json.loads(inspect.stdout).get("annotations", {})
 
 
-def reject_stale_publication(repository: str, branch: str, revision: str) -> None:
-    """Stop an older queued publication from replacing the current branch head."""
-    result = subprocess.run(
-        ["gh", "api", f"repos/{repository}/branches/{branch}", "--jq", ".commit.sha"],
-        check=True,
-        capture_output=True,
-        text=True,
-        env={**os.environ, "GH_TOKEN": os.environ.get("GITHUB_TOKEN", "")},
+def _legacy_docker_run(run_id: str) -> dict[str, Any]:
+    from .gha_publish import _github_json
+
+    run = _github_json(
+        f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}"
+        f"/actions/runs/{run_id}",
+        token=os.environ["GITHUB_TOKEN"],
     )
-    if result.stdout.strip() != revision:
-        raise RuntimeError(
-            f"Refusing stale publication for {revision}; branch head is "
-            f"{result.stdout.strip()}"
+    if (
+        run["path"].split("@", 1)[0] != ".github/workflows/orion.yml"
+        or run["head_branch"] != "main"
+        or run["event"] not in {"push", "schedule", "workflow_dispatch"}
+    ):
+        raise ValueError(f"Docker latest references unexpected GitHub run {run_id}")
+    return run
+
+
+def _latest_image_order(
+    annotations: dict[str, str], main_positions: dict[str, int]
+) -> tuple[int, int, int]:
+    from .gha_publish import publication_order
+
+    provenance = {
+        key.removeprefix(_DOCKER_ANNOTATION): value
+        for key, value in annotations.items()
+        if key.startswith(_DOCKER_ANNOTATION)
+    }
+    if not provenance:
+        # Images published before Orion annotated manifests are superseded by a
+        # successful current publication.
+        return (0, 0, 0)
+    run_id = provenance["github-run-id"]
+    attempt = provenance["github-run-attempt"]
+    if "revision" not in provenance and "github-run-number" not in provenance:
+        run = _legacy_docker_run(run_id)
+        revision = run["head_sha"]
+        run_number = run["run_number"]
+    else:
+        revision = provenance["revision"]
+        run_number = provenance["github-run-number"]
+    return publication_order(main_positions[revision], run_number, attempt)
+
+
+def promote_images(
+    repo_path: Path,
+    plan: dict[str, Any],
+    name: str,
+    digests: dict[str, str],
+    runner_temp: Path,
+) -> Path:
+    """Promote exact staged images under the per-service GitHub concurrency lock."""
+    from .gha_publish import main_positions, publication_order
+
+    repo = GitRepo.from_existing(repo_path)
+    service = _docker_service(repo, plan, name)
+    if set(digests) != set(service.archs) or any(
+        not re.fullmatch(r"sha256:[0-9a-f]{64}", digest) for digest in digests.values()
+    ):
+        raise ValueError(f"Staging did not provide all valid digests for {name}")
+    positions = main_positions(repo)
+    revision = plan["revision"]
+    landing_order = positions.get(revision)
+    if landing_order is None or landing_order != plan["landing_order"]:
+        raise ValueError(
+            f"Planned revision {revision} is not at its expected position on main"
         )
-    current_run_id = os.environ.get("GITHUB_RUN_ID")
-    if not current_run_id:
-        raise RuntimeError("GITHUB_RUN_ID is required to publish Orion artifacts")
-
-    latest_run_id = latest_eligible_publication_run_id(repository, branch)
-    if latest_run_id is not None and int(current_run_id) < latest_run_id:
-        raise RuntimeError(
-            f"Refusing publication run {current_run_id}; newer eligible Orion "
-            f"workflow run {latest_run_id} exists. Start a new workflow_dispatch "
-            "run and select or force the services to publish."
-        )
-
-
-def latest_eligible_publication_run_id(repository: str, branch: str) -> int | None:
-    """Find the newest main publication run, excluding unrelated event types."""
-    latest: int | None = None
-    for event in ("push", "schedule", "workflow_dispatch"):
-        page = 1
-        while True:
-            result = subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{repository}/actions/workflows/orion.yml/runs"
-                    f"?branch={branch}&event={event}&per_page=100&page={page}",
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-                env={**os.environ, "GH_TOKEN": os.environ.get("GITHUB_TOKEN", "")},
+    run_number = os.environ["GITHUB_RUN_NUMBER"]
+    attempt = os.environ["GITHUB_RUN_ATTEMPT"]
+    order = publication_order(landing_order, run_number, attempt)
+    publication: dict[str, Any] = {"architectures": digests, "latest_published": False}
+    output = runner_temp / "published-images.json"
+    try:
+        latest_order = _latest_image_order(_latest_image_annotations(name), positions)
+        if latest_order > order:
+            print(f"Docker latest for {name} already has a newer publication")
+            publication["superseded"] = True
+        else:
+            annotations = {
+                "revision": revision,
+                "github-run-id": os.environ["GITHUB_RUN_ID"],
+                "github-run-number": run_number,
+                "github-run-attempt": attempt,
+            }
+            command = [
+                "docker",
+                "buildx",
+                "imagetools",
+                "create",
+                "--tag",
+                f"mozillasecurity/{name}:latest",
+            ]
+            for key, value in annotations.items():
+                command.extend(
+                    ["--annotation", f"index:{_DOCKER_ANNOTATION}{key}={value}"]
+                )
+            command.extend(
+                f"mozillasecurity/{name}@{digests[arch]}" for arch in sorted(digests)
             )
-            runs = json.loads(result.stdout).get("workflow_runs", [])
-            found_event_run = False
-            for run in runs:
-                path = str(run.get("path", "")).split("@", 1)[0]
-                if (
-                    run.get("head_branch") == branch
-                    and run.get("event") == event
-                    and path == ".github/workflows/orion.yml"
-                ):
-                    run_id = int(run["id"])
-                    latest = run_id if latest is None else max(latest, run_id)
-                    found_event_run = True
-            if found_event_run or len(runs) < 100:
-                break
-            page += 1
-    return latest
+            _run(command)
+            publication["latest_published"] = True
+    finally:
+        output.write_text(
+            json.dumps({name: publication}, sort_keys=True, indent=2) + "\n"
+        )
+    return output
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="python -m orion_decision.gha_run")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for command in ("prepare", "run", "finalize", "publish", "check-head"):
+    for command in ("prepare", "run", "finalize", "stage", "promote"):
         sub = subparsers.add_parser(command)
         if command in {"prepare", "run"}:
             sub.add_argument(
@@ -677,29 +621,31 @@ def main() -> None:
             sub.add_argument("--repo", type=Path, default=Path.cwd())
             if command == "run":
                 sub.add_argument("--test-index", type=int)
-        elif command == "publish":
+        elif command in {"stage", "promote"}:
             sub.add_argument("--plan-file", type=Path, required=True)
             sub.add_argument("--repo", type=Path, default=Path.cwd())
-            sub.add_argument("--service")
-        elif command == "check-head":
-            sub.add_argument("--repository", required=True)
-            sub.add_argument("--branch", required=True)
-            sub.add_argument("--revision", required=True)
+            sub.add_argument("--service", required=True)
         elif command == "finalize":
             sub.add_argument("--name", required=True)
             sub.add_argument("--arch", default="amd64")
             sub.add_argument("--image-tar", type=Path, required=True)
             sub.add_argument("--digest", default="")
     args = parser.parse_args()
-    if args.command == "check-head":
-        reject_stale_publication(args.repository, args.branch, args.revision)
-        return
-    if args.command == "publish":
-        publish_images(
-            args.repo,
-            json.loads(args.plan_file.read_text()),
-            service_name=args.service,
-        )
+    if args.command in {"stage", "promote"}:
+        plan = json.loads(args.plan_file.read_text())
+        runner_temp = Path(os.environ["RUNNER_TEMP"])
+        if args.command == "stage":
+            digests = stage_images(args.repo, plan, args.service, runner_temp)
+            with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+                output.write(f"digests={json.dumps(digests)}\n")
+        else:
+            promote_images(
+                args.repo,
+                plan,
+                args.service,
+                json.loads(os.environ["ORION_STAGED_DIGESTS"]),
+                runner_temp,
+            )
         return
     if args.command == "finalize":
         print(finalize(args.name, args.arch, args.image_tar, args.digest))

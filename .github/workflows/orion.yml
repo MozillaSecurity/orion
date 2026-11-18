@@ -1561,9 +1561,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_afl_amd64') && needs.build_afl_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-afl-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -1625,9 +1622,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_bugmon_amd64') && needs.build_bugmon_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-bugmon-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -1730,9 +1724,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_covdiff_amd64') && needs.build_covdiff_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-covdiff-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -1795,9 +1786,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_coverage_revision_amd64') && needs.build_coverage_revision_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-coverage-revision-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -1861,9 +1849,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_domino_web_tests_amd64') && needs.build_domino_web_tests_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-domino-web-tests-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -1926,9 +1911,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_funfuzz_amd64') && needs.build_funfuzz_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-funfuzz-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2013,9 +1995,6 @@ jobs:
       'build_fuzzilli_amd64') && needs.build_fuzzilli_amd64.result == 'success') &&
       (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_fuzzilli_arm64')
       && needs.build_fuzzilli_arm64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-fuzzilli-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2083,9 +2062,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_fuzzing_decision_amd64') && needs.build_fuzzing_decision_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-fuzzing-decision-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2148,9 +2124,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_grizzly_amd64') && needs.build_grizzly_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-grizzly-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2213,9 +2186,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_grizzly_android_amd64') && needs.build_grizzly_android_amd64.result ==
       'success')
-    concurrency:
-      group: orion-docker-latest-grizzly-android-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2279,9 +2249,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_grizzly_reduce_monitor_amd64') && needs.build_grizzly_reduce_monitor_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-grizzly-reduce-monitor-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2386,9 +2353,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_js_tests_distiller_amd64') && needs.build_js_tests_distiller_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-js-tests-distiller-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2474,9 +2438,6 @@ jobs:
       'build_langfuzz_amd64') && needs.build_langfuzz_amd64.result == 'success') &&
       (contains(fromJSON(needs.plan.outputs.selected_jobs), 'build_langfuzz_arm64')
       && needs.build_langfuzz_arm64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-langfuzz-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2543,9 +2504,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_libfuzzer_amd64') && needs.build_libfuzzer_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-libfuzzer-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2607,9 +2565,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_neqo_coverage_amd64') && needs.build_neqo_coverage_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-neqo-coverage-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2673,9 +2628,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_nss_corpus_update_amd64') && needs.build_nss_corpus_update_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-nss-corpus-update-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2738,9 +2690,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_nss_coverage_amd64') && needs.build_nss_coverage_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-nss-coverage-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2802,9 +2751,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_nyx_amd64') && needs.build_nyx_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-nyx-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2866,9 +2812,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_prefmonitor_amd64') && needs.build_prefmonitor_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-prefmonitor-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2930,9 +2873,6 @@ jobs:
     if: always() && !cancelled() && github.event_name != 'pull_request' && github.ref
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_site_scout_amd64') && needs.build_site_scout_amd64.result == 'success')
-    concurrency:
-      group: orion-docker-latest-site-scout-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -2995,9 +2935,6 @@ jobs:
       == 'refs/heads/main' && fromJSON(needs.plan.outputs.plan_json).publish && (contains(fromJSON(needs.plan.outputs.selected_jobs),
       'build_site_scout_android_amd64') && needs.build_site_scout_android_amd64.result
       == 'success')
-    concurrency:
-      group: orion-docker-latest-site-scout-android-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/publish-service.yml
     with:
       operation: docker
@@ -3156,6 +3093,9 @@ jobs:
     permissions:
       actions: read
       contents: read
+    outputs:
+      task_id: ${{ steps.close.outputs.task_id }}
+      marker_expected: ${{ steps.close.outputs.marker_expected }}
     steps:
     - uses: actions/checkout@v5
       with:
@@ -3165,6 +3105,7 @@ jobs:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
     - name: Close publication submissions
+      id: close
       env:
         TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
           }}
@@ -3186,6 +3127,45 @@ jobs:
         path: ${{ runner.temp }}/publication-control.json
         if-no-files-found: error
         retention-days: 7
+    - name: Await Taskcluster baseline marker
+      if: steps.close.outputs.task_id != ''
+      env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+        TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+        ORION_TASK_ID: ${{ steps.close.outputs.task_id }}
+      run: python -m orion_decision.gha_publish wait-task --task-id "$ORION_TASK_ID"
+  publication-marker:
+    name: Publish Orion baseline marker index
+    needs:
+    - publication-done
+    if: needs.publication-done.outputs.task_id != ''
+    runs-on: ubuntu-24.04
+    environment: fxci
+    permissions:
+      contents: read
+    concurrency:
+      group: orion-fxci-main-marker
+      queue: max
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        fetch-depth: 0
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+    - run: python -m pip install -e services/orion-decision
+    - name: Index the FXCI baseline marker
+      env:
+        TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+          }}
+        TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+        TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+        ORION_TASK_ID: ${{ needs.publication-done.outputs.task_id }}
+      run: python -m orion_decision.gha_publish promote-index --task-id "$ORION_TASK_ID"
   publication-workers:
     name: Taskcluster worker ${{ matrix.worker }}
     needs:
@@ -3243,6 +3223,7 @@ jobs:
     - plan
     - graph-result
     - publication-done
+    - publication-marker
     - publication-workers
     if: always()
     runs-on: ubuntu-latest
@@ -3252,10 +3233,17 @@ jobs:
         ORION_GRAPH_RESULT: ${{ needs.graph-result.result }}
         ORION_PUBLISH: ${{ needs.plan.outputs.publish }}
         ORION_PUBLICATION_RESULT: ${{ needs.publication-done.result }}
+        ORION_MARKER_EXPECTED: ${{ needs.publication-done.outputs.marker_expected
+          }}
+        ORION_MARKER_RESULT: ${{ needs.publication-marker.result }}
         ORION_WORKERS_RESULT: ${{ needs.publication-workers.result }}
       run: "python - <<'PY'\nimport os, sys\nif os.environ['ORION_GRAPH_RESULT'] !=\
         \ 'success':\n    sys.exit('Selected Orion graph jobs did not all succeed')\n\
         if os.environ['ORION_PUBLISH'] == 'true':\n    if os.environ['ORION_PUBLICATION_RESULT']\
-        \ != 'success':\n        sys.exit('Publication submissions failed')\n    if\
-        \ os.environ['ORION_WORKERS_RESULT'] != 'success':\n        sys.exit('Workers\
+        \ != 'success':\n        sys.exit('Publication submissions failed')\n    marker\
+        \ = os.environ['ORION_MARKER_EXPECTED']\n    if marker not in {'true', 'false'}:\n\
+        \        sys.exit('Publication marker decision is missing')\n    expected\
+        \ = 'success' if marker == 'true' else 'skipped'\n    if os.environ['ORION_MARKER_RESULT']\
+        \ != expected:\n        sys.exit('Publication marker indexing failed')\n \
+        \   if os.environ['ORION_WORKERS_RESULT'] != 'success':\n        sys.exit('Workers\
         \ did not drain')\nPY"

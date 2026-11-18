@@ -371,12 +371,6 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 "name": f"Publish {service.name} Docker latest",
                 "needs": ["plan", *selected_builds],
                 "if": f"{publish_condition} && {selected_gate}",
-                "concurrency": {
-                    "group": (
-                        f"orion-docker-latest-{service.name}-${{{{ github.ref }}}}"
-                    ),
-                    "cancel-in-progress": False,
-                },
                 "uses": "./.github/workflows/publish-service.yml",
                 "with": {
                     "operation": "docker",
@@ -451,12 +445,17 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "runs-on": "ubuntu-24.04",
         "environment": "fxci",
         "permissions": {"actions": "read", "contents": "read"},
+        "outputs": {
+            "task_id": "${{ steps.close.outputs.task_id }}",
+            "marker_expected": "${{ steps.close.outputs.marker_expected }}",
+        },
         "steps": [
             {"uses": "actions/checkout@v5", "with": {"ref": HEAD_SHA}},
             {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
             {"run": "python -m pip install -e services/orion-decision"},
             {
                 "name": "Close publication submissions",
+                "id": "close",
                 "env": {
                     "TASKCLUSTER_ACCESS_TOKEN": (
                         "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}"
@@ -490,6 +489,55 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "if-no-files-found": "error",
                     "retention-days": 7,
                 },
+            },
+            {
+                "name": "Await Taskcluster baseline marker",
+                "if": "steps.close.outputs.task_id != ''",
+                "env": {
+                    "TASKCLUSTER_ACCESS_TOKEN": (
+                        "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}"
+                    ),
+                    "TASKCLUSTER_CLIENT_ID": "project/fuzzing/gh-orion-publisher",
+                    "TASKCLUSTER_ROOT_URL": "${{ vars.TASKCLUSTER_ROOT_URL }}",
+                    "ORION_TASK_ID": "${{ steps.close.outputs.task_id }}",
+                },
+                "run": (
+                    "python -m orion_decision.gha_publish wait-task "
+                    '--task-id "$ORION_TASK_ID"'
+                ),
+            },
+        ],
+    }
+    jobs["publication-marker"] = {
+        "name": "Publish Orion baseline marker index",
+        "needs": ["publication-done"],
+        "if": "needs.publication-done.outputs.task_id != ''",
+        "runs-on": "ubuntu-24.04",
+        "environment": "fxci",
+        "permissions": {"contents": "read"},
+        "concurrency": {"group": "orion-fxci-main-marker", "queue": "max"},
+        "timeout-minutes": 20,
+        "steps": [
+            {
+                "uses": "actions/checkout@v5",
+                "with": {"ref": HEAD_SHA, "fetch-depth": 0},
+            },
+            {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
+            {"run": "python -m pip install -e services/orion-decision"},
+            {
+                "name": "Index the FXCI baseline marker",
+                "env": {
+                    "TASKCLUSTER_ACCESS_TOKEN": (
+                        "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}"
+                    ),
+                    "TASKCLUSTER_CLIENT_ID": "project/fuzzing/gh-orion-publisher",
+                    "TASKCLUSTER_ROOT_URL": "${{ vars.TASKCLUSTER_ROOT_URL }}",
+                    "ORION_TASK_ID": "${{ needs.publication-done.outputs.task_id }}",
+                },
+                "run": (
+                    "python -m orion_decision.gha_publish promote-index "
+                    '--task-id "$ORION_TASK_ID"'
+                ),
             },
         ],
     }
@@ -553,6 +601,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
             "plan",
             "graph-result",
             "publication-done",
+            "publication-marker",
             "publication-workers",
         ],
         "if": "always()",
@@ -564,6 +613,10 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "ORION_GRAPH_RESULT": "${{ needs.graph-result.result }}",
                     "ORION_PUBLISH": "${{ needs.plan.outputs.publish }}",
                     "ORION_PUBLICATION_RESULT": "${{ needs.publication-done.result }}",
+                    "ORION_MARKER_EXPECTED": (
+                        "${{ needs.publication-done.outputs.marker_expected }}"
+                    ),
+                    "ORION_MARKER_RESULT": "${{ needs.publication-marker.result }}",
                     "ORION_WORKERS_RESULT": "${{ needs.publication-workers.result }}",
                 },
                 "run": (
@@ -575,6 +628,12 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "    if os.environ['ORION_PUBLICATION_RESULT'] != 'success':\n"
                     "        sys.exit('Publication submissions failed')"
                     "\n"
+                    "    marker = os.environ['ORION_MARKER_EXPECTED']\n"
+                    "    if marker not in {'true', 'false'}:\n"
+                    "        sys.exit('Publication marker decision is missing')\n"
+                    "    expected = 'success' if marker == 'true' else 'skipped'\n"
+                    "    if os.environ['ORION_MARKER_RESULT'] != expected:\n"
+                    "        sys.exit('Publication marker indexing failed')\n"
                     "    if os.environ['ORION_WORKERS_RESULT'] != 'success':\n"
                     "        sys.exit('Workers did not drain')"
                     "\n"

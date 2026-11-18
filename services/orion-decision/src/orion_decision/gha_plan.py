@@ -227,7 +227,8 @@ def _mark_published_changes_dirty(
                     ).strip()
                     revision_is_newer = merge_base == base
                 run_is_newer = (
-                    dependency_run is not None
+                    dependency_revision == base
+                    and dependency_run is not None
                     and service_run is not None
                     and dependency_run > service_run
                 )
@@ -398,6 +399,12 @@ def build_plan(
             "expired_services": sorted(set(expired_services or [])),
         }
     )
+    if publish:
+        if repo.git("rev-parse", "--is-shallow-repository").strip() == "true":
+            raise ValueError("Publication planning requires full main history")
+        result["landing_order"] = int(
+            repo.git("rev-list", "--first-parent", "--count", revision)
+        )
     if full_rebuild_reason:
         for item_reasons in result["reasons"].values():
             item_reasons[:] = [full_rebuild_reason]

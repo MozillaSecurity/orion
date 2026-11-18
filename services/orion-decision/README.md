@@ -17,17 +17,38 @@ workflow matches the service graph. Protect `main` with the required status chec
 GitHub Actions runs pull requests, pushes to `main`, a Monday 05:00 UTC expiry
 check, and manual runs. Manual runs accept comma-separated service names in
 `force_services`. Pull requests build and test the head commit without publication
-credentials. Successful `main` runs push architecture images and a combined Docker
-`latest` manifest, then import per-architecture Docker archives and native archives
+credentials. Main-branch publication pushes Docker architecture images and a combined
+`latest` manifest. It also imports per-architecture Docker archives and native archives
 into FXCI's Taskcluster artifact and index routes. A failed-job-only rerun can reuse
 the newest live build artifact for each exact service and architecture from an earlier
 attempt of the same run. New Taskcluster tasks keep the current attempt's publication
 rank and provenance. Import tasks retain the source artifact ID and digest; receipts and
 monitor control reference the actual producer task IDs. Expired or missing artifacts
 still require rerunning the relevant build job. Re-running all jobs is required when
-the current attempt has no active Taskcluster worker pool. An older run cannot publish
-after a newer eligible `main` run; start a new manual run and select or force the
-services that still need publication.
+the current attempt has no active Taskcluster worker pool.
+
+Publication follows the first-parent order of commits on `main`, then the GitHub
+workflow run number and attempt for builds of the same commit. Docker stages each
+architecture under a run-specific tag. A per-service promotion job checks the
+existing Docker `latest` index before updating it with those immutable digests.
+A newer run that skips or fails the service's builds leaves its previous `latest`
+available. A promotion superseded by an already-published newer image succeeds
+without issuing a Docker publication receipt or advancing the complete-run baseline.
+
+Each FXCI archive route advances when its own import succeeds. GitHub Actions
+waits for the Taskcluster artifacts, then serializes index updates for each archive
+and service receipt. Both the `main` routes and revision-specific routes use the
+same ordering. The complete-service receipt depends on all architecture imports
+and, for Docker services, successful promotion. Successful FXCI archive imports
+remain available when a peer build, import, or Docker promotion fails.
+
+At cutover, let publication jobs from the previous workflow finish before enabling
+this workflow. Avoid rerunning the previous workflow afterward. The FXCI routes
+retain their names and use a higher rank than the previous automatic index routes.
+The publisher compares full revision and workflow order while holding the lock. Docker
+promotion reads the existing run ID and attempt annotations and looks up the
+revision and run number in GitHub when an older manifest lacks those fields. Keep
+`main` history append-only so its first-parent commit positions remain stable.
 
 Windows 2025 runners use their preinstalled MSYS2 `bsdtar` only to extract the
 downloaded bootstrap archive; native builds then use that downloaded MSYS2 runtime.
@@ -66,6 +87,7 @@ creation scope is needed. The client needs:
 queue:create-task:highest:proj-fuzzing/orion-gha-publish
 queue:scheduler-id:fuzzing
 queue:route:index.project.fuzzing.orion.*
+index:insert-task:project.fuzzing.orion.*
 ```
 
 The highest-priority creation scope also authorizes lower-priority imports. Tasks

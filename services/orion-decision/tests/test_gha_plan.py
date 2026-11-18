@@ -26,6 +26,20 @@ def commit(repo: Path, message: str) -> str:
     return git(repo, "rev-parse", "HEAD")
 
 
+def test_publication_plan_counts_main_first_parents(tmp_path):
+    repo = make_repo(tmp_path / "repo")
+    git(repo, "switch", "-c", "side")
+    git(repo, "commit", "--allow-empty", "-m", "side first")
+    git(repo, "commit", "--allow-empty", "-m", "side second")
+    git(repo, "switch", "main")
+    git(repo, "merge", "--no-ff", "side")
+    revision = git(repo, "rev-parse", "HEAD")
+
+    plan = build_plan(repo, revision=revision, event="push", branch="main")
+
+    assert plan["landing_order"] == 2
+
+
 def make_repo(root: Path) -> Path:
     """Create a small tracked graph with hard, weak, recipe and test-image edges."""
     root.mkdir()

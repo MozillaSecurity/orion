@@ -654,39 +654,43 @@ def test_native_preparation_runs_checked_out_setup_without_rewriting_it(
         assert Path(setup_env["HOMEBREW_PREFIX"]).name == "homebrew"
 
 
-def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
+def test_docker_staging_uses_attempt_tags_and_returns_exact_oci_digests(
     tmp_path, monkeypatch
 ):
-    """Publish mixed-attempt build archives under current-attempt staging tags."""
+    """Stage the newest available archive for each arch of this service."""
     repo, revision = make_repo(
         tmp_path / "repo",
         {
             "services/multi/service.yaml": "name: multi\narch: [amd64, arm64]\n",
             "services/multi/Dockerfile": "FROM alpine:3.20\n",
+            "services/peer/service.yaml": "name: peer\n",
+            "services/peer/Dockerfile": "FROM alpine:3.20\n",
         },
     )
     monkeypatch.setenv("GITHUB_RUN_ID", "12345")
     monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
     monkeypatch.setenv("GITHUB_REPOSITORY", "MozillaSecurity/orion")
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    builds = {
+        job_id("build", "multi", "amd64"): {"result": "success"},
+        job_id("build", "multi", "arm64"): {"result": "success"},
+        job_id("build", "peer", "amd64"): {"result": "failure"},
+    }
+    monkeypatch.setenv("ORION_JOB_RESULTS", json.dumps(builds))
     monkeypatch.setattr(
         gha_publish,
         "_actions_artifacts",
         lambda *_args: [
             {"id": 1, "name": "orion-build-multi-amd64-1"},
-            {
-                "id": 2,
-                "name": "orion-build-multi-amd64-2",
-                "expired": True,
-            },
+            {"id": 2, "name": "orion-build-multi-amd64-2", "expired": True},
             {"id": 3, "name": "orion-build-multi-arm64-2"},
             {"id": 4, "name": "orion-build-multi-arm64-3"},
         ],
     )
     monkeypatch.setattr(gha_run, "_artifact_name", _resolve_artifact_name)
-    commands: list[list[str]] = []
-    digests = iter(("a" * 64, "b" * 64))
+    uploaded: list[str] = []
     downloaded: list[str] = []
+    digests = iter(("a" * 64, "b" * 64))
 
     def download_artifact(name: str, destination: Path) -> None:
         downloaded.append(name)
@@ -694,468 +698,172 @@ def test_publication_stages_unique_tags_and_builds_manifest_from_exact_digests(
         (destination / f"multi-{name.rsplit('-', 2)[-2]}.tar.zst").touch()
 
     def run(command: list[str], **_kwargs: Any) -> None:
-        commands.append(command)
         if command[0] == "zstd":
             Path(command[command.index("-o") + 1]).touch()
-
-    monkeypatch.setattr(gha_run, "_download_artifact", download_artifact)
-    monkeypatch.setattr(gha_run, "_run", run)
-    monkeypatch.setattr(
-        gha_run.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            stdout=f"Digest: sha256:{next(digests)}\n"
-        ),
-    )
-
-    gha_run.publish_images(
-        repo,
-        {
-            "revision": revision,
-            "publish": True,
-            "selected_jobs": [
-                job_id("build", "multi", "amd64"),
-                job_id("build", "multi", "arm64"),
-            ],
-        },
-        runner_temp=tmp_path / "runner",
-    )
-
-    pushed = [command[-1] for command in commands if command[:2] == ["docker", "push"]]
-    assert downloaded == [
-        "orion-build-multi-amd64-1",
-        "orion-build-multi-arm64-2",
-    ]
-    assert pushed == [
-        f"mozillasecurity/multi:gha-{revision}-12345-2-amd64",
-        f"mozillasecurity/multi:gha-{revision}-12345-2-arm64",
-    ]
-    manifest = next(
-        command
-        for command in commands
-        if command[:4] == ["docker", "buildx", "imagetools", "create"]
-    )
-    assert manifest == [
-        "docker",
-        "buildx",
-        "imagetools",
-        "create",
-        "--tag",
-        "mozillasecurity/multi:latest",
-        f"mozillasecurity/multi@sha256:{'a' * 64}",
-        f"mozillasecurity/multi@sha256:{'b' * 64}",
-    ]
-
-
-def test_docker_publication_keeps_successful_services_independent(
-    tmp_path, monkeypatch
-) -> None:
-    """Publish a complete image branch when a peer image lacks one architecture."""
-    repo, revision = make_repo(
-        tmp_path / "repo",
-        {
-            "services/partial/service.yaml": "name: partial\narch: [amd64, arm64]\n",
-            "services/partial/Dockerfile": "FROM alpine:3.20\n",
-            "services/complete/service.yaml": "name: complete\narch: [amd64]\n",
-            "services/complete/Dockerfile": "FROM alpine:3.20\n",
-        },
-    )
-    monkeypatch.setenv("GITHUB_RUN_ID", "12345")
-    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
-    monkeypatch.setenv(
-        "ORION_JOB_RESULTS",
-        json.dumps(
-            {
-                job_id("build", "partial", "amd64"): {"result": "success"},
-                job_id("build", "partial", "arm64"): {"result": "failure"},
-                job_id("build", "complete", "amd64"): {"result": "success"},
-            }
-        ),
-    )
-    commands: list[list[str]] = []
-
-    def download_artifact(name: str, destination: Path) -> None:
-        destination.mkdir(parents=True)
-        service, arch = name.removeprefix("orion-build-").rsplit("-", 2)[:2]
-        (destination / f"{service}-{arch}.tar.zst").touch()
-
-    def run(command: list[str], **_kwargs: Any) -> None:
-        commands.append(command)
-        if command[0] == "zstd":
-            Path(command[command.index("-o") + 1]).touch()
-
-    monkeypatch.setattr(gha_run, "_download_artifact", download_artifact)
-    monkeypatch.setattr(gha_run, "_run", run)
-    monkeypatch.setattr(
-        gha_run.subprocess,
-        "run",
-        lambda command, **_kwargs: SimpleNamespace(
-            stdout=(
-                "Digest: sha256:"
-                + ("b" if "complete" in command[-1] else "a") * 64
-                + "\n"
+        else:
+            assert command[:4] == ["skopeo", "copy", "--format", "oci"]
+            assert Path(command[-2].removeprefix("docker-archive:")).is_file()
+            Path(command[command.index("--digestfile") + 1]).write_text(
+                f"sha256:{next(digests)}\n"
             )
-        ),
-    )
-
-    published = gha_run.publish_images(
-        repo,
-        {
-            "revision": revision,
-            "publish": True,
-            "selected_jobs": [
-                job_id("build", "partial", "amd64"),
-                job_id("build", "partial", "arm64"),
-                job_id("build", "complete", "amd64"),
-            ],
-        },
-        runner_temp=tmp_path / "runner",
-    )
-
-    latest_manifests = [
-        command
-        for command in commands
-        if command[:4] == ["docker", "buildx", "imagetools", "create"]
-    ]
-    assert [command[5] for command in latest_manifests] == [
-        "mozillasecurity/complete:latest"
-    ]
-    assert json.loads(published.read_text()) == {
-        "complete": {
-            "architectures": {"amd64": "sha256:" + "b" * 64},
-            "latest_published": True,
-        },
-        "partial": {
-            "architectures": {"amd64": "sha256:" + "a" * 64},
-            "latest_published": False,
-        },
-    }
-
-
-def test_docker_manifest_failure_does_not_block_a_peer_service(
-    tmp_path, monkeypatch
-) -> None:
-    """Continue publishing peer images after one service's latest tag fails."""
-    repo, revision = make_repo(
-        tmp_path / "repo",
-        {
-            "services/broken/service.yaml": "name: broken\narch: [amd64]\n",
-            "services/broken/Dockerfile": "FROM alpine:3.20\n",
-            "services/healthy/service.yaml": "name: healthy\narch: [amd64]\n",
-            "services/healthy/Dockerfile": "FROM alpine:3.20\n",
-        },
-    )
-    monkeypatch.setenv("GITHUB_RUN_ID", "12345")
-    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
-    monkeypatch.setenv(
-        "ORION_JOB_RESULTS",
-        json.dumps(
-            {
-                job_id("build", "broken", "amd64"): {"result": "success"},
-                job_id("build", "healthy", "amd64"): {"result": "success"},
-            }
-        ),
-    )
-    commands: list[list[str]] = []
-
-    def download_artifact(name: str, destination: Path) -> None:
-        service = name.removeprefix("orion-build-").removesuffix("-amd64-1")
-        destination.mkdir(parents=True)
-        (destination / f"{service}-amd64.tar.zst").touch()
-
-    def run(command: list[str], **_kwargs: Any) -> None:
-        commands.append(command)
-        if command[0] == "zstd":
-            Path(command[command.index("-o") + 1]).touch()
-        if (
-            command[:4] == ["docker", "buildx", "imagetools", "create"]
-            and command[5] == "mozillasecurity/broken:latest"
-        ):
-            raise RuntimeError("Docker Hub rejected broken:latest")
+            uploaded.append(command[-1])
 
     monkeypatch.setattr(gha_run, "_download_artifact", download_artifact)
     monkeypatch.setattr(gha_run, "_run", run)
-    monkeypatch.setattr(
-        gha_run.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            stdout="Digest: sha256:" + "c" * 64 + "\n"
-        ),
-    )
-    runner_temp = tmp_path / "runner"
+    plan = {"revision": revision, "publish": True, "selected_jobs": list(builds)}
 
-    with pytest.raises(RuntimeError, match="broken/latest"):
-        gha_run.publish_images(
-            repo,
-            {
-                "revision": revision,
-                "publish": True,
-                "selected_jobs": [
-                    job_id("build", "broken", "amd64"),
-                    job_id("build", "healthy", "amd64"),
-                ],
-            },
-            runner_temp=runner_temp,
-        )
-
-    assert any(
-        command[:4] == ["docker", "buildx", "imagetools", "create"]
-        and command[5] == "mozillasecurity/healthy:latest"
-        for command in commands
-    )
-    assert (runner_temp / "published-images.json").is_file()
-
-
-def test_scoped_publication_does_not_consume_peer_builds_or_failures(
-    tmp_path, monkeypatch
-):
-    """Limit a service publication to its own archives and latest manifest."""
-    repo, revision = make_repo(
-        tmp_path / "repo",
-        {
-            "services/target/service.yaml": "name: target\narch: [amd64]\n",
-            "services/target/Dockerfile": "FROM alpine:3.20\n",
-            "services/peer/service.yaml": "name: peer\narch: [amd64]\n",
-            "services/peer/Dockerfile": "FROM alpine:3.20\n",
-        },
-    )
-    monkeypatch.setenv("GITHUB_RUN_ID", "100")
-    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "1")
-    monkeypatch.setenv(
-        "ORION_JOB_RESULTS",
-        json.dumps(
-            {
-                job_id("build", "target", "amd64"): {"result": "success"},
-                job_id("build", "peer", "amd64"): {"result": "failure"},
-            }
-        ),
-    )
-    downloads: list[str] = []
-    commands: list[list[str]] = []
-
-    def download(name: str, destination: Path) -> None:
-        downloads.append(name)
-        destination.mkdir(parents=True)
-        (destination / "target-amd64.tar.zst").touch()
-
-    def run(command: list[str], **_kwargs: Any) -> None:
-        commands.append(command)
-        if command[0] == "zstd":
-            Path(command[command.index("-o") + 1]).touch()
-
-    monkeypatch.setattr(gha_run, "_download_artifact", download)
-    monkeypatch.setattr(gha_run, "_run", run)
-    monkeypatch.setattr(
-        gha_run, "_has_newer_successful_service_publication", lambda *_: False
-    )
-    monkeypatch.setattr(
-        gha_run.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(
-            stdout="Digest: sha256:" + "d" * 64 + "\n"
-        ),
-    )
-
-    output = gha_run.publish_images(
-        repo,
-        {
-            "revision": revision,
-            "publish": True,
-            "selected_jobs": [
-                job_id("build", "target", "amd64"),
-                job_id("build", "peer", "amd64"),
-            ],
-        },
-        runner_temp=tmp_path / "runner",
-        service_name="target",
-    )
-
-    assert downloads == ["orion-build-target-amd64-1"]
-    latest = [
-        c for c in commands if c[:4] == ["docker", "buildx", "imagetools", "create"]
-    ]
-    assert [c[5] for c in latest] == ["mozillasecurity/target:latest"]
-    assert latest[0][6:10] == [
-        "--annotation",
-        "index:org.mozilla.orion.github-run-id=100",
-        "--annotation",
-        "index:org.mozilla.orion.github-run-attempt=1",
-    ]
-    assert json.loads(output.read_text()) == {
-        "target": {
-            "architectures": {"amd64": "sha256:" + "d" * 64},
-            "latest_published": True,
-        }
+    assert gha_run.stage_images(repo, plan, "multi", tmp_path / "runner") == {
+        "amd64": "sha256:" + "a" * 64,
+        "arm64": "sha256:" + "b" * 64,
     }
+    assert downloaded == ["orion-build-multi-amd64-1", "orion-build-multi-arm64-2"]
+    assert uploaded == [
+        f"docker://mozillasecurity/multi:gha-{revision}-12345-2-amd64",
+        f"docker://mozillasecurity/multi:gha-{revision}-12345-2-arm64",
+    ]
 
 
 @pytest.mark.parametrize(
-    ("returncode", "raw", "stderr", "expected", "raises"),
+    (
+        "current_position",
+        "current_run",
+        "current_attempt",
+        "latest_position",
+        "latest_run",
+        "latest_attempt",
+        "legacy",
+        "promoted",
+    ),
     [
-        (
-            0,
-            {
-                "annotations": {
-                    "org.mozilla.orion.github-run-id": "200",
-                    "org.mozilla.orion.github-run-attempt": "1",
-                }
-            },
-            "",
-            True,
-            False,
-        ),
-        (
-            0,
-            {
-                "annotations": {
-                    "org.mozilla.orion.github-run-id": "100",
-                    "org.mozilla.orion.github-run-attempt": "1",
-                }
-            },
-            "",
-            False,
-            False,
-        ),
-        (0, {"annotations": {}}, "", False, False),
-        (1, {}, "manifest unknown", False, False),
-        (
-            1,
-            {},
-            "ERROR: docker.io/mozillasecurity/target:latest: not found",
-            False,
-            False,
-        ),
-        (
-            1,
-            {},
-            "ERROR: docker.io/mozillasecurity/peer:latest: not found",
-            False,
-            True,
-        ),
-        (1, {}, "unauthorized", False, True),
+        (2, 200, 3, None, None, None, False, True),
+        (2, 200, 3, 2, 199, 9, False, True),
+        (2, 200, 3, 2, 201, 1, False, False),
+        (2, 200, 3, 2, 200, 2, False, True),
+        (2, 200, 3, 2, 200, 4, False, False),
+        (1, 200, 3, 3, 199, 1, False, False),
+        (2, 200, 3, 1, 201, 9, False, True),
+        (1, 200, 3, 2, 199, 1, True, False),
+        (2, 200, 3, 1, 201, 9, True, True),
     ],
 )
-def test_service_latest_freshness_uses_durable_index_annotations(
-    monkeypatch, returncode, raw, stderr, expected, raises
+def test_docker_promotion_orders_service_latest(
+    tmp_path,
+    monkeypatch,
+    current_position,
+    current_run,
+    current_attempt,
+    latest_position,
+    latest_run,
+    latest_attempt,
+    legacy,
+    promoted,
 ):
-    """Compare index run attempts and fail closed on inspect errors."""
-    monkeypatch.setenv("GITHUB_RUN_ID", "100")
-    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
-    result = SimpleNamespace(
-        returncode=returncode,
-        stdout=json.dumps(raw),
-        stderr=stderr,
+    """Use the service's actual index and main landing order before run identity."""
+    repo, first = make_repo(
+        tmp_path / "repo",
+        {
+            "services/multi/service.yaml": "name: multi\narch: [amd64, arm64]\n",
+            "services/multi/Dockerfile": "FROM alpine:3.20\n",
+        },
     )
+    git(repo, "commit", "--allow-empty", "-m", "land second")
+    second = git(repo, "rev-parse", "HEAD")
+    git(repo, "commit", "--allow-empty", "-m", "land third")
+    third = git(repo, "rev-parse", "HEAD")
+    git(repo, "update-ref", "refs/remotes/origin/main", third)
+    revisions = [None, first, second, third]
+    revision = revisions[current_position]
+    git(repo, "checkout", "--detach", revision)
+
+    monkeypatch.setenv("GITHUB_RUN_ID", "12345")
+    monkeypatch.setenv("GITHUB_RUN_NUMBER", str(current_run))
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", str(current_attempt))
+    annotations = {}
+    if latest_position:
+        annotations = {
+            "org.mozilla.orion.github-run-id": "99999",
+            "org.mozilla.orion.github-run-attempt": str(latest_attempt),
+        }
+        if legacy:
+            monkeypatch.setattr(
+                gha_run,
+                "_legacy_docker_run",
+                lambda _run_id: {
+                    "head_sha": revisions[latest_position],
+                    "run_number": latest_run,
+                },
+            )
+        else:
+            annotations.update(
+                {
+                    "org.mozilla.orion.revision": revisions[latest_position],
+                    "org.mozilla.orion.github-run-number": str(latest_run),
+                }
+            )
+    monkeypatch.setattr(gha_run, "_latest_image_annotations", lambda _name: annotations)
     commands: list[list[str]] = []
+    monkeypatch.setattr(gha_run, "_run", commands.append)
+    digests = {"amd64": "sha256:" + "a" * 64, "arm64": "sha256:" + "b" * 64}
 
-    def inspect(command, **_kwargs):
-        commands.append(command)
-        return result
+    output = gha_run.promote_images(
+        repo,
+        {"revision": revision, "publish": True, "landing_order": current_position},
+        "multi",
+        digests,
+        tmp_path,
+    )
 
-    monkeypatch.setattr(gha_run.subprocess, "run", inspect)
-    if raises:
-        with pytest.raises(RuntimeError, match="Could not inspect latest manifest"):
-            gha_run._has_newer_successful_service_publication("target")
-    else:
-        assert gha_run._has_newer_successful_service_publication("target") is expected
-    assert commands == [
-        [
+    receipt = json.loads(output.read_text())["multi"]
+    assert receipt["latest_published"] is promoted
+    assert receipt["architectures"] == digests
+    if promoted:
+        assert len(commands) == 1
+        command = commands[0]
+        assert command[:6] == [
             "docker",
             "buildx",
             "imagetools",
-            "inspect",
-            "--raw",
-            "mozillasecurity/target:latest",
+            "create",
+            "--tag",
+            "mozillasecurity/multi:latest",
         ]
-    ]
+        assert f"index:org.mozilla.orion.revision={revision}" in command
+        assert "index:org.mozilla.orion.github-run-id=12345" in command
+        assert f"index:org.mozilla.orion.github-run-number={current_run}" in command
+        assert (
+            f"index:org.mozilla.orion.github-run-attempt={current_attempt}" in command
+        )
+        assert command[-2:] == [
+            f"mozillasecurity/multi@{digest}" for digest in digests.values()
+        ]
+    else:
+        assert commands == []
+        assert receipt["superseded"] is True
 
 
-def test_stale_publication_is_rejected_against_current_branch_head(monkeypatch):
-    """Reject publication when the workflow revision is no longer the branch head."""
-    monkeypatch.delenv("GITHUB_RUN_ID", raising=False)
+@pytest.mark.parametrize(
+    ("error", "missing"),
+    [
+        ("manifest unknown", True),
+        ("ERROR: docker.io/mozillasecurity/target:latest: not found", True),
+        ("ERROR: docker.io/mozillasecurity/peer:latest: not found", False),
+        ("unauthorized", False),
+    ],
+)
+def test_docker_latest_inspect_distinguishes_missing_tag_from_other_failures(
+    monkeypatch, error, missing
+):
+    """Only a confirmed missing manifest permits a first promotion."""
     monkeypatch.setattr(
         gha_run.subprocess,
         "run",
-        lambda *_args, **_kwargs: SimpleNamespace(stdout="newer-revision\n"),
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stderr=error),
     )
-
-    with pytest.raises(RuntimeError, match="Refusing stale publication"):
-        gha_run.reject_stale_publication("org/orion", "main", "older-revision")
-
-
-def test_same_sha_older_workflow_run_is_rejected(monkeypatch):
-    """Reject an older workflow run when a newer run targets the same revision."""
-    monkeypatch.setenv("GITHUB_RUN_ID", "100")
-    responses = [
-        SimpleNamespace(stdout="same-revision\n"),
-        SimpleNamespace(
-            stdout=json.dumps(
-                {
-                    "workflow_runs": [
-                        {
-                            "id": 200,
-                            "path": ".github/workflows/orion.yml@refs/heads/main",
-                            "head_branch": "main",
-                            "event": "push",
-                        },
-                        {
-                            "id": 999,
-                            "path": ".github/workflows/orion.yml@refs/pull/1/merge",
-                            "head_branch": "main",
-                            "event": "pull_request",
-                        },
-                    ]
-                }
-            )
-        ),
-        SimpleNamespace(stdout=json.dumps({"workflow_runs": []})),
-        SimpleNamespace(stdout=json.dumps({"workflow_runs": []})),
-    ]
-    calls: list[list[str]] = []
-
-    def run(command, **_kwargs):
-        calls.append(command)
-        return responses.pop(0)
-
-    monkeypatch.setattr(gha_run.subprocess, "run", run)
-    with pytest.raises(RuntimeError, match="Start a new workflow_dispatch run"):
-        gha_run.reject_stale_publication("org/orion", "main", "same-revision")
-    assert len(calls) == 4
-    assert all("actions/workflows/orion.yml/runs" in call[-1] for call in calls[1:])
-
-
-def test_latest_eligible_run_paginates_until_it_finds_exact_workflow(monkeypatch):
-    """Search pages until the latest eligible run matches the exact workflow."""
-    pages = [
-        {"workflow_runs": [{"id": 1, "path": ".github/workflows/other.yml"}] * 100},
-        {
-            "workflow_runs": [
-                {
-                    "id": 250,
-                    "path": ".github/workflows/orion.yml@refs/heads/main",
-                    "head_branch": "main",
-                    "event": "push",
-                },
-                {
-                    "id": 275,
-                    "path": ".github/workflows/orion.yml@refs/heads/main",
-                    "head_branch": "main",
-                    "event": "push",
-                },
-            ]
-        },
-        {"workflow_runs": []},
-        {"workflow_runs": []},
-    ]
-    calls: list[list[str]] = []
-
-    def run(command, **_kwargs):
-        calls.append(command)
-        return SimpleNamespace(stdout=json.dumps(pages.pop(0)))
-
-    monkeypatch.setattr(gha_run.subprocess, "run", run)
-    assert gha_run.latest_eligible_publication_run_id("org/orion", "main") == 275
-    assert "page=2" in calls[1][-1]
+    if missing:
+        assert gha_run._latest_image_annotations("target") == {}
+    else:
+        with pytest.raises(RuntimeError, match="Could not inspect latest manifest"):
+            gha_run._latest_image_annotations("target")
 
 
 @pytest.mark.parametrize(

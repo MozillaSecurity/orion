@@ -24,13 +24,20 @@ on:
       job_results:
         type: string
         required: true
+    outputs:
+      receipt_status:
+        value: ${{ jobs.publish.outputs.receipt_status }}
 permissions:
   actions: read
   contents: read
 jobs:
   publish:
+    if: inputs.operation != 'docker'
     runs-on: ubuntu-24.04
-    environment: ${{ inputs.operation == 'docker' && 'dockerhub' || 'fxci' }}
+    environment: fxci
+    outputs:
+      receipt_status: ${{ steps.receipt.outputs.receipt_status }}
+      task_id: ${{ steps.index.outputs.task_id || steps.receipt.outputs.task_id }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -39,25 +46,12 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -e services/orion-decision
-      - name: Write plan and install zstd
+      - name: Write plan
         env:
           ORION_PLAN_JSON: ${{ inputs.plan_json }}
-        run: |
-          printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
-          if [[ "${{ inputs.operation }}" == docker ]]; then
-            sudo apt-get update
-            sudo apt-get install --yes zstd
-          fi
-      - name: Set up Docker Buildx
-        if: inputs.operation == 'docker'
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to Docker Hub
-        if: inputs.operation == 'docker'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
       - name: Schedule archive import
+        id: index
         if: inputs.operation == 'index'
         env:
           TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
@@ -75,6 +69,7 @@ jobs:
             --manifest-file "$RUNNER_TEMP/manifest.json" \
             --task-group "$ORION_TASK_GROUP"
       - name: Create publication receipt
+        id: receipt
         if: inputs.operation == 'receipt'
         env:
           TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
@@ -87,17 +82,112 @@ jobs:
           --plan-file "$RUNNER_TEMP/plan.json"
           --service "${{ inputs.service }}"
           --task-group "$ORION_TASK_GROUP"
-      - name: Publish Docker latest image
-        if: inputs.operation == 'docker'
+      - name: Await Taskcluster publication artifact
+        if: steps.index.outputs.task_id != '' || steps.receipt.outputs.task_id != ''
+        env:
+          TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
+          TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+          TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+          ORION_TASK_ID: ${{ steps.index.outputs.task_id || steps.receipt.outputs.task_id }}
+        run: python -m orion_decision.gha_publish wait-task --task-id "$ORION_TASK_ID" --timeout 16200
+  promote-fxci:
+    needs: publish
+    if: needs.publish.outputs.task_id != ''
+    concurrency:
+      group: orion-fxci-${{ inputs.operation }}-${{ inputs.service }}-${{ inputs.arch }}
+      queue: max
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: fxci
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e services/orion-decision
+      - name: Promote Taskcluster publication indexes
+        env:
+          TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
+          TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
+          TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
+          ORION_TASK_ID: ${{ needs.publish.outputs.task_id }}
+        run: python -m orion_decision.gha_publish promote-index --task-id "$ORION_TASK_ID"
+  stage-docker:
+    if: inputs.operation == 'docker'
+    runs-on: ubuntu-24.04
+    environment: dockerhub
+    outputs:
+      digests: ${{ steps.stage.outputs.digests }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e services/orion-decision
+      - name: Install staging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes zstd skopeo
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          printf '%s' "$DOCKERHUB_TOKEN" | skopeo login --username "$DOCKERHUB_USERNAME" \
+            --password-stdin --authfile "$RUNNER_TEMP/dockerhub-auth.json" docker.io
+      - name: Push Docker staging images
+        id: stage
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ORION_JOB_RESULTS: ${{ inputs.job_results }}
-        run: >-
-          python -m orion_decision.gha_run publish --repo .
-          --plan-file "$RUNNER_TEMP/plan.json"
-          --service "${{ inputs.service }}"
+          ORION_PLAN_JSON: ${{ inputs.plan_json }}
+          ORION_SERVICE: ${{ inputs.service }}
+        run: |
+          printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+          export REGISTRY_AUTH_FILE="$RUNNER_TEMP/dockerhub-auth.json"
+          python -m orion_decision.gha_run stage \
+            --plan-file "$RUNNER_TEMP/plan.json" --service "$ORION_SERVICE"
+  promote-docker:
+    needs: stage-docker
+    if: inputs.operation == 'docker'
+    concurrency:
+      group: orion-docker-latest-${{ inputs.service }}-${{ github.ref }}
+      queue: max
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: dockerhub
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -e services/orion-decision
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Promote Docker latest image
+        id: promote
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ORION_PLAN_JSON: ${{ inputs.plan_json }}
+          ORION_SERVICE: ${{ inputs.service }}
+          ORION_STAGED_DIGESTS: ${{ needs.stage-docker.outputs.digests }}
+        run: |
+          printf '%s' "$ORION_PLAN_JSON" > "$RUNNER_TEMP/plan.json"
+          python -m orion_decision.gha_run promote \
+            --plan-file "$RUNNER_TEMP/plan.json" --service "$ORION_SERVICE"
       - name: Record published image digests
-        if: always() && inputs.operation == 'docker'
+        if: success() || steps.promote.outcome == 'failure'
         uses: actions/upload-artifact@v5
         with:
           name: orion-published-image-digests-${{ inputs.service }}-${{ github.run_id }}-${{ github.run_attempt }}
