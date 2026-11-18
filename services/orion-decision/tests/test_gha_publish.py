@@ -646,7 +646,8 @@ def test_independent_archives_need_their_own_service_completion_receipt(tmp_path
                     raise Missing()
                 return {"taskId": "receipt", "data": receipt}
             if ".docker." in route:
-                return {"taskId": "archive", "data": data}
+                archive = receipt if route.endswith(".arm64.main") and receipt else data
+                return {"taskId": "archive", "data": archive}
             raise Missing()
 
     class Queue:
@@ -682,6 +683,14 @@ def test_independent_archives_need_their_own_service_completion_receipt(tmp_path
 
     receipt = {**receipt, "runId": "122"}
     state = gha_publish.publication_state(**kwargs)
+    assert state["incomplete_services"] == ["docker"]
+
+    # A successful import can advance its arch while the older all-arch receipt
+    # remains the complete-service baseline.
+    receipt = {**data, "service": "docker"}
+    data = {**data, "revision": "b" * 40, "runId": "121", "runNumber": 8}
+    state = gha_publish.publication_state(**kwargs)
+    assert state["service_revisions"] == {"docker": revision}
     assert state["incomplete_services"] == ["docker"]
 
 
@@ -772,6 +781,113 @@ def test_import_task_definitions_preserve_artifact_routes_and_marker_dependencie
     assert marker["scopes"] == []
     assert marker["extra"]["index"]["rank"] == 41802
     assert marker["expires"].startswith("2027-04-13")
+
+
+def test_import_and_marker_leave_revision_and_main_paths_for_direct_promotion(manifest):
+    now = datetime(2026, 10, 13, tzinfo=timezone.utc)
+    tasks = gha_publish.build_import_tasks(
+        {**manifest, "landing_order": 1750}, "d" * 22, now
+    )
+    amd64 = tasks[gha_publish.artifact_task_id("123456789", 2, "fuzzilli-amd64")]
+    marker = tasks[gha_publish.artifact_task_id("123456789", 2, "publication-marker")]
+    assert all(task["routes"] == [] for task in tasks.values())
+    assert {task["extra"]["index"]["rank"] for task in tasks.values()} == {
+        2_147_483_647
+    }
+    assert amd64["extra"]["orion"]["indexPaths"] == [
+        "project.fuzzing.orion.fuzzilli.amd64.main",
+        "project.fuzzing.orion.fuzzilli.amd64.rev." + "a" * 40,
+        "project.fuzzing.orion.fuzzilli.main",
+        "project.fuzzing.orion.fuzzilli.rev." + "a" * 40,
+    ]
+    assert marker["extra"]["orion"]["indexPaths"] == [gha_publish.MARKER_ROUTE]
+
+
+def test_fxci_promotion_preserves_newest_order_and_still_writes_revision_path(
+    tmp_path, monkeypatch, manifest
+):
+    repo = _publication_repo(tmp_path / "repo")
+    first = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "commit", "--allow-empty", "-m", "second land")
+    second = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "update-ref", "refs/remotes/origin/main", second)
+    monkeypatch.setenv("GITHUB_REPOSITORY", manifest["repository"])
+    now = datetime(2026, 10, 13, tzinfo=timezone.utc)
+    tasks = {}
+    archives = "project.fuzzing.orion.fuzzilli.amd64"
+    stable_path = f"{archives}.main"
+    store = {
+        stable_path: {
+            "taskId": "legacy",
+            "rank": 90003,
+            "data": {
+                "repository": manifest["repository"],
+                "revision": second,
+                "runNumber": 900,
+                "runAttempt": "3",
+            },
+        },
+    }
+
+    class Missing(gha_publish.TaskclusterFailure):
+        status_code = 404
+
+    class Index:
+        def findTask(self, path):
+            if path not in store:
+                raise Missing()
+            return store[path]
+
+        def insertTask(self, path, payload):
+            store[path] = payload
+            return payload
+
+    class Queue:
+        def status(self, task_id):
+            state = "failed" if task_id == failed else "completed"
+            return {"status": {"state": state, "runs": [{"state": state}]}}
+
+        def task(self, task_id):
+            return tasks[task_id]
+
+    clients = {"index": Index(), "queue": Queue()}
+    monkeypatch.setattr(gha_publish.Taskcluster, "get_service", clients.__getitem__)
+
+    def candidate(run_id, revision, position, run_number, attempt):
+        tasks.update(
+            gha_publish.build_import_tasks(
+                {
+                    **manifest,
+                    "revision": revision,
+                    "landing_order": position,
+                    "run_id": run_id,
+                    "run_number": run_number,
+                    "run_attempt": attempt,
+                },
+                "d" * 22,
+                now,
+            )
+        )
+        return gha_publish.artifact_task_id(run_id, attempt, "fuzzilli-amd64")
+
+    delayed = candidate("10", first, 1, 903, "2")
+    newer = candidate("11", second, 2, 901, "1")
+    retry = candidate("11", second, 2, 901, "2")
+    failed = candidate("12", second, 2, 904, "1")
+    checkout = GitRepo.from_existing(repo)
+    gha_publish.promote_index(checkout, delayed)
+    assert store[stable_path]["taskId"] == "legacy"
+    assert store[f"{archives}.rev.{first}"]["taskId"] == delayed
+    gha_publish.promote_index(checkout, newer)
+    assert store[stable_path]["taskId"] == newer
+    gha_publish.promote_index(checkout, retry)
+    gha_publish.promote_index(checkout, newer)
+    with pytest.raises(ValueError, match="did not complete successfully"):
+        gha_publish.promote_index(checkout, failed)
+
+    assert store[stable_path]["taskId"] == retry
+    assert store[f"{archives}.rev.{second}"]["taskId"] == retry
+    assert store[stable_path]["rank"] == 2_147_483_647
 
 
 def _zip_bytes(entries: list[tuple[str, bytes]]) -> bytes:
@@ -1047,14 +1163,18 @@ def test_monitor_does_not_treat_an_idle_worker_as_success(
 
 
 @pytest.mark.parametrize(
-    ("graph", "publish", "submissions", "workers", "expected_returncode"),
+    ("graph", "publish", "submissions", "workers", "marker", "expected_returncode"),
     [
-        ("success", "false", "skipped", "skipped", 0),
-        ("success", "true", "failure", "success", 1),
-        ("success", "true", "success", "failure", 1),
-        ("success", "true", "success", "success", 0),
-        ("failure", "false", "skipped", "skipped", 1),
-        ("failure", "true", "success", "success", 1),
+        ("success", "false", "skipped", "skipped", ("", "skipped"), 0),
+        ("success", "true", "failure", "success", ("", "skipped"), 1),
+        ("success", "true", "success", "failure", ("true", "success"), 1),
+        ("success", "true", "success", "success", ("true", "success"), 0),
+        ("success", "true", "success", "success", ("true", "failure"), 1),
+        ("success", "true", "success", "success", ("true", "skipped"), 1),
+        ("success", "true", "success", "success", ("false", "skipped"), 0),
+        ("success", "true", "success", "success", ("", "skipped"), 1),
+        ("failure", "false", "skipped", "skipped", ("", "skipped"), 1),
+        ("failure", "true", "success", "success", ("true", "success"), 1),
     ],
 )
 def test_generated_result_step_enforces_graph_and_publication_statuses(
@@ -1063,6 +1183,7 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
     publish,
     submissions,
     workers,
+    marker,
     expected_returncode,
 ) -> None:
     """A green publication requires successful producers and a drained worker pool."""
@@ -1077,6 +1198,8 @@ def test_generated_result_step_enforces_graph_and_publication_statuses(
         "ORION_PUBLISH": publish,
         "ORION_PUBLICATION_RESULT": submissions,
         "ORION_WORKERS_RESULT": workers,
+        "ORION_MARKER_EXPECTED": marker[0],
+        "ORION_MARKER_RESULT": marker[1],
     }
     completed = subprocess.run(
         ["/bin/bash", "-e", "-c", command],

@@ -63,6 +63,7 @@ def identity(plan: dict[str, Any]) -> dict[str, Any]:
         "runId": os.environ["GITHUB_RUN_ID"],
         "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
         "runNumber": int(os.environ["GITHUB_RUN_NUMBER"]),
+        **({"landingOrder": plan["landing_order"]} if "landing_order" in plan else {}),
     }
 
 
@@ -77,6 +78,10 @@ def metadata_task(
     """Store small immutable publication metadata using ordinary TC artifacts."""
     now = datetime.now(timezone.utc)
     expires = (now + ARTIFACTS_EXPIRE).isoformat()
+    routes = [f"index.{route}"]
+    if "landingOrder" in data and not data.get("root"):
+        data = {**data, "indexPaths": [route]}
+        routes = []
     return {
         "taskGroupId": group,
         "dependencies": dependencies or [],
@@ -87,7 +92,7 @@ def metadata_task(
         "workerType": WORKER,
         "schedulerId": SCHEDULER_ID,
         "priority": "highest" if data.get("root") else "lowest",
-        "routes": [f"index.{route}"],
+        "routes": routes,
         "payload": {
             "maxRunTime": 3600,
             "command": [
@@ -118,7 +123,9 @@ def metadata_task(
         },
         "extra": {
             "index": {
-                "rank": publication_rank(data["runNumber"], data["runAttempt"]),
+                "rank": publication_rank(
+                    data["runNumber"], data["runAttempt"], data.get("landingOrder")
+                ),
                 "data": data,
             },
             "orion": data,
@@ -145,7 +152,7 @@ def bootstrap(plan: dict[str, Any]) -> str:
     return group
 
 
-def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str:
+def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str | None:
     """Record one fully published service without depending on peer services."""
     from .gha_plan import job_id
     from .git import GitRepo
@@ -179,6 +186,9 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
             token=os.environ["GITHUB_TOKEN"],
         )
         publication = images.get(service_name, {})
+        if publication.get("superseded") is True:
+            print(f"Docker latest for {service_name} already has a newer publication")
+            return None
         if publication.get("latest_published") is not True or set(
             publication.get("architectures", {})
         ) != set(service.archs):
@@ -303,7 +313,7 @@ def group_tasks(group: str, run_id: str, attempt: str, queue: Any) -> list[dict]
         options = {"continuationToken": token}
 
 
-def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
+def close_submissions(plan: dict[str, Any], group: str, output: Path) -> str | None:
     """Close submissions after all producers finish, without gating any import."""
     from .gha_plan import job_id
     from .git import GitRepo
@@ -316,6 +326,8 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
         for name, item in results.items()
         if item["result"] in {"failure", "cancelled"}
     ]
+    if not group:
+        failed.append("Missing Taskcluster publication group")
     services = Services(GitRepo.from_existing(Path.cwd()))
     required = {"plan", "publication-bootstrap", "graph-result"}
     required.update(
@@ -332,6 +344,8 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
     )
     queue = Taskcluster.get_service("queue")
     expected: list[str] = []
+    superseded = False
+    marker = None
     try:
         task_map = (
             _group_publication_tasks(group, data, data["runAttempt"], queue)
@@ -353,10 +367,14 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
                         f"No Taskcluster import task exists for "
                         f"{service.name}-{arch} in {group}"
                     )
-            if (
-                results.get(job_id("receipt", service.name), {}).get("result")
-                == "success"
-            ):
+            receipt_result = results.get(job_id("receipt", service.name), {})
+            if receipt_result.get("result") == "success":
+                if (
+                    receipt_result.get("outputs", {}).get("receipt_status")
+                    == "superseded"
+                ):
+                    superseded = True
+                    continue
                 try:
                     receipt = task_map[("receipt", service.name)][1]
                     expected.append(receipt)
@@ -364,7 +382,7 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
                     failed.append(
                         f"No Taskcluster receipt exists for {service.name} in {group}"
                     )
-        if not failed and group:
+        if not failed and not superseded and group:
             require_workers()
             dependencies = expected.copy()
             marker = artifact_task_id(
@@ -399,6 +417,7 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> None:
         raise RuntimeError(
             "Publication producers failed: " + ", ".join(sorted(set(failed)))
         )
+    return marker
 
 
 def _attempt_jobs(

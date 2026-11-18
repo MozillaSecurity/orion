@@ -227,8 +227,8 @@ def test_docker_receipt_requires_full_success_and_uses_only_own_imports(
 
     receipt = gha_pool.schedule_receipt(plan, "docker", group)
 
-    task = queue.tasks[receipt]
     assert receipt == gha_publish.artifact_task_id("123456789", "2", "receipt-docker")
+    task = queue.tasks[receipt]
     assert task["taskGroupId"] == group
     assert task["dependencies"] == [
         gha_publish.artifact_task_id("123456789", "2", "docker-amd64"),
@@ -321,6 +321,7 @@ def test_native_receipt_needs_no_github_docker_artifact(
         plan, "native", gha_publish.artifact_task_id("123456789", "1", "decision")
     )
 
+    assert receipt is not None
     assert queue.tasks[receipt]["dependencies"] == [
         gha_publish.artifact_task_id("123456789", "2", "native-amd64")
     ]

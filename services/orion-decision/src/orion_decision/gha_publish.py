@@ -33,12 +33,16 @@ from . import (
     SOURCE_URL,
     Taskcluster,
 )
+from .git import GitRepo
 
 QUEUE = "orion-gha-publish"
 WORKER = "orion-gha-publish"
 WORKER_CLIENT = "project/fuzzing/ci-worker-orion-gha"
 MARKER_ROUTE = "project.fuzzing.orion.gha.main"
 MANIFEST_SCHEMA = 2
+# Taskcluster stores ranks as signed 32-bit integers. The direct publisher uses
+# the maximum to supersede legacy writers and compares full ordering metadata.
+DIRECT_INDEX_RANK = 2_147_483_647
 
 
 def artifact_task_id(run_id: str, attempt: str | int, key: str) -> str:
@@ -50,12 +54,39 @@ def artifact_task_id(run_id: str, attempt: str | int, key: str) -> str:
     return base64.urlsafe_b64encode(tc_uuid.bytes).decode().rstrip("=")
 
 
-def publication_rank(run_number: str | int, attempt: str | int) -> int:
-    """Give later GHA runs and retries a strictly higher Taskcluster rank."""
+def publication_rank(
+    run_number: str | int, attempt: str | int, landing_order: int | None = None
+) -> int:
+    """Use the reserved direct-write rank or the legacy automatic-route rank."""
+    if landing_order is not None:
+        return DIRECT_INDEX_RANK
     attempt_number = int(attempt)
     if not 1 <= attempt_number <= 99:
         raise ValueError("GitHub Actions run attempt must be between 1 and 99")
     return int(run_number) * 100 + attempt_number
+
+
+def publication_order(
+    landing_order: int, run_number: str | int, attempt: str | int
+) -> tuple[int, int, int]:
+    """Order main revisions first, then workflow runs and attempts of that revision."""
+    order = (landing_order, int(run_number), int(attempt))
+    if min(order) < 1:
+        raise ValueError(f"Publication order must contain positive numbers: {order}")
+    return order
+
+
+def main_positions(repo: GitRepo) -> dict[str, int]:
+    """Read main's first-parent history from a full checkout."""
+    return {
+        revision: number
+        for number, revision in enumerate(
+            repo.git(
+                "rev-list", "--reverse", "--first-parent", "refs/remotes/origin/main"
+            ).splitlines(),
+            1,
+        )
+    }
 
 
 def validate_manifest(
@@ -216,6 +247,9 @@ def build_import_tasks(
     deadline = (now.astimezone(timezone.utc) + DEADLINE).isoformat()
     tasks: dict[str, dict[str, Any]] = {}
     task_ids: list[str] = []
+    rank = publication_rank(
+        manifest["run_number"], manifest["run_attempt"], manifest.get("landing_order")
+    )
     for item in manifest["artifacts"]:
         item = {**item, "repository": manifest["repository"]}
         item.setdefault("worker_path", "orion-import/artifact")
@@ -230,7 +264,6 @@ def build_import_tasks(
         )
         task_ids.append(task_id)
         output_name = Path(item["archive_path"]).name
-        rank = publication_rank(manifest["run_number"], manifest["run_attempt"])
         provenance = {
             "revision": manifest["revision"],
             "repository": manifest["repository"],
@@ -242,6 +275,13 @@ def build_import_tasks(
             "artifactDigest": item.get("digest"),
             "publicationKind": "import",
         }
+        routes = _artifact_indexes(manifest, item)
+        if "landing_order" in manifest:
+            provenance["landingOrder"] = manifest["landing_order"]
+            provenance["indexPaths"] = [
+                route.removeprefix("index.") for route in routes
+            ]
+            routes = []
         if manifest.get("artifact_only"):
             provenance["independentPublication"] = True
         elif item["kind"] == "docker":
@@ -260,7 +300,7 @@ def build_import_tasks(
             "provisionerId": PROVISIONER_ID,
             "workerType": WORKER,
             "schedulerId": SCHEDULER_ID,
-            "routes": _artifact_indexes(manifest, item),
+            "routes": routes,
             "payload": {
                 "maxRunTime": 3600,
                 "command": [["bash", "-e", "-c", _download_script(item)]],
@@ -311,6 +351,11 @@ def build_import_tasks(
             "artifact_task_ids": task_ids,
             "published_images": manifest.get("published_images", {}),
         }
+        routes = [f"index.{MARKER_ROUTE}"]
+        if "landing_order" in manifest:
+            marker["landing_order"] = manifest["landing_order"]
+            marker["indexPaths"] = [MARKER_ROUTE]
+            routes = []
         marker_script = (
             "mkdir -p orion-import && cat > orion-import/publication.json "
             "<<'ORION_MARKER'\n" + json.dumps(marker, sort_keys=True) + "\nORION_MARKER"
@@ -324,7 +369,7 @@ def build_import_tasks(
             "provisionerId": PROVISIONER_ID,
             "workerType": WORKER,
             "schedulerId": SCHEDULER_ID,
-            "routes": [f"index.{MARKER_ROUTE}"],
+            "routes": routes,
             "payload": {
                 "maxRunTime": 3600,
                 "command": [["bash", "-e", "-c", marker_script]],
@@ -346,9 +391,7 @@ def build_import_tasks(
             },
             "extra": {
                 "index": {
-                    "rank": publication_rank(
-                        manifest["run_number"], manifest["run_attempt"]
-                    ),
+                    "rank": rank,
                     "data": marker,
                 },
                 "orion": marker,
@@ -429,6 +472,11 @@ def select_attempt_artifact(
     if not candidates:
         return None
     return max(candidates, key=lambda candidate: candidate[0])[1]
+
+
+def _publication_run(data: dict[str, Any]) -> tuple[int, int]:
+    """Return a same-revision ordering key, with a fallback for legacy metadata."""
+    return int(data.get("runNumber") or data["runId"]), int(data.get("runAttempt", 1))
 
 
 def publication_state(
@@ -554,9 +602,7 @@ def publication_state(
                 ):
                     revisions.append(data["revision"])
                     try:
-                        publication_runs.append(
-                            (int(data["runId"]), int(data.get("runAttempt", 1)))
-                        )
+                        publication_runs.append(_publication_run(data))
                     except (KeyError, TypeError, ValueError):
                         publication_runs.append(None)
                 else:
@@ -592,7 +638,7 @@ def publication_state(
                 ):
                     incomplete_services.append(service.name)
                     continue
-                receipt_run = (int(receipt["runId"]), int(receipt["runAttempt"]))
+                receipt_run = _publication_run(receipt)
                 service_revisions[service.name] = receipt["revision"]
                 service_runs[service.name] = receipt_run
                 if (
@@ -761,6 +807,7 @@ def create_manifest(
         "run_id": run_id,
         "run_attempt": attempt,
         "run_number": int(os.environ["GITHUB_RUN_NUMBER"]),
+        **({"landing_order": plan["landing_order"]} if "landing_order" in plan else {}),
         "event": os.environ["GITHUB_EVENT_NAME"],
         "branch": os.environ["GITHUB_REF_NAME"],
         "workflow": "orion.yml",
@@ -814,10 +861,25 @@ def monitor_imports(
     poll_interval: float = 10,
 ) -> None:
     """Wait for this run's exact imports and marker; fail on missing/failed tasks."""
+    monitor_tasks(
+        expected_import_task_ids(manifest),
+        queue=queue,
+        timeout=timeout,
+        poll_interval=poll_interval,
+    )
+
+
+def monitor_tasks(
+    task_ids: list[str],
+    *,
+    queue: Any | None = None,
+    timeout: float = 3600,
+    poll_interval: float = 10,
+) -> None:
+    """Wait for exact Taskcluster producers before making their index paths live."""
     queue = queue or Taskcluster.get_service("queue")
-    expected = expected_import_task_ids(manifest)
     deadline = time.monotonic() + timeout
-    pending = set(expected)
+    pending = set(task_ids)
     failures: dict[str, str] = {}
     while pending and time.monotonic() < deadline:
         for task_id in tuple(pending):
@@ -861,6 +923,70 @@ def monitor_imports(
                 for task_id, state in sorted(failures.items())
             )
         )
+
+
+def _indexed_order(
+    data: dict[str, Any], positions: dict[str, int], repository: str
+) -> tuple[int, int, int]:
+    """Resolve ordering for current and legacy Orion index entries."""
+    if data.get("repository") != repository or "revision" not in data:
+        return (0, 0, 0)
+    revision = data["revision"]
+    position = positions.get(revision)
+    if position is None:
+        raise ValueError(
+            f"Indexed revision {revision!r} is not on main's first-parent history"
+        )
+    declared_position = data.get("landingOrder", data.get("landing_order", position))
+    if declared_position != position:
+        raise ValueError(
+            f"Indexed revision {revision!r} has the wrong main landing order"
+        )
+    run_number = data.get("runNumber", data.get("run_number"))
+    attempt = data.get("runAttempt", data.get("run_attempt", 1))
+    return (
+        publication_order(position, run_number, attempt)
+        if run_number
+        else (position, 0, 0)
+    )
+
+
+def promote_index(repo: GitRepo, task_id: str) -> None:
+    """Index a completed producer under the GitHub publication lock."""
+    queue = Taskcluster.get_service("queue")
+    index = Taskcluster.get_service("index")
+    task = queue.task(task_id)
+    status = queue.status(task_id)["status"]
+    if status["state"] != "completed" or status["runs"][-1]["state"] != "completed":
+        raise ValueError(f"Task {task_id} did not complete successfully")
+    provenance = task["extra"]["index"]["data"]
+    paths = provenance["indexPaths"]
+    repository = os.environ["GITHUB_REPOSITORY"]
+    if provenance["repository"] != repository or not paths:
+        raise ValueError(f"Task {task_id} has no matching publication paths")
+    positions = main_positions(repo)
+    order = _indexed_order(provenance, positions, repository)
+    for path in paths:
+        try:
+            previous = index.findTask(path)
+        except TaskclusterFailure as exc:
+            if exc.status_code != 404:
+                raise
+        else:
+            if _indexed_order(previous["data"], positions, repository) >= order:
+                print(f"FXCI path {path} already has this or a newer publication")
+                continue
+        indexed = index.insertTask(
+            path,
+            {
+                "taskId": task_id,
+                "rank": DIRECT_INDEX_RANK,
+                "data": provenance,
+                "expires": task["expires"],
+            },
+        )
+        if indexed["taskId"] != task_id:
+            raise RuntimeError(f"FXCI did not index {task_id} at {path}")
 
 
 def _token() -> str:
@@ -1051,7 +1177,18 @@ def main() -> None:
     monitor.add_argument("--manifest-file", type=Path, required=True)
     monitor.add_argument("--timeout", type=float, default=3600)
     monitor.add_argument("--poll-interval", type=float, default=10)
+    wait_task = sub.add_parser("wait-task")
+    wait_task.add_argument("--task-id", required=True)
+    wait_task.add_argument("--timeout", type=float, default=3600)
+    promote = sub.add_parser("promote-index")
+    promote.add_argument("--task-id", required=True)
     args = parser.parse_args()
+    if args.command == "wait-task":
+        monitor_tasks([args.task_id], timeout=args.timeout)
+        return
+    if args.command == "promote-index":
+        promote_index(GitRepo.from_existing(Path.cwd()), args.task_id)
+        return
     if args.command in {"bootstrap", "receipt", "close", "worker-pool"}:
         from .gha_pool import (
             bootstrap,
@@ -1070,9 +1207,18 @@ def main() -> None:
             )
             print(group)
         elif args.command == "receipt":
-            schedule_receipt(plan, args.service, args.task_group)
+            receipt = schedule_receipt(plan, args.service, args.task_group)
+            with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+                if receipt:
+                    output.write(f"receipt_status=submitted\ntask_id={receipt}\n")
+                else:
+                    output.write("receipt_status=superseded\n")
         elif args.command == "close":
-            close_submissions(plan, args.task_group, args.output)
+            marker = close_submissions(plan, args.task_group, args.output)
+            with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+                output.write(f"marker_expected={str(marker is not None).lower()}\n")
+                if marker:
+                    output.write(f"task_id={marker}\n")
         else:
             run_worker_pool(plan, args.timeout)
         return
@@ -1111,7 +1257,11 @@ def main() -> None:
         "attempt": manifest["run_attempt"],
     }
     validate_manifest(manifest, **expected)
-    create_tasks(manifest, args.task_group)
+    task_ids = create_tasks(manifest, args.task_group)
+    if manifest.get("artifact_only") and "GITHUB_OUTPUT" in os.environ:
+        (task_id,) = task_ids
+        with Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+            output.write(f"task_id={task_id}\n")
 
 
 if __name__ == "__main__":

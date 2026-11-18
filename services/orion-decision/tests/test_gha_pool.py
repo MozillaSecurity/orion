@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 from taskcluster.exceptions import TaskclusterFailure
 
-from orion_decision import gha_pool
+from orion_decision import gha_pool, gha_publish
 from orion_decision.gha_plan import job_id
 
 
@@ -113,7 +113,10 @@ def test_group_publication_mapping_finds_actual_prior_attempt_tasks(pool_plan):
     assert ("import", "langfuzz-arm64") not in mapping
 
 
-def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
+@pytest.mark.parametrize("superseded", [False, True])
+def test_receipt_depends_on_actual_inherited_imports(
+    pool_plan, monkeypatch, superseded
+):
     """Schedule a current receipt against imports inherited from an earlier attempt."""
     from orion_decision import orion
 
@@ -124,6 +127,7 @@ def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
         "branch": "main",
         "event": "push",
         "revision": "a" * 40,
+        "landing_order": 1750,
         "selected_jobs": [
             job_id("build", "fuzzilli", "amd64"),
             job_id("build", "fuzzilli", "arm64"),
@@ -178,7 +182,8 @@ def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
         downloaded_artifacts.append(artifact_id)
         return {
             "fuzzilli": {
-                "latest_published": True,
+                "latest_published": not superseded,
+                **({"superseded": True} if superseded else {}),
                 "architectures": {
                     "amd64": "sha256:" + "b" * 64,
                     "arm64": "sha256:" + "c" * 64,
@@ -210,6 +215,11 @@ def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
     )
 
     receipt_id = gha_pool.schedule_receipt(plan, "fuzzilli", group)
+    assert downloaded_artifacts == [22]
+    if superseded:
+        assert receipt_id is None
+        assert submitted == {}
+        return
     receipt = submitted[receipt_id]
 
     assert receipt_id == gha_pool.artifact_task_id("123", 3, "receipt-fuzzilli")
@@ -222,11 +232,19 @@ def test_receipt_depends_on_actual_inherited_imports(pool_plan, monkeypatch):
         receipt["extra"]["orion"]["published_images"]["fuzzilli"]["latest_published"]
         is True
     )
-    assert downloaded_artifacts == [22]
-    assert receipt["extra"]["index"]["rank"] == 803
+    assert receipt["extra"]["index"]["rank"] == gha_publish.DIRECT_INDEX_RANK
+    assert receipt["routes"] == []
+    assert receipt["extra"]["orion"]["indexPaths"] == [
+        f"{gha_pool.SERVICE_ROUTE}.fuzzilli.main"
+    ]
 
 
-def test_close_submissions_records_inherited_task_ids(tmp_path, pool_plan, monkeypatch):
+@pytest.mark.parametrize(
+    ("superseded", "peer_failure"), [(False, False), (True, False), (True, True)]
+)
+def test_close_submissions_records_inherited_task_ids(
+    tmp_path, pool_plan, monkeypatch, superseded, peer_failure
+):
     """Keep inherited imports and receipts in the current monitor control record."""
     import json
 
@@ -239,6 +257,7 @@ def test_close_submissions_records_inherited_task_ids(tmp_path, pool_plan, monke
         "branch": "main",
         "event": "push",
         "revision": "a" * 40,
+        "landing_order": 1750,
         "selected_jobs": [
             job_id("build", "fuzzilli", "amd64"),
             job_id("build", "fuzzilli", "arm64"),
@@ -255,6 +274,12 @@ def test_close_submissions_records_inherited_task_ids(tmp_path, pool_plan, monke
             job_id("receipt", "fuzzilli"),
         )
     }
+    if superseded:
+        results[job_id("receipt", "fuzzilli")]["outputs"] = {
+            "receipt_status": "superseded"
+        }
+    if peer_failure:
+        results[job_id("index", "peer", "amd64")] = {"result": "failure"}
     monkeypatch.setenv("ORION_JOB_RESULTS", json.dumps(results))
     imports = []
     for arch in ("amd64", "arm64"):
@@ -319,9 +344,24 @@ def test_close_submissions_records_inherited_task_ids(tmp_path, pool_plan, monke
     )
     output = tmp_path / "control.json"
 
-    gha_pool.close_submissions(plan, group, output)
+    if peer_failure:
+        with pytest.raises(RuntimeError, match="index_peer_amd64"):
+            gha_pool.close_submissions(plan, group, output)
+    else:
+        gha_pool.close_submissions(plan, group, output)
     record = json.loads(output.read_text())
+    assert record["failed_jobs"] == (["index_peer_amd64"] if peer_failure else [])
+    if superseded:
+        assert not submitted
+        assert set(record["task_ids"]) == {
+            gha_pool.artifact_task_id("123", 2, "fuzzilli-amd64"),
+            gha_pool.artifact_task_id("123", 2, "fuzzilli-arm64"),
+        }
+        return
     marker = submitted[gha_pool.artifact_task_id("123", 3, "publication-marker")]
+    assert marker["extra"]["index"]["rank"] == gha_publish.DIRECT_INDEX_RANK
+    assert marker["routes"] == []
+    assert marker["extra"]["orion"]["indexPaths"] == [gha_pool.MARKER_ROUTE]
 
     assert set(record["task_ids"]) == {
         gha_pool.artifact_task_id("123", 2, "fuzzilli-amd64"),
