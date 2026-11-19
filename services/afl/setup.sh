@@ -98,6 +98,12 @@ retry-curl "$(resolve-tc afl-instrumentation)" | zstdcat | tar -x -C /opt
 echo 'PATH=$PATH:/opt/afl-instrumentation/bin' >>/etc/bash.bashrc
 pushd /opt/afl-instrumentation/bin
 patch -p1 </home/worker/patches/afl-cmin.diff
+# Preserve the compiled afl-merge when it aliases afl-cmin.
+if [[ -L afl-merge && $(readlink afl-merge) == afl-cmin ]]; then
+  ln -fL afl-cmin afl-merge
+fi
+# Corpus refresh uses the patched AWK minimizer's -c and -p options.
+ln -sfn afl-cmin.awk afl-cmin
 popd >/dev/null
 
 /srv/repos/setup/cleanup.sh
