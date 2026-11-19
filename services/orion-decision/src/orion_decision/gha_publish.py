@@ -538,18 +538,16 @@ def publication_state(
     for service in services.values():
         if isinstance(service, ServiceTestOnly):
             continue
-        archs = (
-            [None]
-            if isinstance(service, (ServiceHomebrew, ServiceMsys))
-            else service.archs
-        )
+        native = isinstance(service, (ServiceHomebrew, ServiceMsys))
+        archs = service.archs
+        archive_tasks: dict[str, str] = {}
         revisions: list[str | None] = []
         publication_runs: list[tuple[int, int] | None] = []
         service_expired = False
         independent = False
         for arch in archs:
             route = f"project.fuzzing.orion.{service.name}"
-            if arch:
+            if not native:
                 route += f".{arch}"
             route += ".main"
             try:
@@ -590,17 +588,18 @@ def publication_state(
                 independent |= bool(data.get("independentPublication"))
                 if (
                     completed
-                    and not isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    and not native
                     and not data.get("independentPublication")
                     and data.get("dockerLatestPublished") is False
                 ):
                     docker_latest_failed.append(service.name)
                 if completed and (
                     data.get("independentPublication")
-                    or isinstance(service, (ServiceHomebrew, ServiceMsys))
+                    or native
                     or data.get("dockerLatestPublished") is True
                 ):
                     revisions.append(data["revision"])
+                    archive_tasks[arch] = task_id
                     try:
                         publication_runs.append(_publication_run(data))
                     except (KeyError, TypeError, ValueError):
@@ -641,14 +640,22 @@ def publication_state(
                 receipt_run = _publication_run(receipt)
                 service_revisions[service.name] = receipt["revision"]
                 service_runs[service.name] = receipt_run
+                if "importTaskIds" in receipt:
+                    matching_imports = receipt[
+                        "importTaskIds"
+                    ] == archive_tasks and set(archive_tasks.values()) == set(
+                        receipt_task.get("dependencies", [])
+                    )
+                else:
+                    matching_imports = all(
+                        run == receipt_run for run in publication_runs
+                    )
                 if (
                     len(revisions) != len(archs)
                     or any(
                         rev is None or rev != receipt["revision"] for rev in revisions
                     )
-                    or any(
-                        run is None or run != receipt_run for run in publication_runs
-                    )
+                    or not matching_imports
                 ):
                     incomplete_services.append(service.name)
             except Exception as exc:
