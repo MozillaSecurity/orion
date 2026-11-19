@@ -694,6 +694,94 @@ def test_independent_archives_need_their_own_service_completion_receipt(tmp_path
     assert state["incomplete_services"] == ["docker"]
 
 
+def test_planner_accepts_exact_cross_attempt_receipt_imports(tmp_path, monkeypatch):
+    repo = _publication_repo(tmp_path / "repo")
+    service = Services(GitRepo.from_existing(repo))["docker"]
+    revision = _git(repo, "rev-parse", "HEAD")
+    import_ids = {"amd64": "amd64-attempt-1", "arm64": "arm64-attempt-2"}
+    imports = dict(import_ids)
+    dependencies = list(import_ids.values())
+    data = {
+        "repository": "MozillaSecurity/orion",
+        "revision": revision,
+        "runId": "123",
+        "runNumber": 42,
+    }
+    receipt = {
+        **data,
+        "service": "docker",
+        "runAttempt": "3",
+        "importTaskIds": import_ids,
+    }
+    expires = "2027-06-01T00:00:00Z"
+
+    class Missing(Exception):
+        status_code = 404
+
+    class Index:
+        def findTask(self, route):
+            if route == gha_publish.MARKER_ROUTE:
+                return {"taskId": "marker", "data": data}
+            if ".gha.services." in route:
+                return {"taskId": "receipt", "data": receipt}
+            arch = route.split(".")[-2]
+            if arch not in imports:
+                raise Missing()
+            return {
+                "taskId": imports[arch],
+                "data": {
+                    **data,
+                    "runAttempt": "1" if arch == "amd64" else "2",
+                    "independentPublication": True,
+                },
+            }
+
+    class Queue:
+        def task(self, task_id):
+            task = {"expires": expires}
+            if task_id == "receipt":
+                task["dependencies"] = dependencies
+            return task
+
+        def status(self, _task_id):
+            return {"status": {"state": "completed", "runs": [{"state": "completed"}]}}
+
+        def listLatestArtifacts(self, task_id):
+            name = "orion-publication.json" if task_id == "marker" else "docker.tar.zst"
+            return {"artifacts": [{"name": f"public/{name}", "expires": expires}]}
+
+    def state():
+        return gha_publish.publication_state(
+            index=Index(),
+            queue=Queue(),
+            now=datetime(2026, 10, 22, tzinfo=timezone.utc),
+            services={"docker": service},
+        )
+
+    assert state()["incomplete_services"] == []
+    assert state()["service_runs"] == {"docker": (42, 3)}
+    published = state()
+    with monkeypatch.context() as context:
+        context.setattr(gha_publish, "publication_state", lambda: published)
+        plan = build_plan(
+            repo,
+            revision=revision,
+            event="push",
+            branch="main",
+            baseline_from_taskcluster=True,
+        )
+    assert job_id("build", "docker", "amd64") not in plan["selected_jobs"]
+    assert job_id("build", "docker", "arm64") not in plan["selected_jobs"]
+
+    imports["arm64"] = "new-task-same-revision"
+    assert state()["incomplete_services"] == ["docker"]
+    del imports["arm64"]
+    assert state()["expired_services"] == state()["incomplete_services"] == ["docker"]
+    imports["arm64"] = import_ids["arm64"]
+    dependencies.remove(import_ids["arm64"])
+    assert state()["incomplete_services"] == ["docker"]
+
+
 def test_planner_uses_taskcluster_baseline_and_falls_back_to_full_graph(
     tmp_path, monkeypatch
 ) -> None:

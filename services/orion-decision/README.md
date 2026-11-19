@@ -20,12 +20,13 @@ check, and manual runs. Manual runs accept comma-separated service names in
 credentials. Main-branch publication pushes Docker architecture images and a combined
 `latest` manifest. It also imports per-architecture Docker archives and native archives
 into FXCI's Taskcluster artifact and index routes. A failed-job-only rerun can reuse
-the newest live build artifact for each exact service and architecture from an earlier
-attempt of the same run. New Taskcluster tasks keep the current attempt's publication
-rank and provenance. Import tasks retain the source artifact ID and digest; receipts and
-monitor control reference the actual producer task IDs. Expired or missing artifacts
-still require rerunning the relevant build job. Re-running all jobs is required when
-the current attempt has no active Taskcluster worker pool.
+the newest live build artifact for the same service and architecture from an earlier
+attempt of that run. Retrying a failed Taskcluster import creates a new import task
+with the current attempt and the retained build artifact's ID and digest. Successful
+architecture imports can carry forward from earlier attempts. Service receipts and
+the baseline marker depend on the exact tasks reported by successful publication jobs.
+Expired or missing build artifacts require rerunning the relevant build job. A retry
+that submits new Taskcluster tasks needs at least one active worker in its own attempt.
 
 Publication follows the first-parent order of commits on `main`, then the GitHub
 workflow run number and attempt for builds of the same commit. Docker stages each

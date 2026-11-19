@@ -27,6 +27,8 @@ on:
     outputs:
       receipt_status:
         value: ${{ jobs.publish.outputs.receipt_status }}
+      task_id:
+        value: ${{ jobs.publish.outputs.task_id }}
 permissions:
   actions: read
   contents: read
@@ -37,7 +39,7 @@ jobs:
     environment: fxci
     outputs:
       receipt_status: ${{ steps.receipt.outputs.receipt_status }}
-      task_id: ${{ steps.index.outputs.task_id || steps.receipt.outputs.task_id }}
+      task_id: ${{ steps.completed.outputs.task_id }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -77,19 +79,23 @@ jobs:
           TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
           GITHUB_TOKEN: ${{ github.token }}
           ORION_TASK_GROUP: ${{ inputs.task_group }}
+          ORION_JOB_RESULTS: ${{ inputs.job_results }}
         run: >-
           python -m orion_decision.gha_publish receipt
           --plan-file "$RUNNER_TEMP/plan.json"
           --service "${{ inputs.service }}"
           --task-group "$ORION_TASK_GROUP"
       - name: Await Taskcluster publication artifact
+        id: completed
         if: steps.index.outputs.task_id != '' || steps.receipt.outputs.task_id != ''
         env:
           TASKCLUSTER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}
           TASKCLUSTER_CLIENT_ID: project/fuzzing/gh-orion-publisher
           TASKCLUSTER_ROOT_URL: ${{ vars.TASKCLUSTER_ROOT_URL }}
           ORION_TASK_ID: ${{ steps.index.outputs.task_id || steps.receipt.outputs.task_id }}
-        run: python -m orion_decision.gha_publish wait-task --task-id "$ORION_TASK_ID" --timeout 16200
+        run: |
+          python -m orion_decision.gha_publish wait-task --task-id "$ORION_TASK_ID" --timeout 16200
+          printf 'task_id=%s\n' "$ORION_TASK_ID" >> "$GITHUB_OUTPUT"
   promote-fxci:
     needs: publish
     if: needs.publish.outputs.task_id != ''

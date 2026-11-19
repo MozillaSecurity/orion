@@ -159,7 +159,6 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
     from .orion import ServiceHomebrew, ServiceMsys, Services, ServiceTestOnly
 
     data = identity(plan)
-    require_workers()
     service = Services(GitRepo.from_existing(Path.cwd()))[service_name]
     if isinstance(service, ServiceTestOnly):
         raise ValueError("Test-only services do not have publication receipts")
@@ -193,12 +192,17 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
             publication.get("architectures", {})
         ) != set(service.archs):
             raise ValueError(f"Docker publication incomplete for {service_name}")
-    queue = Taskcluster.get_service("queue")
-    task_map = _group_publication_tasks(group, data, data["runAttempt"], queue)
-    dependencies = [
-        _mapped_task_id(task_map, f"{service_name}-{arch}", kind="import", group=group)
+    results = json.loads(os.environ["ORION_JOB_RESULTS"])
+    tasks = _completed_publication_tasks(group, data, Taskcluster.get_service("queue"))
+    import_ids = {
+        arch: _successful_task_id(
+            tasks,
+            results.get(job_id("index", service_name, arch), {}),
+            "import",
+            f"{service_name}-{arch}",
+        )
         for arch in sorted(service.archs)
-    ]
+    }
     receipt_id = artifact_task_id(
         data["runId"], data["runAttempt"], f"receipt-{service_name}"
     )
@@ -207,8 +211,10 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
             "service": service_name,
             "published_images": images,
             "publicationKind": "receipt",
+            "importTaskIds": import_ids,
         }
     )
+    require_workers()
     submit_tasks(
         {
             receipt_id: metadata_task(
@@ -216,46 +222,44 @@ def schedule_receipt(plan: dict[str, Any], service_name: str, group: str) -> str
                 group,
                 f"Orion publication {service_name}",
                 f"{SERVICE_ROUTE}.{service_name}.main",
-                dependencies=dependencies,
+                dependencies=list(import_ids.values()),
             )
         }
     )
     return receipt_id
 
 
-def _mapped_task_id(
-    mapping: dict[tuple[str, str], tuple[int, str]],
-    key: str,
-    *,
+def _successful_task_id(
+    tasks: dict[str, tuple[str, str, dict[str, Any]]],
+    result: dict[str, Any],
     kind: str,
-    group: str,
+    key: str,
 ) -> str:
-    """Return a mapped producer ID or explain which dependency is missing."""
-    map_key = key.removeprefix("receipt-") if kind == "receipt" else key
-    try:
-        return mapping[(kind, map_key)][1]
-    except KeyError:
-        raise RuntimeError(
-            f"No Taskcluster {kind} task exists for {key} in {group}"
-        ) from None
+    """Accept only a completed Taskcluster producer named by a successful GHA job."""
+    task_id = result.get("outputs", {}).get("task_id", "")
+    task = tasks.get(task_id)
+    if result.get("result") != "success" or task is None or task[:2] != (kind, key):
+        raise ValueError(f"No matching completed Taskcluster {kind} task for {key}")
+    return task_id
 
 
-def _group_publication_tasks(
-    group: str,
-    data: dict[str, Any],
-    current_attempt: str,
-    queue: Any,
-) -> dict[tuple[str, str], tuple[int, str]]:
-    """Map this run's actual imports and receipts with one paginated group scan."""
-    found: dict[tuple[str, str], tuple[int, str]] = {}
+def _completed_publication_tasks(
+    group: str, data: dict[str, Any], queue: Any
+) -> dict[str, tuple[str, str, dict[str, Any]]]:
+    """Collect completed same-run imports and receipts by their exact task ID."""
+    found: dict[str, tuple[str, str, dict[str, Any]]] = {}
     options: dict[str, str] = {}
     while True:
         page = queue.listTaskGroup(group, query=options)
         for item in page.get("tasks", []):
-            task_id = item.get("status", {}).get("taskId")
+            status = item["status"]
+            task_id = status["taskId"]
             task_definition = item.get("task", {})
             provenance = task_definition.get("extra", {}).get("orion", {})
-            if not task_id:
+            if (
+                status.get("state") != "completed"
+                or (status.get("runs") or [{}])[-1].get("state") != "completed"
+            ):
                 continue
             if (
                 task_definition.get("taskGroupId") != group
@@ -268,7 +272,7 @@ def _group_publication_tasks(
                 attempt = int(provenance["runAttempt"])
             except (KeyError, TypeError, ValueError):
                 continue
-            if not 1 <= attempt <= int(current_attempt):
+            if not 1 <= attempt <= int(data["runAttempt"]):
                 continue
             kind = provenance.get("publicationKind")
             key = provenance.get("artifactKey")
@@ -283,10 +287,7 @@ def _group_publication_tasks(
             expected_task_key = f"receipt-{key}" if kind == "receipt" else key
             if task_id != artifact_task_id(data["runId"], attempt, expected_task_key):
                 continue
-            candidate = (attempt, task_id)
-            previous = found.get((kind, key))
-            if previous is None or attempt > previous[0]:
-                found[(kind, key)] = candidate
+            found[task_id] = (kind, key, provenance)
         token = page.get("continuationToken")
         if not token:
             return found
@@ -339,6 +340,13 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> str | N
             for arch in service.archs
         )
     )
+    required.update(
+        job_id("index", service.name, arch)
+        for service in services.values()
+        if not isinstance(service, ServiceTestOnly)
+        for arch in service.archs
+        if job_id("build", service.name, arch) in plan["selected_jobs"]
+    )
     failed += sorted(
         name for name in required if results.get(name, {}).get("result") != "success"
     )
@@ -347,26 +355,20 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> str | N
     superseded = False
     marker = None
     try:
-        task_map = (
-            _group_publication_tasks(group, data, data["runAttempt"], queue)
-            if group
-            else {}
-        )
+        tasks = _completed_publication_tasks(group, data, queue) if group else {}
         for service in services.values():
+            import_ids: dict[str, str] = {}
             for arch in service.archs:
-                if (
-                    results.get(job_id("index", service.name, arch), {}).get("result")
-                    != "success"
-                ):
+                result = results.get(job_id("index", service.name, arch), {})
+                if result.get("result") != "success":
                     continue
                 try:
-                    task_id = task_map[("import", f"{service.name}-{arch}")][1]
-                    expected.append(task_id)
-                except KeyError:
-                    failed.append(
-                        f"No Taskcluster import task exists for "
-                        f"{service.name}-{arch} in {group}"
+                    import_ids[arch] = _successful_task_id(
+                        tasks, result, "import", f"{service.name}-{arch}"
                     )
+                except ValueError as exc:
+                    failed.append(str(exc))
+            expected.extend(import_ids.values())
             receipt_result = results.get(job_id("receipt", service.name), {})
             if receipt_result.get("result") == "success":
                 if (
@@ -376,12 +378,17 @@ def close_submissions(plan: dict[str, Any], group: str, output: Path) -> str | N
                     superseded = True
                     continue
                 try:
-                    receipt = task_map[("receipt", service.name)][1]
-                    expected.append(receipt)
-                except KeyError:
-                    failed.append(
-                        f"No Taskcluster receipt exists for {service.name} in {group}"
+                    receipt = _successful_task_id(
+                        tasks, receipt_result, "receipt", service.name
                     )
+                    if tasks[receipt][2].get("importTaskIds") != import_ids:
+                        raise ValueError(
+                            f"Taskcluster receipt for {service.name} does not match "
+                            "the successful architecture imports"
+                        )
+                    expected.append(receipt)
+                except ValueError as exc:
+                    failed.append(str(exc))
         if not failed and not superseded and group:
             require_workers()
             dependencies = expected.copy()
@@ -455,9 +462,7 @@ def require_workers() -> None:
     )
     names = {"Taskcluster worker 1", "Taskcluster worker 2"}
     workers = [job for job in jobs if job["name"] in names]
-    if {job["name"] for job in workers} != names or not any(
-        job["status"] != "completed" for job in workers
-    ):
+    if not any(job["status"] != "completed" for job in workers):
         raise RuntimeError("This attempt has no active worker pool; re-run all jobs")
 
 
