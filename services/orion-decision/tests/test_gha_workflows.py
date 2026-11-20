@@ -260,6 +260,18 @@ def test_root_lint_is_in_acyclic_graph_and_remains_an_aggregate_job(
     assert "graph-result" in jobs["result"]["needs"]
 
 
+def test_marker_index_can_run_after_unselected_jobs_are_skipped(tmp_path: Path) -> None:
+    """Require successful submission without GitHub's implicit ancestor check."""
+    jobs = jobs_for(workflow_repo(tmp_path / "repo"))
+    marker = jobs["publication-marker"]
+
+    assert marker["needs"] == ["publication-done"]
+    assert marker["if"] == (
+        "!cancelled() && needs.publication-done.result == 'success' && "
+        "needs.publication-done.outputs.task_id != ''"
+    )
+
+
 def test_duplicate_sanitized_job_ids_are_rejected(tmp_path: Path) -> None:
     """Names that sanitize to the same generated job ID are rejected."""
     repo = tmp_path / "repo"

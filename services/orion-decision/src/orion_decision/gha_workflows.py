@@ -511,7 +511,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
     jobs["publication-marker"] = {
         "name": "Publish Orion baseline marker index",
         "needs": ["publication-done"],
-        "if": "needs.publication-done.outputs.task_id != ''",
+        # The submission job already accounts for unselected ancestor jobs.
+        "if": (
+            "!cancelled() && needs.publication-done.result == 'success' && "
+            "needs.publication-done.outputs.task_id != ''"
+        ),
         "runs-on": "ubuntu-24.04",
         "environment": "fxci",
         "permissions": {"contents": "read"},
