@@ -34,11 +34,12 @@ jobs:
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          persist-credentials: false
           ref: ${{ inputs.revision }}
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.13'
       - name: Install decision package
@@ -57,7 +58,7 @@ jobs:
           fi
       - name: Set up Docker Buildx
         if: runner.os == 'Linux' && inputs.operation != 'service-test'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
           driver: docker
       - name: Prepare graph operation
@@ -65,18 +66,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ORION_TASKCLUSTER_ROOT_URL: ${{ vars.ORION_TASKCLUSTER_ROOT_URL }}
+          ORION_OPERATION: ${{ inputs.operation }}
+          ORION_SERVICE_NAME: ${{ inputs.name }}
+          ORION_ARCH: ${{ inputs.arch }}
+          ORION_REVISION: ${{ inputs.revision }}
         shell: bash
         run: >-
           python -m orion_decision.gha_run prepare
-          --operation "${{ inputs.operation }}"
-          --name "${{ inputs.name }}"
-          --arch "${{ inputs.arch }}"
-          --revision "${{ inputs.revision }}"
+          --operation "$ORION_OPERATION"
+          --name "$ORION_SERVICE_NAME"
+          --arch "$ORION_ARCH"
+          --revision "$ORION_REVISION"
           --plan-file "$RUNNER_TEMP/plan.json"
       - name: Build recipe test image
         if: inputs.operation == 'recipe-test'
         id: recipe
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: ${{ steps.prepare.outputs.build_context }}
           file: ${{ steps.prepare.outputs.build_file }}
@@ -87,17 +92,19 @@ jobs:
         if: inputs.operation == 'service-test'
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          ORION_SERVICE_NAME: ${{ inputs.name }}
+          ORION_REVISION: ${{ inputs.revision }}
         shell: bash
         run: >-
           python -m orion_decision.gha_run run
           --operation service-test
-          --name "${{ inputs.name }}"
-          --revision "${{ inputs.revision }}"
+          --name "$ORION_SERVICE_NAME"
+          --revision "$ORION_REVISION"
           --plan-file "$RUNNER_TEMP/plan.json"
       - name: Build Docker service
         if: inputs.operation == 'build' && runner.os == 'Linux'
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: ${{ steps.prepare.outputs.build_context }}
           file: ${{ steps.prepare.outputs.build_file }}
@@ -107,15 +114,20 @@ jobs:
           provenance: false
       - name: Finalize Docker archive
         if: inputs.operation == 'build' && runner.os == 'Linux'
+        env:
+          ORION_SERVICE_NAME: ${{ inputs.name }}
+          ORION_ARCH: ${{ inputs.arch }}
+          ORION_IMAGE_TAR: ${{ steps.prepare.outputs.image_tar }}
+          ORION_DIGEST: ${{ steps.build.outputs.digest }}
         run: >-
           python -m orion_decision.gha_run finalize
-          --name "${{ inputs.name }}"
-          --arch "${{ inputs.arch }}"
-          --image-tar "${{ steps.prepare.outputs.image_tar }}"
-          --digest "${{ steps.build.outputs.digest }}"
+          --name "$ORION_SERVICE_NAME"
+          --arch "$ORION_ARCH"
+          --image-tar "$ORION_IMAGE_TAR"
+          --digest "$ORION_DIGEST"
       - name: Upload Docker build artifact
         if: inputs.operation == 'build' && runner.os == 'Linux'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: orion-build-${{ inputs.name }}-${{ inputs.arch }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/${{ inputs.name }}-${{ inputs.arch }}.tar.zst
@@ -123,7 +135,7 @@ jobs:
           retention-days: 7
       - name: Upload native environment artifact
         if: inputs.operation == 'build' && runner.os != 'Linux'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: orion-build-${{ inputs.name }}-${{ inputs.arch }}-${{ github.run_attempt }}
           path: ${{ steps.prepare.outputs.native_archive }}
