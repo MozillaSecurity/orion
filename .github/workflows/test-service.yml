@@ -46,6 +46,8 @@ jobs:
           ORION_SERVICE_NAME: ${{ inputs.name }}
           ORION_REVISION: ${{ inputs.revision }}
           ORION_TEST_INDEX: ${{ matrix.test_index }}
+          # The dedicated zizmor workflow reports findings to GitHub code scanning.
+          SKIP: ${{ inputs.name == 'orion' && 'zizmor' || '' }}
         shell: bash
         run: >-
           python -m orion_decision.gha_run run
