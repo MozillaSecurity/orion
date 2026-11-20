@@ -32,11 +32,12 @@ jobs:
       publish: ${{ steps.plan.outputs.publish }}
       plan_json: ${{ steps.plan.outputs.plan_json }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
-    - uses: actions/setup-python@v6
+        persist-credentials: false
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
@@ -1504,10 +1505,11 @@ jobs:
     outputs:
       task_group: ${{ steps.bootstrap.outputs.task_group }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-    - uses: actions/setup-python@v6
+        persist-credentials: false
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
@@ -1525,7 +1527,7 @@ jobs:
         --output "$RUNNER_TEMP/group.json")
 
         echo "task_group=$group" >> "$GITHUB_OUTPUT"'
-    - uses: actions/upload-artifact@v5
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
       if: always()
       with:
         name: orion-publication-group-${{ github.run_id }}-${{ github.run_attempt
@@ -1552,7 +1554,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_afl:
     name: Publish afl Docker latest
     needs:
@@ -1570,7 +1574,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_afl:
     name: Create afl Taskcluster publication receipt
     needs:
@@ -1593,7 +1598,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_bugmon_amd64:
     name: Schedule bugmon amd64 Taskcluster import
     needs:
@@ -1613,7 +1620,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_bugmon:
     name: Publish bugmon Docker latest
     needs:
@@ -1631,7 +1640,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_bugmon:
     name: Create bugmon Taskcluster publication receipt
     needs:
@@ -1654,7 +1664,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_bugmon_win_amd64:
     name: Schedule bugmon-win amd64 Taskcluster import
     needs:
@@ -1674,7 +1686,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   receipt_bugmon_win:
     name: Create bugmon-win Taskcluster publication receipt
     needs:
@@ -1695,7 +1709,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_covdiff_amd64:
     name: Schedule covdiff amd64 Taskcluster import
     needs:
@@ -1715,7 +1731,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_covdiff:
     name: Publish covdiff Docker latest
     needs:
@@ -1733,7 +1751,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_covdiff:
     name: Create covdiff Taskcluster publication receipt
     needs:
@@ -1756,7 +1775,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_coverage_revision_amd64:
     name: Schedule coverage-revision amd64 Taskcluster import
     needs:
@@ -1776,7 +1797,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_coverage_revision:
     name: Publish coverage-revision Docker latest
     needs:
@@ -1795,7 +1818,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_coverage_revision:
     name: Create coverage-revision Taskcluster publication receipt
     needs:
@@ -1819,7 +1843,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_domino_web_tests_amd64:
     name: Schedule domino-web-tests amd64 Taskcluster import
     needs:
@@ -1839,7 +1865,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_domino_web_tests:
     name: Publish domino-web-tests Docker latest
     needs:
@@ -1858,7 +1886,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_domino_web_tests:
     name: Create domino-web-tests Taskcluster publication receipt
     needs:
@@ -1882,7 +1911,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_funfuzz_amd64:
     name: Schedule funfuzz amd64 Taskcluster import
     needs:
@@ -1902,7 +1933,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_funfuzz:
     name: Publish funfuzz Docker latest
     needs:
@@ -1920,7 +1953,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_funfuzz:
     name: Create funfuzz Taskcluster publication receipt
     needs:
@@ -1943,7 +1977,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_fuzzilli_amd64:
     name: Schedule fuzzilli amd64 Taskcluster import
     needs:
@@ -1963,7 +1999,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_fuzzilli_arm64:
     name: Schedule fuzzilli arm64 Taskcluster import
     needs:
@@ -1983,7 +2021,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_fuzzilli:
     name: Publish fuzzilli Docker latest
     needs:
@@ -2004,7 +2044,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_fuzzilli:
     name: Create fuzzilli Taskcluster publication receipt
     needs:
@@ -2032,7 +2073,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_fuzzing_decision_amd64:
     name: Schedule fuzzing-decision amd64 Taskcluster import
     needs:
@@ -2052,7 +2095,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_fuzzing_decision:
     name: Publish fuzzing-decision Docker latest
     needs:
@@ -2071,7 +2116,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_fuzzing_decision:
     name: Create fuzzing-decision Taskcluster publication receipt
     needs:
@@ -2095,7 +2141,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_grizzly_amd64:
     name: Schedule grizzly amd64 Taskcluster import
     needs:
@@ -2115,7 +2163,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_grizzly:
     name: Publish grizzly Docker latest
     needs:
@@ -2133,7 +2183,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_grizzly:
     name: Create grizzly Taskcluster publication receipt
     needs:
@@ -2156,7 +2207,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_grizzly_android_amd64:
     name: Schedule grizzly-android amd64 Taskcluster import
     needs:
@@ -2176,7 +2229,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_grizzly_android:
     name: Publish grizzly-android Docker latest
     needs:
@@ -2195,7 +2250,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_grizzly_android:
     name: Create grizzly-android Taskcluster publication receipt
     needs:
@@ -2219,7 +2275,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_grizzly_reduce_monitor_amd64:
     name: Schedule grizzly-reduce-monitor amd64 Taskcluster import
     needs:
@@ -2239,7 +2297,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_grizzly_reduce_monitor:
     name: Publish grizzly-reduce-monitor Docker latest
     needs:
@@ -2258,7 +2318,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_grizzly_reduce_monitor:
     name: Create grizzly-reduce-monitor Taskcluster publication receipt
     needs:
@@ -2282,7 +2343,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_grizzly_win_amd64:
     name: Schedule grizzly-win amd64 Taskcluster import
     needs:
@@ -2302,7 +2365,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   receipt_grizzly_win:
     name: Create grizzly-win Taskcluster publication receipt
     needs:
@@ -2323,7 +2388,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_js_tests_distiller_amd64:
     name: Schedule js-tests-distiller amd64 Taskcluster import
     needs:
@@ -2343,7 +2410,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_js_tests_distiller:
     name: Publish js-tests-distiller Docker latest
     needs:
@@ -2362,7 +2431,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_js_tests_distiller:
     name: Create js-tests-distiller Taskcluster publication receipt
     needs:
@@ -2386,7 +2456,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_langfuzz_amd64:
     name: Schedule langfuzz amd64 Taskcluster import
     needs:
@@ -2406,7 +2478,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_langfuzz_arm64:
     name: Schedule langfuzz arm64 Taskcluster import
     needs:
@@ -2426,7 +2500,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_langfuzz:
     name: Publish langfuzz Docker latest
     needs:
@@ -2447,7 +2523,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_langfuzz:
     name: Create langfuzz Taskcluster publication receipt
     needs:
@@ -2475,7 +2552,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_libfuzzer_amd64:
     name: Schedule libfuzzer amd64 Taskcluster import
     needs:
@@ -2495,7 +2574,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_libfuzzer:
     name: Publish libfuzzer Docker latest
     needs:
@@ -2513,7 +2594,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_libfuzzer:
     name: Create libfuzzer Taskcluster publication receipt
     needs:
@@ -2536,7 +2618,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_neqo_coverage_amd64:
     name: Schedule neqo-coverage amd64 Taskcluster import
     needs:
@@ -2556,7 +2640,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_neqo_coverage:
     name: Publish neqo-coverage Docker latest
     needs:
@@ -2574,7 +2660,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_neqo_coverage:
     name: Create neqo-coverage Taskcluster publication receipt
     needs:
@@ -2598,7 +2685,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_nss_corpus_update_amd64:
     name: Schedule nss-corpus-update amd64 Taskcluster import
     needs:
@@ -2618,7 +2707,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_nss_corpus_update:
     name: Publish nss-corpus-update Docker latest
     needs:
@@ -2637,7 +2728,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_nss_corpus_update:
     name: Create nss-corpus-update Taskcluster publication receipt
     needs:
@@ -2661,7 +2753,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_nss_coverage_amd64:
     name: Schedule nss-coverage amd64 Taskcluster import
     needs:
@@ -2681,7 +2775,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_nss_coverage:
     name: Publish nss-coverage Docker latest
     needs:
@@ -2699,7 +2795,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_nss_coverage:
     name: Create nss-coverage Taskcluster publication receipt
     needs:
@@ -2722,7 +2819,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_nyx_amd64:
     name: Schedule nyx amd64 Taskcluster import
     needs:
@@ -2742,7 +2841,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_nyx:
     name: Publish nyx Docker latest
     needs:
@@ -2760,7 +2861,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_nyx:
     name: Create nyx Taskcluster publication receipt
     needs:
@@ -2783,7 +2885,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_prefmonitor_amd64:
     name: Schedule prefmonitor amd64 Taskcluster import
     needs:
@@ -2803,7 +2907,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_prefmonitor:
     name: Publish prefmonitor Docker latest
     needs:
@@ -2821,7 +2927,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_prefmonitor:
     name: Create prefmonitor Taskcluster publication receipt
     needs:
@@ -2844,7 +2951,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_site_scout_amd64:
     name: Schedule site-scout amd64 Taskcluster import
     needs:
@@ -2864,7 +2973,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_site_scout:
     name: Publish site-scout Docker latest
     needs:
@@ -2882,7 +2993,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_site_scout:
     name: Create site-scout Taskcluster publication receipt
     needs:
@@ -2905,7 +3017,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_site_scout_android_amd64:
     name: Schedule site-scout-android amd64 Taskcluster import
     needs:
@@ -2925,7 +3039,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publish_docker_site_scout_android:
     name: Publish site-scout-android Docker latest
     needs:
@@ -2944,7 +3060,8 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ''
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   receipt_site_scout_android:
     name: Create site-scout-android Taskcluster publication receipt
     needs:
@@ -2968,7 +3085,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   index_site_scout_win_amd64:
     name: Schedule site-scout-win amd64 Taskcluster import
     needs:
@@ -2988,7 +3107,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   receipt_site_scout_win:
     name: Create site-scout-win Taskcluster publication receipt
     needs:
@@ -3009,7 +3130,9 @@ jobs:
       plan_json: ${{ needs.plan.outputs.plan_json }}
       task_group: ${{ needs.publication-bootstrap.outputs.task_group }}
       job_results: ${{ toJSON(needs) }}
-    secrets: inherit
+    secrets:
+      TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN: ${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN
+        }}
   publication-done:
     name: Orion publication submissions complete
     needs:
@@ -3097,10 +3220,11 @@ jobs:
       task_id: ${{ steps.close.outputs.task_id }}
       marker_expected: ${{ steps.close.outputs.marker_expected }}
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-    - uses: actions/setup-python@v6
+        persist-credentials: false
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
@@ -3119,7 +3243,7 @@ jobs:
 
         python -m orion_decision.gha_publish close --plan-file "$RUNNER_TEMP/plan.json"
         --task-group "$ORION_TASK_GROUP" --output "$RUNNER_TEMP/publication-control.json"'
-    - uses: actions/upload-artifact@v5
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
       if: always()
       with:
         name: orion-publication-control-${{ github.run_id }}-${{ github.run_attempt
@@ -3150,11 +3274,12 @@ jobs:
       queue: max
     timeout-minutes: 20
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
         fetch-depth: 0
-    - uses: actions/setup-python@v6
+        persist-credentials: false
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision
@@ -3183,10 +3308,11 @@ jobs:
       actions: read
       contents: read
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
       with:
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
-    - uses: actions/setup-python@v6
+        persist-credentials: false
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
       with:
         python-version: '3.13'
     - run: python -m pip install -e services/orion-decision

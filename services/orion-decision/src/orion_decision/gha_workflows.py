@@ -26,6 +26,11 @@ from .orion import (
 
 WORKFLOW = Path(".github/workflows/orion.yml")
 HEAD_SHA = "${{ github.event.pull_request.head.sha || github.sha }}"
+CHECKOUT = "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09"  # v5.1.0
+SETUP_PYTHON = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"  # v6.3.0
+UPLOAD_ARTIFACT = (  # v5.0.0
+    "actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4"
+)
 HEADER = """# GENERATED FILE — DO NOT EDIT.
 # Regenerate with: python -m orion_decision.gha_workflows
 # Sources: tracked service.yaml files, Dockerfiles, service inputs, and recipes.
@@ -273,8 +278,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "permissions": {"actions": "read", "contents": "read"},
         "outputs": {"task_group": "${{ steps.bootstrap.outputs.task_group }}"},
         "steps": [
-            {"uses": "actions/checkout@v5", "with": {"ref": HEAD_SHA}},
-            {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
+            {
+                "uses": CHECKOUT,
+                "with": {"ref": HEAD_SHA, "persist-credentials": False},
+            },
+            {"uses": SETUP_PYTHON, "with": {"python-version": "3.13"}},
             {"run": "python -m pip install -e services/orion-decision"},
             {
                 "id": "bootstrap",
@@ -296,7 +304,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 ),
             },
             {
-                "uses": "actions/upload-artifact@v5",
+                "uses": UPLOAD_ARTIFACT,
                 "if": "always()",
                 "with": {
                     "name": (
@@ -357,7 +365,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     ),
                     "job_results": "${{ toJSON(needs) }}",
                 },
-                "secrets": "inherit",
+                "secrets": {
+                    "TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN": (
+                        "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}"
+                    ),
+                },
             }
             index_jobs_by_service.setdefault(service.name, []).append(index_id)
             publication_jobs.append(index_id)
@@ -381,7 +393,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                     "task_group": "",
                     "job_results": "${{ toJSON(needs) }}",
                 },
-                "secrets": "inherit",
+                "secrets": {"DOCKERHUB_TOKEN": "${{ secrets.DOCKERHUB_TOKEN }}"},
             }
             publication_jobs.append(docker_id)
 
@@ -432,7 +444,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 "task_group": ("${{ needs.publication-bootstrap.outputs.task_group }}"),
                 "job_results": "${{ toJSON(needs) }}",
             },
-            "secrets": "inherit",
+            "secrets": {
+                "TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN": (
+                    "${{ secrets.TASKCLUSTER_GH_ORION_PUBLISHER_ACCESS_TOKEN }}"
+                ),
+            },
         }
         receipt_jobs.append(receipt_id)
         publication_jobs.append(receipt_id)
@@ -450,8 +466,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
             "marker_expected": "${{ steps.close.outputs.marker_expected }}",
         },
         "steps": [
-            {"uses": "actions/checkout@v5", "with": {"ref": HEAD_SHA}},
-            {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
+            {
+                "uses": CHECKOUT,
+                "with": {"ref": HEAD_SHA, "persist-credentials": False},
+            },
+            {"uses": SETUP_PYTHON, "with": {"python-version": "3.13"}},
             {"run": "python -m pip install -e services/orion-decision"},
             {
                 "name": "Close publication submissions",
@@ -478,7 +497,7 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
                 ),
             },
             {
-                "uses": "actions/upload-artifact@v5",
+                "uses": UPLOAD_ARTIFACT,
                 "if": "always()",
                 "with": {
                     "name": (
@@ -519,10 +538,14 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "timeout-minutes": 20,
         "steps": [
             {
-                "uses": "actions/checkout@v5",
-                "with": {"ref": HEAD_SHA, "fetch-depth": 0},
+                "uses": CHECKOUT,
+                "with": {
+                    "ref": HEAD_SHA,
+                    "fetch-depth": 0,
+                    "persist-credentials": False,
+                },
             },
-            {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
+            {"uses": SETUP_PYTHON, "with": {"python-version": "3.13"}},
             {"run": "python -m pip install -e services/orion-decision"},
             {
                 "name": "Index the FXCI baseline marker",
@@ -551,8 +574,11 @@ def _build_jobs(services: Services) -> dict[str, dict[str, Any]]:
         "strategy": {"fail-fast": False, "matrix": {"worker": [1, 2]}},
         "permissions": {"actions": "read", "contents": "read"},
         "steps": [
-            {"uses": "actions/checkout@v5", "with": {"ref": HEAD_SHA}},
-            {"uses": "actions/setup-python@v6", "with": {"python-version": "3.13"}},
+            {
+                "uses": CHECKOUT,
+                "with": {"ref": HEAD_SHA, "persist-credentials": False},
+            },
+            {"uses": SETUP_PYTHON, "with": {"python-version": "3.13"}},
             {"run": "python -m pip install -e services/orion-decision"},
             {
                 "name": "Write protected GitHub token file",
@@ -679,11 +705,15 @@ def render_workflow(services: Services) -> str:
                 },
                 "steps": [
                     {
-                        "uses": "actions/checkout@v5",
-                        "with": {"ref": HEAD_SHA, "fetch-depth": 0},
+                        "uses": CHECKOUT,
+                        "with": {
+                            "ref": HEAD_SHA,
+                            "fetch-depth": 0,
+                            "persist-credentials": False,
+                        },
                     },
                     {
-                        "uses": "actions/setup-python@v6",
+                        "uses": SETUP_PYTHON,
                         "with": {"python-version": "3.13"},
                     },
                     {

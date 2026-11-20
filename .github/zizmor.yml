@@ -1,0 +1,5 @@
+rules:
+  self-repository:
+    ignore:
+      # Generated workflow uses ./ references so actionlint can validate reusable calls.
+      - orion.yml
