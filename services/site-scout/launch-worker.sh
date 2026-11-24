@@ -169,6 +169,12 @@ else
     debug32)
       fuzzfetch_flags+=(--debug --cpu x86)
       ;;
+    fuzzing-asan)
+      fuzzfetch_flags+=(--fuzzing --asan)
+      ;;
+    fuzzing-debug)
+      fuzzfetch_flags+=(--fuzzing --debug)
+      ;;
     *)
       fuzzfetch_flags+=("--$build")
       ;;
