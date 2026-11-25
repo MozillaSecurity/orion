@@ -25,6 +25,7 @@ EDIT=1 SRCDIR=/src/fuzzing-tc ./fuzzing_tc.sh
 EDIT=1 DESTDIR=/src ./fuzzmanager.sh
 ./grcov.sh
 ./llvm-cov.sh
+./llvm-symbolizer.sh
 ./nodejs.sh
 retry npm install --global prettier
 command -v node

@@ -861,6 +861,7 @@ jobs:
     - recipe_test_fuzzmanager_sh
     - recipe_test_grcov_sh
     - recipe_test_llvm_cov_sh
+    - recipe_test_llvm_symbolizer_sh
     - recipe_test_nodejs_sh
     - recipe_test_radamsa_sh
     - recipe_test_rr_sh
@@ -881,17 +882,19 @@ jobs:
       'recipe_test_fuzzmanager_sh')) && (needs.recipe_test_grcov_sh.result == 'success'
       || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_grcov_sh'))
       && (needs.recipe_test_llvm_cov_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_nodejs_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_nodejs_sh'))
-      && (needs.recipe_test_radamsa_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_radamsa_sh')) && (needs.recipe_test_rr_sh.result == 'success' ||
-      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_rr_sh'))
-      && (needs.recipe_test_sentry_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_sentry_sh')) && (needs.recipe_test_taskcluster_sh.result == 'success'
-      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskcluster_sh'))
-      && (needs.recipe_test_taskgraph_m_c_latest_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
-      'recipe_test_taskgraph_m_c_latest_sh')) && (needs.recipe_test_worker_sh.result
-      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_worker_sh'))
+      'recipe_test_llvm_cov_sh')) && (needs.recipe_test_llvm_symbolizer_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_llvm_symbolizer_sh'))
+      && (needs.recipe_test_nodejs_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_nodejs_sh')) && (needs.recipe_test_radamsa_sh.result == 'success'
+      || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_radamsa_sh'))
+      && (needs.recipe_test_rr_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_rr_sh')) && (needs.recipe_test_sentry_sh.result == 'success' ||
+      !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_sentry_sh'))
+      && (needs.recipe_test_taskcluster_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_taskcluster_sh')) && (needs.recipe_test_taskgraph_m_c_latest_sh.result
+      == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs), 'recipe_test_taskgraph_m_c_latest_sh'))
+      && (needs.recipe_test_worker_sh.result == 'success' || !contains(fromJSON(needs.plan.outputs.selected_jobs),
+      'recipe_test_worker_sh'))
     uses: ./.github/workflows/build-service.yml
     with:
       operation: build
