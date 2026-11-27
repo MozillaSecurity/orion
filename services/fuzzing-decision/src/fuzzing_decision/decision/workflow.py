@@ -131,12 +131,12 @@ class Workflow(CommonWorkflow):
         # exact IDs generated here, plus prior worker-pool IDs whose configured
         # static replacements no longer need Taskcluster-managed capacity. tc-admin
         # dispatches current-resource fetches from the leading kind=, and MatchList
-        # already roots regex matching at the start of each ID.
+        # patterns must match the whole ID.
         for resource in generated:
-            resources.manage(f"{re.escape(resource.id)}$")
+            resources.manage(re.escape(resource.id))
 
         for worker_pool_id in retired_worker_pool_ids:
-            resources.manage(f"{re.escape(f'WorkerPool={worker_pool_id}')}$")
+            resources.manage(re.escape(f"WorkerPool={worker_pool_id}"))
 
         resources.update(generated)
         # Pools removed from configuration are still cleaned up manually.
